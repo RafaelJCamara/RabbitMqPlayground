@@ -13,3 +13,13 @@ export {
 } from './lib/headers';
 export { ROUTING_KEY_MAX_BYTES, routingKeyIssue, utf8Length } from './lib/keys';
 export { createPrng, type Prng } from './lib/prng';
+export {
+  alignTopic,
+  splitTopic,
+  topicMatches,
+  topicSamples,
+  type TopicAlignment,
+  type TopicMiss,
+  type TopicSamples,
+  type TopicSegment,
+} from './lib/topic';
