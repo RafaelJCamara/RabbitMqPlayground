@@ -1,0 +1,1288 @@
+{
+  "id": "routing/headers-every-type-and-width-of-a-value-against-every-other",
+  "kind": "routing",
+  "title": "A binding value against a message value, for strings, integers of every width, floats and booleans: 1 is not \"1\", is not 1.0, is not true, and 1 is 1 whatever its width (ADR-0009)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers"
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding string 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding string 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": "1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding string 2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding string 2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": "2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding string empty",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding string empty"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding string true",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding string true"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": "true"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding string 1.0",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding string 1.0"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": "1.0"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int8 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int8 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1,
+              "width": 8
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int16 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int16 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1,
+              "width": 16
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int32 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int32 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1,
+              "width": 32
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int64 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int64 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1,
+              "width": 64
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int 2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int 2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int 0",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int 0"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int -1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int -1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int 128",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int 128"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 128
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int 70000",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int 70000"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 70000
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int32 70000",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int32 70000"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 70000,
+              "width": 32
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int64 70000",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int64 70000"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 70000,
+              "width": 64
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding int64 2147483648",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding int64 2147483648"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 2147483648,
+              "width": 64
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding float 1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding float 1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding float 1.5",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding float 1.5"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "float",
+              "v": 1.5
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding float 0",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding float 0"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "float",
+              "v": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding float -1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding float -1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "float",
+              "v": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding boolean true",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding boolean true"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "boolean",
+              "v": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding boolean false",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding boolean false"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "boolean",
+              "v": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "binding exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "binding exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message string 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message string 2",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": "2"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message string empty",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": ""
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message string true",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": "true"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message string 1.0",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": "1.0"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int8 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1,
+            "width": 8
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int16 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1,
+            "width": 16
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int32 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1,
+            "width": 32
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int64 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1,
+            "width": 64
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int 2",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int 0",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 0
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int -1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": -1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int 128",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 128
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int 70000",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 70000
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int32 70000",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 70000,
+            "width": 32
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int64 70000",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 70000,
+            "width": 64
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message int64 2147483648",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 2147483648,
+            "width": 64
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message float 1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message float 1.5",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "float",
+            "v": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message float 0",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "float",
+            "v": 0
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message float -1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "float",
+            "v": -1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message boolean true",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message boolean false",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "boolean",
+            "v": false
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message without n",
+      "headers": [
+        {
+          "key": "m",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message without headers"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "message string 1",
+        "returned": false,
+        "queues": [
+          "binding string 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message string 2",
+        "returned": false,
+        "queues": [
+          "binding string 2",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message string empty",
+        "returned": false,
+        "queues": [
+          "binding string empty",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message string true",
+        "returned": false,
+        "queues": [
+          "binding string true",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message string 1.0",
+        "returned": false,
+        "queues": [
+          "binding string 1.0",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int 1",
+        "returned": false,
+        "queues": [
+          "binding int 1",
+          "binding int8 1",
+          "binding int16 1",
+          "binding int32 1",
+          "binding int64 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int8 1",
+        "returned": false,
+        "queues": [
+          "binding int 1",
+          "binding int8 1",
+          "binding int16 1",
+          "binding int32 1",
+          "binding int64 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int16 1",
+        "returned": false,
+        "queues": [
+          "binding int 1",
+          "binding int8 1",
+          "binding int16 1",
+          "binding int32 1",
+          "binding int64 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int32 1",
+        "returned": false,
+        "queues": [
+          "binding int 1",
+          "binding int8 1",
+          "binding int16 1",
+          "binding int32 1",
+          "binding int64 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int64 1",
+        "returned": false,
+        "queues": [
+          "binding int 1",
+          "binding int8 1",
+          "binding int16 1",
+          "binding int32 1",
+          "binding int64 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int 2",
+        "returned": false,
+        "queues": [
+          "binding int 2",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int 0",
+        "returned": false,
+        "queues": [
+          "binding int 0",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int -1",
+        "returned": false,
+        "queues": [
+          "binding int -1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int 128",
+        "returned": false,
+        "queues": [
+          "binding int 128",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int 70000",
+        "returned": false,
+        "queues": [
+          "binding int 70000",
+          "binding int32 70000",
+          "binding int64 70000",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int32 70000",
+        "returned": false,
+        "queues": [
+          "binding int 70000",
+          "binding int32 70000",
+          "binding int64 70000",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int64 70000",
+        "returned": false,
+        "queues": [
+          "binding int 70000",
+          "binding int32 70000",
+          "binding int64 70000",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message int64 2147483648",
+        "returned": false,
+        "queues": [
+          "binding int64 2147483648",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message float 1",
+        "returned": false,
+        "queues": [
+          "binding float 1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message float 1.5",
+        "returned": false,
+        "queues": [
+          "binding float 1.5",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message float 0",
+        "returned": false,
+        "queues": [
+          "binding float 0",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message float -1",
+        "returned": false,
+        "queues": [
+          "binding float -1",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message boolean true",
+        "returned": false,
+        "queues": [
+          "binding boolean true",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message boolean false",
+        "returned": false,
+        "queues": [
+          "binding boolean false",
+          "binding exists"
+        ]
+      },
+      {
+        "body": "message without n",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "message without headers",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,1848 @@
+{
+  "id": "routing/headers-every-x-match-mode-against-sets-of-arguments",
+  "kind": "routing",
+  "title": "The four modes and an omitted x-match against sets of arguments that include x- keys and exists: which arguments count, and what matches when none does (ADR-0009)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers"
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | nothing",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | nothing"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": []
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | a=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | a=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | a=1 b=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | a=1 b=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | a=1 x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | a=1 x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | x-foo=1 x-bar=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | x-foo=1 x-bar=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-bar",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | a exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | a exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | a=1 b exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | a=1 b exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "omitted | x-foo exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "omitted | x-foo exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | nothing",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | nothing"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": []
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | a=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | a=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | a=1 b=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | a=1 b=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | a=1 x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | a=1 x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | x-foo=1 x-bar=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | x-foo=1 x-bar=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-bar",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | a exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | a exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | a=1 b exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | a=1 b exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all | x-foo exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all | x-foo exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | nothing",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | nothing"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": []
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | a=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | a=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | a=1 b=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | a=1 b=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | a=1 x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | a=1 x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | x-foo=1 x-bar=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | x-foo=1 x-bar=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-bar",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | a exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | a exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | a=1 b exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | a=1 b exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any | x-foo exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any | x-foo exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | nothing",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | nothing"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": []
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | a=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | a=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | a=1 b=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | a=1 b=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | a=1 x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | a=1 x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | x-foo=1 x-bar=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | x-foo=1 x-bar=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-bar",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | a exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | a exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | a=1 b exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | a=1 b exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "all-with-x | x-foo exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "all-with-x | x-foo exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | nothing",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | nothing"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": []
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | a=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | a=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | a=1 b=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | a=1 b=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | a=1 x-foo=1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | a=1 x-foo=1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | x-foo=1 x-bar=2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | x-foo=1 x-bar=2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-bar",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | a exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | a exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | a=1 b exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | a=1 b exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "queue.declare",
+      "name": "any-with-x | x-foo exists",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "any-with-x | x-foo exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "x-foo",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message no headers"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message empty table",
+      "headers": []
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=1",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message b=2",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=1 b=2",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=2",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message x-foo=1",
+      "headers": [
+        {
+          "key": "x-foo",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message x-foo=1 a=1",
+      "headers": [
+        {
+          "key": "x-foo",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message x-foo=2 a=1",
+      "headers": [
+        {
+          "key": "x-foo",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        },
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message x-foo=1 x-bar=2",
+      "headers": [
+        {
+          "key": "x-foo",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "x-bar",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=1 b=3",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 3
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=1 x-bar=2",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "x-bar",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "message a=string x-foo=string",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        },
+        {
+          "key": "x-foo",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "message no headers",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | x-foo exists",
+          "all-with-x | nothing"
+        ]
+      },
+      {
+        "body": "message empty table",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | x-foo exists",
+          "all-with-x | nothing"
+        ]
+      },
+      {
+        "body": "message a=1",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | a exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists"
+        ]
+      },
+      {
+        "body": "message b=2",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | x-foo exists",
+          "any | a=1 b=2",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 b exists"
+        ]
+      },
+      {
+        "body": "message a=1 b=2",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | a=1 b=2",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | a=1 b exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | a=1 b=2",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | a=1 b exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | a=1 b=2",
+          "all-with-x | a exists",
+          "all-with-x | a=1 b exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists"
+        ]
+      },
+      {
+        "body": "message a=2",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a exists",
+          "all-with-x | nothing",
+          "all-with-x | a exists",
+          "any-with-x | a exists"
+        ]
+      },
+      {
+        "body": "message x-foo=1",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | x-foo exists",
+          "all-with-x | nothing",
+          "all-with-x | x-foo=1",
+          "all-with-x | x-foo exists",
+          "any-with-x | x-foo=1",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | x-foo=1 x-bar=2",
+          "any-with-x | x-foo exists"
+        ]
+      },
+      {
+        "body": "message x-foo=1 a=1",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | x-foo=1",
+          "all-with-x | a=1 x-foo=1",
+          "all-with-x | a exists",
+          "all-with-x | x-foo exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | x-foo=1",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | x-foo=1 x-bar=2",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists",
+          "any-with-x | x-foo exists"
+        ]
+      },
+      {
+        "body": "message x-foo=2 a=1",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | a exists",
+          "all-with-x | x-foo exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists",
+          "any-with-x | x-foo exists"
+        ]
+      },
+      {
+        "body": "message x-foo=1 x-bar=2",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | x-foo exists",
+          "all-with-x | nothing",
+          "all-with-x | x-foo=1",
+          "all-with-x | x-foo=1 x-bar=2",
+          "all-with-x | x-foo exists",
+          "any-with-x | x-foo=1",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | x-foo=1 x-bar=2",
+          "any-with-x | x-foo exists"
+        ]
+      },
+      {
+        "body": "message a=1 b=3",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | a=1 b exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | a=1 b exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | a exists",
+          "all-with-x | a=1 b exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists"
+        ]
+      },
+      {
+        "body": "message a=1 x-bar=2",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | a=1",
+          "omitted | x-foo=1",
+          "omitted | a=1 x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | a=1",
+          "all | x-foo=1",
+          "all | a=1 x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a=1",
+          "any | a=1 b=2",
+          "any | a=1 x-foo=1",
+          "any | a exists",
+          "any | a=1 b exists",
+          "all-with-x | nothing",
+          "all-with-x | a=1",
+          "all-with-x | a exists",
+          "any-with-x | a=1",
+          "any-with-x | a=1 b=2",
+          "any-with-x | a=1 x-foo=1",
+          "any-with-x | x-foo=1 x-bar=2",
+          "any-with-x | a exists",
+          "any-with-x | a=1 b exists"
+        ]
+      },
+      {
+        "body": "message a=string x-foo=string",
+        "returned": false,
+        "queues": [
+          "omitted | nothing",
+          "omitted | x-foo=1",
+          "omitted | x-foo=1 x-bar=2",
+          "omitted | a exists",
+          "omitted | x-foo exists",
+          "all | nothing",
+          "all | x-foo=1",
+          "all | x-foo=1 x-bar=2",
+          "all | a exists",
+          "all | x-foo exists",
+          "any | a exists",
+          "all-with-x | nothing",
+          "all-with-x | a exists",
+          "all-with-x | x-foo exists",
+          "any-with-x | a exists",
+          "any-with-x | x-foo exists"
+        ]
+      }
+    ]
+  }
+}
