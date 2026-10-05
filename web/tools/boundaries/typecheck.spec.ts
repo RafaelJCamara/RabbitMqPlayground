@@ -11,7 +11,11 @@ type Library = 'engine' | 'domain' | 'persistence' | 'testing';
 
 /** Type-checks every snippet as its own file in one program, and returns the error codes for each snippet. */
 function analyse(library: Library, snippets: readonly string[]): Map<string, number[]> {
-  const configPath = fileURLToPath(new URL(`../../projects/${library}/tsconfig.lib.json`, import.meta.url));
+  // TypeScript names files with forward slashes on every platform, and `fileURLToPath` gives backslashes on Windows.
+  const configPath = fileURLToPath(new URL(`../../projects/${library}/tsconfig.lib.json`, import.meta.url)).replaceAll(
+    '\\',
+    '/',
+  );
   const parsed = ts.getParsedCommandLineOfConfigFile(
     configPath,
     {},

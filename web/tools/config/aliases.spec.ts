@@ -25,7 +25,10 @@ describe('rmqAliases', () => {
 
   it('exposes each library only through its src/index.ts entry point', () => {
     for (const [alias, file] of Object.entries(aliases)) {
-      expect(file.endsWith(`/projects/${alias.slice('@rmq/'.length)}/src/index.ts`), alias).toBe(true);
+      // `fileURLToPath` gives backslashes on Windows.
+      expect(file.replaceAll('\\', '/').endsWith(`/projects/${alias.slice('@rmq/'.length)}/src/index.ts`), alias).toBe(
+        true,
+      );
     }
   });
 });

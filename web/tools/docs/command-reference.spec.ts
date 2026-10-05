@@ -49,8 +49,13 @@ describe('docs/commands.md', () => {
 
   describe('the script behind `npm run docs:check`', () => {
     const webRoot = fileURLToPath(new URL('../../', import.meta.url));
+    // `npx` is `npx.cmd` on Windows, which cannot be spawned without a shell. This is the entry point `tsx` points to.
+    const tsx = fileURLToPath(new URL('../../node_modules/tsx/dist/cli.mjs', import.meta.url));
     const script = (...args: string[]) =>
-      spawnSync('npx', ['tsx', 'tools/docs/generate-commands.ts', ...args], { cwd: webRoot, encoding: 'utf8' });
+      spawnSync(process.execPath, [tsx, 'tools/docs/generate-commands.ts', ...args], {
+        cwd: webRoot,
+        encoding: 'utf8',
+      });
     let dir: string;
     beforeEach(() => {
       dir = mkdtempSync(join(tmpdir(), 'commands-'));

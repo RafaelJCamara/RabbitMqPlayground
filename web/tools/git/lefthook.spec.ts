@@ -20,8 +20,11 @@ interface Config {
   'commit-msg': { jobs: Job[] };
 }
 
+/** `node_modules/.bin/lefthook` is a shell script on Windows, which cannot be spawned. This is the launcher it points to. */
+const LAUNCHER = `${webRoot}node_modules/lefthook/bin/index.js`;
+
 function lefthook(...args: string[]) {
-  return spawnSync(`${webRoot}node_modules/.bin/lefthook`, args, { cwd: repoRoot, encoding: 'utf8' });
+  return spawnSync(process.execPath, [LAUNCHER, ...args], { cwd: repoRoot, encoding: 'utf8' });
 }
 
 const dump = lefthook('dump', '--format', 'json');
