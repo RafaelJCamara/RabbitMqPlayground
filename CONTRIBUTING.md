@@ -31,6 +31,11 @@ npm ci          # installs dependencies and the git hooks (lefthook)
 npm start
 ```
 
+In a Claude Code cloud session, a `SessionStart` hook ([`.claude/hooks/session-start.sh`](.claude/hooks/session-start.sh))
+does this for you. It puts a suitable Node on the `PATH`, points `PW_CHROMIUM_PATH` at the Chromium that is already
+installed (`playwright install` is not available there), runs `npm ci` when `package-lock.json` has changed, and
+installs the git hooks.
+
 ## Before you push
 
 The **pre-push hook** runs these in parallel, and the push is refused if any of them fails:
@@ -95,6 +100,12 @@ A change is done when all of these hold ([ADR-0015](docs/adr/0015-testing-strate
 - **The conformance fixtures are never updated blindly.** The nightly job fails on any difference from the recorded
   behaviour of RabbitMQ 4.3. A person reviews a re-recorded fixture and commits it, and a rule that a fixture disproves
   gets a superseding ADR.
+  - To record, run the **Nightly** workflow by hand with `mode` set to `record`, or run
+    `CONFORMANCE_MODE=record npm run test:conformance` in `web/` on a machine that has Docker. Nothing is recorded on
+    any other broker: the manifest has to name the pinned image, and an offline spec fails otherwise.
+  - The workflow uploads the fixtures as an artifact, and also prints them in its log. If you cannot download the
+    artifact, save the log and run `npx tsx tools/conformance/dump.ts restore <log> fixtures/conformance/4.3`. It
+    rebuilds the files byte for byte, and refuses any file whose SHA-256 differs from the one the job printed.
 
 ## Reporting bugs and proposing features
 
