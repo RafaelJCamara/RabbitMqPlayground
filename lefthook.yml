@@ -1,0 +1,32 @@
+# Git hooks (ADR-0004: automation replaces review). They are installed by `npm ci` in web/, through lefthook's
+# postinstall, and they run with the commands in web/package.json.
+#
+# CI runs the same checks and more, so skipping a hook (LEFTHOOK=0, or `git push --no-verify`) only postpones the
+# failure. A failing test is never skipped to get a push through, and coverage thresholds are never lowered (ADR-0015).
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: lint
+      root: web/
+      run: npm run lint
+    - name: format
+      root: web/
+      run: npm run format:check
+    - name: typecheck
+      root: web/
+      run: npm run typecheck
+    - name: library tests and coverage
+      root: web/
+      run: npm run test:libs:coverage
+    - name: app tests and coverage
+      root: web/
+      run: npm run test:app:coverage
+    - name: development build
+      root: web/
+      run: npm run build:dev
+
+commit-msg:
+  jobs:
+    - name: conventional commit
+      run: web/node_modules/.bin/tsx web/tools/git/check-commit-message.ts {1}

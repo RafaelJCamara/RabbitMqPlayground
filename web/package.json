@@ -15,7 +15,7 @@
     "build:dev": "ng build --configuration development",
     "build:pages": "ng build --base-href /RabbitMqPlayground/ && tsx tools/pages/postbuild.ts dist/app/browser",
     "build:e2e": "ng build --configuration e2e --base-href /RabbitMqPlayground/ && tsx tools/pages/postbuild.ts dist/app-e2e/browser",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -b",
