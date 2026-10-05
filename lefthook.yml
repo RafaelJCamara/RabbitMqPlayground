@@ -3,28 +3,26 @@
 #
 # CI runs the same checks and more, so skipping a hook (LEFTHOOK=0, or `git push --no-verify`) only postpones the
 # failure. A failing test is never skipped to get a push through, and coverage thresholds are never lowered (ADR-0015).
+#
+# The pre-push jobs have no `root`, `glob` or other file filter, and change into web/ themselves. Lefthook skips a job
+# that has one when none of the pushed files matches it, and specs in web/ also guard files outside it (README.md,
+# LICENSE, .gitignore, lefthook.yml, .claude/). A push that changes only those must still run every gate.
 
 pre-push:
   parallel: true
   jobs:
     - name: lint
-      root: web/
-      run: npm run lint
+      run: cd web && npm run lint
     - name: format
-      root: web/
-      run: npm run format:check
+      run: cd web && npm run format:check
     - name: typecheck
-      root: web/
-      run: npm run typecheck
+      run: cd web && npm run typecheck
     - name: library tests and coverage
-      root: web/
-      run: npm run test:libs:coverage
+      run: cd web && npm run test:libs:coverage
     - name: app tests and coverage
-      root: web/
-      run: npm run test:app:coverage
+      run: cd web && npm run test:app:coverage
     - name: development build
-      root: web/
-      run: npm run build:dev
+      run: cd web && npm run build:dev
 
 commit-msg:
   jobs:

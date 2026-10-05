@@ -14,7 +14,6 @@ const webRoot = `${repoRoot}web/`;
 interface Job {
   name: string;
   run: string;
-  root?: string;
 }
 interface Config {
   'pre-push': { parallel?: boolean; jobs: Job[] };
@@ -46,18 +45,24 @@ describe('lefthook.yml', () => {
 
     it('has every gate of the M1 plan: lint, format, types, both coverage runs and a development build', () => {
       expect(jobs.map((job) => job.run)).toEqual([
-        'npm run lint',
-        'npm run format:check',
-        'npm run typecheck',
-        'npm run test:libs:coverage',
-        'npm run test:app:coverage',
-        'npm run build:dev',
+        'cd web && npm run lint',
+        'cd web && npm run format:check',
+        'cd web && npm run typecheck',
+        'cd web && npm run test:libs:coverage',
+        'cd web && npm run test:app:coverage',
+        'cd web && npm run build:dev',
       ]);
     });
 
-    it.each(jobs)('runs $name in web/, with an npm script that exists', ({ run, root }) => {
-      expect(root).toBe('web/');
-      const script = /^npm run (\S+)$/.exec(run)?.[1] ?? '';
+    it.each(jobs)('runs $name whichever files were pushed, because it has nothing but a name and a command', (job) => {
+      // Lefthook skips a job that has a `root`, a `glob` or another file filter when no pushed file matches it, and the
+      // specs in web/ also guard files outside web/ (README.md, LICENSE, .gitignore, lefthook.yml, .claude/). A push
+      // that changes only those has to run every gate.
+      expect(Object.keys(job).sort()).toEqual(['name', 'run']);
+    });
+
+    it.each(jobs)('runs $name in web/, with an npm script that exists', ({ run }) => {
+      const script = /^cd web && npm run (\S+)$/.exec(run)?.[1] ?? '';
       expect(scripts[script], `web/package.json has no script "${script}"`).toBeTruthy();
     });
 
