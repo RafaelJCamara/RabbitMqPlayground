@@ -1,0 +1,107 @@
+{
+  "id": "routing/only-the-prefix-amq-dot-is-reserved",
+  "kind": "routing",
+  "title": "Only a name that starts with amq. in lower case is reserved: amq, AMQ.x and amqp.x are ordinary names (ADR-0008, rule 9)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "amq",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "AMQ.upper",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "amqp.x",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "amq",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "AMQ.upper",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "amqp.x",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "amq",
+      "destination": {
+        "kind": "queue",
+        "name": "amq"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "AMQ.upper",
+      "destination": {
+        "kind": "queue",
+        "name": "AMQ.upper"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "amqp.x",
+      "destination": {
+        "kind": "queue",
+        "name": "amqp.x"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "amq",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "AMQ.upper",
+      "key": "",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "amqp.x",
+      "key": "",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "amq"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "AMQ.upper"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "amqp.x"
+        ]
+      }
+    ]
+  }
+}

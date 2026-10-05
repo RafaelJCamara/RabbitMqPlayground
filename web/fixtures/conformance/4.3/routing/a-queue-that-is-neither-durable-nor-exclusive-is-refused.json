@@ -1,0 +1,73 @@
+{
+  "id": "routing/a-queue-that-is-neither-durable-nor-exclusive-is-refused",
+  "kind": "routing",
+  "title": "A queue that is neither durable nor exclusive is refused, the broker closes the connection, and nothing was created (ADR-0008, rule 28)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "events",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "transient",
+      "durable": false,
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "events",
+      "destination": {
+        "kind": "queue",
+        "name": "transient"
+      },
+      "key": "",
+      "refused": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "events",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "events",
+      "key": "",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 2,
+        "level": "connection",
+        "code": 541,
+        "text": "INTERNAL_ERROR - Feature `transient_nonexcl_queues` is deprecated.\nBy default, this feature is not permitted anymore.\nThe feature will be removed from a future major RabbitMQ version, regardless of the configuration; actual version to be determined.\nTo..."
+      },
+      {
+        "step": 3,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no queue 'transient' in vhost '/'"
+      }
+    ]
+  }
+}

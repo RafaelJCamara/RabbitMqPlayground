@@ -1,0 +1,120 @@
+{
+  "id": "routing/a-binding-to-something-that-does-not-exist-is-refused",
+  "kind": "routing",
+  "title": "A binding that names an exchange or a queue that does not exist is refused with 404, and routing is unchanged (M1 plan, S1)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "nope",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "nope"
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "exchange",
+        "name": "nope"
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "nope",
+      "destination": {
+        "kind": "exchange",
+        "name": "e"
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "other",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      }
+    ],
+    "refusals": [
+      {
+        "step": 3,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'nope' in vhost '/'"
+      },
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no queue 'nope' in vhost '/'"
+      },
+      {
+        "step": 5,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'nope' in vhost '/'"
+      },
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'nope' in vhost '/'"
+      }
+    ]
+  }
+}

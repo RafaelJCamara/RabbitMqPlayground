@@ -1,0 +1,110 @@
+{
+  "id": "routing/names-that-start-with-amq-are-refused",
+  "kind": "routing",
+  "title": "Declaring an exchange or a queue whose name starts with amq. is refused with 403, and nothing is created (ADR-0008, rule 9)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "events",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "events",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "exchange.declare",
+      "name": "amq.mine",
+      "type": "direct",
+      "refused": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "amq.mine",
+      "durable": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "amq.",
+      "type": "direct",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "amq.mine",
+      "key": "",
+      "body": "m1",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "amq.mine",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "events",
+      "key": "",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - exchange name 'amq.mine' contains reserved prefix 'amq.*'"
+      },
+      {
+        "step": 5,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - queue name 'amq.mine' contains reserved prefix 'amq.*'"
+      },
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - exchange name 'amq.' contains reserved prefix 'amq.*'"
+      },
+      {
+        "step": 7,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'amq.mine' in vhost '/'"
+      },
+      {
+        "step": 8,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'amq.mine' in vhost '/'"
+      }
+    ]
+  }
+}

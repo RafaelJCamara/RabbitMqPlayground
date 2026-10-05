@@ -1,0 +1,44 @@
+{
+  "id": "routing/a-queue-that-is-not-durable-is-accepted-when-it-is-exclusive",
+  "kind": "routing",
+  "title": "A queue that is not durable is accepted when it is exclusive, and routing reaches it (ADR-0008, rule 28)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "events",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "mine",
+      "durable": false,
+      "exclusive": true
+    },
+    {
+      "op": "bind",
+      "source": "events",
+      "destination": {
+        "kind": "queue",
+        "name": "mine"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "events",
+      "key": "",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "mine"
+        ]
+      }
+    ]
+  }
+}

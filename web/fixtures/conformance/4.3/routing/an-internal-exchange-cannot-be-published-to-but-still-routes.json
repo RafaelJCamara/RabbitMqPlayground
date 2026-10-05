@@ -1,0 +1,86 @@
+{
+  "id": "routing/an-internal-exchange-cannot-be-published-to-but-still-routes",
+  "kind": "routing",
+  "title": "A client cannot publish to an internal exchange, but another exchange can route through it (ADR-0008, rule 8)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "front",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "hidden",
+      "type": "fanout",
+      "internal": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "front",
+      "destination": {
+        "kind": "exchange",
+        "name": "hidden"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "hidden",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "hidden",
+      "key": "",
+      "body": "m1",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "front",
+      "key": "",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "hidden",
+      "key": "",
+      "body": "m3",
+      "refused": true
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - cannot publish to internal exchange 'hidden' in vhost '/'"
+      },
+      {
+        "step": 8,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - cannot publish to internal exchange 'hidden' in vhost '/'"
+      }
+    ]
+  }
+}

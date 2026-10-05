@@ -1,13 +1,13 @@
 {
   "baseline": "4.3",
   "image": "rabbitmq:4.3-management",
-  "imageDigest": "rabbitmq@sha256:1d7dfbe6c30e04f0a130a1d6e1b31028fe8245c7033c09ffb6ea6554b8fdb2f0",
+  "imageDigest": "rabbitmq@sha256:8dd6e3570ddaa2ef82a6c3a8950e79c1f73893adfbdddbc374fc1f1ac8a0f5dd",
   "serverVersion": "4.3.6",
   "erlangVersion": "27.3.4.18",
-  "generatorSha": "b48545978d763f2156fea5b9f14935a8faccfc1e",
-  "recordedAt": "2026-10-05T16:39:37.377Z",
+  "generatorSha": "6821304eda0a1ce2eb1c58733f49306fc6248c8f",
+  "recordedAt": "2026-10-05T18:34:16.274Z",
   "counts": {
-    "routing": 7,
+    "routing": 16,
     "delivery": 5
   }
 }

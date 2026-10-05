@@ -1,0 +1,84 @@
+{
+  "id": "routing/publishing-to-an-exchange-that-does-not-exist-is-refused",
+  "kind": "routing",
+  "title": "Publishing to an exchange that does not exist is refused, whether or not a queue has that name, and the next publish works (M1 plan, S1)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "events",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "events",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "nowhere",
+      "key": "k",
+      "body": "m1",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "events",
+      "key": "k",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "inbox",
+      "key": "k",
+      "body": "m3",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "events",
+      "key": "k",
+      "body": "m4"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'nowhere' in vhost '/'"
+      },
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 404,
+        "text": "NOT_FOUND - no exchange 'inbox' in vhost '/'"
+      }
+    ]
+  }
+}
