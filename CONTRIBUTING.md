@@ -105,7 +105,8 @@ A change is done when all of these hold ([ADR-0015](docs/adr/0015-testing-strate
     any other broker: the manifest has to name the pinned image, and an offline spec fails otherwise.
   - The workflow uploads the fixtures as an artifact, and also prints them in its log. If you cannot download the
     artifact, save the log and run `npx tsx tools/conformance/dump.ts restore <log> fixtures/conformance/4.3`. It
-    rebuilds the files byte for byte, and refuses any file whose SHA-256 differs from the one the job printed.
+    rebuilds the files byte for byte, and refuses any file whose SHA-256 differs from the one the job printed. The
+    output of `gh run view <run> --log --job <job>` works as it is. The whole set is about 250 KB of log.
 
 ## Reporting bugs and proposing features
 

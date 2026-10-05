@@ -28,11 +28,15 @@ export function renderDump(files: readonly DumpedFile[]): string {
     .join('\n');
 }
 
-/** Job logs put a timestamp, and sometimes colour codes, in front of every line. */
+/**
+ * Job logs put a timestamp, and sometimes colour codes, in front of every line. `gh run view --log` adds the name of the
+ * job and of the step before that, each followed by a tab. A line of the dump has no tab of its own, because JSON writes
+ * a tab inside a string as `\t`.
+ */
 const ESCAPE = String.fromCharCode(27);
 const COLOUR_CODE = `${ESCAPE}\\[[0-9;]*m`;
 const COLOUR_CODES = new RegExp(COLOUR_CODE, 'g');
-const LOG_PREFIX = new RegExp(`^(?:${COLOUR_CODE})*\\d{4}-\\d\\d-\\d\\dT[\\d:.]+Z\\s?`);
+const LOG_PREFIX = new RegExp(`^(?:[^\\t]*\\t[^\\t]*\\t)?(?:${COLOUR_CODE})*\\d{4}-\\d\\d-\\d\\dT[\\d:.]+Z\\s?`);
 const stripLogDecoration = (line: string): string => line.replace(LOG_PREFIX, '').replace(COLOUR_CODES, '').trimEnd();
 
 export function parseDump(text: string): DumpedFile[] {

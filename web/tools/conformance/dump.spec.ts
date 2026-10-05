@@ -41,6 +41,20 @@ describe('parseDump', () => {
     ).toEqual(files);
   });
 
+  it('copes with the job and step columns that `gh run view --log` puts in front of the timestamp', () => {
+    const log = renderDump(files)
+      .split('\n')
+      .map(
+        (line) =>
+          `Conformance against RabbitMQ 4.3\tPrint the recorded fixtures, for a tool\t2026-10-05T18:50:52.0479369Z ${line}`,
+      )
+      .join('\n');
+
+    expect(
+      parseDump(`Conformance against RabbitMQ 4.3\tSet up job\t2026-10-05T18:49:00.0000000Z noise\n${log}`),
+    ).toEqual(files);
+  });
+
   it('copes with Windows line endings', () => {
     expect(parseDump(renderDump(files).replaceAll('\n', '\r\n'))).toEqual(files);
   });
