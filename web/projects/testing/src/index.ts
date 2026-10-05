@@ -7,3 +7,19 @@ export {
   type Env,
   type FastCheckSettings,
 } from './lib/fast-check';
+export {
+  bool,
+  deepFreeze,
+  entry,
+  exchange,
+  exists,
+  float,
+  headerArguments,
+  int,
+  message,
+  str,
+  toExchange,
+  toQueue,
+  topology,
+} from './lib/topology';
+export { arbHeaderArguments, arbHeaderCondition, arbHeaderValue, arbMessageFor, arbTopology } from './lib/arbitraries';
