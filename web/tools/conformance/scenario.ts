@@ -24,39 +24,65 @@ export interface HeaderEntry<V> {
   readonly value: V;
 }
 
+export type ExchangeType = 'direct' | 'fanout' | 'topic' | 'headers';
+
 export interface Destination {
   readonly kind: 'queue' | 'exchange';
   readonly name: string;
 }
 
+/**
+ * A step that the broker may refuse. A refusal is an answer the broker gives, not a failure of the run: it closes the
+ * channel the step was sent on (or, for the one refusal that is about a deprecated feature, the whole connection), and
+ * the recording keeps the reply code and text. `refused: true` says that this is what the scenario is about. A step
+ * without it is expected to be accepted, and a refusal there fails the run, so a scenario cannot hide a surprise.
+ * The same holds the other way round: a step marked as refused that the broker accepts fails the run too.
+ */
+interface Refusable {
+  readonly refused?: true;
+}
+
 export type Step =
-  | {
+  | ({
       readonly op: 'exchange.declare';
       readonly name: string;
-      readonly type: 'direct' | 'fanout' | 'topic' | 'headers';
+      readonly type: ExchangeType;
       readonly durable?: boolean;
       readonly autoDelete?: boolean;
+      /** An internal exchange cannot be published to by a client, but other exchanges can still route through it. */
       readonly internal?: boolean;
-    }
-  /** Scenarios always set `durable: true`: RabbitMQ 4.3 refuses a queue that is neither durable nor exclusive. */
-  | { readonly op: 'queue.declare'; readonly name: string; readonly durable?: boolean }
-  | {
+    } & Refusable)
+  /**
+   * RabbitMQ 4.3 refuses a queue that is neither durable nor exclusive, so a scenario either leaves `durable` out (a
+   * durable queue) or says `durable: false` together with `exclusive: true`, or expects the refusal.
+   */
+  | ({
+      readonly op: 'queue.declare';
+      readonly name: string;
+      readonly durable?: boolean;
+      /** An exclusive queue belongs to the connection that declared it, and goes when that connection closes. */
+      readonly exclusive?: boolean;
+    } & Refusable)
+  | ({
       readonly op: 'bind';
       readonly source: string;
       readonly destination: Destination;
       readonly key?: string;
       /** For a headers exchange. `xMatch: null` leaves `x-match` out, which the broker treats as `all`. */
       readonly headers?: { readonly xMatch: XMatch | null; readonly args: readonly HeaderEntry<HeaderCondition>[] };
-    }
-  | {
+    } & Refusable)
+  | ({
       /** Always published as `mandatory`, so an unroutable message comes back instead of vanishing. */
       readonly op: 'basic.publish';
       readonly exchange: string;
       readonly key?: string;
       readonly headers?: readonly HeaderEntry<HeaderValue>[];
-      /** Also the message's identity: it is unique within a scenario, and the observations name messages by it. */
+      /**
+       * Also the message's identity: it is unique among the messages a scenario publishes and the broker accepts, and
+       * the observations name messages by it. A refused publish is not observed as a message, so it may reuse a body.
+       */
       readonly body: string;
-    }
+    } & Refusable)
   | { readonly op: 'channel.open'; readonly channel: string; readonly prefetch?: number }
   | {
       readonly op: 'basic.consume';
@@ -101,6 +127,11 @@ const ROUTING_OPS = new Set<Step['op']>(['exchange.declare', 'queue.declare', 'b
  * Checks that a scenario is well formed: the id fits the kind, every name a step uses was declared before, names are
  * not declared twice, bodies are unique, and a routing scenario uses only routing steps. A scenario that is wrong
  * should fail here, with a message, not as a confusing broker error in CI.
+ *
+ * The checks about names and what the broker accepts apply to a step that is expected to be accepted. A step marked
+ * `refused` is expected to fail in one of those ways, so they are left out for it, and what it names is not counted as
+ * declared, because the broker did not create it. Only a routing scenario may expect a refusal, because that is where
+ * the broker's refusals are (a delivery scenario that gets one has gone wrong).
  */
 export function validateScenario(scenario: Scenario): void {
   const fail = (message: string): never => {
@@ -119,6 +150,7 @@ export function validateScenario(scenario: Scenario): void {
   }
 
   const exchanges = new Set<string>(['']); // the default exchange always exists
+  const internalExchanges = new Set<string>();
   const queues = new Set<string>();
   const channels = new Set<string>();
   const closedChannels = new Set<string>();
@@ -131,40 +163,82 @@ export function validateScenario(scenario: Scenario): void {
       fail(`${at}: a routing scenario cannot use ${step.op}`);
     }
 
+    // The step may come from a fixture file, so what is there is checked and not trusted to be `true` or absent.
+    const flag = (step as { readonly refused?: unknown }).refused;
+    if (flag !== undefined && flag !== true) {
+      fail(`${at}: "refused" can only be true. Leave it out for a step that the broker accepts`);
+    }
+    if (flag === true && !ROUTING_OPS.has(step.op)) {
+      fail(`${at}: ${step.op} cannot be marked as refused`);
+    }
+    if (flag === true && scenario.kind !== 'routing') {
+      fail(`${at}: a delivery scenario cannot expect a refusal`);
+    }
+    const refused = flag === true;
+
     switch (step.op) {
       case 'exchange.declare':
-        if (step.name === '' || step.name.startsWith('amq.')) {
-          fail(`${at}: "${step.name}" is not a name a client may declare`);
+        if (!refused) {
+          if (step.name === '' || step.name.startsWith('amq.')) {
+            fail(`${at}: "${step.name}" is not a name a client may declare`);
+          }
+          if (exchanges.has(step.name)) {
+            fail(`${at}: exchange "${step.name}" is declared twice`);
+          }
+          exchanges.add(step.name);
+          if (step.internal === true) {
+            internalExchanges.add(step.name);
+          }
         }
-        if (exchanges.has(step.name)) {
-          fail(`${at}: exchange "${step.name}" is declared twice`);
-        }
-        exchanges.add(step.name);
         break;
       case 'queue.declare':
-        if (step.name === '' || queues.has(step.name)) {
-          fail(`${at}: queue "${step.name}" is empty or declared twice`);
+        if (!refused) {
+          if (step.name === '' || queues.has(step.name)) {
+            fail(`${at}: queue "${step.name}" is empty or declared twice`);
+          }
+          if (step.name.startsWith('amq.')) {
+            fail(`${at}: "${step.name}" is not a name a client may declare`);
+          }
+          if (step.durable === false && step.exclusive !== true) {
+            fail(
+              `${at}: RabbitMQ 4.3 refuses queue "${step.name}", which is neither durable nor exclusive. Make it durable, or expect the refusal`,
+            );
+          }
+          queues.add(step.name);
         }
-        queues.add(step.name);
         break;
       case 'bind':
-        if (step.source === '' || !exchanges.has(step.source)) {
-          fail(`${at}: the source exchange "${step.source}" is not declared`);
-        }
-        if (
-          step.destination.kind === 'queue' ? !queues.has(step.destination.name) : !exchanges.has(step.destination.name)
-        ) {
-          fail(`${at}: the destination ${step.destination.kind} "${step.destination.name}" is not declared`);
+        if (!refused) {
+          if (step.source === '' || !exchanges.has(step.source)) {
+            fail(`${at}: the source exchange "${step.source}" is not declared`);
+          }
+          if (step.destination.kind === 'exchange' && step.destination.name === '') {
+            fail(`${at}: the default exchange cannot be the destination of a binding`);
+          }
+          if (
+            step.destination.kind === 'queue'
+              ? !queues.has(step.destination.name)
+              : !exchanges.has(step.destination.name)
+          ) {
+            fail(`${at}: the destination ${step.destination.kind} "${step.destination.name}" is not declared`);
+          }
         }
         break;
       case 'basic.publish':
-        if (!exchanges.has(step.exchange)) {
-          fail(`${at}: exchange "${step.exchange}" is not declared`);
+        if (!refused) {
+          if (!exchanges.has(step.exchange)) {
+            fail(`${at}: exchange "${step.exchange}" is not declared`);
+          }
+          if (internalExchanges.has(step.exchange)) {
+            fail(
+              `${at}: exchange "${step.exchange}" is internal, so the broker refuses a publish to it. Expect the refusal`,
+            );
+          }
+          if (bodies.has(step.body)) {
+            fail(`${at}: the body "${step.body}" is used twice, so the observations could not tell the messages apart`);
+          }
+          bodies.add(step.body);
         }
-        if (bodies.has(step.body)) {
-          fail(`${at}: the body "${step.body}" is used twice, so the observations could not tell the messages apart`);
-        }
-        bodies.add(step.body);
         break;
       case 'channel.open':
         if (channels.has(step.channel)) {

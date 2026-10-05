@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateScenario, type Scenario, type ScenarioKind, type Step } from './scenario';
-import type { Delivery, DeliveryObserved, Observed, RoutingObserved } from './session';
+import type { Delivery, DeliveryObserved, Observed, RecordedRefusal, RoutingObserved } from './session';
 
 /**
  * A fixture is a scenario together with what the broker did with it: the inputs and the outputs in one file
@@ -177,6 +177,36 @@ function deliveryMap(value: unknown, where: string, source: string): Record<stri
   );
 }
 
+function refusals(value: unknown, source: string): RecordedRefusal[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new FixtureError(source, '"observed.refusals" must be a list with at least one refusal, or be left out');
+  }
+  const list = value.map((item, index): RecordedRefusal => {
+    const step = isRecord(item) ? item['step'] : undefined;
+    const code = isRecord(item) ? item['code'] : undefined;
+    if (
+      !isRecord(item) ||
+      typeof step !== 'number' ||
+      !Number.isInteger(step) ||
+      step < 1 ||
+      (item['level'] !== 'channel' && item['level'] !== 'connection') ||
+      typeof code !== 'number' ||
+      !Number.isInteger(code) ||
+      typeof item['text'] !== 'string'
+    ) {
+      throw new FixtureError(
+        source,
+        `observed.refusals[${index}] must be { step: a whole number from 1, level: "channel" or "connection", code: a whole number, text: string }`,
+      );
+    }
+    return { step, level: item['level'], code, text: item['text'] };
+  });
+  if (list.some((refusal, index) => index > 0 && refusal.step <= (list[index - 1]?.step ?? 0))) {
+    throw new FixtureError(source, '"observed.refusals" must be in the order of the steps, each step once');
+  }
+  return list;
+}
+
 function parseObserved(kind: ScenarioKind, value: unknown, source: string): Observed {
   if (!isRecord(value)) {
     throw new FixtureError(source, '"observed" must be an object');
@@ -200,6 +230,7 @@ function parseObserved(kind: ScenarioKind, value: unknown, source: string): Obse
         }
         return { body: route['body'], returned: route['returned'], queues: queues as string[] };
       }),
+      ...(value['refusals'] === undefined ? {} : { refusals: refusals(value['refusals'], source) }),
     };
     return observed;
   }

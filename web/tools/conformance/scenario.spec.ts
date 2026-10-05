@@ -143,6 +143,181 @@ describe('validateScenario', () => {
   });
 });
 
+describe('validateScenario, for a step that the broker is expected to refuse', () => {
+  const refused = <S extends Step>(step: S): S => ({ ...step, refused: true });
+  const bindTo = (source: string, destination: { kind: 'queue' | 'exchange'; name: string }): Step => ({
+    op: 'bind',
+    source,
+    destination,
+  });
+
+  it.each<[string, Scenario]>([
+    [
+      'declaring a reserved exchange name',
+      routing(refused({ op: 'exchange.declare', name: 'amq.custom', type: 'direct' })),
+    ],
+    [
+      'declaring an exchange with the empty name',
+      routing(refused({ op: 'exchange.declare', name: '', type: 'direct' })),
+    ],
+    [
+      'declaring an exchange that exists with other properties',
+      routing(exchange, refused({ op: 'exchange.declare', name: 'e', type: 'topic' })),
+    ],
+    ['declaring a reserved queue name', routing(refused({ op: 'queue.declare', name: 'amq.custom', durable: true }))],
+    [
+      'declaring a queue that is neither durable nor exclusive',
+      routing(refused({ op: 'queue.declare', name: 'q', durable: false })),
+    ],
+    ['binding from the default exchange', routing(queue, refused(bindTo('', { kind: 'queue', name: 'q' })))],
+    ['binding to the default exchange', routing(exchange, refused(bindTo('e', { kind: 'exchange', name: '' })))],
+    [
+      'binding from an exchange that does not exist',
+      routing(queue, refused(bindTo('nope', { kind: 'queue', name: 'q' }))),
+    ],
+    [
+      'binding to a queue that does not exist',
+      routing(exchange, refused(bindTo('e', { kind: 'queue', name: 'nope' }))),
+    ],
+    [
+      'binding to an exchange that does not exist',
+      routing(exchange, refused(bindTo('e', { kind: 'exchange', name: 'nope' }))),
+    ],
+    [
+      'publishing to an exchange that does not exist',
+      routing(refused({ op: 'basic.publish', exchange: 'nope', body: 'm1' })),
+    ],
+  ])('accepts %s', (_name, scenario) => {
+    expect(() => validateScenario(scenario)).not.toThrow();
+  });
+
+  it('does not count what a refused step names as declared, because the broker did not create it', () => {
+    expect(() =>
+      validateScenario(
+        routing(refused({ op: 'exchange.declare', name: 'amq.custom', type: 'direct' }), {
+          op: 'basic.publish',
+          exchange: 'amq.custom',
+          body: 'm1',
+        }),
+      ),
+    ).toThrow(/exchange "amq\.custom" is not declared/);
+    expect(() =>
+      validateScenario(
+        routing(
+          exchange,
+          refused({ op: 'queue.declare', name: 'q', durable: false }),
+          bindTo('e', { kind: 'queue', name: 'q' }),
+        ),
+      ),
+    ).toThrow(/destination queue "q" is not declared/);
+  });
+
+  it('lets a body be used again after a publish that was refused, because only an accepted publish is observed', () => {
+    expect(() =>
+      validateScenario(
+        routing(exchange, refused({ op: 'basic.publish', exchange: 'nope', body: 'm1' }), {
+          op: 'basic.publish',
+          exchange: 'e',
+          body: 'm1',
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('keeps what was declared before a refused step, because the broker kept it too', () => {
+    expect(() => validateScenario(routing(exchange, refused(exchange), exchange))).toThrow(/declared twice/);
+  });
+
+  it.each<[string, Scenario, RegExp]>([
+    [
+      'a delivery scenario',
+      delivery(refused({ op: 'queue.declare', name: 'q', durable: false })),
+      /a delivery scenario cannot expect a refusal/,
+    ],
+    [
+      'a step that is not one of the four the broker can refuse here',
+      routing(queue, { op: 'channel.open', channel: 'ch', refused: true } as unknown as Step),
+      /routing scenario cannot use channel\.open/,
+    ],
+    [
+      'a refused flag on a delivery step',
+      delivery({ op: 'channel.open', channel: 'ch', refused: true } as unknown as Step),
+      /channel\.open cannot be marked as refused/,
+    ],
+    [
+      'a refused flag that is not true',
+      routing({ ...exchange, refused: false } as unknown as Step),
+      /"refused" can only be true/,
+    ],
+  ])('rejects %s', (_name, scenario, message) => {
+    expect(() => validateScenario(scenario)).toThrow(ScenarioError);
+    expect(() => validateScenario(scenario)).toThrow(message);
+  });
+});
+
+describe('validateScenario, for the queues and names that RabbitMQ 4.3 does not accept', () => {
+  it('rejects a queue that is neither durable nor exclusive, unless the step is expected to be refused', () => {
+    expect(() => validateScenario(routing({ op: 'queue.declare', name: 'q', durable: false }))).toThrow(
+      /neither durable nor exclusive/,
+    );
+  });
+
+  it('accepts a queue that is not durable but is exclusive', () => {
+    expect(() =>
+      validateScenario(routing({ op: 'queue.declare', name: 'q', durable: false, exclusive: true })),
+    ).not.toThrow();
+  });
+
+  it('rejects a publish to an internal exchange, unless the step is expected to be refused', () => {
+    const internal: Step = { op: 'exchange.declare', name: 'hidden', type: 'fanout', internal: true };
+
+    expect(() => validateScenario(routing(internal, { op: 'basic.publish', exchange: 'hidden', body: 'm1' }))).toThrow(
+      /exchange "hidden" is internal/,
+    );
+    expect(() =>
+      validateScenario(routing(internal, { op: 'basic.publish', exchange: 'hidden', body: 'm1', refused: true })),
+    ).not.toThrow();
+  });
+
+  it('accepts a binding to an internal exchange, and a publish to an exchange that merely sounds internal', () => {
+    const internal: Step = { op: 'exchange.declare', name: 'hidden', type: 'fanout', internal: true };
+
+    expect(() =>
+      validateScenario(
+        routing(
+          exchange,
+          internal,
+          { op: 'bind', source: 'e', destination: { kind: 'exchange', name: 'hidden' } },
+          { op: 'basic.publish', exchange: 'e', body: 'm1' },
+        ),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateScenario(
+        routing(
+          { op: 'exchange.declare', name: 'hidden', type: 'fanout', internal: false },
+          { op: 'basic.publish', exchange: 'hidden', body: 'm1' },
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects a binding to the default exchange, unless the step is expected to be refused', () => {
+    const toDefault: Step = { op: 'bind', source: 'e', destination: { kind: 'exchange', name: '' } };
+
+    expect(() => validateScenario(routing(exchange, toDefault))).toThrow(
+      /default exchange cannot be the destination of a binding/,
+    );
+    expect(() => validateScenario(routing(exchange, { ...toDefault, refused: true }))).not.toThrow();
+  });
+
+  it('rejects a queue name that starts with amq., unless the step is expected to be refused', () => {
+    expect(() => validateScenario(routing({ op: 'queue.declare', name: 'amq.mine', durable: true }))).toThrow(
+      /not a name a client may declare/,
+    );
+  });
+});
+
 describe('the seed scenarios', () => {
   it('are all well formed', () => {
     for (const scenario of SCENARIOS) {

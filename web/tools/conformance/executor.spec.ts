@@ -167,6 +167,144 @@ describe('runScenario', () => {
     });
   });
 
+  describe('when the broker refuses a step that the scenario expects it to refuse', () => {
+    const missing = {
+      level: 'channel',
+      code: 404,
+      text: "NOT_FOUND - no exchange 'nope' in vhost 'fake-vhost'",
+    } as const;
+    const publishToNowhere: Step = { op: 'basic.publish', exchange: 'nope', key: 'k', body: 'm1', refused: true };
+
+    it('records the refusal at its step, and carries on with the steps after it', async () => {
+      const session = new FakeSession();
+      session.refusals.set('publish m1', missing);
+      session.ready['q'] = [{ body: 'm2', redelivered: false }];
+
+      const observed = await runScenario(
+        session,
+        routing(
+          { op: 'exchange.declare', name: 'e', type: 'fanout' },
+          { op: 'queue.declare', name: 'q' },
+          { op: 'bind', source: 'e', destination: { kind: 'queue', name: 'q' } },
+          publishToNowhere,
+          { op: 'basic.publish', exchange: 'e', body: 'm2' },
+        ),
+      );
+
+      expect(observed).toEqual({
+        routes: [{ body: 'm2', returned: false, queues: ['q'] }],
+        refusals: [{ step: 4, level: 'channel', code: 404, text: "NOT_FOUND - no exchange 'nope' in vhost '/'" }],
+      });
+      expect(session.calls.slice(-5)).toEqual(['publish m1', 'settle', 'publish m2', 'settle', 'drain q']);
+    });
+
+    it('writes the vhost as "/", wherever the broker names it, so a recording does not depend on the vhost it ran in', async () => {
+      const session = new FakeSession();
+      session.refusals.set('publish m1', {
+        level: 'channel',
+        code: 404,
+        text: "NOT_FOUND - in vhost 'fake-vhost' and again in vhost 'fake-vhost', but not in fake-vhost-2",
+      });
+
+      const observed = await runScenario(session, routing(publishToNowhere));
+
+      expect(observed).toMatchObject({
+        refusals: [{ text: "NOT_FOUND - in vhost '/' and again in vhost '/', but not in fake-vhost-2" }],
+      });
+    });
+
+    it('records the level, so a refusal that closes the connection is told apart from one that closes a channel', async () => {
+      const session = new FakeSession();
+      session.refusals.set('queue.declare q', { level: 'connection', code: 541, text: 'INTERNAL_ERROR - gone' });
+
+      const observed = await runScenario(
+        session,
+        routing({ op: 'queue.declare', name: 'q', durable: false, refused: true }),
+      );
+
+      expect(observed).toEqual({
+        routes: [],
+        refusals: [{ step: 1, level: 'connection', code: 541, text: 'INTERNAL_ERROR - gone' }],
+      });
+    });
+
+    it('lists every refusal, in the order of the steps', async () => {
+      const session = new FakeSession();
+      session.refusals.set('publish m1', missing);
+      session.refusals.set('publish m2', { ...missing, code: 403 });
+
+      const observed = await runScenario(session, routing(publishToNowhere, { ...publishToNowhere, body: 'm2' }));
+
+      expect(observed).toMatchObject({
+        refusals: [
+          { step: 1, code: 404 },
+          { step: 2, code: 403 },
+        ],
+      });
+    });
+
+    it('does not count what a refused declaration names, so the queue is not drained and no route lists it', async () => {
+      const session = new FakeSession();
+      session.refusals.set('queue.declare amq.mine', {
+        level: 'channel',
+        code: 403,
+        text: 'ACCESS_REFUSED - reserved',
+      });
+
+      await runScenario(session, routing({ op: 'queue.declare', name: 'amq.mine', durable: true, refused: true }));
+
+      expect(session.calls).toEqual(['queue.declare amq.mine', 'settle']);
+    });
+
+    it('leaves the key out of the observation when nothing was refused', async () => {
+      const observed = await runScenario(new FakeSession(), routing({ op: 'queue.declare', name: 'q' }));
+
+      expect('refusals' in observed).toBe(false);
+    });
+  });
+
+  describe('when the broker and the scenario disagree about a refusal', () => {
+    it('fails, naming the step and what the broker said, when it refuses a step that was not marked', async () => {
+      const session = new FakeSession();
+      session.refusals.set('bind e q', {
+        level: 'channel',
+        code: 403,
+        text: 'ACCESS_REFUSED - operation not permitted on the default exchange',
+      });
+
+      await expect(
+        runScenario(
+          session,
+          routing(
+            { op: 'exchange.declare', name: 'e', type: 'direct' },
+            { op: 'queue.declare', name: 'q' },
+            { op: 'bind', source: 'e', destination: { kind: 'queue', name: 'q' } },
+          ),
+        ),
+      ).rejects.toThrow(
+        /step 3 \(bind\): the broker refused it with 403 ACCESS_REFUSED - operation not permitted on the default exchange.*mark the step as refused/s,
+      );
+    });
+
+    it('fails, naming the step, when the broker accepts a step that was marked as refused', async () => {
+      await expect(
+        runScenario(
+          new FakeSession(),
+          routing({ op: 'basic.publish', exchange: '', key: 'q', body: 'm1', refused: true }),
+        ),
+      ).rejects.toThrow(/step 1 \(basic\.publish\): marked as refused, but the broker accepted it/);
+    });
+
+    it('does not take another kind of error for a refusal', async () => {
+      const session = new FakeSession();
+      session.failOn = 'publish';
+
+      await expect(
+        runScenario(session, routing({ op: 'basic.publish', exchange: '', key: 'q', body: 'm1', refused: true })),
+      ).rejects.toThrow('scripted failure on publish m1');
+    });
+  });
+
   describe('when something is wrong', () => {
     it('refuses an invalid scenario before it touches the broker', async () => {
       const session = new FakeSession();

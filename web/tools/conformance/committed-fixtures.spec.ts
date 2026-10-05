@@ -68,13 +68,32 @@ describe('the fixtures', () => {
     'routes' in fixture.observed ? [[fixture, fixture.observed] as const] : [],
   );
   it.each(routing.map(([fixture, observed]) => [fixture.id, fixture, observed] as const))(
-    '%s records an outcome for every publish, in order',
+    '%s records an outcome for every publish the broker accepted, in order',
     (_id, fixture, observed) => {
       expect(observed.routes.map((route) => route.body)).toEqual(
-        stepsOf(fixture, 'basic.publish').map((step) => step.body),
+        stepsOf(fixture, 'basic.publish')
+          .filter((step) => step.refused !== true)
+          .map((step) => step.body),
       );
     },
   );
+
+  it.each(routing.map(([fixture, observed]) => [fixture.id, fixture, observed] as const))(
+    '%s records a refusal for exactly the steps that its scenario expects the broker to refuse',
+    (_id, fixture, observed) => {
+      const expected = fixture.steps.flatMap((step, index) => ('refused' in step && step.refused ? [index + 1] : []));
+
+      expect((observed.refusals ?? []).map((refusal) => refusal.step)).toEqual(expected);
+    },
+  );
+
+  it('record what the broker said without the name of the vhost that the runner gave each scenario', () => {
+    const texts = routing.flatMap(([, observed]) => (observed.refusals ?? []).map((refusal) => refusal.text));
+
+    for (const text of texts) {
+      expect(text).not.toContain('conformance-');
+    }
+  });
 
   const delivery = fixtures.flatMap((fixture) =>
     'deliveries' in fixture.observed ? [[fixture, fixture.observed] as const] : [],

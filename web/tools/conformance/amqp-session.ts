@@ -1,6 +1,6 @@
 import { connect, type Channel, type ChannelModel, type ConfirmChannel, type ConsumeMessage } from 'amqplib';
 import { bindingArguments, messageHeaders } from './headers';
-import type { BrokerSession, Delivery, StepOf } from './session';
+import { BrokerRefusal, type BrokerSession, type Delivery, type Refusal, type StepOf } from './session';
 
 /**
  * The AMQP side of a conformance session, on amqplib. It is the one part of the runner that needs a real broker, so it
@@ -12,6 +12,10 @@ import type { BrokerSession, Delivery, StepOf } from './session';
  *   before the answer comes back, and then asks each consumer channel one, so every delivery the broker already sent has
  *   reached the client;
  * - waiting for deliveries is by count (`waitForDeliveries`), never by time.
+ *
+ * When the broker refuses a step it closes the channel (or the connection) that the step used, and says why. The
+ * session reports that as a `BrokerRefusal`, after it has opened a new channel or connected again, so the scenario can
+ * carry on.
  */
 
 export interface AmqpTarget {
@@ -24,6 +28,34 @@ export interface AmqpTarget {
 
 const DELIVERY_TIMEOUT_MS = 20_000;
 
+/** amqplib puts the broker's reason for closing in the error's message, as `… with message "<reply text>"`. */
+const REPLY_TEXT = /with message "([\s\S]*)"$/;
+
+/**
+ * The refusal that an error from amqplib stands for, or `undefined` when it is something else, such as a socket failure
+ * or a mistake in how the client was used. When the broker closes a channel or the connection, amqplib sets `code` to the
+ * AMQP reply code and puts the reply text in the message.
+ */
+export function refusalFrom(level: Refusal['level'], error: unknown): Refusal | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+  const code = (error as { code?: unknown }).code;
+  const text = REPLY_TEXT.exec(error.message)?.[1];
+  return typeof code === 'number' && text !== undefined ? { level, code, text } : undefined;
+}
+
+function openConnection(target: AmqpTarget): Promise<ChannelModel> {
+  return connect({
+    protocol: 'amqp',
+    hostname: target.hostname,
+    port: target.port,
+    username: target.username,
+    password: target.password,
+    vhost: target.vhost,
+  });
+}
+
 interface ConsumerState {
   readonly channelName: string;
   readonly channel: Channel;
@@ -32,7 +64,10 @@ interface ConsumerState {
 }
 
 export class AmqpSession implements BrokerSession {
+  readonly vhost: string;
   private readonly queues: string[] = [];
+  /** Exclusive queues go when their connection does, which a refusal that closes the connection would do. */
+  private readonly exclusive = new Set<string>();
   private readonly channels = new Map<string, Channel>();
   private readonly consumers = new Map<string, ConsumerState>();
   private readonly received = new Map<string, Delivery[]>();
@@ -40,33 +75,65 @@ export class AmqpSession implements BrokerSession {
   private readonly waiters = new Set<{ readonly count: number; readonly wake: () => void }>();
   private total = 0;
   private failure: Error | undefined;
+  /** What the broker said when it last closed the connection or the control channel, until a step has taken it. */
+  private closedWith: Refusal | undefined;
 
   private constructor(
-    private readonly connection: ChannelModel,
-    private readonly control: ConfirmChannel,
+    private readonly target: AmqpTarget,
+    private connection: ChannelModel,
+    private control: ConfirmChannel,
     private readonly onClose?: () => Promise<void>,
   ) {
-    connection.on('error', (error) => this.fail(error));
-    connection.on('close', (error) => {
-      if (error) {
-        this.fail(error);
-      }
-    });
-    control.on('error', (error) => this.fail(error));
-    control.on('return', (message) => this.returned.add(message.content.toString()));
+    this.vhost = target.vhost;
+    this.watchConnection(connection);
+    this.watchControl(control);
   }
 
   /** `onClose` runs after the connection is closed, for example to delete the vhost that the session used. */
   static async connect(target: AmqpTarget, onClose?: () => Promise<void>): Promise<AmqpSession> {
-    const connection = await connect({
-      protocol: 'amqp',
-      hostname: target.hostname,
-      port: target.port,
-      username: target.username,
-      password: target.password,
-      vhost: target.vhost,
+    const connection = await openConnection(target);
+    return new AmqpSession(target, connection, await connection.createConfirmChannel(), onClose);
+  }
+
+  /** A close that the broker explains is a refusal, which the step that caused it reports. Anything else ends the run. */
+  private closedByBroker(level: Refusal['level']): (error: Error) => void {
+    return (error) => {
+      const refusal = refusalFrom(level, error);
+      if (refusal) {
+        this.closedWith ??= refusal;
+      } else {
+        this.fail(error);
+      }
+    };
+  }
+
+  private watchConnection(connection: ChannelModel): void {
+    connection.on('error', this.closedByBroker('connection'));
+    connection.on('close', (error) => {
+      if (error) {
+        this.closedByBroker('connection')(error);
+      }
     });
-    return new AmqpSession(connection, await connection.createConfirmChannel(), onClose);
+  }
+
+  private watchControl(control: ConfirmChannel): void {
+    control.on('error', this.closedByBroker('channel'));
+    control.on('return', (message) => this.returned.add(message.content.toString()));
+  }
+
+  /** Gets the session ready for the next step after the broker closed what the last one used. */
+  private async recover(refusal: Refusal): Promise<void> {
+    if (refusal.level === 'connection') {
+      if (this.exclusive.size > 0 || this.channels.size > 0) {
+        throw new Error(
+          `The broker closed the connection (${refusal.code} ${refusal.text}), which ended the channels and the exclusive queues that this scenario had opened. Put a refusal like that before them`,
+        );
+      }
+      this.connection = await openConnection(this.target);
+      this.watchConnection(this.connection);
+    }
+    this.control = await this.connection.createConfirmChannel();
+    this.watchControl(this.control);
   }
 
   private fail(error: Error): void {
@@ -83,16 +150,23 @@ export class AmqpSession implements BrokerSession {
   }
 
   /**
-   * Runs one broker call. When the broker closes the connection, every call still pending fails with amqplib's
-   * "Channel ended, no reply will be forthcoming", which says nothing. The broker's reason, such as "540 NOT_IMPLEMENTED
-   * … deprecated feature", arrives on the connection's own `error` event a moment later, so wait for it and report it,
-   * together with what the runner was trying to do.
+   * Runs one broker call. When the broker closes a channel or the connection, the call fails with something that says
+   * nothing: "channel closed", or amqplib's "Channel ended, no reply will be forthcoming". The broker's reason, such as
+   * "404 NOT_FOUND - no exchange 'x'", arrives on the `error` event of what it closed, so wait for it. A reason like that
+   * is a refusal: the session opens a new channel, or connects again, and throws it for the executor to judge. Any other
+   * failure is reported together with what the runner was trying to do.
    */
   private async call<T>(what: string, operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
     } catch (error) {
       await new Promise((resolve) => setImmediate(resolve));
+      const refusal = this.closedWith;
+      if (refusal) {
+        this.closedWith = undefined;
+        await this.recover(refusal);
+        throw new BrokerRefusal(refusal);
+      }
       const reason = this.failure ?? (error instanceof Error ? error : new Error(String(error)));
       throw new Error(`${what}: ${reason.message}`, { cause: error });
     }
@@ -117,12 +191,17 @@ export class AmqpSession implements BrokerSession {
   }
 
   async declareQueue(step: StepOf<'queue.declare'>): Promise<void> {
-    // `durable` is spelled out in every scenario. The fallback is `true` because a queue that is neither durable nor
-    // exclusive is a deprecated feature that newer RabbitMQ versions refuse.
+    // The fallback for `durable` is `true`, because RabbitMQ 4.3 refuses a queue that is neither durable nor exclusive.
     await this.call(`declare queue "${step.name}"`, () =>
-      this.control.assertQueue(step.name, { durable: step.durable ?? true }),
+      this.control.assertQueue(step.name, {
+        durable: step.durable ?? true,
+        ...(step.exclusive === true ? { exclusive: true } : {}),
+      }),
     );
     this.queues.push(step.name);
+    if (step.exclusive === true) {
+      this.exclusive.add(step.name);
+    }
   }
 
   async bind(step: StepOf<'bind'>): Promise<void> {

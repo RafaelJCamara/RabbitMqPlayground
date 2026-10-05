@@ -29,6 +29,22 @@ const scenario: Scenario = {
   ],
 };
 const routingFixture: Fixture = toFixture(scenario, { routes: [{ body: 'm1', returned: false, queues: ['q'] }] });
+const refusedFixture: Fixture = toFixture(
+  {
+    id: 'routing/refused',
+    kind: 'routing',
+    title: 'Refused',
+    steps: [
+      { op: 'exchange.declare', name: 'e', type: 'direct' },
+      { op: 'basic.publish', exchange: 'nope', body: 'm1', refused: true },
+      { op: 'basic.publish', exchange: 'e', body: 'm2' },
+    ],
+  },
+  {
+    routes: [{ body: 'm2', returned: true, queues: [] }],
+    refusals: [{ step: 2, level: 'channel', code: 404, text: "NOT_FOUND - no exchange 'nope' in vhost '/'" }],
+  },
+);
 const deliveryFixture: Fixture = {
   id: 'delivery/one',
   kind: 'delivery',
@@ -149,6 +165,23 @@ describe('parseFixture', () => {
     expect(parseFixture(serializeFixture(deliveryFixture), 'f.json')).toEqual(deliveryFixture);
   });
 
+  it('accepts a fixture that records a refusal, and gives it back as it was written', () => {
+    expect(parseFixture(serializeFixture(refusedFixture), 'f.json')).toEqual(refusedFixture);
+    expect(serializeFixture(refusedFixture)).toContain('"code": 404');
+  });
+
+  it('accepts a refusal that closed the connection, as well as one that closed a channel', () => {
+    const closedConnection: Fixture = {
+      ...refusedFixture,
+      observed: {
+        routes: [],
+        refusals: [{ step: 2, level: 'connection', code: 541, text: 'INTERNAL_ERROR - gone' }],
+      },
+    };
+
+    expect(parseFixture(serializeFixture(closedConnection), 'f.json')).toEqual(closedConnection);
+  });
+
   it.each<[string, (fixture: Record<string, unknown>) => unknown, RegExp]>([
     ['not JSON', () => '{', /not valid JSON/],
     ['an array', () => [], /must be a JSON object/],
@@ -168,6 +201,79 @@ describe('parseFixture', () => {
       'a route whose queues are not strings',
       (f) => ({ ...f, observed: { routes: [{ body: 'm1', returned: false, queues: [1] }] } }),
       /observed\.routes\[0\]/,
+    ],
+    [
+      'refusals that are not an array',
+      (f) => ({ ...f, observed: { routes: [], refusals: {} } }),
+      /"observed\.refusals" must be a list with at least one refusal/,
+    ],
+    [
+      'an empty list of refusals, which is written by leaving the key out',
+      (f) => ({ ...f, observed: { routes: [], refusals: [] } }),
+      /"observed\.refusals" must be a list with at least one refusal/,
+    ],
+    [
+      'a refusal of the wrong shape',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 1, level: 'channel', code: 404 }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal with a level that is neither channel nor connection',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 1, level: 'link', code: 404, text: 'x' }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal at a step that is not a whole number',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 1.5, level: 'channel', code: 404, text: 'x' }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal whose code is not a whole number',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 1, level: 'channel', code: 404.5, text: 'x' }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal whose code is not a number',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 1, level: 'channel', code: '404', text: 'x' }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal that is not an object',
+      (f) => ({ ...f, observed: { routes: [], refusals: ['404'] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'a refusal at step 0, because steps are counted from 1',
+      (f) => ({ ...f, observed: { routes: [], refusals: [{ step: 0, level: 'channel', code: 404, text: 'x' }] } }),
+      /observed\.refusals\[0\] must be \{ step/,
+    ],
+    [
+      'refusals that are not in the order of the steps',
+      (f) => ({
+        ...f,
+        observed: {
+          routes: [],
+          refusals: [
+            { step: 3, level: 'channel', code: 404, text: 'x' },
+            { step: 2, level: 'channel', code: 404, text: 'x' },
+          ],
+        },
+      }),
+      /"observed\.refusals" must be in the order of the steps, each step once/,
+    ],
+    [
+      'two refusals at the same step',
+      (f) => ({
+        ...f,
+        observed: {
+          routes: [],
+          refusals: [
+            { step: 2, level: 'channel', code: 404, text: 'x' },
+            { step: 2, level: 'channel', code: 404, text: 'x' },
+          ],
+        },
+      }),
+      /"observed\.refusals" must be in the order of the steps, each step once/,
     ],
     [
       'steps that are not a valid scenario',

@@ -1,18 +1,35 @@
-import type { Destination, HeaderCondition, HeaderEntry, HeaderValue, Step, XMatch } from '../scenario';
+import type { Destination, ExchangeType, HeaderCondition, HeaderEntry, HeaderValue, Step, XMatch } from '../scenario';
 
 /** Small constructors that keep the scenario files readable. */
+
+type StepOf<Op extends Step['op']> = Extract<Step, { readonly op: Op }>;
 
 export const queue = (name: string): Destination => ({ kind: 'queue', name });
 
 /**
- * A queue declaration. Queues are durable because a queue that is neither durable nor exclusive is a deprecated feature,
- * and RabbitMQ 4.3.6 refuses it: the broker closed the connection at the first such declaration (the first Nightly
- * record run, 37341314213; the reply code was not captured). Rule 28 of ADR-0008 only says "deprecated". That wants a
- * scenario of its own, and a superseding ADR if it changes the rule, once the vocabulary can say that a step is expected
- * to be refused. S1 needs that anyway, for the internal and missing exchanges it refuses.
+ * A durable queue, which is how a scenario gets a queue. RabbitMQ 4.3 refuses a queue that is neither durable nor
+ * exclusive: it closes the connection (the first Nightly record run, 37341314213, was the first to see it). The
+ * refusal has scenarios of their own (`routing/a-queue-that-is-neither-durable-nor-exclusive-is-refused` and
+ * `routing/a-queue-that-is-not-durable-is-accepted-when-it-is-exclusive`), and ADR-0021 records what they showed.
  */
-export const declareQueue = (name: string): Step => ({ op: 'queue.declare', name, durable: true });
+export const declareQueue = (name: string): StepOf<'queue.declare'> => ({ op: 'queue.declare', name, durable: true });
 export const exchange = (name: string): Destination => ({ kind: 'exchange', name });
+
+export const declareExchange = (
+  name: string,
+  type: ExchangeType,
+  options: { readonly internal?: true } = {},
+): StepOf<'exchange.declare'> => ({
+  op: 'exchange.declare',
+  name,
+  type,
+  ...options,
+});
+
+type RefusableStep = StepOf<'exchange.declare' | 'queue.declare' | 'bind' | 'basic.publish'>;
+
+/** A step that the broker is expected to refuse. The recording keeps what it answered (see `Refusable`). */
+export const refused = <S extends RefusableStep>(step: S): S => ({ ...step, refused: true });
 
 export const str = (v: string): HeaderValue => ({ t: 'string', v });
 export const int = (v: number, width?: 8 | 16 | 32 | 64): HeaderValue =>
@@ -28,7 +45,7 @@ export const publish = (
   key: string,
   body: string,
   headers?: readonly HeaderEntry<HeaderValue>[],
-): Step => ({
+): StepOf<'basic.publish'> => ({
   op: 'basic.publish',
   exchange: exchangeName,
   key,
@@ -36,7 +53,7 @@ export const publish = (
   ...(headers ? { headers } : {}),
 });
 
-export const bindKey = (source: string, destination: Destination, key: string): Step => ({
+export const bindKey = (source: string, destination: Destination, key: string): StepOf<'bind'> => ({
   op: 'bind',
   source,
   destination,
@@ -48,4 +65,4 @@ export const bindHeaders = (
   destination: Destination,
   xMatch: XMatch | null,
   args: readonly HeaderEntry<HeaderCondition>[],
-): Step => ({ op: 'bind', source, destination, key: '', headers: { xMatch, args } });
+): StepOf<'bind'> => ({ op: 'bind', source, destination, key: '', headers: { xMatch, args } });

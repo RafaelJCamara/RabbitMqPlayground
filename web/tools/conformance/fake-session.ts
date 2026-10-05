@@ -1,4 +1,4 @@
-import type { BrokerSession, Delivery, StepOf } from './session';
+import { BrokerRefusal, type BrokerSession, type Delivery, type Refusal, type StepOf } from './session';
 import type { LiveBroker } from './management';
 
 /**
@@ -6,7 +6,10 @@ import type { LiveBroker } from './management';
  * from what the test sets up. It does not route or deliver anything: that is the broker's job, and the live run's.
  */
 export class FakeSession implements BrokerSession {
+  readonly vhost = 'fake-vhost';
   readonly calls: string[] = [];
+  /** Calls that the broker refuses, by the text `calls` records for them. They throw a `BrokerRefusal`. */
+  readonly refusals = new Map<string, Refusal>();
   /** Bodies that `publish` should report as returned. */
   readonly returned = new Set<string>();
   /** What `drain` hands back, by queue. */
@@ -18,6 +21,10 @@ export class FakeSession implements BrokerSession {
 
   private record(call: string): Promise<void> {
     this.calls.push(call);
+    const refusal = this.refusals.get(call);
+    if (refusal) {
+      return Promise.reject(new BrokerRefusal(refusal));
+    }
     return call.startsWith(this.failOn ?? '\0')
       ? Promise.reject(new Error(`scripted failure on ${call}`))
       : Promise.resolve();
