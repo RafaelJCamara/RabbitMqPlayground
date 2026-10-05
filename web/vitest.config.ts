@@ -18,7 +18,17 @@ export default defineConfig({
       })),
       {
         extends: true,
-        test: { name: 'tools', include: ['tools/**/*.spec.ts'], environment: 'node', setupFiles },
+        // These specs build TypeScript programs, load the ESLint configuration and spawn processes. That takes seconds on
+        // a loaded machine, such as the pre-push hook with lint, both coverage runs and a build running at once, so they
+        // get a limit that fits the work. A test that fails is still a failure, and none is skipped.
+        test: {
+          name: 'tools',
+          include: ['tools/**/*.spec.ts'],
+          environment: 'node',
+          setupFiles,
+          testTimeout: 60_000,
+          hookTimeout: 120_000,
+        },
       },
     ],
     coverage: {
