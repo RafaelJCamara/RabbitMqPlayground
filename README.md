@@ -1,6 +1,7 @@
 # RabbitMQ Playground
 
 [![CI](https://github.com/RafaelJCamara/RabbitMqPlayground/actions/workflows/ci.yml/badge.svg)](https://github.com/RafaelJCamara/RabbitMqPlayground/actions/workflows/ci.yml)
+[![Nightly](https://github.com/RafaelJCamara/RabbitMqPlayground/actions/workflows/nightly.yml/badge.svg)](https://github.com/RafaelJCamara/RabbitMqPlayground/actions/workflows/nightly.yml)
 
 A browser-based, visual RabbitMQ playground for **learning**, **teaching and presenting**, and **designing
 topologies**. Build a topology of producers, exchanges, queues and consumers, send messages through it, and see why each

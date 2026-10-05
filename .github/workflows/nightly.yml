@@ -1,0 +1,97 @@
+# Nightly checks (ADR-0015). They are too slow, or too dependent on Docker, to run on every push:
+#
+#   conformance  plays the recorded scenarios against a real RabbitMQ and compares what it does with the fixtures.
+#                Any difference fails the job and is investigated. A fixture is never re-recorded to make a failure go away.
+#   fuzz         runs the property-based suites with a random seed and many more runs.
+#
+# Run it by hand from the Actions tab: mode "record" records new fixtures (see below), "verify" is the nightly check.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "verify compares with the committed fixtures. record writes new ones and uploads them as an artifact for a person to review and commit."
+        type: choice
+        options: [verify, record]
+        default: verify
+      fuzz_runs:
+        description: "Runs per property in the fuzz job"
+        type: string
+        default: "5000"
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    name: Conformance against RabbitMQ 4.3
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    env:
+      CONFORMANCE_MODE: ${{ inputs.mode || 'verify' }}
+      # A missing Docker is a failure here, not a skip.
+      CONFORMANCE_REQUIRED: "true"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - name: Conformance run (${{ env.CONFORMANCE_MODE }})
+        working-directory: web
+        run: npm run test:conformance
+      - name: Upload the recorded fixtures, for review
+        if: success() && env.CONFORMANCE_MODE == 'record'
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-fixtures
+          path: web/fixtures/conformance
+          retention-days: 14
+      - name: Upload the drift report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-drift
+          path: web/conformance-diff
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Open or update the conformance-drift issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          summary=""
+          if [ -f web/conformance-diff/summary.md ]; then summary=$(cat web/conformance-diff/summary.md); fi
+          body=$(printf 'The nightly conformance run failed: %s\n\n%s\n\nThe `conformance-drift` artifact of that run has the recorded and the observed behaviour of each case that drifted.\n\nInvestigate before anything else. Do not re-record a fixture to make this go away (ADR-0015). If the broker disproves a rule in ADR-0008 or ADR-0009, write the superseding ADR in the same push as the new fixture.\n' "$RUN_URL" "$summary")
+          gh label create conformance-drift --color B60205 --description 'The live broker no longer matches the conformance fixtures' 2>/dev/null || true
+          existing=$(gh issue list --label conformance-drift --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title 'Conformance drift against RabbitMQ 4.3' --label conformance-drift --body "$body"
+          fi
+
+  fuzz:
+    name: Property tests with a random seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - name: Choose a seed and run the property suites
+        working-directory: web
+        env:
+          RUNS: ${{ inputs.fuzz_runs || '5000' }}
+        run: |
+          seed=$(date +%s)
+          echo "FC_SEED=$seed FC_NUM_RUNS=$RUNS"
+          echo "Seed $seed, $RUNS runs per property. To reproduce: \`FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:libs\`" >> "$GITHUB_STEP_SUMMARY"
+          FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:libs
