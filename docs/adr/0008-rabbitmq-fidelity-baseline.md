@@ -1,6 +1,7 @@
 # ADR-0008: RabbitMQ fidelity baseline (4.3.x)
 
-- **Status:** Accepted. Rule 28 is superseded by [ADR-0021](0021-transient-queues-are-refused.md).
+- **Status:** Accepted. Rule 28 is superseded by [ADR-0021](0021-transient-queues-are-refused.md), and rule 4 is extended
+  by [ADR-0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

@@ -1,0 +1,286 @@
+{
+  "id": "routing/topic-matching-is-case-sensitive-and-compares-bytes",
+  "kind": "routing",
+  "title": "Words are compared byte for byte: case, a composed and a decomposed é, and spaces all count (ADR-0008, rule 4)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.b"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:A.b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:A.b"
+      },
+      "key": "A.b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.B",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.B"
+      },
+      "key": "a.B"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:A.B",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:A.B"
+      },
+      "key": "A.B"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:é",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:é"
+      },
+      "key": "é"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:é",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:é"
+      },
+      "key": "é"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:é.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:é.*"
+      },
+      "key": "é.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.é",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.é"
+      },
+      "key": "*.é"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a. b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a. b"
+      },
+      "key": "a. b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.b ",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.b "
+      },
+      "key": "a.b "
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "k:a.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "A.b",
+      "body": "k:A.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.B",
+      "body": "k:a.B"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "A.B",
+      "body": "k:A.B"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "é",
+      "body": "k:é"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "é",
+      "body": "k:é"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "é.x",
+      "body": "k:é.x"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "x.é",
+      "body": "k:x.é"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a. b",
+      "body": "k:a. b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b ",
+      "body": "k:a.b "
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "k:a.b",
+        "returned": false,
+        "queues": [
+          "p:a.b"
+        ]
+      },
+      {
+        "body": "k:A.b",
+        "returned": false,
+        "queues": [
+          "p:A.b"
+        ]
+      },
+      {
+        "body": "k:a.B",
+        "returned": false,
+        "queues": [
+          "p:a.B"
+        ]
+      },
+      {
+        "body": "k:A.B",
+        "returned": false,
+        "queues": [
+          "p:A.B"
+        ]
+      },
+      {
+        "body": "k:é",
+        "returned": false,
+        "queues": [
+          "p:é"
+        ]
+      },
+      {
+        "body": "k:é",
+        "returned": false,
+        "queues": [
+          "p:é"
+        ]
+      },
+      {
+        "body": "k:é.x",
+        "returned": false,
+        "queues": [
+          "p:é.*"
+        ]
+      },
+      {
+        "body": "k:x.é",
+        "returned": false,
+        "queues": [
+          "p:*.é"
+        ]
+      },
+      {
+        "body": "k:a. b",
+        "returned": false,
+        "queues": [
+          "p:a. b"
+        ]
+      },
+      {
+        "body": "k:a.b ",
+        "returned": false,
+        "queues": [
+          "p:a.b "
+        ]
+      }
+    ]
+  }
+}

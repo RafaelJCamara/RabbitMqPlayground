@@ -1,0 +1,288 @@
+{
+  "id": "routing/topic-star-matches-exactly-one-word-and-the-word-may-be-empty",
+  "kind": "routing",
+  "title": "A * matches exactly one word, and that word may be empty (ADR-0008, rule 4)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*"
+      },
+      "key": "*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.*"
+      },
+      "key": "*.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.*"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.b"
+      },
+      "key": "*.b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.*.b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.*.b"
+      },
+      "key": "a.*.b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.*.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.*.*"
+      },
+      "key": "*.*.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.a",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.a"
+      },
+      "key": "*.a"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*."
+      },
+      "key": "*."
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "",
+      "body": "k:"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a",
+      "body": "k:a"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "b",
+      "body": "k:b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": ".",
+      "body": "k:."
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.",
+      "body": "k:a."
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": ".b",
+      "body": "k:.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "k:a.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a..b",
+      "body": "k:a..b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.x.b",
+      "body": "k:a.x.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b.c",
+      "body": "k:a.b.c"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "..",
+      "body": "k:.."
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "...",
+      "body": "k:..."
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "k:",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "k:a",
+        "returned": false,
+        "queues": [
+          "p:*"
+        ]
+      },
+      {
+        "body": "k:b",
+        "returned": false,
+        "queues": [
+          "p:*"
+        ]
+      },
+      {
+        "body": "k:.",
+        "returned": false,
+        "queues": [
+          "p:*.*",
+          "p:*."
+        ]
+      },
+      {
+        "body": "k:a.",
+        "returned": false,
+        "queues": [
+          "p:*.*",
+          "p:a.*",
+          "p:*."
+        ]
+      },
+      {
+        "body": "k:.b",
+        "returned": false,
+        "queues": [
+          "p:*.*",
+          "p:*.b"
+        ]
+      },
+      {
+        "body": "k:a.b",
+        "returned": false,
+        "queues": [
+          "p:*.*",
+          "p:a.*",
+          "p:*.b"
+        ]
+      },
+      {
+        "body": "k:a..b",
+        "returned": false,
+        "queues": [
+          "p:a.*.b",
+          "p:*.*.*"
+        ]
+      },
+      {
+        "body": "k:a.x.b",
+        "returned": false,
+        "queues": [
+          "p:a.*.b",
+          "p:*.*.*"
+        ]
+      },
+      {
+        "body": "k:a.b.c",
+        "returned": false,
+        "queues": [
+          "p:*.*.*"
+        ]
+      },
+      {
+        "body": "k:..",
+        "returned": false,
+        "queues": [
+          "p:*.*.*"
+        ]
+      },
+      {
+        "body": "k:...",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

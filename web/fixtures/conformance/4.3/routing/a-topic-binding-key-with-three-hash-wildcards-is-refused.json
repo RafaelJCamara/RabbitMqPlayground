@@ -1,0 +1,189 @@
+{
+  "id": "routing/a-topic-binding-key-with-three-hash-wildcards-is-refused",
+  "kind": "routing",
+  "title": "A topic binding key may have at most two # words: a third is refused with 406, and only a topic exchange minds (ADR-0022)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "other",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "wild",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "literal",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "wild"
+      },
+      "key": "#.#.#",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "wild"
+      },
+      "key": "a.#.b.#.c.#",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "wild"
+      },
+      "key": "#.*.#.*.#",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "exchange",
+        "name": "other"
+      },
+      "key": "#.#.#",
+      "refused": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "wild"
+      },
+      "key": "#.#"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "wild"
+      },
+      "key": "a.#.b.#.c"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "literal"
+      },
+      "key": "##.#.#"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "literal"
+      },
+      "key": "#.#.#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b.c",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "##.x.y",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "#.#.#",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "a",
+      "body": "m4"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "wild"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "wild",
+          "literal"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "literal"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      }
+    ],
+    "refusals": [
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - Topic binding key '#.#.#' uses 3 '#' wildcards, at most 2 are allowed"
+      },
+      {
+        "step": 7,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - Topic binding key 'a.#.b.#.c.#' uses 3 '#' wildcards, at most 2 are allowed"
+      },
+      {
+        "step": 8,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - Topic binding key '#.*.#.*.#' uses 3 '#' wildcards, at most 2 are allowed"
+      },
+      {
+        "step": 9,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - Topic binding key '#.#.#' uses 3 '#' wildcards, at most 2 are allowed"
+      }
+    ]
+  }
+}

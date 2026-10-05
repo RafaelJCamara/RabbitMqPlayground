@@ -1,0 +1,146 @@
+{
+  "id": "routing/topic-a-queue-gets-one-copy-however-many-patterns-match",
+  "kind": "routing",
+  "title": "A queue that is bound with several patterns that all match still gets one copy of the message (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "one",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "two",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "three",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "one"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "one"
+      },
+      "key": "#"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "one"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "one"
+      },
+      "key": "*.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "one"
+      },
+      "key": "*.*"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "two"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "two"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "three"
+      },
+      "key": "#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "x",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.c",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "one",
+          "two",
+          "three"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "one",
+          "three"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "one",
+          "three"
+        ]
+      }
+    ]
+  }
+}

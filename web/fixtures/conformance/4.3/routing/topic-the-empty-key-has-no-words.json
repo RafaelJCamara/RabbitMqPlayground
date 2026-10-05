@@ -1,0 +1,281 @@
+{
+  "id": "routing/topic-the-empty-key-has-no-words",
+  "kind": "routing",
+  "title": "The empty routing key has zero words: # matches it and * does not, and \".\" is two empty words (ADR-0008, rule 4)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:#"
+      },
+      "key": "#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*"
+      },
+      "key": "*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:#.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:#.#"
+      },
+      "key": "#.#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.#"
+      },
+      "key": "*.#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:#.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:#.*"
+      },
+      "key": "#.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*.*"
+      },
+      "key": "*.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a"
+      },
+      "key": "a"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:a.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:a.#"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:#.a",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:#.a"
+      },
+      "key": "#.a"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:.",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:."
+      },
+      "key": "."
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:.#"
+      },
+      "key": ".#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:#.",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:#."
+      },
+      "key": "#."
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:*.",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:*."
+      },
+      "key": "*."
+    },
+    {
+      "op": "queue.declare",
+      "name": "p:.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "p:.*"
+      },
+      "key": ".*"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "",
+      "body": "k:"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": ".",
+      "body": "k:."
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "..",
+      "body": "k:.."
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "k:",
+        "returned": false,
+        "queues": [
+          "p:",
+          "p:#",
+          "p:#.#"
+        ]
+      },
+      {
+        "body": "k:.",
+        "returned": false,
+        "queues": [
+          "p:#",
+          "p:#.#",
+          "p:*.#",
+          "p:#.*",
+          "p:*.*",
+          "p:.",
+          "p:.#",
+          "p:#.",
+          "p:*.",
+          "p:.*"
+        ]
+      },
+      {
+        "body": "k:..",
+        "returned": false,
+        "queues": [
+          "p:#",
+          "p:#.#",
+          "p:*.#",
+          "p:#.*",
+          "p:.#",
+          "p:#."
+        ]
+      }
+    ]
+  }
+}
