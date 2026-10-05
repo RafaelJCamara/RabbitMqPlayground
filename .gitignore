@@ -55,3 +55,36 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+## ---------------------------------------------------------------------------
+## Node, Angular and test output (the web/ workspace)
+## ---------------------------------------------------------------------------
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build output and caches
+/web/dist/
+/web/.angular/
+/web/.tsbuild/
+*.tsbuildinfo
+
+# Test and tool output
+/web/coverage/
+/web/playwright-report/
+/web/test-results/
+/web/blob-report/
+/web/bench-results/
+/web/conformance-diff/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Claude Code: personal settings stay local, the shared hook and settings are committed
+.claude/settings.local.json
