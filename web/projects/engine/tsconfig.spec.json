@@ -9,7 +9,7 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/**/*.spec.ts"],
+  "include": ["src/**/*.spec.ts", "src/**/*.bench.ts"],
   "references": [
     {
       "path": "./tsconfig.lib.json"

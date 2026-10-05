@@ -10,7 +10,7 @@
     "types": ["node"],
     "allowImportingTsExtensions": true
   },
-  "include": ["./**/*.ts", "../vitest.config.ts"],
+  "include": ["./**/*.ts", "../vitest.config.ts", "../vitest.bench.config.ts"],
   "references": [
     {
       "path": "../projects/engine/tsconfig.lib.json"

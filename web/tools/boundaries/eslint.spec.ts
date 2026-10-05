@@ -114,6 +114,15 @@ describe('imports', () => {
       }
     });
 
+    it('apply to benchmark files too, which are test code', async () => {
+      const bench = 'projects/engine/src/lib/example.bench.ts';
+
+      expect(await violations(bench, importing('vitest'))).toEqual([]);
+      expect(await violations(bench, using('[performance, console]'))).toEqual([]);
+      expect(await violations(bench, "it.only('x', () => {});\n")).toHaveLength(1);
+      expect(await violations(bench, importing('@angular/core'))).toHaveLength(1);
+    });
+
     it('may use `console` and `process`, which production engine code may not', async () => {
       expect(await violations('projects/engine/src/lib/example.spec.ts', using('[console, process]'))).toEqual([]);
     });

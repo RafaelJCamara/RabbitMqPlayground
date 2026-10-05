@@ -150,7 +150,7 @@ const noOptingOutOfOnPush = {
   ],
 };
 
-const SPECS = ['**/*.spec.ts'];
+const SPECS = ['**/*.spec.ts', '**/*.bench.ts'];
 const APP_SOURCES = ['projects/app/src/**/*.ts'];
 const FLOW_ADAPTER = 'projects/app/src/app/canvas/flow/**';
 
@@ -281,7 +281,7 @@ export default defineConfig([
 
   // Specs may use `@rmq/testing`, Vitest and Node, but the libraries' specs still keep the UI frameworks out.
   {
-    files: ['projects/{engine,domain,persistence,testing}/src/**/*.spec.ts'],
+    files: ['projects/{engine,domain,persistence,testing}/src/**/*.{spec,bench}.ts'],
     rules: {
       'no-restricted-imports': restrictImports(noDeepImports, noUiFramework),
       ...testHygiene,
@@ -303,14 +303,14 @@ export default defineConfig([
     },
   },
   {
-    files: ['tools/**/*.spec.ts'],
+    files: ['tools/**/*.{spec,bench}.ts'],
     rules: { ...testHygiene },
   },
 
   // Tools and end-to-end specs: free to import what they need, but never a path inside a library, and never `.only`.
   {
     files: ['tools/**/*.ts', 'e2e/**/*.ts', '*.config.ts'],
-    ignores: ['tools/**/*.spec.ts'],
+    ignores: ['tools/**/*.{spec,bench}.ts'],
     rules: { 'no-restricted-imports': restrictImports(noDeepImports) },
   },
   {

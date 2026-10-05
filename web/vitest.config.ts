@@ -24,7 +24,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['projects/{engine,domain,persistence}/src/**/*.ts'],
-      exclude: ['**/*.spec.ts', '**/*.d.ts'],
+      exclude: ['**/*.spec.ts', '**/*.bench.ts', '**/*.d.ts'],
       reporter: ['text-summary', 'text', 'lcovonly'],
       thresholds: {
         'projects/engine/src/**': threshold(95),
