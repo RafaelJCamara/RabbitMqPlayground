@@ -1,0 +1,400 @@
+{
+  "id": "routing/direct-compares-the-whole-key-byte-for-byte",
+  "kind": "routing",
+  "title": "A direct exchange routes on the whole key: case, spaces, a composed and a decomposed é, and the empty key all count, and # and * are ordinary characters (ADR-0008, rule 2)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:a",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:a"
+      },
+      "key": "a"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:A",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:A"
+      },
+      "key": "A"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:a ",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:a "
+      },
+      "key": "a "
+    },
+    {
+      "op": "queue.declare",
+      "name": "k: a",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k: a"
+      },
+      "key": " a"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:é",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:é"
+      },
+      "key": "é"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:é",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:é"
+      },
+      "key": "é"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:#"
+      },
+      "key": "#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:*"
+      },
+      "key": "*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:a.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:a.#"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:a.*",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:a.*"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:a.b",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:a.b"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "queue.declare",
+      "name": "k:#.#.#",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "k:#.#.#"
+      },
+      "key": "#.#.#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a",
+      "body": "m:a"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "A",
+      "body": "m:A"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a ",
+      "body": "m:a "
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": " a",
+      "body": "m: a"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "",
+      "body": "m:"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "é",
+      "body": "m:é"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "é",
+      "body": "m:é"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "#",
+      "body": "m:#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "*",
+      "body": "m:*"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.#",
+      "body": "m:a.#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.*",
+      "body": "m:a.*"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.b",
+      "body": "m:a.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "#.#.#",
+      "body": "m:#.#.#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.x",
+      "body": "m:a.x"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "x",
+      "body": "m:x"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.b.c",
+      "body": "m:a.b.c"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m:a",
+        "returned": false,
+        "queues": [
+          "k:a"
+        ]
+      },
+      {
+        "body": "m:A",
+        "returned": false,
+        "queues": [
+          "k:A"
+        ]
+      },
+      {
+        "body": "m:a ",
+        "returned": false,
+        "queues": [
+          "k:a "
+        ]
+      },
+      {
+        "body": "m: a",
+        "returned": false,
+        "queues": [
+          "k: a"
+        ]
+      },
+      {
+        "body": "m:",
+        "returned": false,
+        "queues": [
+          "k:"
+        ]
+      },
+      {
+        "body": "m:é",
+        "returned": false,
+        "queues": [
+          "k:é"
+        ]
+      },
+      {
+        "body": "m:é",
+        "returned": false,
+        "queues": [
+          "k:é"
+        ]
+      },
+      {
+        "body": "m:#",
+        "returned": false,
+        "queues": [
+          "k:#"
+        ]
+      },
+      {
+        "body": "m:*",
+        "returned": false,
+        "queues": [
+          "k:*"
+        ]
+      },
+      {
+        "body": "m:a.#",
+        "returned": false,
+        "queues": [
+          "k:a.#"
+        ]
+      },
+      {
+        "body": "m:a.*",
+        "returned": false,
+        "queues": [
+          "k:a.*"
+        ]
+      },
+      {
+        "body": "m:a.b",
+        "returned": false,
+        "queues": [
+          "k:a.b"
+        ]
+      },
+      {
+        "body": "m:#.#.#",
+        "returned": false,
+        "queues": [
+          "k:#.#.#"
+        ]
+      },
+      {
+        "body": "m:a.x",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m:x",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m:a.b.c",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

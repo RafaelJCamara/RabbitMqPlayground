@@ -1,0 +1,211 @@
+{
+  "id": "routing/a-message-that-matches-no-binding-is-returned",
+  "kind": "routing",
+  "title": "A message that no binding matches is returned to the publisher, on every type of exchange, and so is one that is passed on to an exchange with no queues (ADR-0008, rules 10 and 12)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "dead-end",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "dq",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "tq",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "hq",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "dq"
+      },
+      "key": "k"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "tq"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "hq"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "exchange",
+        "name": "dead-end"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "other",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.c",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "dead-end",
+      "key": "",
+      "body": "m5"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k",
+      "body": "m6"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m7"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "m8",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m6",
+        "returned": false,
+        "queues": [
+          "dq"
+        ]
+      },
+      {
+        "body": "m7",
+        "returned": false,
+        "queues": [
+          "tq"
+        ]
+      },
+      {
+        "body": "m8",
+        "returned": false,
+        "queues": [
+          "hq"
+        ]
+      }
+    ]
+  }
+}

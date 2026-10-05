@@ -1,0 +1,181 @@
+{
+  "id": "routing/headers-to-topic-to-direct-chain",
+  "kind": "routing",
+  "title": "A message goes through a headers, a topic and a direct exchange in a row, and a miss at any of them stops it (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "end",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "exchange",
+        "name": "t"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "string",
+              "v": "x"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "exchange",
+        "name": "d"
+      },
+      "key": "#.x"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "end"
+      },
+      "key": "k.x"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "k.x",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "k.x",
+      "body": "m2",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "string",
+            "v": "x"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "k.x",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "k.y",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "z.x",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

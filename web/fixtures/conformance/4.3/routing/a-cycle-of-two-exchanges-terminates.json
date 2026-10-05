@@ -1,0 +1,95 @@
+{
+  "id": "routing/a-cycle-of-two-exchanges-terminates",
+  "kind": "routing",
+  "title": "Two exchanges that are bound to each other pass a message on once and stop, whichever one is published to (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "a",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "b",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "qa",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "qb",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "a",
+      "destination": {
+        "kind": "exchange",
+        "name": "b"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "b",
+      "destination": {
+        "kind": "exchange",
+        "name": "a"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "a",
+      "destination": {
+        "kind": "queue",
+        "name": "qa"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "b",
+      "destination": {
+        "kind": "queue",
+        "name": "qb"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "a",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "b",
+      "key": "",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "qa",
+          "qb"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "qa",
+          "qb"
+        ]
+      }
+    ]
+  }
+}

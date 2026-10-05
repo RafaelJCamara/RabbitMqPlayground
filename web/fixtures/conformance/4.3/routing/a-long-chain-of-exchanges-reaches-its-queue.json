@@ -1,0 +1,475 @@
+{
+  "id": "routing/a-long-chain-of-exchanges-reaches-its-queue",
+  "kind": "routing",
+  "title": "A chain of thirty exchanges carries a message from either end to the queue at the last one (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "x01",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x02",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x03",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x04",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x05",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x06",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x07",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x08",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x09",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x10",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x11",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x12",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x13",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x14",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x15",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x16",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x17",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x18",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x19",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x20",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x21",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x22",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x23",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x24",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x25",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x26",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x27",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x28",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x29",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x30",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "end",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "x01",
+      "destination": {
+        "kind": "exchange",
+        "name": "x02"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x02",
+      "destination": {
+        "kind": "exchange",
+        "name": "x03"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x03",
+      "destination": {
+        "kind": "exchange",
+        "name": "x04"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x04",
+      "destination": {
+        "kind": "exchange",
+        "name": "x05"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x05",
+      "destination": {
+        "kind": "exchange",
+        "name": "x06"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x06",
+      "destination": {
+        "kind": "exchange",
+        "name": "x07"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x07",
+      "destination": {
+        "kind": "exchange",
+        "name": "x08"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x08",
+      "destination": {
+        "kind": "exchange",
+        "name": "x09"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x09",
+      "destination": {
+        "kind": "exchange",
+        "name": "x10"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x10",
+      "destination": {
+        "kind": "exchange",
+        "name": "x11"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x11",
+      "destination": {
+        "kind": "exchange",
+        "name": "x12"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x12",
+      "destination": {
+        "kind": "exchange",
+        "name": "x13"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x13",
+      "destination": {
+        "kind": "exchange",
+        "name": "x14"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x14",
+      "destination": {
+        "kind": "exchange",
+        "name": "x15"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x15",
+      "destination": {
+        "kind": "exchange",
+        "name": "x16"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x16",
+      "destination": {
+        "kind": "exchange",
+        "name": "x17"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x17",
+      "destination": {
+        "kind": "exchange",
+        "name": "x18"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x18",
+      "destination": {
+        "kind": "exchange",
+        "name": "x19"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x19",
+      "destination": {
+        "kind": "exchange",
+        "name": "x20"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x20",
+      "destination": {
+        "kind": "exchange",
+        "name": "x21"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x21",
+      "destination": {
+        "kind": "exchange",
+        "name": "x22"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x22",
+      "destination": {
+        "kind": "exchange",
+        "name": "x23"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x23",
+      "destination": {
+        "kind": "exchange",
+        "name": "x24"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x24",
+      "destination": {
+        "kind": "exchange",
+        "name": "x25"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x25",
+      "destination": {
+        "kind": "exchange",
+        "name": "x26"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x26",
+      "destination": {
+        "kind": "exchange",
+        "name": "x27"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x27",
+      "destination": {
+        "kind": "exchange",
+        "name": "x28"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x28",
+      "destination": {
+        "kind": "exchange",
+        "name": "x29"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x29",
+      "destination": {
+        "kind": "exchange",
+        "name": "x30"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x30",
+      "destination": {
+        "kind": "queue",
+        "name": "end"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x01",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x15",
+      "key": "",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x30",
+      "key": "",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "id": "routing/a-diamond-delivers-one-copy-however-many-paths-reach-the-queue",
+  "kind": "routing",
+  "title": "A queue that three paths reach, two through exchanges and one directly, gets one copy, and the exchange that two paths reach is visited once (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "top",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "left",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "right",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "shared",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "left-only",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "right-only",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "top",
+      "destination": {
+        "kind": "exchange",
+        "name": "left"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "top",
+      "destination": {
+        "kind": "exchange",
+        "name": "right"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "top",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "left",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "right",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "left",
+      "destination": {
+        "kind": "queue",
+        "name": "left-only"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "right",
+      "destination": {
+        "kind": "queue",
+        "name": "right-only"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "top",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "left",
+      "key": "",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "right",
+      "key": "",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "shared",
+          "left-only",
+          "right-only"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "shared",
+          "left-only"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "shared",
+          "right-only"
+        ]
+      }
+    ]
+  }
+}

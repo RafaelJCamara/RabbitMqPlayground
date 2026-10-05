@@ -1,0 +1,173 @@
+{
+  "id": "routing/fanout-ignores-the-key-and-the-headers-of-a-binding-and-of-a-message",
+  "kind": "routing",
+  "title": "A fanout exchange ignores the key and the headers, on the binding and on the message, even a key that no topic exchange would accept (ADR-0008, rule 3)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "plain",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "keyed",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "hashes",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "headed",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "plain"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "keyed"
+      },
+      "key": "some.key"
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "hashes"
+      },
+      "key": "#.#.#"
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "headed"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "other.key",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "some.key",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "plain",
+          "keyed",
+          "hashes",
+          "headed"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "plain",
+          "keyed",
+          "hashes",
+          "headed"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "plain",
+          "keyed",
+          "hashes",
+          "headed"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "plain",
+          "keyed",
+          "hashes",
+          "headed"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,237 @@
+{
+  "id": "routing/fanout-reaches-every-queue-bound-to-it",
+  "kind": "routing",
+  "title": "A fanout exchange sends one copy to every queue that is bound to it, however many there are (ADR-0008, rule 3)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q1"
+      },
+      "key": "key-0"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": "key-1"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q3",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": "key-2"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q4",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q4"
+      },
+      "key": "key-0"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q5",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q5"
+      },
+      "key": "key-1"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q6",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q6"
+      },
+      "key": "key-2"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q7",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q7"
+      },
+      "key": "key-0"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q8",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q8"
+      },
+      "key": "key-1"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q9",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q9"
+      },
+      "key": "key-2"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q10",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q10"
+      },
+      "key": "key-0"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q11",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q11"
+      },
+      "key": "key-1"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q12",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "q12"
+      },
+      "key": "key-2"
+    },
+    {
+      "op": "queue.declare",
+      "name": "unbound",
+      "durable": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "x",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "x",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "q1",
+          "q2",
+          "q3",
+          "q4",
+          "q5",
+          "q6",
+          "q7",
+          "q8",
+          "q9",
+          "q10",
+          "q11",
+          "q12"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "q1",
+          "q2",
+          "q3",
+          "q4",
+          "q5",
+          "q6",
+          "q7",
+          "q8",
+          "q9",
+          "q10",
+          "q11",
+          "q12"
+        ]
+      }
+    ]
+  }
+}

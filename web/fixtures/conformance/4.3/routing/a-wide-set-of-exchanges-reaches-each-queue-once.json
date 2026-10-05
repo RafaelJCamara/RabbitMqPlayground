@@ -1,0 +1,352 @@
+{
+  "id": "routing/a-wide-set-of-exchanges-reaches-each-queue-once",
+  "kind": "routing",
+  "title": "One exchange that passes a message on to eight exchanges, which all share a queue and each have one of their own, reaches every queue once (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "root",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x01",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x02",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x03",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x04",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x05",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x06",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x07",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x08",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "shared",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-1",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x01"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x01",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x01",
+      "destination": {
+        "kind": "queue",
+        "name": "own-1"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-2",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x02"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x02",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x02",
+      "destination": {
+        "kind": "queue",
+        "name": "own-2"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-3",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x03"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x03",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x03",
+      "destination": {
+        "kind": "queue",
+        "name": "own-3"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-4",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x04"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x04",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x04",
+      "destination": {
+        "kind": "queue",
+        "name": "own-4"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-5",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x05"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x05",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x05",
+      "destination": {
+        "kind": "queue",
+        "name": "own-5"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-6",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x06"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x06",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x06",
+      "destination": {
+        "kind": "queue",
+        "name": "own-6"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-7",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x07"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x07",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x07",
+      "destination": {
+        "kind": "queue",
+        "name": "own-7"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "own-8",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "root",
+      "destination": {
+        "kind": "exchange",
+        "name": "x08"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x08",
+      "destination": {
+        "kind": "queue",
+        "name": "shared"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x08",
+      "destination": {
+        "kind": "queue",
+        "name": "own-8"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "root",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x03",
+      "key": "",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "shared",
+          "own-1",
+          "own-2",
+          "own-3",
+          "own-4",
+          "own-5",
+          "own-6",
+          "own-7",
+          "own-8"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "shared",
+          "own-3"
+        ]
+      }
+    ]
+  }
+}

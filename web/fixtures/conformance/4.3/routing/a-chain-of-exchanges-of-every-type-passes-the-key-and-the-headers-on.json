@@ -1,0 +1,270 @@
+{
+  "id": "routing/a-chain-of-exchanges-of-every-type-passes-the-key-and-the-headers-on",
+  "kind": "routing",
+  "title": "A message goes through a topic, a headers, a direct and a fanout exchange in a row with the key and the headers it was published with, and each one applies its own type (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "end",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "side",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "exchange",
+        "name": "h"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "exchange",
+        "name": "d"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "exchange",
+        "name": "f"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "end"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "side"
+      },
+      "key": "a.c"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.c",
+      "body": "m2",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "b.b",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.x",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "whatever",
+      "body": "m6",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "a.b",
+      "body": "m7",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "a.b",
+      "body": "m8"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "x",
+      "body": "m9"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "side"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m6",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m7",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m8",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      },
+      {
+        "body": "m9",
+        "returned": false,
+        "queues": [
+          "end"
+        ]
+      }
+    ]
+  }
+}

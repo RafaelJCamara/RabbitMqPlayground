@@ -1,0 +1,127 @@
+{
+  "id": "routing/direct-a-key-may-reach-several-queues-and-a-queue-may-have-several-keys",
+  "kind": "routing",
+  "title": "A direct exchange sends a message to every queue that is bound with its key, and a queue bound twice, or with several keys, gets one copy (ADR-0008, rules 2 and 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "first",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "second",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "third",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "first"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "first"
+      },
+      "key": "k2"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "second"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "third"
+      },
+      "key": "k3"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "third"
+      },
+      "key": "k3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k1",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k2",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k3",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k4",
+      "body": "m4"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "first",
+          "second"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "first"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "third"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

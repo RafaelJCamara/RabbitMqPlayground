@@ -1,0 +1,156 @@
+{
+  "id": "routing/an-exchange-bound-to-itself-terminates",
+  "kind": "routing",
+  "title": "An exchange that is bound to itself passes a message on to itself once, and still delivers it (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "qf",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "qd",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "qt",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "exchange",
+        "name": "f"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "f",
+      "destination": {
+        "kind": "queue",
+        "name": "qf"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "exchange",
+        "name": "d"
+      },
+      "key": "k"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "qd"
+      },
+      "key": "k"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "exchange",
+        "name": "t"
+      },
+      "key": "#"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "qt"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "f",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "k",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "other",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "b",
+      "body": "m5"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "qf"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "qd"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "qt"
+        ]
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

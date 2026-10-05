@@ -4,10 +4,10 @@
   "imageDigest": "rabbitmq@sha256:8dd6e3570ddaa2ef82a6c3a8950e79c1f73893adfbdddbc374fc1f1ac8a0f5dd",
   "serverVersion": "4.3.6",
   "erlangVersion": "27.3.4.18",
-  "generatorSha": "ab1cb0519f69421e5d7bbdd79f78e5fd1bc2b05f",
-  "recordedAt": "2026-10-05T18:41:48.328Z",
+  "generatorSha": "d011ebd42a0e7f6918abf31084853cc6d2ab92ba",
+  "recordedAt": "2026-10-05T18:44:53.392Z",
   "counts": {
-    "routing": 31,
+    "routing": 47,
     "delivery": 5
   }
 }

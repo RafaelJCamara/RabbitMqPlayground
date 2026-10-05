@@ -1,0 +1,136 @@
+{
+  "id": "routing/a-binding-between-exchanges-is-matched-by-the-source-exchange-with-its-own-type",
+  "kind": "routing",
+  "title": "The key of a binding between exchanges is matched by the exchange it starts from, and the next exchange matches the same message again with its own bindings (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "src-direct",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "src-topic",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "dst-fanout",
+      "type": "fanout"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "dst-direct",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "fanned",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "exact",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "src-direct",
+      "destination": {
+        "kind": "exchange",
+        "name": "dst-fanout"
+      },
+      "key": "k"
+    },
+    {
+      "op": "bind",
+      "source": "dst-fanout",
+      "destination": {
+        "kind": "queue",
+        "name": "fanned"
+      },
+      "key": "ignored"
+    },
+    {
+      "op": "bind",
+      "source": "src-topic",
+      "destination": {
+        "kind": "exchange",
+        "name": "dst-direct"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "bind",
+      "source": "dst-direct",
+      "destination": {
+        "kind": "queue",
+        "name": "exact"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "src-direct",
+      "key": "k",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "src-direct",
+      "key": "other",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "src-topic",
+      "key": "a.b",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "src-topic",
+      "key": "a.c",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "src-topic",
+      "key": "b.b",
+      "body": "m5"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "fanned"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "exact"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

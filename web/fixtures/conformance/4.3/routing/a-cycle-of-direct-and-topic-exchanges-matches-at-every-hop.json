@@ -1,0 +1,132 @@
+{
+  "id": "routing/a-cycle-of-direct-and-topic-exchanges-matches-at-every-hop",
+  "kind": "routing",
+  "title": "A cycle through a direct and a topic exchange matches the key at every hop, so it is only gone round while the key matches (ADR-0008, rule 7)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "d",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic"
+    },
+    {
+      "op": "queue.declare",
+      "name": "from-d",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "from-t",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "exchange",
+        "name": "t"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "exchange",
+        "name": "d"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "bind",
+      "source": "d",
+      "destination": {
+        "kind": "queue",
+        "name": "from-d"
+      },
+      "key": "a.b"
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "from-t"
+      },
+      "key": "#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "a.b",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "d",
+      "key": "a.c",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.c",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "b",
+      "body": "m5"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "from-d",
+          "from-t"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "from-d",
+          "from-t"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "from-t"
+        ]
+      },
+      {
+        "body": "m5",
+        "returned": false,
+        "queues": [
+          "from-t"
+        ]
+      }
+    ]
+  }
+}
