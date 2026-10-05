@@ -21,20 +21,24 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted |
 | [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted |
 | [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted |
-| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017) |
+| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019) |
 | [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted |
 | [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted |
 | [0014](0014-broker-interop-via-definitions-json.md) | Broker interoperability via `definitions.json` only | Accepted |
 | [0015](0015-testing-strategy-and-definition-of-done.md) | Testing strategy and definition of done | Accepted |
 | [0016](0016-node-editor-library.md) | Node editor library: Foblex Flow | Accepted |
 | [0017](0017-canvas-keyboard-model.md) | Canvas keyboard model: Foblex Flow's keyboard layer | Accepted |
+| [0018](0018-workspace-layout-and-dependency-rules.md) | Workspace layout and dependency rules | Accepted |
+| [0019](0019-undo-through-immutable-document-snapshots.md) | Undo through immutable document snapshots | Accepted |
+| [0020](0020-mit-licence.md) | MIT licence | Accepted |
 
 ## Where to start
 
 - **What we're building and in what order:** [0002](0002-product-vision-and-scope.md), then
   [0003](0003-roadmap-and-milestones.md).
 - **How it's built:** [0005](0005-frontend-angular.md), [0006](0006-client-only-app-dotnet-api-when-needed.md),
-  [0007](0007-deterministic-simulation-engine.md), [0011](0011-explicit-linking-and-command-layer.md).
+  [0007](0007-deterministic-simulation-engine.md), [0011](0011-explicit-linking-and-command-layer.md),
+  [0018](0018-workspace-layout-and-dependency-rules.md), [0019](0019-undo-through-immutable-document-snapshots.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0015](0015-testing-strategy-and-definition-of-done.md).
 

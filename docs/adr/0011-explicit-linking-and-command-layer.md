@@ -1,7 +1,8 @@
 # ADR-0011: Explicit linking and a single command layer
 
 - **Status:** Accepted. Keyboard linking (item 4 of "Five ways to link") and "Initial keyboard shortcuts" are
-  superseded by [ADR-0017](0017-canvas-keyboard-model.md).
+  superseded by [ADR-0017](0017-canvas-keyboard-model.md). The "produces **patches**" clause of "One command layer" is
+  superseded by [ADR-0019](0019-undo-through-immutable-document-snapshots.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
