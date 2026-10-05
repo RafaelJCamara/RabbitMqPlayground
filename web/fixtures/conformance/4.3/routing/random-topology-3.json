@@ -1,0 +1,321 @@
+{
+  "id": "routing/random-topology-3",
+  "kind": "routing",
+  "title": "A random topology made from seed 3 with the engine's PRNG routes the way the broker does (ADR-0015)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "x1",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x2",
+      "type": "fanout",
+      "internal": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x3",
+      "type": "headers"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x4",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q1",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q2",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q3",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "exchange",
+        "name": "x3"
+      },
+      "key": "c"
+    },
+    {
+      "op": "bind",
+      "source": "x4",
+      "destination": {
+        "kind": "exchange",
+        "name": "x3"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x3",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          },
+          {
+            "key": "x-c",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": "c"
+    },
+    {
+      "op": "bind",
+      "source": "x4",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": "x"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "c.c",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "c.b",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "x-c",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "b.c.c",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "b.b.a",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "x-c",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "c",
+      "body": "m6",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "q3",
+      "body": "m7"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "q2",
+      "body": "m8"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "",
+      "body": "m9"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "",
+      "body": "m10",
+      "headers": []
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "c",
+      "body": "m11",
+      "headers": []
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "q3"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m6",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m7",
+        "returned": false,
+        "queues": [
+          "q3"
+        ]
+      },
+      {
+        "body": "m8",
+        "returned": false,
+        "queues": [
+          "q2"
+        ]
+      },
+      {
+        "body": "m9",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m10",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m11",
+        "returned": false,
+        "queues": [
+          "q3"
+        ]
+      }
+    ]
+  }
+}

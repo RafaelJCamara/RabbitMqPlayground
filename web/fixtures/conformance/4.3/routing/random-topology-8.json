@@ -1,0 +1,350 @@
+{
+  "id": "routing/random-topology-8",
+  "kind": "routing",
+  "title": "A random topology made from seed 8 with the engine's PRNG routes the way the broker does (ADR-0015)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "x1",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x2",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q1",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q2",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q3",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q4",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "exchange",
+        "name": "x2"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": "a"
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": "*.a.*"
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q4"
+      },
+      "key": "#.*"
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "exchange",
+        "name": "x1"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "a",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "nobody",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.c.b",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "c",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "b.b",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "x-c",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.c",
+      "body": "m6",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "a.b.b",
+      "body": "m7",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "c",
+      "body": "m8"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "a",
+      "body": "m9",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.b.b",
+      "body": "m10",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "c.b.b",
+      "body": "m11",
+      "headers": [
+        {
+          "key": "x-c",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "q2",
+          "q3",
+          "q4"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m5",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m6",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m7",
+        "returned": false,
+        "queues": [
+          "q2",
+          "q4"
+        ]
+      },
+      {
+        "body": "m8",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m9",
+        "returned": false,
+        "queues": [
+          "q2",
+          "q3",
+          "q4"
+        ]
+      },
+      {
+        "body": "m10",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m11",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      }
+    ]
+  }
+}

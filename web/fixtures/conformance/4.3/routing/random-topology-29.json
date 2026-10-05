@@ -1,0 +1,271 @@
+{
+  "id": "routing/random-topology-29",
+  "kind": "routing",
+  "title": "A random topology made from seed 29 with the engine's PRNG routes the way the broker does (ADR-0015)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "x1",
+      "type": "direct"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x2",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q1",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q2",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q3",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "exchange",
+        "name": "x1"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "exchange",
+        "name": "x2"
+      },
+      "key": "x"
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "queue",
+        "name": "q3"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "exchange",
+        "name": "x1"
+      },
+      "key": ""
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q1"
+      },
+      "key": "a"
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q1"
+      },
+      "key": "c.b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "b.a",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "b",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "a",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "q2",
+      "body": "m6"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.b",
+      "body": "m7",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "a",
+      "body": "m8",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "q3"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "q3"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": false,
+        "queues": [
+          "q1"
+        ]
+      },
+      {
+        "body": "m6",
+        "returned": false,
+        "queues": [
+          "q2"
+        ]
+      },
+      {
+        "body": "m7",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m8",
+        "returned": false,
+        "queues": [
+          "q1",
+          "q3"
+        ]
+      }
+    ]
+  }
+}

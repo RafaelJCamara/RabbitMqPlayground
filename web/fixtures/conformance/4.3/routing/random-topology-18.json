@@ -1,0 +1,335 @@
+{
+  "id": "routing/random-topology-18",
+  "kind": "routing",
+  "title": "A random topology made from seed 18 with the engine's PRNG routes the way the broker does (ADR-0015)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "x1",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x2",
+      "type": "topic"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "x3",
+      "type": "headers"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q1",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q2",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q3",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q4",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q2"
+      },
+      "key": "b.*"
+    },
+    {
+      "op": "bind",
+      "source": "x2",
+      "destination": {
+        "kind": "exchange",
+        "name": "x3"
+      },
+      "key": "#.*.a"
+    },
+    {
+      "op": "bind",
+      "source": "x3",
+      "destination": {
+        "kind": "exchange",
+        "name": "x3"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "b",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          },
+          {
+            "key": "x-c",
+            "value": {
+              "t": "integer",
+              "v": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "x3",
+      "destination": {
+        "kind": "exchange",
+        "name": "x3"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "x-c",
+            "value": {
+              "t": "string",
+              "v": "1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "x1",
+      "destination": {
+        "kind": "queue",
+        "name": "q4"
+      },
+      "key": "c.c"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "a.a",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "a.c.c",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "c.b.a",
+      "body": "m3",
+      "headers": []
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "q4",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "a",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "q2",
+      "body": "m6"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.c.a",
+      "body": "m7",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "",
+      "body": "m8",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        },
+        {
+          "key": "x-c",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "b.c",
+      "body": "m9",
+      "headers": []
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x3",
+      "key": "",
+      "body": "m10"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x1",
+      "key": "",
+      "body": "m11"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "x2",
+      "key": "b.a.b",
+      "body": "m12",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        },
+        {
+          "key": "b",
+          "value": {
+            "t": "integer",
+            "v": 2
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "q4"
+        ]
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m6",
+        "returned": false,
+        "queues": [
+          "q2"
+        ]
+      },
+      {
+        "body": "m7",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m8",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m9",
+        "returned": false,
+        "queues": [
+          "q2"
+        ]
+      },
+      {
+        "body": "m10",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m11",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m12",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

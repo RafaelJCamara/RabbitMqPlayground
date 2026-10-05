@@ -4,6 +4,7 @@ import { DELIVERY_SCENARIOS } from './delivery';
 import { EXCHANGE_SCENARIOS } from './exchanges';
 import { HEADERS_SCENARIOS } from './headers';
 import { LIMIT_SCENARIOS } from './limits';
+import { RANDOM_SCENARIOS } from './random';
 import { REFUSAL_SCENARIOS } from './refusals';
 import { ROUTING_SCENARIOS } from './routing';
 import { TOPIC_SCENARIOS } from './topic';
@@ -17,5 +18,6 @@ export const SCENARIOS: readonly Scenario[] = [
   ...LIMIT_SCENARIOS,
   ...TOPIC_SCENARIOS,
   ...HEADERS_SCENARIOS,
+  ...RANDOM_SCENARIOS,
   ...DELIVERY_SCENARIOS,
 ];
