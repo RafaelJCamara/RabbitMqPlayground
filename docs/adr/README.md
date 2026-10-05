@@ -26,7 +26,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted |
 | [0014](0014-broker-interop-via-definitions-json.md) | Broker interoperability via `definitions.json` only | Accepted |
 | [0015](0015-testing-strategy-and-definition-of-done.md) | Testing strategy and definition of done | Accepted |
-| [0016](0016-node-editor-library.md) | Node editor library | Proposed |
+| [0016](0016-node-editor-library.md) | Node editor library: Foblex Flow | Accepted |
 
 ## Where to start
 
