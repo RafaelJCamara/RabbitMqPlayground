@@ -82,6 +82,22 @@ export class AmqpSession implements BrokerSession {
     }
   }
 
+  /**
+   * Runs one broker call. When the broker closes the connection, every call still pending fails with amqplib's
+   * "Channel ended, no reply will be forthcoming", which says nothing. The broker's reason, such as "540 NOT_IMPLEMENTED
+   * … deprecated feature", arrives on the connection's own `error` event a moment later, so wait for it and report it,
+   * together with what the runner was trying to do.
+   */
+  private async call<T>(what: string, operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      await new Promise((resolve) => setImmediate(resolve));
+      const reason = this.failure ?? (error instanceof Error ? error : new Error(String(error)));
+      throw new Error(`${what}: ${reason.message}`, { cause: error });
+    }
+  }
+
   private channel(name: string): Channel {
     const channel = this.channels.get(name);
     if (!channel) {
@@ -91,50 +107,62 @@ export class AmqpSession implements BrokerSession {
   }
 
   async declareExchange(step: StepOf<'exchange.declare'>): Promise<void> {
-    await this.control.assertExchange(step.name, step.type, {
-      durable: step.durable ?? false,
-      autoDelete: step.autoDelete ?? false,
-      internal: step.internal ?? false,
-    });
+    await this.call(`declare exchange "${step.name}"`, () =>
+      this.control.assertExchange(step.name, step.type, {
+        durable: step.durable ?? false,
+        autoDelete: step.autoDelete ?? false,
+        internal: step.internal ?? false,
+      }),
+    );
   }
 
   async declareQueue(step: StepOf<'queue.declare'>): Promise<void> {
-    await this.control.assertQueue(step.name, { durable: step.durable ?? false });
+    // `durable` is spelled out in every scenario. The fallback is `true` because a queue that is neither durable nor
+    // exclusive is a deprecated feature that newer RabbitMQ versions refuse.
+    await this.call(`declare queue "${step.name}"`, () =>
+      this.control.assertQueue(step.name, { durable: step.durable ?? true }),
+    );
     this.queues.push(step.name);
   }
 
   async bind(step: StepOf<'bind'>): Promise<void> {
     const args = step.headers ? bindingArguments(step.headers) : undefined;
     const key = step.key ?? '';
-    if (step.destination.kind === 'queue') {
-      await this.control.bindQueue(step.destination.name, step.source, key, args);
-    } else {
-      await this.control.bindExchange(step.destination.name, step.source, key, args);
-    }
+    const { kind, name } = step.destination;
+    await this.call(`bind ${kind} "${name}" to "${step.source}"`, () =>
+      kind === 'queue'
+        ? this.control.bindQueue(name, step.source, key, args)
+        : this.control.bindExchange(name, step.source, key, args),
+    );
   }
 
   async publish(step: StepOf<'basic.publish'>): Promise<{ returned: boolean }> {
     this.returned.delete(step.body);
-    await new Promise<void>((resolve, reject) => {
-      this.control.publish(
-        step.exchange,
-        step.key ?? '',
-        Buffer.from(step.body),
-        { mandatory: true, ...(step.headers ? { headers: messageHeaders(step.headers) } : {}) },
-        (error) =>
-          error
-            ? reject(error instanceof Error ? error : new Error(`Publish was not confirmed: ${String(error)}`))
-            : resolve(),
-      );
-    });
+    await this.call(
+      `publish "${step.body}" to "${step.exchange}"`,
+      () =>
+        new Promise<void>((resolve, reject) => {
+          this.control.publish(
+            step.exchange,
+            step.key ?? '',
+            Buffer.from(step.body),
+            { mandatory: true, ...(step.headers ? { headers: messageHeaders(step.headers) } : {}) },
+            (error) =>
+              error
+                ? reject(error instanceof Error ? error : new Error(`Publish was not confirmed: ${String(error)}`))
+                : resolve(),
+          );
+        }),
+    );
     return { returned: this.returned.has(step.body) };
   }
 
   async openChannel(step: StepOf<'channel.open'>): Promise<void> {
-    const channel = await this.connection.createChannel();
+    const channel = await this.call(`open channel "${step.channel}"`, () => this.connection.createChannel());
     channel.on('error', (error) => this.fail(error));
     if (step.prefetch !== undefined) {
-      await channel.prefetch(step.prefetch);
+      const { prefetch } = step;
+      await this.call(`set the prefetch of channel "${step.channel}"`, () => channel.prefetch(prefetch));
     }
     this.channels.set(step.channel, channel);
   }
@@ -145,29 +173,30 @@ export class AmqpSession implements BrokerSession {
     this.consumers.set(step.consumer, state);
     this.received.set(step.consumer, []);
 
-    await channel.consume(
-      step.queue,
-      (message) => {
-        if (message === null) {
-          return; // the broker cancelled the consumer
-        }
-        this.received
-          .get(step.consumer)
-          ?.push({ body: message.content.toString(), redelivered: message.fields.redelivered });
-        if (step.ack === 'manual') {
-          state.unacked.push(message);
-        }
-        this.total += 1;
-        for (const waiter of [...this.waiters].filter((candidate) => this.total >= candidate.count)) {
-          waiter.wake();
-        }
-      },
-      { noAck: step.ack === 'auto', consumerTag: step.consumer },
+    const onMessage = (message: ConsumeMessage | null): void => {
+      if (message === null) {
+        return; // the broker cancelled the consumer
+      }
+      this.received
+        .get(step.consumer)
+        ?.push({ body: message.content.toString(), redelivered: message.fields.redelivered });
+      if (step.ack === 'manual') {
+        state.unacked.push(message);
+      }
+      this.total += 1;
+      for (const waiter of [...this.waiters].filter((candidate) => this.total >= candidate.count)) {
+        waiter.wake();
+      }
+    };
+
+    await this.call(`consume "${step.queue}" as "${step.consumer}"`, () =>
+      channel.consume(step.queue, onMessage, { noAck: step.ack === 'auto', consumerTag: step.consumer }),
     );
   }
 
   async cancel(step: StepOf<'basic.cancel'>): Promise<void> {
-    await this.consumer(step.consumer).channel.cancel(step.consumer);
+    const { channel } = this.consumer(step.consumer);
+    await this.call(`cancel consumer "${step.consumer}"`, () => channel.cancel(step.consumer));
   }
 
   async ack(step: StepOf<'basic.ack'>): Promise<void> {
@@ -185,7 +214,8 @@ export class AmqpSession implements BrokerSession {
   }
 
   async closeChannel(step: StepOf<'channel.close'>): Promise<void> {
-    await this.channel(step.channel).close();
+    const channel = this.channel(step.channel);
+    await this.call(`close channel "${step.channel}"`, () => channel.close());
     this.channels.delete(step.channel);
   }
 
@@ -224,10 +254,10 @@ export class AmqpSession implements BrokerSession {
 
   async settle(): Promise<void> {
     for (const queue of this.queues) {
-      await this.control.checkQueue(queue);
+      await this.call(`ask queue "${queue}" to catch up`, () => this.control.checkQueue(queue));
     }
-    for (const channel of this.channels.values()) {
-      await channel.checkExchange('amq.direct');
+    for (const [name, channel] of this.channels) {
+      await this.call(`ask channel "${name}" to catch up`, () => channel.checkExchange('amq.direct'));
     }
     this.check();
   }
@@ -239,7 +269,9 @@ export class AmqpSession implements BrokerSession {
   async drain(queue: string): Promise<readonly Delivery[]> {
     const messages: Delivery[] = [];
     for (;;) {
-      const message = await this.control.get(queue, { noAck: true });
+      const message = await this.call(`take a message from queue "${queue}"`, () =>
+        this.control.get(queue, { noAck: true }),
+      );
       if (message === false) {
         return messages;
       }

@@ -1,5 +1,5 @@
 import type { Scenario } from '../scenario';
-import { publish } from './helpers';
+import { declareQueue, publish } from './helpers';
 
 /**
  * Seed delivery scenarios, including the two bugs of the original simulator that this project is a regression test
@@ -11,7 +11,7 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     kind: 'delivery',
     title: 'Messages are dealt out to the consumers of a queue in turn (ADR-0008, rule 14)',
     steps: [
-      { op: 'queue.declare', name: 'work' },
+      declareQueue('work'),
       { op: 'channel.open', channel: 'ch1' },
       { op: 'channel.open', channel: 'ch2' },
       { op: 'basic.consume', channel: 'ch1', queue: 'work', consumer: 'c1', ack: 'auto' },
@@ -28,7 +28,7 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     kind: 'delivery',
     title: 'A consumer with a full prefetch window gets nothing more until it acknowledges (ADR-0008, rules 14 and 15)',
     steps: [
-      { op: 'queue.declare', name: 'work' },
+      declareQueue('work'),
       { op: 'channel.open', channel: 'ch1', prefetch: 2 },
       { op: 'channel.open', channel: 'ch2', prefetch: 1 },
       { op: 'basic.consume', channel: 'ch1', queue: 'work', consumer: 'c1', ack: 'manual' },
@@ -49,7 +49,7 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     title: 'With two consumers on a queue, the first message goes to exactly one of them',
     origin: 'RabbitMQSimulator/RabbitMQSimulator#10',
     steps: [
-      { op: 'queue.declare', name: 'jobs' },
+      declareQueue('jobs'),
       { op: 'channel.open', channel: 'ch1' },
       { op: 'channel.open', channel: 'ch2' },
       { op: 'basic.consume', channel: 'ch1', queue: 'jobs', consumer: 'c1', ack: 'auto' },
@@ -67,7 +67,7 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
       'Removing a consumer closes its channel: its unacked message is requeued as redelivered, and nothing else reaches it',
     origin: 'RabbitMQSimulator/RabbitMQSimulator#18',
     steps: [
-      { op: 'queue.declare', name: 'jobs' },
+      declareQueue('jobs'),
       { op: 'channel.open', channel: 'ch1', prefetch: 1 },
       { op: 'channel.open', channel: 'ch2', prefetch: 1 },
       { op: 'basic.consume', channel: 'ch1', queue: 'jobs', consumer: 'c1', ack: 'manual' },
@@ -88,7 +88,7 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     title:
       'Cancelling a consumer does not requeue its unacked messages, and it can still acknowledge them (ADR-0008, rule 16)',
     steps: [
-      { op: 'queue.declare', name: 'jobs' },
+      declareQueue('jobs'),
       { op: 'channel.open', channel: 'ch1', prefetch: 1 },
       { op: 'basic.consume', channel: 'ch1', queue: 'jobs', consumer: 'c1', ack: 'manual' },
       publish('', 'jobs', 'm1'),

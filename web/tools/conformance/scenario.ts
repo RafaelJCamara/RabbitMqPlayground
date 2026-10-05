@@ -38,6 +38,7 @@ export type Step =
       readonly autoDelete?: boolean;
       readonly internal?: boolean;
     }
+  /** Scenarios always set `durable: true`: RabbitMQ 4.3 refuses a queue that is neither durable nor exclusive. */
   | { readonly op: 'queue.declare'; readonly name: string; readonly durable?: boolean }
   | {
       readonly op: 'bind';

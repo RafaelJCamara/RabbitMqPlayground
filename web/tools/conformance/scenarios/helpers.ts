@@ -3,6 +3,12 @@ import type { Destination, HeaderCondition, HeaderEntry, HeaderValue, Step, XMat
 /** Small constructors that keep the scenario files readable. */
 
 export const queue = (name: string): Destination => ({ kind: 'queue', name });
+
+/**
+ * A queue declaration. Queues are durable because a queue that is neither durable nor exclusive is a deprecated feature
+ * that newer RabbitMQ versions refuse, and a scenario has to run on the baseline broker.
+ */
+export const declareQueue = (name: string): Step => ({ op: 'queue.declare', name, durable: true });
 export const exchange = (name: string): Destination => ({ kind: 'exchange', name });
 
 export const str = (v: string): HeaderValue => ({ t: 'string', v });
