@@ -1,0 +1,110 @@
+{
+  "id": "delivery/prefetch-holds-messages-back-until-an-ack",
+  "kind": "delivery",
+  "title": "A consumer with a full prefetch window gets nothing more until it acknowledges (ADR-0008, rules 14 and 15)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "work",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 2
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch2",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "work",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch2",
+      "queue": "work",
+      "consumer": "c2",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m5"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 4
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "work": [
+        {
+          "body": "m5",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,337 @@
+{
+  "id": "routing/headers-exchange-compares-typed-values",
+  "kind": "routing",
+  "title": "A headers exchange compares typed values: \"1\", 1, 1.0 and 64-bit 1 are tried against each other (ADR-0009)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "docs",
+      "type": "headers"
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-string",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-int",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-float",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-int64",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-bool",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-exists",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "q-any",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-string"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "string",
+              "v": "1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-int"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-float"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-int64"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1,
+              "width": 64
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-bool"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "b",
+            "value": {
+              "t": "boolean",
+              "v": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-exists"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "bind",
+      "source": "docs",
+      "destination": {
+        "kind": "queue",
+        "name": "q-any"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "b",
+            "value": {
+              "t": "boolean",
+              "v": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "string",
+            "v": "1"
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m2",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m3",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "float",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m4",
+      "headers": [
+        {
+          "key": "n",
+          "value": {
+            "t": "integer",
+            "v": 1,
+            "width": 64
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m5",
+      "headers": [
+        {
+          "key": "b",
+          "value": {
+            "t": "boolean",
+            "v": true
+          }
+        }
+      ]
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "docs",
+      "key": "",
+      "body": "m6",
+      "headers": []
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "q-string",
+          "q-exists"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "q-int",
+          "q-int64",
+          "q-exists",
+          "q-any"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "q-float",
+          "q-exists"
+        ]
+      },
+      {
+        "body": "m4",
+        "returned": false,
+        "queues": [
+          "q-int",
+          "q-int64",
+          "q-exists",
+          "q-any"
+        ]
+      },
+      {
+        "body": "m5",
+        "returned": false,
+        "queues": [
+          "q-bool",
+          "q-any"
+        ]
+      },
+      {
+        "body": "m6",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

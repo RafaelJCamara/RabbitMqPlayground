@@ -1,0 +1,89 @@
+{
+  "id": "delivery/round-robin-between-consumers",
+  "kind": "delivery",
+  "title": "Messages are dealt out to the consumers of a queue in turn (ADR-0008, rule 14)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "work",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1"
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch2"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "work",
+      "consumer": "c1",
+      "ack": "auto"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch2",
+      "queue": "work",
+      "consumer": "c2",
+      "ack": "auto"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "work",
+      "body": "m4"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 4
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "work": []
+    }
+  }
+}

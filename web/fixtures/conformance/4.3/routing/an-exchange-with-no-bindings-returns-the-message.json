@@ -1,0 +1,27 @@
+{
+  "id": "routing/an-exchange-with-no-bindings-returns-the-message",
+  "kind": "routing",
+  "title": "A mandatory message that no queue receives is returned to the publisher (ADR-0008, rules 10 and 12)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "nowhere",
+      "type": "fanout"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "nowhere",
+      "key": "any",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

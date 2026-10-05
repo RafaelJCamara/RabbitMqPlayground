@@ -1,0 +1,69 @@
+{
+  "id": "routing/default-exchange-routes-to-the-queue-with-that-name",
+  "kind": "routing",
+  "title": "The default exchange is bound to every queue, with the queue name as the key (ADR-0008, rule 6)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "alpha",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "beta",
+      "durable": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "alpha",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "beta",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "gamma",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "",
+      "body": "m4"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "alpha"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "beta"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

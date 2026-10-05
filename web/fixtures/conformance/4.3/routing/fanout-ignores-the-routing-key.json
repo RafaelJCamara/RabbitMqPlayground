@@ -1,0 +1,72 @@
+{
+  "id": "routing/fanout-ignores-the-routing-key",
+  "kind": "routing",
+  "title": "A fanout exchange sends every message to every bound queue, whatever the routing key (ADR-0008, rule 3)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "broadcast",
+      "type": "fanout"
+    },
+    {
+      "op": "queue.declare",
+      "name": "first",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "second",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "broadcast",
+      "destination": {
+        "kind": "queue",
+        "name": "first"
+      },
+      "key": "a"
+    },
+    {
+      "op": "bind",
+      "source": "broadcast",
+      "destination": {
+        "kind": "queue",
+        "name": "second"
+      },
+      "key": "b"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "broadcast",
+      "key": "zzz",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "broadcast",
+      "key": "",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "first",
+          "second"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "first",
+          "second"
+        ]
+      }
+    ]
+  }
+}

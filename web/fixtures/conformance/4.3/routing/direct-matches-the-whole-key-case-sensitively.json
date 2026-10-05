@@ -1,0 +1,118 @@
+{
+  "id": "routing/direct-matches-the-whole-key-case-sensitively",
+  "kind": "routing",
+  "title": "A direct exchange routes on the whole routing key, and the comparison is case-sensitive (ADR-0008, rule 2)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "orders",
+      "type": "direct"
+    },
+    {
+      "op": "queue.declare",
+      "name": "created",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "created-too",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "created-upper",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "orders",
+      "destination": {
+        "kind": "queue",
+        "name": "created"
+      },
+      "key": "order.created"
+    },
+    {
+      "op": "bind",
+      "source": "orders",
+      "destination": {
+        "kind": "queue",
+        "name": "created-too"
+      },
+      "key": "order.created"
+    },
+    {
+      "op": "bind",
+      "source": "orders",
+      "destination": {
+        "kind": "queue",
+        "name": "created-upper"
+      },
+      "key": "ORDER.CREATED"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "orders",
+      "key": "order.created",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "orders",
+      "key": "ORDER.CREATED",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "orders",
+      "key": "order",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "orders",
+      "key": "order.created.eu",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "orders",
+      "key": "",
+      "body": "m5"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "created",
+          "created-too"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "created-upper"
+        ]
+      },
+      {
+        "body": "m3",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m4",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m5",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

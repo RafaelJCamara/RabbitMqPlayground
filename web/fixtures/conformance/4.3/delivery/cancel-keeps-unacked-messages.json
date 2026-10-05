@@ -1,0 +1,66 @@
+{
+  "id": "delivery/cancel-keeps-unacked-messages",
+  "kind": "delivery",
+  "title": "Cancelling a consumer does not requeue its unacked messages, and it can still acknowledge them (ADR-0008, rule 16)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 1
+    },
+    {
+      "op": "basic.cancel",
+      "consumer": "c1"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c1"
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": [
+        {
+          "body": "m2",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

@@ -5,8 +5,11 @@ import type { Destination, HeaderCondition, HeaderEntry, HeaderValue, Step, XMat
 export const queue = (name: string): Destination => ({ kind: 'queue', name });
 
 /**
- * A queue declaration. Queues are durable because a queue that is neither durable nor exclusive is a deprecated feature
- * that newer RabbitMQ versions refuse, and a scenario has to run on the baseline broker.
+ * A queue declaration. Queues are durable because a queue that is neither durable nor exclusive is a deprecated feature,
+ * and RabbitMQ 4.3.6 refuses it: the broker closed the connection at the first such declaration (the first Nightly
+ * record run, 37341314213; the reply code was not captured). Rule 28 of ADR-0008 only says "deprecated". That wants a
+ * scenario of its own, and a superseding ADR if it changes the rule, once the vocabulary can say that a step is expected
+ * to be refused. S1 needs that anyway, for the internal and missing exchanges it refuses.
  */
 export const declareQueue = (name: string): Step => ({ op: 'queue.declare', name, durable: true });
 export const exchange = (name: string): Destination => ({ kind: 'exchange', name });

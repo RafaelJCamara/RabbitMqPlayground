@@ -1,0 +1,109 @@
+{
+  "id": "delivery/issue-18-a-removed-consumer-gets-nothing-more",
+  "kind": "delivery",
+  "title": "Removing a consumer closes its channel: its unacked message is requeued as redelivered, and nothing else reaches it",
+  "origin": "RabbitMQSimulator/RabbitMQSimulator#18",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch2",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch2",
+      "queue": "jobs",
+      "consumer": "c2",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    },
+    {
+      "op": "channel.close",
+      "channel": "ch1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m4"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m1",
+          "redelivered": true
+        }
+      ]
+    },
+    "ready": {
+      "jobs": [
+        {
+          "body": "m3",
+          "redelivered": false
+        },
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}
