@@ -54,6 +54,10 @@ jobs:
           name: conformance-fixtures
           path: web/fixtures/conformance
           retention-days: 14
+      - name: Print the recorded fixtures, for a tool that can read this log but cannot download the artifact
+        if: success() && env.CONFORMANCE_MODE == 'record'
+        working-directory: web
+        run: npx tsx tools/conformance/dump.ts dump fixtures/conformance/4.3
       - name: Upload the drift report
         if: failure()
         uses: actions/upload-artifact@v4
