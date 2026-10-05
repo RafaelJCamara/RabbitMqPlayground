@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.tsbuild/engine-spec",
+    "tsBuildInfoFile": "../../.tsbuild/engine-spec.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "../testing/tsconfig.lib.json"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.tsbuild/persistence",
+    "tsBuildInfoFile": "../../.tsbuild/persistence.tsbuildinfo",
+    "lib": ["ES2023", "DOM"],
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../engine/tsconfig.lib.json"
+    }
+  ]
+}

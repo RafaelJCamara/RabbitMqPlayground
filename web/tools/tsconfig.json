@@ -1,0 +1,28 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "..",
+    "outDir": "../.tsbuild/tools",
+    "tsBuildInfoFile": "../.tsbuild/tools.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["./**/*.ts", "../vitest.config.ts"],
+  "references": [
+    {
+      "path": "../projects/engine/tsconfig.lib.json"
+    },
+    {
+      "path": "../projects/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../projects/persistence/tsconfig.lib.json"
+    },
+    {
+      "path": "../projects/testing/tsconfig.lib.json"
+    }
+  ]
+}

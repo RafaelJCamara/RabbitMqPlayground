@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "../../.tsbuild/domain-spec",
+    "tsBuildInfoFile": "../../.tsbuild/domain-spec.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "../engine/tsconfig.lib.json"
+    },
+    {
+      "path": "../testing/tsconfig.lib.json"
+    }
+  ]
+}

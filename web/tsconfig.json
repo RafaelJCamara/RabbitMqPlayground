@@ -1,5 +1,33 @@
 {
   "extends": "./tsconfig.base.json",
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./projects/engine/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/engine/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/domain/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/persistence/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/persistence/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/testing/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/testing/tsconfig.spec.json"
+    },
+    {
+      "path": "./tools"
+    }
+  ]
 }

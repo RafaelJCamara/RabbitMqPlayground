@@ -2,6 +2,7 @@
   "name": "rabbitmq-playground-web",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "license": "MIT",
   "description": "RabbitMQ Playground: a browser-based visual RabbitMQ simulator.",
   "engines": {
