@@ -1,6 +1,6 @@
 # ADR-0009: Headers exchange support
 
-- **Status:** Accepted
+- **Status:** Accepted. The rule on integers is extended by [ADR-0023](0023-header-integers-are-limited-to-safe-integers.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

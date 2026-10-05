@@ -19,7 +19,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0006](0006-client-only-app-dotnet-api-when-needed.md) | Client-only app; a .NET API only when needed | Accepted |
 | [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted |
 | [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted (rule 28 superseded by 0021, rule 4 extended by 0022) |
-| [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted |
+| [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted (integers extended by 0023) |
 | [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted |
 | [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019) |
 | [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted |
@@ -33,6 +33,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0020](0020-mit-licence.md) | MIT licence | Accepted |
 | [0021](0021-transient-queues-are-refused.md) | RabbitMQ 4.3 refuses transient queues, and the refusals the simulator reproduces | Accepted |
 | [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md) | A topic binding key may have at most two `#` wildcards | Accepted |
+| [0023](0023-header-integers-are-limited-to-safe-integers.md) | Header integers are limited to the safe-integer range | Accepted |
 
 ## Where to start
 
@@ -43,7 +44,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0018](0018-workspace-layout-and-dependency-rules.md), [0019](0019-undo-through-immutable-document-snapshots.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
-  [0015](0015-testing-strategy-and-definition-of-done.md).
+  [0023](0023-header-integers-are-limited-to-safe-integers.md), [0015](0015-testing-strategy-and-definition-of-done.md).
 
 ## Adding or changing a decision
 
