@@ -79,6 +79,17 @@ yarn-error.log*
 /web/bench-results/
 /web/conformance-diff/
 
+# The .NET patterns at the top ignore any directory called bin, obj, log(s), debug or release, wherever it is.
+# Source folders in web/ may use those names, so they are never ignored there. Build output and node_modules stay
+# ignored, because git cannot re-include a file whose parent directory is ignored.
+!/web/**/[Bb]in/
+!/web/**/[Oo]bj/
+!/web/**/[Ll]og/
+!/web/**/[Ll]ogs/
+!/web/**/[Dd]ebug/
+!/web/**/[Rr]elease/
+!/web/**/[Rr]eleases/
+
 # Editors and operating systems
 .idea/
 .vscode/
