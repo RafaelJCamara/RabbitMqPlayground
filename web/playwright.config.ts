@@ -11,7 +11,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const port = Number(process.env['E2E_PORT'] ?? 4173);
 const localUrl = `http://127.0.0.1:${port}/RabbitMqPlayground/`;
-const liveUrl = process.env['LIVE_URL'];
+// A trailing slash matters: Playwright resolves `page.goto('some/path')` against the base URL like a browser would.
+const liveUrl = process.env['LIVE_URL']?.replace(/\/?$/, '/');
 const inCi = Boolean(process.env['CI']);
 
 const browser = {

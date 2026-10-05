@@ -1,0 +1,22 @@
+name: Install Playwright Chromium
+description: Chromium and its system libraries, with the browser download cached. Run it after setup-web.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache the browser
+      id: browser-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+    - name: Download Chromium and install its system libraries
+      if: steps.browser-cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: web
+      run: npx playwright install --with-deps chromium
+    - name: Install the system libraries only (the browser came from the cache)
+      if: steps.browser-cache.outputs.cache-hit == 'true'
+      shell: bash
+      working-directory: web
+      run: npx playwright install-deps chromium

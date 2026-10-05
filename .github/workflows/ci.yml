@@ -1,0 +1,138 @@
+# CI (ADR-0004, ADR-0015). Every push to main runs the whole suite, and a green run deploys to GitHub Pages.
+# There is no review step on main, so this is the gate. A red main is fixed first.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+      - name: Format check
+        working-directory: web
+        run: npm run format:check
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+      - name: Library tests, with the coverage thresholds
+        working-directory: web
+        run: npm run test:libs:coverage
+      - name: App tests, with the coverage threshold
+        working-directory: web
+        run: npm run test:app:coverage
+      - name: Command reference is up to date
+        working-directory: web
+        run: npm run docs:check
+      - name: Production build for GitHub Pages (budgets are errors)
+        working-directory: web
+        run: npm run build:pages
+      - name: The deployed bundle has no debug handle
+        working-directory: web
+        run: npx tsx tools/pages/check-bundle.ts dist/app/browser __rmq RMQ_E2E
+      - name: Upload the site
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web/dist/app/browser
+
+  e2e:
+    name: End-to-end and accessibility
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - uses: ./.github/actions/install-playwright
+      - name: Build for the end-to-end tests (production build plus the debug handle)
+        working-directory: web
+        run: npm run build:e2e
+      - name: Playwright and axe, at the Pages base path
+        working-directory: web
+        run: npm run test:e2e
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
+
+  bench:
+    name: Benchmarks
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - name: Run the benchmarks (the results go to the job summary)
+        working-directory: web
+        run: npm run bench
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [verify, e2e, bench]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  smoke:
+    name: Smoke test the live site
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-web
+      - uses: ./.github/actions/install-playwright
+      - name: Playwright against the deployed site, once it serves this commit
+        working-directory: web
+        run: npm run test:e2e
+        env:
+          LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
