@@ -16,9 +16,12 @@ const RESTRICTION_RULES = new Set([
 ]);
 
 let eslint: ESLint;
-beforeAll(() => {
+beforeAll(async () => {
   eslint = new ESLint({ cwd: webRoot, overrideConfigFile: `${webRoot}eslint.config.mjs` });
-});
+  // The first lint loads the whole configuration (typescript-eslint, angular-eslint), which takes seconds on a loaded
+  // machine and, inside the first test, used to eat its 5 seconds. Loading it here keeps the cases themselves quick.
+  await eslint.lintText('export {};\n', { filePath: `${webRoot}projects/engine/src/lib/warm-up.ts` });
+}, 120_000);
 
 async function violations(file: string, code: string): Promise<{ rule: string; text: string }[]> {
   const [result] = await eslint.lintText(code, { filePath: `${webRoot}${file}` });
