@@ -1,0 +1,116 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "analytics": false
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "app": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/app",
+      "sourceRoot": "projects/app/src",
+      "prefix": "rmq",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/app/src/main.ts",
+            "tsConfig": "projects/app/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/app/public"
+              }
+            ],
+            "styles": ["projects/app/src/styles.css"],
+            "define": {
+              "RMQ_E2E": "false"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "e2e": {
+              "outputPath": "dist/app-e2e",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all",
+              "define": {
+                "RMQ_E2E": "true"
+              }
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "app:build:production"
+            },
+            "development": {
+              "buildTarget": "app:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runner": "vitest",
+            "buildTarget": "app:build:development",
+            "tsConfig": "projects/app/tsconfig.spec.json",
+            "setupFiles": ["projects/app/src/test-setup.ts"],
+            "coverageInclude": ["projects/app/src/**/*.ts"],
+            "coverageExclude": [
+              "projects/app/src/**/*.spec.ts",
+              "projects/app/src/**/*.d.ts",
+              "projects/app/src/test-setup.ts",
+              "projects/app/src/main.ts",
+              "projects/app/src/app/app.config.ts",
+              "projects/app/src/app/canvas/flow/**"
+            ],
+            "coverageReporters": ["text-summary", "lcovonly", "html"],
+            "coverageThresholds": {
+              "statements": 85,
+              "branches": 85,
+              "functions": 85,
+              "lines": 85
+            }
+          }
+        }
+      }
+    }
+  }
+}

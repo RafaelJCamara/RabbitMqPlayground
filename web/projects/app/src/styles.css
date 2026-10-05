@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+/* Design tokens (ADR-0010). Templates use these names and never raw colours. */
+@theme inline {
+  --color-surface: var(--rmq-surface);
+  --color-panel: var(--rmq-panel);
+  --color-fg: var(--rmq-fg);
+  --color-muted: var(--rmq-muted);
+  --color-line: var(--rmq-line);
+  --color-link: var(--rmq-link);
+}
+
+/* Light is the default. The dark values apply when the OS asks for dark and nothing overrides it,
+   or when the theme is set to dark explicitly (`data-theme`, used by the theme switch in a later slice). */
+:root {
+  color-scheme: light;
+  --rmq-surface: #ffffff;
+  --rmq-panel: #f3f4f6;
+  --rmq-fg: #111827;
+  --rmq-muted: #4b5563;
+  --rmq-line: #d1d5db;
+  --rmq-link: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --rmq-surface: #0b1020;
+    --rmq-panel: #151b2e;
+    --rmq-fg: #e5e7eb;
+    --rmq-muted: #a1a8b8;
+    --rmq-line: #2f3a55;
+    --rmq-link: #93c5fd;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --rmq-surface: #0b1020;
+  --rmq-panel: #151b2e;
+  --rmq-fg: #e5e7eb;
+  --rmq-muted: #a1a8b8;
+  --rmq-line: #2f3a55;
+  --rmq-link: #93c5fd;
+}

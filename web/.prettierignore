@@ -1,0 +1,13 @@
+/dist
+/coverage
+/.angular
+/.tsbuild
+/playwright-report
+/test-results
+/bench-results
+/conformance-diff
+/node_modules
+package-lock.json
+
+# Written by the conformance runner in a fixed format; reviewed as data, not reformatted.
+/fixtures

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@rmq/engine": ["./projects/engine/src/index.ts"],
+      "@rmq/domain": ["./projects/domain/src/index.ts"],
+      "@rmq/persistence": ["./projects/persistence/src/index.ts"],
+      "@rmq/testing": ["./projects/testing/src/index.ts"]
+    }
+  }
+}
