@@ -25,7 +25,7 @@
                 "input": "projects/app/public"
               }
             ],
-            "styles": ["projects/app/src/styles.css"],
+            "styles": ["projects/app/src/styles.css", "projects/app/src/styles/foblex-theme.scss"],
             "define": {
               "RMQ_E2E": "false"
             }

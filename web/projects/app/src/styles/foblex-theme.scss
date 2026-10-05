@@ -1,0 +1,14 @@
+// The Foblex Flow theme (ADR-0016). It is a global stylesheet, kept apart from the Tailwind file, because as a
+// component stylesheet it blew the 16 kB `anyComponentStyle` budget (19.6 kB, 13 kB of it custom properties).
+//
+// Every rule is scoped under `f-flow, .f-flow`, so none of it touches the rest of the page.
+@use '@foblex/flow/styles' as flow-theme;
+
+@include flow-theme.theme-tokens();
+@include flow-theme.flow-canvas();
+@include flow-theme.connection-all();
+@include flow-theme.plugins(); // the minimap's size and position come from here; without it, it is 0 x 0
+
+// node-group() and connector() are left out on purpose. Their `f-flow .f-node { width: var(--ff-node-width);
+// padding: 24px; ... }` and connector-socket rules out-rank app styles, and would change the node box and the handle
+// look. The editor styles its own nodes and handles (slice S4).
