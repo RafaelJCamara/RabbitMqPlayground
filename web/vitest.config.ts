@@ -14,7 +14,15 @@ export default defineConfig({
     projects: [
       ...libraries.map((name) => ({
         extends: true,
-        test: { name, include: [`projects/${name}/src/**/*.spec.ts`], environment: 'node', setupFiles },
+        // The nightly fuzz job runs every property 5,000 times (FC_NUM_RUNS), which can take longer than the 5 s default
+        // on a busy runner. A property that times out has found nothing, and hides what a real run would have found.
+        test: {
+          name,
+          include: [`projects/${name}/src/**/*.spec.ts`],
+          environment: 'node',
+          setupFiles,
+          testTimeout: 60_000,
+        },
       })),
       {
         extends: true,
