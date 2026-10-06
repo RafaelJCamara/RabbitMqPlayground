@@ -31,12 +31,12 @@ export class EditorActions {
   /** Set by the editor, which owns the field for a name and the inspector. */
   surface: ActionSurface | undefined;
 
-  undo(): void {
-    this.bus.undo();
+  undo(origin: CommandOrigin): void {
+    this.bus.undo(origin);
   }
 
-  redo(): void {
-    this.bus.redo();
+  redo(origin: CommandOrigin): void {
+    this.bus.redo(origin);
   }
 
   /** Puts every node in its place, and then shows all of them: the fit has to wait until they are where they were put. */

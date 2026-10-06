@@ -151,7 +151,7 @@ describe('Inspector', () => {
       await user.tab();
 
       expect(store.canUndo()).toBe(true);
-      TestBed.inject(CommandBus).undo();
+      TestBed.inject(CommandBus).undo('toolbar');
       expect(store.document().queues['Q1']?.name).toBe('billing');
     });
 
@@ -527,7 +527,7 @@ describe('Inspector', () => {
 
       expect(document().queues['Q2']).toBeUndefined();
       expect(document().consumers['C1']).toBeUndefined();
-      TestBed.inject(CommandBus).undo();
+      TestBed.inject(CommandBus).undo('toolbar');
       expect(store.document().consumers['C1']).toBeDefined();
     });
   });

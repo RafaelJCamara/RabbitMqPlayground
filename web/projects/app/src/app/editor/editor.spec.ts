@@ -396,7 +396,7 @@ describe('Editor', () => {
       fixture.detectChanges();
       expect(canvas().model().nodes).toEqual([]);
 
-      fixture.debugElement.injector.get(CommandBus).undo();
+      fixture.debugElement.injector.get(CommandBus).undo('toolbar');
       fixture.detectChanges();
       expect(canvas().model().nodes).toHaveLength(1);
     });

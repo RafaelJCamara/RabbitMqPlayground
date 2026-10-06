@@ -19,6 +19,11 @@ const COLLECTIONS = ['exchanges', 'queues', 'bindings', 'producers', 'consumers'
 export interface IdGenerator {
   /** An id for something new, that the canvas does not have and that this generator has not made before. */
   readonly newId: (kind: IdKind) => Id;
+  /**
+   * Notes where the counters are, and answers a function that puts them back. A command that is refused has made no element, so the ids that it
+   * asked for are given back, and what is made next has the id that a replay of the commands that were accepted makes (ADR-0046).
+   */
+  readonly mark: () => () => void;
 }
 
 /**
@@ -41,6 +46,15 @@ export function createIdGenerator(document: () => CanvasDocument): IdGenerator {
         id = `${PREFIX[kind]}${next}`;
       } while (has(current, id));
       return id;
+    },
+    mark() {
+      const saved = new Map(counters);
+      return () => {
+        counters.clear();
+        for (const [kind, count] of saved) {
+          counters.set(kind, count);
+        }
+      };
     },
   };
 }

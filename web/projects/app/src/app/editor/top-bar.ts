@@ -34,7 +34,7 @@ const BUTTON =
             [attr.title]="'Undo (' + undoKeys + ')'"
             aria-keyshortcuts="Control+Z Meta+Z"
             data-testid="undo"
-            (click)="actions.undo()"
+            (click)="actions.undo('toolbar')"
           >
             <rmq-icon name="undo" [size]="18" />
             <span>Undo</span>
@@ -47,7 +47,7 @@ const BUTTON =
             [attr.title]="'Redo (' + redoKeys + ')'"
             aria-keyshortcuts="Control+Shift+Z Control+Y Meta+Shift+Z"
             data-testid="redo"
-            (click)="actions.redo()"
+            (click)="actions.redo('toolbar')"
           >
             <rmq-icon name="redo" [size]="18" />
             <span>Redo</span>

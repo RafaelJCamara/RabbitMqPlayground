@@ -55,6 +55,48 @@ describe('createIdGenerator', () => {
     expect(generator.newId('queue')).toBe('q2');
   });
 
+  describe('mark', () => {
+    it('takes back the ids that were made after it, for every kind, so that a command that was refused spends none', () => {
+      const generator = createIdGenerator(() => documentOf());
+      generator.newId('queue');
+      generator.newId('exchange');
+      const back = generator.mark();
+      generator.newId('queue');
+      generator.newId('queue');
+      generator.newId('producer');
+      generator.newId('binding');
+
+      back();
+
+      expect(generator.newId('queue')).toBe('q2');
+      expect(generator.newId('producer')).toBe('p1');
+      expect(generator.newId('binding')).toBe('b1');
+      expect(generator.newId('exchange')).toBe('x2');
+    });
+
+    it('leaves the ids that were made before it alone, and does nothing when nothing was made', () => {
+      const generator = createIdGenerator(() => documentOf());
+      const first = generator.newId('queue');
+      generator.mark()();
+
+      expect(generator.newId('queue')).not.toBe(first);
+      expect(generator.newId('queue')).toBe('q3');
+    });
+
+    it('can be taken twice, and each goes back to where it was', () => {
+      const generator = createIdGenerator(() => documentOf());
+      const outer = generator.mark();
+      generator.newId('queue');
+      const inner = generator.mark();
+      generator.newId('queue');
+
+      inner();
+      expect(generator.newId('queue')).toBe('q2');
+      outer();
+      expect(generator.newId('queue')).toBe('q1');
+    });
+  });
+
   it('is what applyCommand needs: it never throws for a long run of commands that add things, in one batch or many', () => {
     let document: CanvasDocument = documentOf();
     const context = { newId: createIdGenerator(() => document).newId };

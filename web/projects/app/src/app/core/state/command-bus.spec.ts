@@ -126,6 +126,19 @@ describe('CommandBus', () => {
       expect(applied[0]).toEqual({ command, origin: 'gesture', before, after: store.document() });
     });
 
+    it('does not spend an id on a command that is refused, so that what is made next has the id that a replay of the accepted commands makes', () => {
+      const refusedBatch: DocumentCommand = {
+        type: 'batch',
+        commands: [declareQueue('made-then-refused'), declareQueue('made-then-refused')],
+      };
+
+      const result = bus.apply(refusedBatch, 'gesture');
+      bus.apply(declareQueue('billing'), 'gesture');
+
+      expect(result.ok).toBe(false);
+      expect(Object.keys(store.document().queues)).toEqual(['q1']);
+    });
+
     it('stops telling a listener that has been dropped', () => {
       const listener = vi.fn();
       const stop = bus.onApplied(listener);
@@ -149,7 +162,7 @@ describe('CommandBus', () => {
       );
 
       expect(store.undoLabel()).toBe('added queue billing');
-      bus.undo();
+      bus.undo('toolbar');
       expect(Object.keys(store.document().queues)).toEqual([]);
     });
   });
@@ -158,20 +171,38 @@ describe('CommandBus', () => {
     it('take back and bring back the last change, and say what they did', () => {
       bus.apply(declareQueue('billing'), 'gesture');
 
-      expect(bus.undo()).toBe(true);
+      expect(bus.undo('toolbar')).toBe(true);
       expect(Object.keys(store.document().queues)).toEqual([]);
       expect(status.notice()).toEqual({ kind: 'message', text: 'Undid: added queue billing.' });
       expect(announcer.announce).toHaveBeenLastCalledWith('Undid: added queue billing.');
 
-      expect(bus.redo()).toBe(true);
+      expect(bus.redo('toolbar')).toBe(true);
       expect(Object.values(store.document().queues).map((queue) => queue.name)).toEqual(['billing']);
       expect(status.notice()).toEqual({ kind: 'message', text: 'Redid: added queue billing.' });
     });
 
+    it('tell a listener, as a command is told, with what was used and the two documents, and say nothing when there was nothing to take back', () => {
+      const applied: Applied[] = [];
+      bus.onApplied((entry) => applied.push(entry));
+      bus.undo('key');
+      bus.apply(declareQueue('billing'), 'gesture');
+      const withQueue = store.document();
+
+      bus.undo('toolbar');
+      const without = store.document();
+      bus.redo('typed');
+      bus.redo('typed');
+
+      expect(applied.slice(1)).toEqual([
+        { command: { type: 'undo' }, origin: 'toolbar', before: withQueue, after: without },
+        { command: { type: 'redo' }, origin: 'typed', before: without, after: withQueue },
+      ]);
+    });
+
     it('say that there is nothing to undo or redo, and answer false', () => {
-      expect(bus.undo()).toBe(false);
+      expect(bus.undo('toolbar')).toBe(false);
       expect(status.notice()).toEqual({ kind: 'message', text: 'Nothing to undo.' });
-      expect(bus.redo()).toBe(false);
+      expect(bus.redo('toolbar')).toBe(false);
       expect(status.notice()).toEqual({ kind: 'message', text: 'Nothing to redo.' });
     });
 
@@ -182,12 +213,12 @@ describe('CommandBus', () => {
       bus.apply({ type: 'add-producer', name: 'sender' }, 'gesture');
       const afterB = store.document();
 
-      bus.undo();
+      bus.undo('toolbar');
       expect(store.document()).toBe(afterA);
-      bus.undo();
+      bus.undo('toolbar');
       expect(store.document()).toBe(original);
-      bus.redo();
-      bus.redo();
+      bus.redo('toolbar');
+      bus.redo('toolbar');
       expect(store.document()).toBe(afterB);
     });
 
@@ -195,7 +226,7 @@ describe('CommandBus', () => {
       bus.apply(declareQueue('billing'), 'gesture');
       selection.select([Object.keys(store.document().queues)[0] ?? '']);
 
-      bus.undo();
+      bus.undo('toolbar');
 
       expect(selection.selection().nodes).toEqual([]);
     });
@@ -203,7 +234,7 @@ describe('CommandBus', () => {
     it('never make an id again, so that redo cannot meet a new element that has the id that it brings back', () => {
       bus.apply(declareQueue('first'), 'gesture');
       const firstId = Object.keys(store.document().queues)[0];
-      bus.undo();
+      bus.undo('toolbar');
       bus.apply(declareQueue('second'), 'gesture');
 
       expect(Object.keys(store.document().queues)).not.toContain(firstId);

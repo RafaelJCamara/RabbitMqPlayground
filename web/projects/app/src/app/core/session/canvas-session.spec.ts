@@ -360,12 +360,12 @@ describe('CanvasSession', () => {
       timer.advance(500);
       await session.flush();
 
-      bus.undo();
+      bus.undo('toolbar');
       timer.advance(500);
       await session.flush();
       expect((await stored(repository, id)).document.queues).toEqual({});
 
-      bus.redo();
+      bus.redo('toolbar');
       timer.advance(500);
       await session.flush();
       expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1);
@@ -378,7 +378,7 @@ describe('CanvasSession', () => {
 
       declare(bus, 'billing');
       expect(session.save()).toEqual({ kind: 'saving' });
-      bus.undo();
+      bus.undo('toolbar');
 
       expect(session.save().kind).toBe('saved');
       timer.advance(10_000);
@@ -491,7 +491,7 @@ describe('CanvasSession', () => {
       timer.advance(500);
       await settle(); // the write of the canvas with 'a' is under way
 
-      bus.undo(); // back to what is kept, so nothing waits to be written, and it says so
+      bus.undo('toolbar'); // back to what is kept, so nothing waits to be written, and it says so
       expect(session.save().kind).toBe('saved');
       releases.shift()?.();
       await settle(); // what is kept is now the canvas with 'a', which is not the one that is on the screen

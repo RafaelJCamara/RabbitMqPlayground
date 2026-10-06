@@ -128,7 +128,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     scope: 'app',
     owner: 'app',
     shows: always,
-    run: (actions) => actions.undo(),
+    run: (actions) => actions.undo('key'),
   },
   {
     id: 'redo',
@@ -140,7 +140,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     scope: 'app',
     owner: 'app',
     shows: always,
-    run: (actions) => actions.redo(),
+    run: (actions) => actions.redo('key'),
   },
 ];
 

@@ -49,22 +49,22 @@ describe('EditorActions', () => {
       TestBed.inject(CommandBus).apply({ type: 'declare-queue', name: 'extra', durable: true }, 'gesture');
       expect(Object.values(store.document().queues).map((queue) => queue.name)).toContain('extra');
 
-      actions.undo();
+      actions.undo('toolbar');
       expect(Object.values(store.document().queues).map((queue) => queue.name)).toEqual(['billing', 'archive']);
       expect(TestBed.inject(StatusStore).notice()).toMatchObject({
         kind: 'message',
         text: 'Undid: added queue extra.',
       });
 
-      actions.redo();
+      actions.redo('toolbar');
       expect(Object.values(store.document().queues).map((queue) => queue.name)).toContain('extra');
     });
 
     it('say that there is nothing to undo or redo when there is not', () => {
-      actions.undo();
+      actions.undo('toolbar');
       expect(TestBed.inject(StatusStore).notice()).toMatchObject({ text: 'Nothing to undo.' });
 
-      actions.redo();
+      actions.redo('toolbar');
       expect(TestBed.inject(StatusStore).notice()).toMatchObject({ text: 'Nothing to redo.' });
     });
   });

@@ -85,7 +85,7 @@ describe('TopBar', () => {
       fixture.detectChanges();
       expect(screen.getByRole('button', { name: 'Undo: added queue billing' })).toBeEnabled();
 
-      bus.undo();
+      bus.undo('toolbar');
       fixture.detectChanges();
       expect(screen.getByRole('button', { name: 'Redo: added queue billing' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();

@@ -86,7 +86,7 @@ describe('IntentHandler', () => {
 
       expect(applied).toHaveLength(1);
       expect(applied[0]?.command.type).toBe('batch');
-      bus.undo();
+      bus.undo('toolbar');
       expect(store.document()).toEqual(before);
     });
 
@@ -122,7 +122,7 @@ describe('IntentHandler', () => {
       expect(store.document().queues['Q2']).toBeUndefined();
       expect(Object.keys(store.document().bindings)).toEqual(['B1', 'B3']);
       expect(applied.map(({ origin }) => origin)).toEqual(['key']);
-      bus.undo();
+      bus.undo('toolbar');
       expect(store.document()).toEqual(before);
     });
 
@@ -335,7 +335,7 @@ describe('IntentHandler', () => {
       });
       expect(selection.selection().nodes).toEqual([id]);
       expect(applied).toHaveLength(1);
-      bus.undo();
+      bus.undo('toolbar');
       expect(store.document()).toEqual(before);
     });
 

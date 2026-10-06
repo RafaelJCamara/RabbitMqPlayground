@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { applyCommand, type CanvasDocument, type DocumentCommand, type Result } from '@rmq/domain';
+import { applyCommand, type CanvasDocument, type Command, type DocumentCommand, type Result } from '@rmq/domain';
 import { Announcer } from '../announcer';
 import { describeCommand, sentence } from './describe';
 import { DocumentStore } from './document-store';
@@ -8,9 +8,12 @@ import type { CommandOrigin } from './origin';
 import { SelectionStore } from './selection-store';
 import { speakRefusal, StatusStore } from './status-store';
 
-/** A command that was accepted, for whoever follows what the learner does: S5's log of equivalent commands, for one. */
+/**
+ * A command that was accepted, for whoever follows what the learner does: the log of equivalent commands, for one. An `undo` and a `redo` are told as
+ * a command is, with the two documents that they went between (ADR-0046).
+ */
 export interface Applied {
-  readonly command: DocumentCommand;
+  readonly command: Command;
   readonly origin: CommandOrigin;
   readonly before: CanvasDocument;
   readonly after: CanvasDocument;
@@ -39,8 +42,10 @@ export class CommandBus {
 
   apply(command: DocumentCommand, origin: CommandOrigin, options: ApplyOptions = {}): Result<CanvasDocument> {
     const before = this.store.document();
+    const restoreIds = this.ids.mark();
     const result = applyCommand(before, command, this.ids);
     if (!result.ok) {
+      restoreIds();
       this.status.refuse(result.error, origin);
       this.announcer.announce(speakRefusal(result.error), 'assertive');
       return result;
@@ -56,25 +61,31 @@ export class CommandBus {
       } else {
         this.status.clear();
       }
-      for (const listener of [...this.listeners]) {
-        listener({ command, origin, before, after });
-      }
+      this.notify({ command, origin, before, after });
     }
     return result;
   }
 
   /** Takes back the last change. It answers whether there was one. Undo restores the design, not the simulation (ADR-0019). */
-  undo(): boolean {
+  undo(origin: CommandOrigin): boolean {
+    const before = this.store.document();
     const step = this.store.undo();
     this.tell(step === undefined ? 'Nothing to undo.' : sentence(`Undid: ${step.label}`));
     this.selection.prune(this.store.document());
+    if (step !== undefined) {
+      this.notify({ command: { type: 'undo' }, origin, before, after: this.store.document() });
+    }
     return step !== undefined;
   }
 
-  redo(): boolean {
+  redo(origin: CommandOrigin): boolean {
+    const before = this.store.document();
     const step = this.store.redo();
     this.tell(step === undefined ? 'Nothing to redo.' : sentence(`Redid: ${step.label}`));
     this.selection.prune(this.store.document());
+    if (step !== undefined) {
+      this.notify({ command: { type: 'redo' }, origin, before, after: this.store.document() });
+    }
     return step !== undefined;
   }
 
@@ -85,12 +96,18 @@ export class CommandBus {
     this.status.clear();
   }
 
-  /** Is told of every command that was accepted and changed the canvas. Undo, redo and load are told by the store. */
+  /** Is told of every command that was accepted and changed the canvas, and of every undo and redo that did. A load is told by the store. */
   onApplied(listener: AppliedListener): () => void {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  private notify(applied: Applied): void {
+    for (const listener of [...this.listeners]) {
+      listener(applied);
+    }
   }
 
   private tell(text: string): void {
