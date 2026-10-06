@@ -311,7 +311,8 @@ describe('sameValue', () => {
 
     fc.assert(
       fc.property(arbJson, (value) => {
-        expect(sameValue(value, JSON.parse(JSON.stringify(value)))).toBe(true);
+        // A structured clone, and not a JSON round trip, which writes -0 as 0, and then it is not a copy.
+        expect(sameValue(value, structuredClone(value))).toBe(true);
       }),
     );
     fc.assert(
