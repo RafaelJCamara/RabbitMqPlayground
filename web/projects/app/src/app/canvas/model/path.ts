@@ -6,9 +6,11 @@ import type { Point } from './transform';
  * measure an SVG path, but only in a page, and the places of the labels are worked out by a pure function that a unit test reaches, so the
  * path is read here: its curves are cut into short straight pieces, and the length is the sum of the pieces.
  *
- * The library draws an edge as `M x y C x1 y1, x2 y2, x y` (a cubic curve), and what it places along it, as the content of a connection,
- * is placed by length along a polyline of its own. This reads `M`, `L`, `C` and `Q` with absolute coordinates, which is all that is drawn
- * for the types of edge that the app uses, and it keeps what it has read when the path goes on with a command that it does not know.
+ * The library draws an edge of the type that the app uses, `bezier`, as `M x y C x1 y1, x2 y2, x y` (a cubic curve), and what it places
+ * along it, as the content of a connection, is placed by length along a polyline of its own. This reads `M`, `L` and `C` with absolute
+ * coordinates, and it keeps what it has read when the path goes on with a command that it does not know. The type that draws a rounded bend
+ * (`segment`) is the one that uses `Q`, so an app that changes the type of its edges has to teach this its command, and the spec says
+ * that a path with one is read as far as the command.
  */
 
 export interface Polyline {
@@ -24,21 +26,13 @@ const CURVE_STEPS = 32;
 /** A command letter, or a number: the `e` of an exponent belongs to the number that it is in, and no path command is called `e`. */
 const TOKEN = /([A-DF-Za-df-z])|(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)/g;
 
-const ARGUMENTS: Readonly<Record<string, number>> = { M: 2, L: 2, C: 6, Q: 4 };
+const ARGUMENTS: Readonly<Record<string, number>> = { M: 2, L: 2, C: 6 };
 
 function cubic(from: Point, a: Point, b: Point, to: Point, t: number): Point {
   const u = 1 - t;
   return {
     x: u ** 3 * from.x + 3 * u * u * t * a.x + 3 * u * t * t * b.x + t ** 3 * to.x,
     y: u ** 3 * from.y + 3 * u * u * t * a.y + 3 * u * t * t * b.y + t ** 3 * to.y,
-  };
-}
-
-function quadratic(from: Point, control: Point, to: Point, t: number): Point {
-  const u = 1 - t;
-  return {
-    x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
-    y: u * u * from.y + 2 * u * t * control.y + t * t * to.y,
   };
 }
 
@@ -88,11 +82,6 @@ export function polylineOf(d: string): Polyline | null {
           points.push(
             cubic(from, { x: n[0], y: n[1] }, { x: n[2], y: n[3] }, { x: n[4], y: n[5] }, step / CURVE_STEPS),
           );
-        }
-      } else if (command === 'Q') {
-        const from = at();
-        for (let step = 1; step <= CURVE_STEPS; step += 1) {
-          points.push(quadratic(from, { x: n[0], y: n[1] }, { x: n[2], y: n[3] }, step / CURVE_STEPS));
         }
       } else {
         // `M` and `L` both go to a point, and a second `M` in a path is taken as a line to it.

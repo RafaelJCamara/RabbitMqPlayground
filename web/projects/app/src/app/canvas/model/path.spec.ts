@@ -22,8 +22,7 @@ describe('polylineOf (ADR-0044)', () => {
     expect(line?.points.at(-1)?.x).toBeCloseTo(308.0002, 4);
   });
 
-  it('reads a quadratic curve, a path with several segments, and numbers with signs, decimals and exponents', () => {
-    expect(polylineOf('M 0 0 Q 50 100 100 0')?.total).toBeGreaterThan(100);
+  it('reads a path with several segments, and numbers with signs, decimals and exponents', () => {
     expect(polylineOf('M 0 0 L 10 0 L 10 10 L 0 10')?.total).toBeCloseTo(30, 5);
     expect(polylineOf('M-5.5,-2.5L4.5,-2.5')?.total).toBeCloseTo(10, 5);
     expect(polylineOf('M 0 0 L 1e1 0')?.total).toBeCloseTo(10, 5);
@@ -31,6 +30,25 @@ describe('polylineOf (ADR-0044)', () => {
 
   it('reads the commas that the library puts between the points of a curve', () => {
     expect(polylineOf('M 0 0 C 10 0, 20 0, 30 0')?.total).toBeCloseTo(30, 3);
+  });
+
+  it('cuts a curve into 32 pieces, which is what keeps its length within half a unit of the browser’s', () => {
+    // The control points are evenly spaced along a line, so the curve goes along it at a steady pace, and each piece is 30 / 32 long.
+    const line = polylineOf('M 0 0 C 10 0, 20 0, 30 0')!;
+
+    expect(line.points).toHaveLength(33);
+    expect(line.points[1]?.x).toBeCloseTo(30 / 32, 6);
+    expect(line.points[16]?.x).toBeCloseTo(15, 6);
+    expect(line.distances[1]).toBeCloseTo(30 / 32, 6);
+  });
+
+  it('starts each curve where the one before it ended', () => {
+    const line = polylineOf('M 0 0 C 10 0, 20 0, 30 0 C 40 0, 50 0, 60 0')!;
+
+    expect(line.points).toHaveLength(65);
+    expect(line.points[32]).toEqual({ x: 30, y: 0 });
+    expect(line.points[33]?.x).toBeCloseTo(30 + 30 / 32, 6);
+    expect(line.total).toBeCloseTo(60, 6);
   });
 
   it('is nothing for a path that has no line in it, so that an edge that is not drawn is left alone', () => {
@@ -41,14 +59,19 @@ describe('polylineOf (ADR-0044)', () => {
   });
 
   it('keeps what it could read of a path that goes on with a command that it does not know', () => {
-    const line = polylineOf('M 0 0 L 10 0 Z');
-
-    expect(line?.total).toBeCloseTo(10, 5);
+    expect(polylineOf('M 0 0 L 10 0 Z')?.total).toBeCloseTo(10, 5);
+    // The rounded bend of the `segment` type of edge is a command that is not read, so a change of type has to teach it.
+    expect(polylineOf('M 0 0 L 10 0 Q 20 0 20 10 L 20 20')?.total).toBeCloseTo(10, 5);
   });
 
   it('is nothing for a segment that lacks its numbers', () => {
     expect(polylineOf('M 0 0 L 10')).toBeNull();
     expect(polylineOf('M 0 0 C 1 2 3 4 5')).toBeNull();
+    expect(polylineOf('M 0 0 L 10 0 L')).toBeNull();
+  });
+
+  it('is nothing when a number comes before any command', () => {
+    expect(polylineOf('1 2 M 0 0 L 10 0')).toBeNull();
   });
 });
 
