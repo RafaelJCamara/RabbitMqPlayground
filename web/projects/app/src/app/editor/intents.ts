@@ -127,14 +127,17 @@ export class IntentHandler {
     this.apply(commands, origin, false);
   }
 
-  /** The label of an edge was dragged along it: where it is let go is the place that the document keeps, as one `move label`. */
+  /**
+   * The label of an edge was dragged along it: where it is let go is the place that the document keeps, as one `move label`, to a thousandth of the way along the edge, so that the line
+   * that the log writes for it is one that a person can read (`at=0.424` and not `at=0.4237594123`).
+   */
   private moveLabel(key: string, at: number): void {
     const ends = edgeEnds(key);
     const document = this.store.document();
     const from = ends === undefined ? undefined : refOf(document, ends.from);
     const to = ends === undefined ? undefined : refOf(document, ends.to);
     if (from !== undefined && to !== undefined) {
-      this.bus.apply({ type: 'move-label', from, to, at }, 'gesture');
+      this.bus.apply({ type: 'move-label', from, to, at: Math.round(at * 1000) / 1000 }, 'gesture');
     }
   }
 

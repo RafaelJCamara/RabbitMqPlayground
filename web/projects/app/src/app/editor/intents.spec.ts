@@ -283,6 +283,15 @@ describe('IntentHandler', () => {
       ]);
     });
 
+    it('is kept to a thousandth of the way along the edge, so that the line that is logged for a drag is one that can be read', () => {
+      handler.handle({ type: 'move-label', key: 'E1>Q1', at: 0.4237594123 });
+
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.424 });
+      expect(applied.map(({ command }) => command)).toEqual([
+        expect.objectContaining({ type: 'move-label', at: 0.424 }),
+      ]);
+    });
+
     it('is one step of undo', () => {
       const before = store.document();
 
