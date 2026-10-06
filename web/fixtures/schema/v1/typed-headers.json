@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "rabbitmqBaseline": "4.3",
+  "vhost": "/",
+  "exchanges": {
+    "x1": {
+      "name": "documents",
+      "type": "headers",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x2": {
+      "name": "events",
+      "type": "headers",
+      "durable": true,
+      "autoDelete": true,
+      "internal": false
+    },
+    "x3": {
+      "name": "audit",
+      "type": "fanout",
+      "durable": false,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x4": {
+      "name": "internal-hub",
+      "type": "topic",
+      "durable": true,
+      "autoDelete": false,
+      "internal": true
+    },
+    "x5": {
+      "name": "plain",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    }
+  },
+  "queues": {
+    "q1": {
+      "name": "all-of",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q2": {
+      "name": "any-of",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q3": {
+      "name": "all-with-x",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q4": {
+      "name": "any-with-x",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q5": {
+      "name": "no-mode",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q6": {
+      "name": "amq.gen-JzTY20BRgKO-HjmUJj0wLg",
+      "serverNamed": true,
+      "durable": true
+    }
+  },
+  "bindings": {
+    "b1": {
+      "source": "x1",
+      "dest": {
+        "kind": "queue",
+        "id": "q1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "format",
+            "value": {
+              "t": "string",
+              "v": "pdf"
+            }
+          },
+          {
+            "key": "pages",
+            "value": {
+              "t": "integer",
+              "v": 3
+            }
+          }
+        ]
+      }
+    },
+    "b2": {
+      "source": "x1",
+      "dest": {
+        "kind": "queue",
+        "id": "q2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "format",
+            "value": {
+              "t": "string",
+              "v": "pdf"
+            }
+          },
+          {
+            "key": "scanned",
+            "value": {
+              "t": "boolean",
+              "v": true
+            }
+          }
+        ]
+      }
+    },
+    "b3": {
+      "source": "x2",
+      "dest": {
+        "kind": "queue",
+        "id": "q3"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all-with-x",
+        "args": [
+          {
+            "key": "x-priority",
+            "value": {
+              "t": "string",
+              "v": "high"
+            }
+          },
+          {
+            "key": "ratio",
+            "value": {
+              "t": "float",
+              "v": 1.5
+            }
+          }
+        ]
+      }
+    },
+    "b4": {
+      "source": "x2",
+      "dest": {
+        "kind": "queue",
+        "id": "q4"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any-with-x",
+        "args": [
+          {
+            "key": "x-region",
+            "value": {
+              "t": "exists"
+            }
+          },
+          {
+            "key": "version",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    "b5": {
+      "source": "x1",
+      "dest": {
+        "kind": "queue",
+        "id": "q5"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "one-as-text",
+            "value": {
+              "t": "string",
+              "v": "1"
+            }
+          },
+          {
+            "key": "one-as-integer",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          },
+          {
+            "key": "one-as-float",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    "b6": {
+      "source": "x1",
+      "dest": {
+        "kind": "exchange",
+        "id": "x2"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "any",
+        "args": [
+          {
+            "key": "relay",
+            "value": {
+              "t": "exists"
+            }
+          }
+        ]
+      }
+    },
+    "b7": {
+      "source": "x4",
+      "dest": {
+        "kind": "queue",
+        "id": "q6"
+      },
+      "key": "a.#.b.#"
+    },
+    "b8": {
+      "source": "x5",
+      "dest": {
+        "kind": "queue",
+        "id": "q1"
+      },
+      "key": "direct-key"
+    },
+    "b9": {
+      "source": "x3",
+      "dest": {
+        "kind": "queue",
+        "id": "q2"
+      },
+      "key": ""
+    }
+  },
+  "producers": {
+    "p1": {
+      "name": "uploader",
+      "target": {
+        "kind": "exchange",
+        "id": "x1"
+      },
+      "message": {
+        "payload": "{\"id\":1}",
+        "key": "",
+        "headers": [
+          {
+            "key": "format",
+            "value": {
+              "t": "string",
+              "v": "pdf"
+            }
+          },
+          {
+            "key": "pages",
+            "value": {
+              "t": "integer",
+              "v": 3
+            }
+          },
+          {
+            "key": "ratio",
+            "value": {
+              "t": "float",
+              "v": 1.5
+            }
+          },
+          {
+            "key": "scanned",
+            "value": {
+              "t": "boolean",
+              "v": true
+            }
+          },
+          {
+            "key": "flagged",
+            "value": {
+              "t": "boolean",
+              "v": false
+            }
+          },
+          {
+            "key": "version",
+            "value": {
+              "t": "float",
+              "v": 1
+            }
+          },
+          {
+            "key": "string-one",
+            "value": {
+              "t": "string",
+              "v": "1"
+            }
+          }
+        ]
+      },
+      "burst": 1,
+      "interval": {
+        "everyMs": 1000,
+        "on": false
+      }
+    },
+    "p2": {
+      "name": "straight-to-a-queue",
+      "target": {
+        "kind": "queue",
+        "id": "q5"
+      },
+      "message": {
+        "payload": "",
+        "key": "",
+        "headers": []
+      },
+      "burst": 1,
+      "interval": {
+        "everyMs": 1000,
+        "on": false
+      }
+    },
+    "p3": {
+      "name": "not-linked",
+      "target": null,
+      "message": {
+        "payload": "",
+        "key": "",
+        "headers": []
+      },
+      "burst": 1,
+      "interval": {
+        "everyMs": 1000,
+        "on": false
+      }
+    }
+  },
+  "consumers": {
+    "c1": {
+      "name": "reader",
+      "queues": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "ack": "auto",
+      "prefetch": 0,
+      "processingMs": 500
+    },
+    "c2": {
+      "name": "idle",
+      "queues": [],
+      "ack": "auto",
+      "prefetch": 0,
+      "processingMs": 500
+    }
+  },
+  "layout": {
+    "nodes": {
+      "x1": {
+        "x": 0,
+        "y": 0
+      },
+      "x2": {
+        "x": 100,
+        "y": 0
+      },
+      "x3": {
+        "x": 200,
+        "y": 0
+      },
+      "x4": {
+        "x": 300,
+        "y": 0
+      },
+      "x5": {
+        "x": 400,
+        "y": 0
+      },
+      "q1": {
+        "x": 500,
+        "y": 0
+      },
+      "q2": {
+        "x": 600,
+        "y": 0
+      },
+      "q3": {
+        "x": 700,
+        "y": 0
+      },
+      "q4": {
+        "x": 800,
+        "y": 0
+      },
+      "q5": {
+        "x": 900,
+        "y": 0
+      },
+      "q6": {
+        "x": 1000,
+        "y": 0
+      },
+      "p1": {
+        "x": 1100,
+        "y": 0
+      },
+      "p2": {
+        "x": 1200,
+        "y": 0
+      },
+      "p3": {
+        "x": 1300,
+        "y": 0
+      },
+      "c1": {
+        "x": 1400,
+        "y": 0
+      },
+      "c2": {
+        "x": 1500,
+        "y": 0
+      }
+    },
+    "labels": {
+      "x1>q1": {
+        "at": 0.25
+      },
+      "x2>q3": {
+        "at": 0.75
+      }
+    }
+  },
+  "settings": {
+    "showDefaultExchange": false,
+    "seed": 1,
+    "timing": {
+      "publishMs": 500,
+      "brokerMs": 300,
+      "deliverMs": 500
+    }
+  }
+}

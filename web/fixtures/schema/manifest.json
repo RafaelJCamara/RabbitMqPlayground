@@ -1,0 +1,10 @@
+{
+  "about": "The documents that each schema version wrote, with the SHA-256 of what each one parses to, so that a line ending cannot change it. A file here is never edited, and none is deleted: the day a migration is wrong, these are the proof (ADR-0027). A new schema version adds a folder, and adds its files here.",
+  "files": {
+    "v1/empty.json": "0e75cca496f0655149b25999951278f17b577e9a6413b564f8b95290a6b46548",
+    "v1/sample.json": "788f4a30f832d8253828a90a50865b29d143542d6c3f06fb675bcdef93df4dba",
+    "v1/typed-headers.json": "d0b3261975b78a53597ce0dddaff1a61dbdb6f1bd8c4cd886053bb12f3613216",
+    "v1/unicode.json": "eab402a268a4e5b3d57f5f3b647a2020ff1ed28961ad011a81ca173196373581",
+    "v1/limits.json": "c4fe679c2cd02e17964a7215f93b15575f8a4b7abfe336514cd361ee7ac81726"
+  }
+}

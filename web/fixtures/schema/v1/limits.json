@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "rabbitmqBaseline": "4.3",
+  "vhost": "/",
+  "exchanges": {
+    "x1": {
+      "name": "top",
+      "type": "headers",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    }
+  },
+  "queues": {
+    "q1": {
+      "name": "sink",
+      "serverNamed": false,
+      "durable": true
+    }
+  },
+  "bindings": {
+    "b1": {
+      "source": "x1",
+      "dest": {
+        "kind": "queue",
+        "id": "q1"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "max",
+            "value": {
+              "t": "integer",
+              "v": 9007199254740991
+            }
+          },
+          {
+            "key": "min",
+            "value": {
+              "t": "integer",
+              "v": -9007199254740991
+            }
+          },
+          {
+            "key": "tiny",
+            "value": {
+              "t": "float",
+              "v": 5e-324
+            }
+          },
+          {
+            "key": "big",
+            "value": {
+              "t": "float",
+              "v": 1e+21
+            }
+          },
+          {
+            "key": "zero",
+            "value": {
+              "t": "integer",
+              "v": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "producers": {
+    "p1": {
+      "name": "fastest",
+      "target": {
+        "kind": "exchange",
+        "id": "x1"
+      },
+      "message": {
+        "payload": "",
+        "key": "",
+        "headers": [
+          {
+            "key": "max",
+            "value": {
+              "t": "integer",
+              "v": 9007199254740991
+            }
+          },
+          {
+            "key": "min",
+            "value": {
+              "t": "integer",
+              "v": -9007199254740991
+            }
+          }
+        ]
+      },
+      "burst": 1000,
+      "interval": {
+        "everyMs": 1,
+        "on": true
+      }
+    },
+    "p2": {
+      "name": "slowest",
+      "target": {
+        "kind": "exchange",
+        "id": "x1"
+      },
+      "message": {
+        "payload": "",
+        "key": "",
+        "headers": []
+      },
+      "burst": 1,
+      "interval": {
+        "everyMs": 3600000,
+        "on": false
+      }
+    }
+  },
+  "consumers": {
+    "c1": {
+      "name": "unlimited",
+      "queues": [
+        "q1"
+      ],
+      "ack": "auto",
+      "prefetch": 0,
+      "processingMs": 0
+    },
+    "c2": {
+      "name": "limited",
+      "queues": [
+        "q1"
+      ],
+      "ack": "manual",
+      "prefetch": 65535,
+      "processingMs": 3600000
+    }
+  },
+  "layout": {
+    "nodes": {
+      "x1": {
+        "x": -1000000,
+        "y": 1000000
+      },
+      "q1": {
+        "x": 1000000,
+        "y": -1000000
+      },
+      "p1": {
+        "x": 0,
+        "y": 0
+      },
+      "p2": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "c1": {
+        "x": -0.5,
+        "y": -0.5
+      },
+      "c2": {
+        "x": 123456.789,
+        "y": -987654.321
+      }
+    },
+    "labels": {
+      "x1>q1": {
+        "at": 0.5
+      }
+    }
+  },
+  "settings": {
+    "showDefaultExchange": false,
+    "seed": 4294967295,
+    "timing": {
+      "publishMs": 0,
+      "brokerMs": 60000,
+      "deliverMs": 0
+    }
+  }
+}

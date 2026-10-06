@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "rabbitmqBaseline": "4.3",
+  "vhost": "my vhost/é",
+  "exchanges": {
+    "x1": {
+      "name": "ordres reçus",
+      "type": "topic",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x2": {
+      "name": "日本語の交換",
+      "type": "fanout",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x3": {
+      "name": "with \"quotes\" and \\ backslash",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x4": {
+      "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    "x5": {
+      "name": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    }
+  },
+  "queues": {
+    "q1": {
+      "name": "file d’attente",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q2": {
+      "name": "queue:q",
+      "serverNamed": false,
+      "durable": true
+    },
+    "q3": {
+      "name": "exchange:x",
+      "serverNamed": false,
+      "durable": true
+    }
+  },
+  "bindings": {
+    "b1": {
+      "source": "x1",
+      "dest": {
+        "kind": "queue",
+        "id": "q1"
+      },
+      "key": "commande.*.été"
+    },
+    "b2": {
+      "source": "x2",
+      "dest": {
+        "kind": "queue",
+        "id": "q2"
+      },
+      "key": ""
+    },
+    "b3": {
+      "source": "x3",
+      "dest": {
+        "kind": "queue",
+        "id": "q3"
+      },
+      "key": "a b;c=d(e)->f"
+    },
+    "b4": {
+      "source": "x5",
+      "dest": {
+        "kind": "exchange",
+        "id": "x4"
+      },
+      "key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+    }
+  },
+  "producers": {
+    "p1": {
+      "name": "émetteur",
+      "target": {
+        "kind": "exchange",
+        "id": "x1"
+      },
+      "message": {
+        "payload": "ligne un\nligne deux\t\"cité\" \\ fin",
+        "key": "commande.reçue.été",
+        "headers": [
+          {
+            "key": "clé",
+            "value": {
+              "t": "string",
+              "v": "valeur 😀"
+            }
+          }
+        ]
+      },
+      "burst": 1,
+      "interval": {
+        "everyMs": 1000,
+        "on": false
+      }
+    }
+  },
+  "consumers": {
+    "c1": {
+      "name": "lecteur",
+      "queues": [
+        "q1",
+        "q2"
+      ],
+      "ack": "auto",
+      "prefetch": 0,
+      "processingMs": 500
+    }
+  },
+  "layout": {
+    "nodes": {
+      "x1": {
+        "x": -120.5,
+        "y": 40.25
+      },
+      "x2": {
+        "x": 0,
+        "y": 0
+      },
+      "x3": {
+        "x": 99999.75,
+        "y": -99999.75
+      },
+      "x4": {
+        "x": 1,
+        "y": 2
+      },
+      "x5": {
+        "x": 3,
+        "y": 4
+      },
+      "q1": {
+        "x": 5,
+        "y": 6
+      },
+      "q2": {
+        "x": 7,
+        "y": 8
+      },
+      "q3": {
+        "x": 9,
+        "y": 10
+      },
+      "p1": {
+        "x": -300,
+        "y": 12.5
+      },
+      "c1": {
+        "x": 300,
+        "y": 12.5
+      }
+    },
+    "labels": {
+      "x1>q1": {
+        "at": 0
+      },
+      "x3>q3": {
+        "at": 1
+      },
+      "x2>q2": {
+        "at": 0.3333333333333333
+      }
+    }
+  },
+  "settings": {
+    "showDefaultExchange": true,
+    "seed": 20261005,
+    "timing": {
+      "publishMs": 250,
+      "brokerMs": 125,
+      "deliverMs": 1000
+    }
+  }
+}
