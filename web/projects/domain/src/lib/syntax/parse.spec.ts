@@ -995,7 +995,7 @@ describe('parseCommand', () => {
 
   describe('help', () => {
     it('reads help with no command, and with the name of one, of one word or of two', () => {
-      expect(read('help')).toEqual({ type: 'help' });
+      expect(read('help')).toStrictEqual({ type: 'help' });
       expect(read('help bind')).toEqual({ type: 'help', command: 'bind' });
       expect(read('help declare queue')).toEqual({ type: 'help', command: 'declare queue' });
       expect(read('help move')).toEqual({ type: 'help', command: 'move' });
@@ -1041,6 +1041,26 @@ describe('parseCommand', () => {
       expect(refused('help "bind"')).toMatchObject({ kind: 'syntax' });
       expect(refused('help bind -> x')).toMatchObject({ kind: 'syntax' });
       expect(pointedAt('help -> bind', refused('help -> bind'))).toBe('->');
+    });
+
+    it('says why, in plain words, and where, for a name that has a quote in it, whether the whole word is quoted or only a part of it', () => {
+      const why =
+        'Write the name of a command as it is typed, with no quotes and no arrow, as in help bind or help declare queue.';
+
+      for (const text of ['help "bind"', 'help "bi"nd', 'help bi"nd"']) {
+        const issue = refused(text);
+        expect(issue, text).toMatchObject({ kind: 'syntax', message: why });
+        expect(pointedAt(text, issue), text).toBe(text.slice('help '.length));
+      }
+    });
+
+    it('says what is wrong with the first word, and not with the ones after it, when the words are no command', () => {
+      const text = 'help frobnicate one two';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({ kind: 'unknown-command' });
+      expect(issue.message).toBe("There is no command 'frobnicate'.");
+      expect(pointedAt(text, issue)).toBe('frobnicate');
     });
 
     it('cannot be one of several commands, because it answers a question and changes nothing', () => {
