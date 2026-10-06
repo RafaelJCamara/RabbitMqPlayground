@@ -171,7 +171,7 @@ const helpSpoken = (output: HelpOutput): string =>
                 autocapitalize="off"
                 spellcheck="false"
                 placeholder="Type a command, or help"
-                class="border-border bg-surface w-full rounded-md border px-2 py-1.5 font-mono"
+                class="border-border bg-surface placeholder:text-muted w-full rounded-md border px-2 py-1.5 font-mono"
                 [value]="text()"
                 [attr.aria-expanded]="items().length > 0"
                 [attr.aria-controls]="items().length > 0 ? listId : null"

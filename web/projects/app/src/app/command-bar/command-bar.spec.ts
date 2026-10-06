@@ -230,6 +230,15 @@ describe('CommandBar, the log of equivalent commands (ADR-0046)', () => {
 });
 
 describe('CommandBar, completion (ADR-0045)', () => {
+  it('says what to type in the colour of muted text, which is readable, and not in the colour that the browser chooses', async () => {
+    const { user } = await renderBar(SHOP);
+
+    await openBar(user);
+
+    expect(field()).toHaveAttribute('placeholder', 'Type a command, or help');
+    expect(field()).toHaveClass('placeholder:text-muted');
+  });
+
   it('is a combobox that has no list while nothing is typed, and says so', async () => {
     const { user } = await renderBar(SHOP);
 
