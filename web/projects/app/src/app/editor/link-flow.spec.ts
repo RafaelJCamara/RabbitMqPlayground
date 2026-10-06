@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { CanvasDocument } from '@rmq/domain';
+import { NODE_SIZE, type CanvasDocument } from '@rmq/domain';
 import { documentOf, exchangeRecord, producerRecord, queueRecord, sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -370,6 +370,45 @@ describe('LinkFlow (ADR-0041, ADR-0042)', () => {
       const queue = Object.values(store.document().queues).find(({ name }) => name === 'queue1');
       expect(queue).toBeDefined();
       expect(Object.values(store.document().bindings).some(({ key }) => key === 'order.new')).toBe(true);
+    });
+
+    it('puts the popover of the key where the new node will be, with its middle at the point, and not by another node', () => {
+      TestBed.inject(FlowViewport).attach({
+        transform: () => ({ position: { x: 0, y: 0 }, scaledPosition: { x: 0, y: 0 }, scale: 2 }),
+        host: () => ({ x: 10, y: 20, width: 800, height: 600 }),
+        fit: () => undefined,
+        zoomIn: () => undefined,
+        zoomOut: () => undefined,
+        resetZoom: () => undefined,
+        select: () => undefined,
+        focus: () => undefined,
+        edgePath: () => null,
+      });
+      const { width, height } = NODE_SIZE.queue;
+
+      flow.dropOnNothing('E1', { x: 100, y: 100 }, { x: 10, y: 10 }, 'gesture');
+      surface.create?.choose({ kind: 'queue' });
+
+      // The canvas is at 200%, so the box of the node is twice as big, and its corner twice as far from the corner of the host.
+      expect(surface.key?.anchor).toEqual({
+        x: (100 - width / 2) * 2,
+        y: (100 - height / 2) * 2,
+        width: width * 2,
+        height: height * 2,
+      });
+    });
+
+    it('shows the new node only once the binding is made: a key that is refused makes nothing to show', () => {
+      const focus = TestBed.inject(NewNodeFocus);
+      const show = vi.spyOn(focus, 'show');
+      flow.dropOnNothing('E1', { x: 100, y: 100 }, { x: 10, y: 10 }, 'gesture');
+      surface.create?.choose({ kind: 'queue' });
+
+      expect(surface.key?.submit('#.#.#').ok).toBe(false);
+      expect(show).not.toHaveBeenCalled();
+
+      expect(surface.key?.submit('order.new').ok).toBe(true);
+      expect(show).toHaveBeenCalledExactlyOnceWith('queue', 'queue1');
     });
 
     it('makes nothing when the key is given up, and not even the node', () => {

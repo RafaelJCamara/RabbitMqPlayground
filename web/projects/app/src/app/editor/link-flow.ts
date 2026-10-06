@@ -91,8 +91,11 @@ const KEY_HELP: Readonly<Partial<Record<ExchangeType, string>>> = {
 /** Only a direct and a topic exchange read the key of a binding. A fanout ignores it, and a headers exchange reads conditions, which are S8's. */
 const keyMatters = (type: ExchangeType | undefined): boolean => type === 'direct' || type === 'topic';
 
+/** The commands that a link makes. */
+type LinkingCommand = Extract<DocumentCommand, { readonly type: 'bind' | 'link' | 'subscribe' }>;
+
 /** What is said when a link changes nothing, because what it makes is there already. */
-const NOTHING_NEW: Readonly<Record<string, string>> = {
+const NOTHING_NEW: Readonly<Record<LinkingCommand['type'], string>> = {
   bind: 'Already bound with that key.',
   link: 'That producer already publishes there.',
   subscribe: 'That consumer already consumes from that queue.',
@@ -137,18 +140,20 @@ export class LinkFlow {
       return;
     }
     const command = made.value;
-    const type = command.type === 'bind' ? lookup(document.exchanges, source)?.type : undefined;
-    if (command.type === 'bind' && type !== undefined && keyMatters(type) && this.surface !== undefined) {
-      this.askKey(
-        command,
-        type,
-        describeNode(document, source) as string,
-        describeNode(document, target) as string,
-        this.anchorOf(document, target),
-        origin,
-        (bound) => this.apply(bound, origin),
-      );
-      return;
+    if (command.type === 'bind') {
+      const type = lookup(document.exchanges, source)?.type;
+      if (type !== undefined && keyMatters(type) && this.surface !== undefined) {
+        this.askKey(
+          command,
+          type,
+          describeNode(document, source) as string,
+          describeNode(document, target) as string,
+          this.anchorOf(document, target),
+          origin,
+          (bound) => this.apply(bound, origin),
+        );
+        return;
+      }
     }
     this.apply(command, origin);
   }
@@ -199,16 +204,14 @@ export class LinkFlow {
     const { nodes, reason } = createChoices(document, source);
     if (nodes.length === 0) {
       this.bus.refuse(
-        {
-          kind: 'invalid-link',
-          message: reason ?? 'There is nothing to link to where you let go. Drop the link on a node.',
-        },
+        // The choices say why they are none: each item of the toolbox that is not offered has its reason.
+        { kind: 'invalid-link', message: reason as string },
         origin,
       );
       return;
     }
     this.surface?.askNew({
-      title: `Create and link from ${describeNode(document, source) ?? 'this node'}`,
+      title: `Create and link from ${describeNode(document, source) as string}`,
       client,
       nodes,
       choose: (node) => this.createAndLink(source, node, at, origin),
@@ -228,13 +231,10 @@ export class LinkFlow {
       this.bus.refuse(added.error, origin);
       return;
     }
-    const target = findId(added.value, addition.kind, addition.name);
-    const made = target === undefined ? undefined : linkCommand(added.value, source, target);
-    if (made === undefined || !made.ok) {
-      this.bus.refuse(
-        made?.ok === false ? made.error : { kind: 'invalid-link', message: 'That cannot be linked.' },
-        origin,
-      );
+    const target = findId(added.value, addition.kind, addition.name) as Id;
+    const made = linkCommand(added.value, source, target);
+    if (!made.ok) {
+      this.bus.refuse(made.error, origin);
       return;
     }
     const steps: readonly DocumentCommand[] =
@@ -246,19 +246,21 @@ export class LinkFlow {
       }
       return result;
     };
-    const type = made.value.type === 'bind' ? lookup(document.exchanges, source)?.type : undefined;
-    if (made.value.type === 'bind' && type !== undefined && keyMatters(type) && this.surface !== undefined) {
-      const { width, height } = frameOf(addition.kind);
-      this.askKey(
-        made.value,
-        type,
-        describeNode(document, source) as string,
-        `${addition.kind} ${addition.name}`,
-        this.viewport.onHost({ x: at.x - width / 2, y: at.y - height / 2, width, height }),
-        origin,
-        make,
-      );
-      return;
+    if (made.value.type === 'bind') {
+      const type = lookup(document.exchanges, source)?.type;
+      if (type !== undefined && keyMatters(type) && this.surface !== undefined) {
+        const { width, height } = frameOf(addition.kind);
+        this.askKey(
+          made.value,
+          type,
+          describeNode(document, source) as string,
+          `${addition.kind} ${addition.name}`,
+          this.viewport.onHost({ x: at.x - width / 2, y: at.y - height / 2, width, height }),
+          origin,
+          make,
+        );
+        return;
+      }
     }
     make(made.value);
   }
@@ -284,11 +286,11 @@ export class LinkFlow {
   }
 
   /** Applies a command, and says so when it changed nothing, because what it makes is there already, which would otherwise be silent. */
-  private apply(command: DocumentCommand, origin: CommandOrigin): Result<CanvasDocument> {
+  private apply(command: LinkingCommand, origin: CommandOrigin): Result<CanvasDocument> {
     const before = this.store.document();
     const result = this.bus.apply(command, origin);
     if (result.ok && result.value === before) {
-      this.bus.say(NOTHING_NEW[command.type] ?? 'Nothing changed.');
+      this.bus.say(NOTHING_NEW[command.type]);
     }
     return result;
   }
