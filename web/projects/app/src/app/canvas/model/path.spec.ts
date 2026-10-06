@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { closestFraction, pointAtFraction, polylineOf } from './path';
+
+/** The path that the library drew for an edge in the end-to-end suite, which the browser measures at 348.344 long. */
+const CURVE = 'M 492 28 C 660 28, 140 148, 308.0002 148.0002';
+
+describe('polylineOf (ADR-0044)', () => {
+  it('reads a straight line, and knows how long it is', () => {
+    const line = polylineOf('M 0 0 L 30 40');
+
+    expect(line?.total).toBeCloseTo(50, 5);
+    expect(line?.points[0]).toEqual({ x: 0, y: 0 });
+    expect(line?.points.at(-1)).toEqual({ x: 30, y: 40 });
+  });
+
+  it('reads the curve that the library draws, and measures it as the browser does, within half a unit', () => {
+    const line = polylineOf(CURVE);
+
+    expect(line?.total).toBeGreaterThan(347.8);
+    expect(line?.total).toBeLessThan(348.9);
+    expect(line?.points[0]).toEqual({ x: 492, y: 28 });
+    expect(line?.points.at(-1)?.x).toBeCloseTo(308.0002, 4);
+  });
+
+  it('reads a quadratic curve, a path with several segments, and numbers with signs, decimals and exponents', () => {
+    expect(polylineOf('M 0 0 Q 50 100 100 0')?.total).toBeGreaterThan(100);
+    expect(polylineOf('M 0 0 L 10 0 L 10 10 L 0 10')?.total).toBeCloseTo(30, 5);
+    expect(polylineOf('M-5.5,-2.5L4.5,-2.5')?.total).toBeCloseTo(10, 5);
+    expect(polylineOf('M 0 0 L 1e1 0')?.total).toBeCloseTo(10, 5);
+  });
+
+  it('reads the commas that the library puts between the points of a curve', () => {
+    expect(polylineOf('M 0 0 C 10 0, 20 0, 30 0')?.total).toBeCloseTo(30, 3);
+  });
+
+  it('is nothing for a path that has no line in it, so that an edge that is not drawn is left alone', () => {
+    expect(polylineOf('')).toBeNull();
+    expect(polylineOf('M 1 2')).toBeNull();
+    expect(polylineOf('nonsense')).toBeNull();
+    expect(polylineOf('L 1 2')).toBeNull();
+  });
+
+  it('keeps what it could read of a path that goes on with a command that it does not know', () => {
+    const line = polylineOf('M 0 0 L 10 0 Z');
+
+    expect(line?.total).toBeCloseTo(10, 5);
+  });
+
+  it('is nothing for a segment that lacks its numbers', () => {
+    expect(polylineOf('M 0 0 L 10')).toBeNull();
+    expect(polylineOf('M 0 0 C 1 2 3 4 5')).toBeNull();
+  });
+});
+
+describe('pointAtFraction', () => {
+  it('is the start at 0, the end at 1, and the middle by length on a straight line', () => {
+    const line = polylineOf('M 0 0 L 100 0')!;
+
+    expect(pointAtFraction(line, 0)).toEqual({ x: 0, y: 0 });
+    expect(pointAtFraction(line, 1)).toEqual({ x: 100, y: 0 });
+    expect(pointAtFraction(line, 0.5)).toEqual({ x: 50, y: 0 });
+    expect(pointAtFraction(line, 0.25)).toEqual({ x: 25, y: 0 });
+  });
+
+  it('goes by the length along the path, so a place is where the library puts it (about a pixel off over this curve)', () => {
+    const point = pointAtFraction(polylineOf(CURVE)!, 0.25);
+
+    // The browser's getPointAtLength gives (482.086, 58.934), and the library places its content at (481.117, 59.298).
+    expect(Math.abs(point.x - 482.086)).toBeLessThan(1.5);
+    expect(Math.abs(point.y - 58.934)).toBeLessThan(1.5);
+  });
+
+  it('goes round a corner', () => {
+    const line = polylineOf('M 0 0 L 10 0 L 10 10')!;
+
+    expect(pointAtFraction(line, 0.75)).toEqual({ x: 10, y: 5 });
+  });
+
+  it('stays on the path for a fraction that is out of range', () => {
+    const line = polylineOf('M 0 0 L 100 0')!;
+
+    expect(pointAtFraction(line, -1)).toEqual({ x: 0, y: 0 });
+    expect(pointAtFraction(line, 2)).toEqual({ x: 100, y: 0 });
+  });
+});
+
+describe('closestFraction', () => {
+  it('is how far along the path the nearest point to a point is, by length', () => {
+    const line = polylineOf('M 0 0 L 100 0')!;
+
+    expect(closestFraction(line, { x: 25, y: 30 })).toBeCloseTo(0.25, 5);
+    expect(closestFraction(line, { x: 80, y: -5 })).toBeCloseTo(0.8, 5);
+  });
+
+  it('is 0 before the start and 1 after the end', () => {
+    const line = polylineOf('M 0 0 L 100 0')!;
+
+    expect(closestFraction(line, { x: -40, y: 10 })).toBe(0);
+    expect(closestFraction(line, { x: 400, y: 10 })).toBe(1);
+  });
+
+  it('gives back the fraction that a point on the curve was taken at', () => {
+    const line = polylineOf(CURVE)!;
+
+    for (const at of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+      expect(closestFraction(line, pointAtFraction(line, at))).toBeCloseTo(at, 2);
+    }
+  });
+
+  it('chooses the nearest part of a path that comes back near itself', () => {
+    const line = polylineOf('M 0 0 L 100 0 L 100 10 L 0 10')!;
+
+    expect(closestFraction(line, { x: 20, y: 9 })).toBeGreaterThan(0.6);
+    expect(closestFraction(line, { x: 20, y: 1 })).toBeLessThan(0.2);
+  });
+});
