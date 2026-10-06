@@ -197,7 +197,10 @@ export class IntentHandler {
   describe(id: Id): string | undefined {
     const document = this.store.document();
     const kind = kindOf(document, id);
-    const name = kind === undefined ? undefined : nameOf(document, kind, id);
-    return kind === undefined || name === undefined ? undefined : `${kind} ${name}`;
+    if (kind === undefined) {
+      return undefined;
+    }
+    const name = nameOf(document, kind, id);
+    return name === undefined ? undefined : `${kind} ${name}`;
   }
 }

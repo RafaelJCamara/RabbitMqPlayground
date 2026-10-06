@@ -1,6 +1,15 @@
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from '@angular/cdk/menu';
-import { DOCUMENT } from '@angular/common';
-import { afterNextRender, Component, DestroyRef, inject, Injector, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  DOCUMENT,
+  inject,
+  Injector,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import type { ContextTarget } from '../canvas/model/intents';
 import type { Point } from '../canvas/model/transform';
 import { Icon } from '../core/ui/icon';
@@ -73,7 +82,7 @@ export class ContextMenu {
   readonly dismissed = output<void>();
 
   protected readonly items = signal<readonly MenuItem[]>([]);
-  protected readonly title = signal('Actions');
+  protected readonly title = signal('');
   private readonly target = signal<ContextTarget | null>(null);
   private readonly trigger = viewChild.required(CdkContextMenuTrigger);
   private readonly menuRef = viewChild(CdkMenu);
@@ -144,6 +153,5 @@ export class ContextMenu {
     if (!this.chosen) {
       this.dismissed.emit();
     }
-    this.chosen = false;
   }
 }

@@ -205,13 +205,17 @@ export class Editor implements IntentSurface, ActionSurface {
     this.intents.handle(intent);
   }
 
-  /** The menu is for what was pointed at, so that is what is selected, and what the inspector shows. */
+  /**
+   * The menu is for what was pointed at, and only that, so that is what is selected, and what the inspector shows. A node that has
+   * gone from the canvas since it was pointed at has no menu.
+   */
   openMenu(target: ContextTarget, client: Point): void {
     if (target.kind === 'node') {
-      if (!this.selection.selection().nodes.includes(target.id)) {
+      const what = this.intents.describe(target.id);
+      if (what !== undefined) {
         this.selection.select([target.id]);
+        this.menu().open(target, client, `Actions for ${what}`);
       }
-      this.menu().open(target, client, `Actions for ${this.intents.describe(target.id) ?? 'this node'}`);
     } else {
       this.selection.select([], [target.key]);
       this.menu().open(target, client, 'Actions for this edge');

@@ -16,6 +16,7 @@ import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import {
   AUTOSAVE_TIMER,
+  CanvasSession,
   NOW,
   REPOSITORIES,
   STORAGE_MANAGER,
@@ -27,6 +28,7 @@ import { DocumentStore } from '../core/state/document-store';
 import type { Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { THEME_STORAGE_KEY } from '../core/theme/theme';
+import { ContextMenu } from './context-menu';
 import { Editor } from './editor';
 
 /**
@@ -171,6 +173,74 @@ describe('Editor', () => {
       ['failure', 'assertive'],
       ['warning', 'polite'],
     ]);
+  });
+
+  it('does not say anything assertively for a write that worked', async () => {
+    const announce = vi.spyOn(Announcer.prototype, 'announce');
+    try {
+      const { providers, timer } = harness();
+      const { fixture } = await renderEditor(providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+
+      fixture.debugElement.injector
+        .get(CommandBus)
+        .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+      fixture.detectChanges();
+      expect(screen.getByTestId('save-state')).toHaveTextContent('Saving…');
+      timer.advance(500);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+
+      expect(announce.mock.calls.filter(([, politeness]) => politeness === 'assertive')).toEqual([]);
+    } finally {
+      announce.mockRestore();
+    }
+  });
+
+  it.each([
+    ['almost no room is left, which is urgent', 990, 'assertive'],
+    ['the room is running low, which is not', 850, 'polite'],
+  ] as const)('says aloud, with the urgency that it has, when %s', async (_what, usage, politeness) => {
+    const { providers, timer, storage } = harness();
+    storage.estimate.mockResolvedValue({ usage, quota: 1_000 });
+    const { fixture } = await renderEditor(providers);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const announce = vi.spyOn(fixture.debugElement.injector.get(Announcer), 'announce');
+
+    fixture.debugElement.injector
+      .get(CommandBus)
+      .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+    timer.advance(500);
+    await waitFor(() => expect(screen.getByTestId('quota')).toBeInTheDocument());
+
+    const warning = fixture.debugElement.injector.get(CanvasSession).quota();
+    expect(announce).toHaveBeenCalledWith(warning?.message, politeness);
+  });
+
+  it('says aloud what the browser said when it would not promise to keep the canvases', async () => {
+    const { providers, timer, storage } = harness();
+    storage.persist.mockResolvedValue(false);
+    const { fixture } = await renderEditor(providers);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const announce = vi.spyOn(fixture.debugElement.injector.get(Announcer), 'announce');
+
+    fixture.debugElement.injector
+      .get(CommandBus)
+      .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+    timer.advance(500);
+
+    await waitFor(() => expect(fixture.debugElement.injector.get(CanvasSession).persistence()).not.toBeNull());
+    const note = fixture.debugElement.injector.get(CanvasSession).persistence();
+    await waitFor(() => expect(announce).toHaveBeenCalledWith(note?.message));
+  });
+
+  it('lets go of the canvas when it is taken away, so that nothing is written after it', async () => {
+    const { fixture } = await renderEditor(harness().providers);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const close = vi.spyOn(fixture.debugElement.injector.get(CanvasSession), 'close');
+
+    fixture.destroy();
+
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it('says that nothing is kept when the browser will not let the site keep canvases', async () => {
@@ -395,6 +465,54 @@ describe('Editor', () => {
       expect(canvas().selection().edges).toEqual([edge!.id]);
     });
 
+    it('is for what was pointed at, and only that, so that is all that is selected, even when it was one of several', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+      const [first, second] = canvas().model().nodes;
+      canvas().intent.emit({ type: 'select', nodes: [first!.id, second!.id], edges: [] });
+      fixture.detectChanges();
+
+      canvas().intent.emit({ type: 'context-menu', target: { kind: 'node', id: second!.id }, client: { x: 5, y: 5 } });
+      fixture.detectChanges();
+
+      expect(await screen.findByRole('menu', { name: 'Actions for queue queue2' })).toBeInTheDocument();
+      expect(canvas().selection().nodes).toEqual([second!.id]);
+    });
+
+    it('does not open for a node that has gone from the canvas, and leaves the selection as it was', async () => {
+      const { canvas, queue, fixture } = await openEditor();
+      canvas().intent.emit({ type: 'select', nodes: [queue.id], edges: [] });
+      fixture.detectChanges();
+
+      canvas().intent.emit({ type: 'context-menu', target: { kind: 'node', id: 'gone' }, client: { x: 5, y: 5 } });
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(canvas().selection().nodes).toEqual([queue.id]);
+    });
+
+    it('does not rename an edge, and does not delete it either, when it is asked to', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Direct exchange' }));
+      fixture.detectChanges();
+      const idOf = (kind: string) =>
+        canvas()
+          .model()
+          .nodes.find((node) => node.kind === kind)!.id;
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      const [edge] = canvas().model().edges;
+
+      fixture.debugElement
+        .query(By.directive(ContextMenu))
+        .triggerEventHandler('act', { action: 'rename', target: { kind: 'edge', key: edge!.id } });
+      fixture.detectChanges();
+
+      expect(canvas().model().edges).toHaveLength(1);
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+    });
+
     it('gives the focus back to the canvas when it is closed without a choice', async () => {
       const { canvas, openMenu, fixture } = await openEditor();
       await openMenu();
@@ -459,7 +577,10 @@ describe('Editor', () => {
       await user.keyboard('queue2{Enter}');
       fixture.detectChanges();
 
-      expect(screen.getByTestId('rename-field')).toBeInTheDocument();
+      const field = screen.getByTestId('rename-field');
+      expect(field).toBeInTheDocument();
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+      expect(field).toHaveAccessibleDescription(expect.stringContaining('queue2'));
       expect(screen.getByTestId('refusal-message')).toHaveTextContent('queue2');
       expect(
         canvas()
@@ -489,12 +610,15 @@ describe('Editor', () => {
     it('closes the field, and says on the status line why, when it is left with a name that is refused', async () => {
       const { startRename, canvas, user, fixture } = await openEditor();
       await startRename();
+      canvas().calls.length = 0;
 
       await user.keyboard('queue2');
       await user.tab();
       fixture.detectChanges();
 
       expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      // The learner went to something else, and the focus stays where they put it.
+      expect(canvas().calls).not.toContain('focus');
       expect(screen.getByTestId('refusal-message')).toHaveTextContent('queue2');
       expect(
         canvas()
@@ -525,12 +649,15 @@ describe('Editor', () => {
       await startRename();
       const store = fixture.debugElement.injector.get(DocumentStore);
       const before = store.document();
+      const applied: string[] = [];
+      fixture.debugElement.injector.get(CommandBus).onApplied(({ command }) => applied.push(command.type));
 
       await user.keyboard('{Enter}');
       fixture.detectChanges();
 
       expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
       expect(store.document()).toBe(before);
+      expect(applied).toEqual([]);
     });
 
     it('does not open for a node that is not there', async () => {
