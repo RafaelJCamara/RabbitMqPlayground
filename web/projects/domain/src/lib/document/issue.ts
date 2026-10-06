@@ -79,6 +79,14 @@ export type ElementKind = 'exchange' | 'queue' | 'producer' | 'consumer';
 
 export const ELEMENT_KINDS: readonly ElementKind[] = ['exchange', 'queue', 'producer', 'consumer'];
 
+/** A kind with the article that goes before it: `an exchange`, `a queue`. */
+export const A_KIND: Readonly<Record<ElementKind, string>> = {
+  exchange: 'an exchange',
+  queue: 'a queue',
+  producer: 'a producer',
+  consumer: 'a consumer',
+};
+
 /** The words that name a kind in a sentence. */
 export const KIND_LABEL: Readonly<Record<ElementKind, string>> = {
   exchange: 'exchange',

@@ -10,7 +10,7 @@ import {
   topicWildcardsReply,
   transientQueueReply,
 } from '@rmq/engine';
-import { KIND_LABEL, type ElementKind, type Issue } from './issue';
+import { A_KIND, type ElementKind, type Issue } from './issue';
 
 /**
  * The refusals of ADR-0021 and ADR-0022 and the rules of the simulator, as `Issue`s. A command and the validation of a
@@ -85,7 +85,7 @@ export function missingEndIssue(kind: 'exchange' | 'queue', name: string, vhost:
 export function duplicateNameIssue(kind: ElementKind, name: string): Issue {
   return {
     kind: 'duplicate-name',
-    message: `There is already ${kind === 'exchange' ? 'an' : 'a'} ${KIND_LABEL[kind]} named '${name}'. Names are unique within a kind.`,
+    message: `There is already ${A_KIND[kind]} named '${name}'. Names are unique within a kind.`,
   };
 }
 

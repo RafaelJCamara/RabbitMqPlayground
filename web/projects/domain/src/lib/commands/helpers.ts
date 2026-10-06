@@ -1,5 +1,5 @@
 import { COLLECTION, findId, lookup, recordOf } from '../document/elements';
-import { ELEMENT_KINDS, KIND_LABEL, type ElementKind, type Issue } from '../document/issue';
+import { A_KIND, ELEMENT_KINDS, KIND_LABEL, type ElementKind, type Issue } from '../document/issue';
 import { ID_PATTERN, type CanvasDocument, type Id, type Position } from '../document/schema';
 import { edgeKeys } from '../document/topology';
 import { suggest } from '../suggest';
@@ -145,7 +145,7 @@ export function withNameHints(issue: Issue, document: CanvasDocument, kind: Elem
     others.length === 0
       ? ''
       : ` There is ${joinList(
-          others.map((other) => `${other === 'exchange' ? 'an' : 'a'} ${KIND_LABEL[other]}`),
+          others.map((other) => A_KIND[other]),
           'and',
         )} with that name.`;
   const suggestions = suggest(name, namesOf(document, kind));

@@ -85,5 +85,16 @@ export {
 export { edgeKey, edgeKeys, toTopology } from './lib/document/topology';
 export { History, HISTORY_LIMIT } from './lib/history';
 export { autoLayout, COLUMN_SEPARATION, NODE_SEPARATION, NODE_SIZE } from './lib/layout';
+export {
+  allowedTargets,
+  explainLink,
+  linkCommand,
+  linkRules,
+  linkVerdict,
+  type LinkRules,
+  type LinkVerdict,
+} from './lib/link-rules';
+export { lint, type Lint, type LintKind } from './lib/lints';
+export { reconcile } from './lib/reconcile';
 export { editDistance, suggest } from './lib/suggest';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
