@@ -230,6 +230,23 @@ describe('FlowViewport', () => {
     expect(viewport.toCanvas({ x: 100 + 15 + 40, y: 50 + 25 + 20 })).toEqual({ x: 20, y: 10 });
   });
 
+  it('takes a rectangle of the canvas to the host, at the size that it is drawn, which is where a field goes that edits it', () => {
+    const viewport = make();
+    viewport.attach(fakeDriver().driver);
+
+    // The viewport puts the canvas origin at (15, 25) of the host, at zoom 2.
+    expect(viewport.onHost({ x: 20, y: 10, width: 140, height: 56 })).toEqual({
+      x: 15 + 40,
+      y: 25 + 20,
+      width: 280,
+      height: 112,
+    });
+  });
+
+  it('has no place on the host for a rectangle until a canvas is attached', () => {
+    expect(make().onHost({ x: 0, y: 0, width: 1, height: 1 })).toBeNull();
+  });
+
   it('passes what the app asks to the canvas', () => {
     const viewport = make();
     const { driver, calls } = fakeDriver();

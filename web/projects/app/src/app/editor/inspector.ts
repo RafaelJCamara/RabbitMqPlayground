@@ -66,7 +66,7 @@ let nextInspector = 0;
           }
         </div>
 
-        <fieldset class="flex flex-col gap-1">
+        <fieldset class="flex min-w-0 flex-col gap-1">
           <legend class="flex flex-wrap items-center gap-1 text-sm font-medium">
             Position
             <rmq-help topic="Position">
@@ -74,7 +74,7 @@ let nextInspector = 0;
             </rmq-help>
           </legend>
           <div class="flex gap-3">
-            <div class="flex flex-1 flex-col gap-1">
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
               <label class="text-muted text-xs" [for]="id('x')">X</label>
               <input
                 type="number"
@@ -87,7 +87,7 @@ let nextInspector = 0;
                 (change)="place('x', $event, n)"
               />
             </div>
-            <div class="flex flex-1 flex-col gap-1">
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
               <label class="text-muted text-xs" [for]="id('y')">Y</label>
               <input
                 type="number"

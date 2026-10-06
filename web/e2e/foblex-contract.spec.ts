@@ -540,9 +540,9 @@ test.describe('Foblex contract: what the adapter reports from the pointer', () =
     expect(moves).toHaveLength(1);
     expect(moves[0]).toMatchObject({ by: 'pointer', moves: [{ id: 'c1' }] });
     const moved = (moves[0] as unknown as { moves: { x: number; y: number }[] }).moves[0]!;
-    // The pointer moves by whole pixels and the node by fractions of them at a zoom that is not 100%, so one unit is allowed.
-    expect(Math.abs(moved.x - start.x - 40 / zoom)).toBeLessThanOrEqual(1);
-    expect(Math.abs(moved.y - start.y - 60 / zoom)).toBeLessThanOrEqual(1);
+    // The pointer moves by whole pixels, and one pixel is 1/zoom of the canvas, and the library rounds to whole pixels, so two are allowed.
+    expect(Math.abs(moved.x - start.x - 40 / zoom)).toBeLessThanOrEqual(2 / zoom);
+    expect(Math.abs(moved.y - start.y - 60 / zoom)).toBeLessThanOrEqual(2 / zoom);
   });
 
   test('reports what is dropped from the toolbox, where the middle of its preview was, in the coordinates of the canvas', async ({

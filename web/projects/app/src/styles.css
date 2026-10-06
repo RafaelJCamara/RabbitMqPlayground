@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* The container and the panes that the CDK's overlays (the context menu) are drawn in. */
+@import '@angular/cdk/overlay-prebuilt.css';
 
 /* Design tokens (ADR-0010, ADR-0032). Templates use these names and never raw colours. */
 @theme inline {

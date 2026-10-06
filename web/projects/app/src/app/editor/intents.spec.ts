@@ -223,6 +223,51 @@ describe('IntentHandler', () => {
     });
   });
 
+  describe('a rename', () => {
+    it('gives the node another name, and answers the document that the command made', () => {
+      const result = handler.rename('Q1', 'payments', 'menu');
+
+      expect(result?.ok).toBe(true);
+      expect(store.document().queues['Q1']?.name).toBe('payments');
+      expect(applied.map(({ origin, command }) => [origin, command.type])).toEqual([['menu', 'rename']]);
+    });
+
+    it('answers why when the name is refused, and changes nothing, so that a field can say it', () => {
+      const before = store.document();
+
+      const result = handler.rename('Q1', 'archive', 'key');
+
+      expect(result?.ok).toBe(false);
+      expect(!result?.ok && result?.error.kind).toBe('duplicate-name');
+      expect(store.document()).toBe(before);
+      expect(status.refusal()?.origin).toBe('key');
+    });
+
+    it('answers nothing for a node that is not on the canvas, and applies nothing', () => {
+      expect(handler.rename('gone', 'x', 'key')).toBeUndefined();
+      expect(applied).toEqual([]);
+    });
+  });
+
+  describe('a delete that a menu asks for', () => {
+    it('deletes the node that the menu was opened on, whether or not it is selected', () => {
+      selection.select(['C1']);
+
+      handler.deleteTarget({ kind: 'node', id: 'Q2' }, 'menu');
+
+      expect(store.document().queues['Q2']).toBeUndefined();
+      expect(store.document().consumers['C1']).toBeDefined();
+      expect(applied.map(({ origin }) => origin)).toEqual(['menu']);
+    });
+
+    it('takes away the edge that the menu was opened on, and no node', () => {
+      handler.deleteTarget({ kind: 'edge', key: 'E1>Q1' }, 'menu');
+
+      expect(Object.keys(store.document().bindings)).toEqual(['B2', 'B3']);
+      expect(store.document().queues['Q1']).toBeDefined();
+    });
+  });
+
   describe('what the editor shows', () => {
     it('opens a menu where the canvas says, for what it says', () => {
       const surface: IntentSurface = { openMenu: vi.fn(), startRename: vi.fn() };

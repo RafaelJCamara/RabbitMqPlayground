@@ -1,5 +1,16 @@
 import { inject, Injectable } from '@angular/core';
-import { findId, kindOf, linkCommand, linkRules, lookup, nameOf, type DocumentCommand, type Id } from '@rmq/domain';
+import {
+  findId,
+  kindOf,
+  linkCommand,
+  linkRules,
+  lookup,
+  nameOf,
+  type CanvasDocument,
+  type DocumentCommand,
+  type Id,
+  type Result,
+} from '@rmq/domain';
 import { Announcer } from '../core/announcer';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
@@ -18,7 +29,7 @@ import { addNode } from './add-node';
 /** What the editor shows as a result of an intent that is not a command: a menu that opens, a name that is being edited. */
 export interface IntentSurface {
   openMenu(target: ContextTarget, client: Point): void;
-  startRename(id: Id): void;
+  startRename(id: Id, origin?: CommandOrigin): void;
 }
 
 const originOf = (by: InputBy): CommandOrigin => (by === 'keyboard' ? 'key' : 'gesture');
@@ -77,6 +88,24 @@ export class IntentHandler {
     const addition = addNode(this.store.document(), node, at);
     if (this.bus.apply(addition.command, origin).ok) {
       this.showNew(addition.kind, addition.name);
+    }
+  }
+
+  /**
+   * Renames a node. It answers what the bus answered, so that a field that is open can say why a name was refused, and `undefined`
+   * when the node is not on the canvas any more.
+   */
+  rename(id: Id, name: string, origin: CommandOrigin): Result<CanvasDocument> | undefined {
+    const target = refOf(this.store.document(), id);
+    return target === undefined ? undefined : this.bus.apply({ type: 'rename', target, name }, origin);
+  }
+
+  /** Deletes what a menu was opened on, whether or not it is selected. */
+  deleteTarget(target: ContextTarget, origin: CommandOrigin): void {
+    if (target.kind === 'node') {
+      this.remove([target.id], [], origin);
+    } else {
+      this.remove([], [target.key], origin);
     }
   }
 

@@ -4,6 +4,7 @@ import {
   isInView,
   liveViewport,
   toCanvas,
+  toScreen,
   type Point,
   type Size,
   type TransformModel,
@@ -79,6 +80,16 @@ export class FlowViewport {
     return viewport === null || host === undefined
       ? null
       : toCanvas(viewport, { x: client.x - host.x, y: client.y - host.y });
+  }
+
+  /** Where a rectangle of the canvas is, measured from the top left of the canvas's host, or `null` when there is no canvas. */
+  onHost(rect: Point & Size): (Point & Size) | null {
+    const viewport = this.live();
+    if (viewport === null) {
+      return null;
+    }
+    const { x, y } = toScreen(viewport, rect);
+    return { x, y, width: rect.width * viewport.zoom, height: rect.height * viewport.zoom };
   }
 
   fit(): void {

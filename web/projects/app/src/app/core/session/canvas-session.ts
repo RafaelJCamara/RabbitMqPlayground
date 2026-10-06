@@ -102,6 +102,11 @@ export class CanvasSession {
   /** A warning that the room is running out, or `null`. */
   readonly quota = this.quotaResult.asReadonly();
 
+  /** The learner has read what the browser said about keeping the canvases, and it goes away for as long as the page is open. */
+  dismissPersistence(): void {
+    this.persistResult.set(null);
+  }
+
   private repository: CanvasRepository | undefined;
   private autosave: Autosave<CanvasDocument> | undefined;
   /** The document that is kept, as far as the session knows: the one it opened, or the last one that was written. */

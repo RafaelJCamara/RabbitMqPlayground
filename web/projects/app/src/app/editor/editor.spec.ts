@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { render, screen, waitFor } from '@testing-library/angular';
+import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { transientQueueReply } from '@rmq/engine';
 import { createMemoryRepository, type CanvasRepository } from '@rmq/persistence';
@@ -9,6 +9,7 @@ import { manualClock, manualTimer } from '@rmq/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LinkRules } from '@rmq/domain';
 import { FlowCanvas } from '../canvas/flow/flow-canvas';
+import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { CanvasVm } from '../canvas/model/canvas-vm';
 import type { CanvasIntent } from '../canvas/model/intents';
 import { APP_NAME } from '../core/app-info';
@@ -21,6 +22,7 @@ import {
   type RepositoryFactories,
 } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
+import { DocumentStore } from '../core/state/document-store';
 import type { Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { THEME_STORAGE_KEY } from '../core/theme/theme';
@@ -37,6 +39,23 @@ class FakeCanvas {
   readonly selection = input.required<Selection>();
   readonly rules = input<LinkRules>();
   readonly intent = output<CanvasIntent>();
+  /** What the editor asked of the canvas, in order. */
+  readonly calls: string[] = [];
+
+  constructor() {
+    // The canvas is a 800 by 600 box at the corner of the page, at 100%, and does what it is asked by writing it down.
+    inject(FlowViewport).attach({
+      transform: () => ({ position: { x: 0, y: 0 }, scaledPosition: { x: 0, y: 0 }, scale: 1 }),
+      host: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      fit: () => this.calls.push('fit'),
+      zoomIn: () => this.calls.push('zoomIn'),
+      zoomOut: () => this.calls.push('zoomOut'),
+      resetZoom: () => this.calls.push('resetZoom'),
+      select: () => undefined,
+      focus: () => this.calls.push('focus'),
+      edgePath: () => null,
+    });
+  }
 }
 
 function renderEditor(providers: ReturnType<typeof harness>['providers']) {
@@ -257,6 +276,240 @@ describe('Editor', () => {
     });
   });
 
+  describe('the context menu', () => {
+    async function openEditor() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+      const [queue] = canvas().model().nodes;
+      const openMenu = async () => {
+        canvas().intent.emit({
+          type: 'context-menu',
+          target: { kind: 'node', id: queue!.id },
+          client: { x: 50, y: 60 },
+        });
+        view.fixture.detectChanges();
+        return screen.findByRole('menu', { name: 'Actions for queue queue1' });
+      };
+      return { ...view, canvas, user, queue: queue!, openMenu };
+    }
+
+    it('opens for the node that the canvas names, with what can be done to it', async () => {
+      const { openMenu } = await openEditor();
+
+      await openMenu();
+
+      expect(screen.getByRole('menuitem', { name: /Rename/ })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: /Delete/ })).toBeInTheDocument();
+    });
+
+    it('selects what it was opened on, so that the inspector shows it', async () => {
+      const { canvas, openMenu, fixture } = await openEditor();
+      canvas().intent.emit({ type: 'select', nodes: [], edges: [] });
+      fixture.detectChanges();
+      expect(canvas().selection().nodes).toEqual([]);
+
+      await openMenu();
+      fixture.detectChanges();
+
+      expect(canvas().selection().nodes).toEqual([canvas().model().nodes[0]!.id]);
+    });
+
+    it('deletes the node from the menu, with the menu as the origin, and gives the focus back to the canvas', async () => {
+      const { canvas, openMenu, user, fixture } = await openEditor();
+      await openMenu();
+      const seen: string[] = [];
+      fixture.debugElement.injector.get(CommandBus).onApplied(({ origin }) => seen.push(origin));
+
+      await user.click(screen.getByRole('menuitem', { name: /Delete/ }));
+      fixture.detectChanges();
+
+      expect(canvas().model().nodes).toEqual([]);
+      expect(seen).toEqual(['menu']);
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('opens the field for a name over the node when Rename is chosen', async () => {
+      const { openMenu, user, fixture } = await openEditor();
+      await openMenu();
+
+      await user.click(screen.getByRole('menuitem', { name: /Rename/ }));
+      fixture.detectChanges();
+
+      expect(await screen.findByRole('textbox', { name: 'Rename queue queue1' })).toBeInTheDocument();
+    });
+
+    it('opens for an edge, with delete only, and selects the edge', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Direct exchange' }));
+      fixture.detectChanges();
+      const idOf = (kind: string) =>
+        canvas()
+          .model()
+          .nodes.find((node) => node.kind === kind)!.id;
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      const [edge] = canvas().model().edges;
+
+      canvas().intent.emit({ type: 'context-menu', target: { kind: 'edge', key: edge!.id }, client: { x: 5, y: 5 } });
+      fixture.detectChanges();
+
+      expect(await screen.findByRole('menu', { name: 'Actions for this edge' })).toBeInTheDocument();
+      expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+      expect(canvas().selection().edges).toEqual([edge!.id]);
+    });
+
+    it('gives the focus back to the canvas when it is closed without a choice', async () => {
+      const { canvas, openMenu, fixture } = await openEditor();
+      await openMenu();
+      canvas().calls.length = 0;
+
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', keyCode: 27 });
+      fixture.detectChanges();
+
+      await waitFor(() => expect(canvas().calls).toContain('focus'));
+    });
+  });
+
+  describe('renaming a node', () => {
+    async function openEditor() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+      const [first] = canvas().model().nodes;
+      const field = () => screen.findByRole('textbox', { name: 'Rename queue queue1' });
+      const startRename = async () => {
+        canvas().intent.emit({ type: 'rename', id: first!.id });
+        view.fixture.detectChanges();
+        return field();
+      };
+      return { ...view, canvas, user, first: first!, startRename };
+    }
+
+    it('opens a field over the node, with the name in it, when the canvas says that the node was double-clicked', async () => {
+      const { startRename } = await openEditor();
+
+      const field = await startRename();
+
+      expect(field).toHaveValue('queue1');
+      await waitFor(() => expect(field).toHaveFocus());
+    });
+
+    it('renames the node with Enter, and gives the focus back to the canvas', async () => {
+      const { startRename, canvas, user, fixture } = await openEditor();
+      await startRename();
+      canvas().calls.length = 0;
+
+      await user.keyboard('payments{Enter}');
+      fixture.detectChanges();
+
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toContain('payments');
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('keeps the field open, with the reason under it, when the name is taken and Enter gave it', async () => {
+      const { startRename, canvas, user, fixture } = await openEditor();
+      await startRename();
+
+      await user.keyboard('queue2{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('rename-field')).toBeInTheDocument();
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('queue2');
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toEqual(['queue1', 'queue2']);
+    });
+
+    it('can be given another name after a refusal', async () => {
+      const { startRename, canvas, user, fixture } = await openEditor();
+      await startRename();
+      await user.keyboard('queue2{Enter}');
+      fixture.detectChanges();
+
+      await user.clear(screen.getByTestId('rename-field'));
+      await user.keyboard('orders{Enter}');
+      fixture.detectChanges();
+
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toContain('orders');
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+    });
+
+    it('closes the field, and says on the status line why, when it is left with a name that is refused', async () => {
+      const { startRename, canvas, user, fixture } = await openEditor();
+      await startRename();
+
+      await user.keyboard('queue2');
+      await user.tab();
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('queue2');
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toEqual(['queue1', 'queue2']);
+    });
+
+    it('closes the field and changes nothing on Escape', async () => {
+      const { startRename, canvas, user, fixture } = await openEditor();
+      await startRename();
+      canvas().calls.length = 0;
+
+      await user.keyboard('payments{Escape}');
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toEqual(['queue1', 'queue2']);
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('closes the field, with no command, when the name is the one that it had', async () => {
+      const { startRename, user, fixture } = await openEditor();
+      await startRename();
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      const before = store.document();
+
+      await user.keyboard('{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      expect(store.document()).toBe(before);
+    });
+
+    it('does not open for a node that is not there', async () => {
+      const { canvas, fixture } = await openEditor();
+
+      canvas().intent.emit({ type: 'rename', id: 'gone' });
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+    });
+  });
+
   describe('canvases that cannot be opened', () => {
     const unreadable = (count: number) =>
       harness({
@@ -346,6 +599,25 @@ describe('Editor', () => {
   });
 
   describe('the status strip', () => {
+    it('lets the learner dismiss the note about the browser’s promise, and keeps the warning about room', async () => {
+      const user = userEvent.setup();
+      const { providers, timer, storage } = harness();
+      storage.estimate.mockResolvedValue({ usage: 900, quota: 1_000 });
+      storage.persist.mockResolvedValue(false);
+      const { fixture } = await renderEditor(providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      fixture.debugElement.injector
+        .get(CommandBus)
+        .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+      timer.advance(500);
+      expect(await screen.findByTestId('persistence')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+      expect(screen.queryByTestId('persistence')).not.toBeInTheDocument();
+      expect(screen.getByTestId('quota')).toBeInTheDocument();
+    });
+
     it('says what was done', async () => {
       const { fixture } = await renderEditor(harness().providers);
       await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));

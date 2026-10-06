@@ -456,6 +456,24 @@ describe('CanvasSession', () => {
       expect(refused.session.persistence()?.message).toContain('backup');
     });
 
+    it('forgets what the browser said once the learner has read it, and does not ask again because of it', async () => {
+      const { session, bus, timer, storage } = setup();
+      storage.persist.mockResolvedValue(false);
+      await session.open();
+      declare(bus, 'a');
+      timer.advance(500);
+      await session.flush();
+      await vi.waitFor(() => expect(session.persistence()).not.toBeNull());
+
+      session.dismissPersistence();
+      declare(bus, 'b');
+      timer.advance(500);
+      await session.flush();
+
+      expect(session.persistence()).toBeNull();
+      expect(storage.persist).toHaveBeenCalledTimes(1);
+    });
+
     it('does not ask when the canvas is kept in memory, because there is nothing to keep', async () => {
       const { session, bus, timer, storage } = setup({ browser: (memory) => failing(memory, { list: unavailable }) });
       await session.open();
