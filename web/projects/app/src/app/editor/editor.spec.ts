@@ -573,6 +573,23 @@ describe('Editor', () => {
       expect(canvas().calls).not.toContain('focus');
     });
 
+    it('says why there is nothing to choose in the picker, in the words of what is needed', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Producer');
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'node', id: idOf('producer') },
+        client: { x: 5, y: 5 },
+      });
+      fixture.detectChanges();
+
+      await user.click(await screen.findByRole('menuitem', { name: /Link to…/ }));
+      fixture.detectChanges();
+
+      expect(await screen.findByTestId('picker-reason')).toHaveTextContent(
+        'Add an exchange or a queue first: a producer publishes to one of them.',
+      );
+    });
+
     it('does not offer "Link to…" for a consumer, which nothing is linked from', async () => {
       const { canvas, fixture, idOf } = await openEditor('Consumer');
 

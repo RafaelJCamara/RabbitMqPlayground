@@ -99,6 +99,21 @@ describe('LinkPicker (ADR-0041)', () => {
     expect(screen.getByRole('group', { name: 'Queues' })).toBeInTheDocument();
   });
 
+  it('says that its field completes from a list, takes its options out of the order of Tab, and takes one with Enter when it has the cursor', async () => {
+    const { chosen } = await renderPicker();
+
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-autocomplete', 'list');
+    for (const option of screen.getAllByRole('option')) {
+      expect(option).toHaveAttribute('tabindex', '-1');
+    }
+    // The rows that only hold the groups, and the names of the groups, are not things to read out.
+    expect(screen.getAllByRole('presentation')).toHaveLength(4);
+
+    fireEvent.keyDown(screen.getAllByRole('option')[2]!, { key: 'Enter' });
+
+    expect(chosen).toEqual(['q1']);
+  });
+
   it('has the first target as the active one, and says so through the field', async () => {
     await renderPicker();
 

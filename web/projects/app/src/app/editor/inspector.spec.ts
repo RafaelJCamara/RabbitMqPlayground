@@ -607,6 +607,9 @@ describe('Inspector', () => {
       expect(
         rows().map((row) => (within(row).getByRole('textbox', { name: 'Key' }) as HTMLInputElement).value),
       ).toEqual(['order.*', 'invoice.#']);
+      // Nothing is wrong with these, and they have no header arguments, so neither is said.
+      expect(screen.queryByTestId('inspector-warnings')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('binding-headers')).not.toBeInTheDocument();
     });
 
     it('gives a binding another key when the field is left, as one step of undo that a typed line can say', async () => {
@@ -641,6 +644,9 @@ describe('Inspector', () => {
       expect(field).toHaveValue('order.*');
       expect(field).toHaveAttribute('aria-invalid', 'true');
       expect(within(rows()[0]!).getByTestId('refusal-message')).toHaveTextContent('#');
+      expect(document.getElementById(field.getAttribute('aria-describedby') as string)).toContainElement(
+        within(rows()[0]!).getByTestId('refusal-message'),
+      );
       expect(store.document().bindings['B1']?.key).toBe('order.*');
     });
 
@@ -699,12 +705,16 @@ describe('Inspector', () => {
       expect(within(rows()[0]!).getByTestId('binding-headers')).toHaveTextContent('header arguments');
     });
 
-    it('has no rows for a link or a subscription, which are not bindings', async () => {
+    it('has no rows for a link or a subscription, which are not bindings, and no button that adds one', async () => {
       const { choose } = await renderInspector({ edges: ['P1>E1'] });
       expect(screen.queryByRole('group', { name: /^Binding \d+ of/ })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('binding-rows')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('add-binding')).not.toBeInTheDocument();
 
       choose([], ['Q1>C1']);
       expect(screen.queryByRole('group', { name: /^Binding \d+ of/ })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('binding-rows')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('add-binding')).not.toBeInTheDocument();
     });
   });
 
@@ -718,6 +728,7 @@ describe('Inspector', () => {
       expect(field.value).toBe('');
       expect(field).toHaveAttribute('min', '0');
       expect(field).toHaveAttribute('max', '100');
+      expect(field).toHaveAttribute('step', '5');
     });
 
     it('shows where the document keeps it, as a percentage', async () => {
@@ -757,6 +768,9 @@ describe('Inspector', () => {
       expect(field).toHaveValue(50);
       expect(field).toHaveAttribute('aria-invalid', 'true');
       expect(screen.getByTestId('refusal-message')).toHaveTextContent('A label sits from 0');
+      expect(document.getElementById(field.getAttribute('aria-describedby') as string)).toContainElement(
+        screen.getByTestId('refusal-message'),
+      );
       expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.5 });
     });
 

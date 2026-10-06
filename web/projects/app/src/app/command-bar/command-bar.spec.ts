@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { emptyDocument, type CanvasDocument, type DocumentCommand } from '@rmq/domain';
 import { documentOf, exchangeRecord, queueRecord } from '@rmq/testing';
-import { render, screen, waitFor, within } from '@testing-library/angular';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -99,6 +99,31 @@ describe('CommandBar, closed (ADR-0045)', () => {
     expect(latest).toHaveTextContent('Latest equivalent command: ↳ declare queue billing');
     expect(within(latest).getByText('declare queue billing')).toBeVisible();
     expect(screen.queryByText('Each change you make appears here as the command that does the same.')).toBeNull();
+  });
+
+  it('says the latest equivalent command once: while the bar is closed, and not above its own log when it is open', async () => {
+    const { user, bus, fixture } = await renderBar();
+    bus.apply(declareQueue('billing'), 'gesture');
+    fixture.detectChanges();
+    expect(screen.getByTestId('latest-command')).toBeVisible();
+
+    await openBar(user);
+
+    expect(screen.queryByTestId('latest-command')).not.toBeInTheDocument();
+  });
+
+  it('hides from a screen reader what is only drawn for the eyes: the arrow before the latest line, the prompt and the words that its groups are named by', async () => {
+    const { user, bus, fixture } = await renderBar(SHOP);
+    bus.apply(declareQueue('extra'), 'gesture');
+    fixture.detectChanges();
+    expect(within(screen.getByTestId('latest-command')).getByText('↳')).toHaveAttribute('aria-hidden', 'true');
+
+    await openBar(user);
+
+    expect(screen.getByText('›')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('Try')).toHaveAttribute('aria-hidden', 'true');
+    await type(user, 'bnd orders -> billing{Enter}');
+    expect(screen.getByText('Did you mean')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('opens with its button, with the cursor in the field, and closes with it, which leaves the cursor where the pointer put it', async () => {
@@ -519,6 +544,29 @@ describe('CommandBar, completion (ADR-0045)', () => {
     }
   });
 
+  it('has a list that is named, whose options are reached by the arrow keys and not by Tab, and a press in it does not take the cursor from the field', async () => {
+    const { user } = await renderBar(SHOP);
+    await openBar(user);
+    await type(user, 'un');
+
+    const list = screen.getByRole('listbox', { name: 'Completions' });
+    for (const option of within(list).getAllByRole('option')) {
+      expect(option).toHaveAttribute('tabindex', '-1');
+    }
+    // A press that is not given up leaves the field with the cursor: the page's default for it, which is to move the focus, is stopped.
+    expect(fireEvent.mouseDown(list)).toBe(false);
+  });
+
+  it('takes an option with Enter when the option has the cursor, as a button would', async () => {
+    const { user } = await renderBar(SHOP);
+    await openBar(user);
+    await type(user, 'un');
+
+    fireEvent.keyDown(screen.getAllByRole('option')[0]!, { key: 'Enter' });
+
+    expect(field()).toHaveValue('unbind ');
+  });
+
   it('points the parts of the bar at one another by id: its button at its panel, its field at its list and at the option that is chosen', async () => {
     const { user } = await renderBar(SHOP);
     await openBar(user);
@@ -652,6 +700,10 @@ describe('CommandBar, running a line (ADR-0045)', () => {
       expect(document.getElementById(field().getAttribute('aria-describedby') as string)).toBe(
         screen.getByTestId('command-answer'),
       );
+      expect(field()).toHaveAttribute('aria-invalid', 'true');
+      await type(user, 'x');
+      expect(field()).not.toHaveAttribute('aria-invalid');
+      expect(field()).not.toHaveAttribute('aria-describedby');
     });
 
     it('leaves the list shut, because the line was run and is not being typed any more', async () => {
@@ -731,6 +783,10 @@ describe('CommandBar, running a line (ADR-0045)', () => {
 
       expect(store.document()).toBe(before);
       expect(field()).toHaveValue('declare exchange amq.mine type=direct');
+      expect(
+        screen.queryByRole('group', { name: 'Did you mean' }),
+        'a refusal that has no name to offer',
+      ).not.toBeInTheDocument();
       const message = screen.getByTestId('refusal-message');
       const reply = screen.getByTestId('refusal-reply');
       expect(message.textContent?.length).toBeGreaterThan(0);

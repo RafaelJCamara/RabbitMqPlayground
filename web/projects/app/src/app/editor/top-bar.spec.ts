@@ -59,6 +59,9 @@ describe('TopBar', () => {
       const help = screen.getByRole('button', { name: 'Help' });
       expect(help).toHaveAttribute('aria-haspopup', 'dialog');
       expect(help).toHaveAttribute('aria-keyshortcuts', '?');
+      // It is an icon, so what it is is also said when the pointer rests on it, with the key.
+      expect(help).toHaveAttribute('title', 'Help: keyboard shortcuts and commands (?)');
+      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveAttribute('title', 'Theme');
       await userEvent.setup().click(help);
 
       expect(open).toHaveBeenCalledOnce();

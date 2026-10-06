@@ -103,6 +103,15 @@ describe('the cheat-sheet (ADR-0047)', () => {
     expect(within(dialog).getByRole('heading', { level: 2, name: 'Keyboard shortcuts and commands' })).toBeVisible();
   });
 
+  it('has a region for each of its three parts, which its heading names, and a scroll that a keyboard can reach', async () => {
+    const { dialog } = await openSheet();
+
+    for (const name of ['Five ways to link', 'Keys', 'Commands']) {
+      expect(within(dialog).getByRole('region', { name })).toBeInTheDocument();
+    }
+    expect(dialog.querySelector('.overflow-y-auto')).toHaveAttribute('tabindex', '0');
+  });
+
   it('lists the five ways to link, as one ordered list, and says what the command bar does', async () => {
     const { dialog } = await openSheet();
 
