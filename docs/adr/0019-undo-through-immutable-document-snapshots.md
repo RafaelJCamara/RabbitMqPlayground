@@ -1,6 +1,7 @@
 # ADR-0019: Undo through immutable document snapshots
 
-- **Status:** Accepted
+- **Status:** Accepted. The choices that building it needed are in
+  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** in [ADR-0011](0011-explicit-linking-and-command-layer.md), the part of "One command layer" that says a

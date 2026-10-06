@@ -2,7 +2,9 @@
 
 - **Status:** Accepted. Keyboard linking (item 4 of "Five ways to link") and "Initial keyboard shortcuts" are
   superseded by [ADR-0017](0017-canvas-keyboard-model.md). The "produces **patches**" clause of "One command layer" is
-  superseded by [ADR-0019](0019-undo-through-immutable-document-snapshots.md).
+  superseded by [ADR-0019](0019-undo-through-immutable-document-snapshots.md). The vocabulary of "Command bar (M1)" is
+  extended by [ADR-0025](0025-the-command-grammar.md), and "One command layer" by
+  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
