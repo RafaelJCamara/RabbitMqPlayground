@@ -141,6 +141,38 @@ describe('Editor', () => {
     );
   });
 
+  it('says aloud, assertively, that a write failed, and does not let the warning about room take its place', async () => {
+    const { providers, timer, storage } = harness({
+      browser: (memory) => ({
+        ...memory,
+        save: async () => ({
+          ok: false,
+          error: { kind: 'quota-exceeded', message: 'The browser has no room left to keep this canvas.' },
+        }),
+      }),
+    });
+    storage.estimate.mockResolvedValue({ usage: 990, quota: 1_000 });
+    const { fixture } = await renderEditor(providers);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const announce = vi.spyOn(fixture.debugElement.injector.get(Announcer), 'announce');
+
+    fixture.debugElement.injector
+      .get(CommandBus)
+      .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+    timer.advance(500);
+    await waitFor(() => expect(screen.getByTestId('quota')).toBeInTheDocument());
+
+    const said = announce.mock.calls.filter(
+      ([message]) => message.startsWith('Not saved.') || message.includes('almost no room'),
+    );
+    expect(
+      said.map(([message, politeness]) => [message.startsWith('Not saved.') ? 'failure' : 'warning', politeness]),
+    ).toEqual([
+      ['failure', 'assertive'],
+      ['warning', 'polite'],
+    ]);
+  });
+
   it('says that nothing is kept when the browser will not let the site keep canvases', async () => {
     const { providers } = harness({
       browser: (memory) => ({
@@ -596,6 +628,28 @@ describe('Editor', () => {
 
       fireEvent.keyDown(toolbox, { key: 'Z', ctrlKey: true, shiftKey: true });
       fixture.detectChanges();
+      expect(canvas().model().nodes).toHaveLength(1);
+    });
+
+    it('undoes when the focus is nowhere, which is where it goes when the Undo button has nothing left to undo', async () => {
+      const { canvas, fixture } = await openEditor();
+      expect(canvas().model().nodes).toHaveLength(1);
+
+      fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+      fixture.detectChanges();
+
+      expect(canvas().model().nodes).toHaveLength(0);
+    });
+
+    it('does not take a key that goes to something outside the editor', async () => {
+      const { canvas, fixture } = await openEditor();
+      const outside = document.createElement('button');
+      document.body.append(outside);
+
+      fireEvent.keyDown(outside, { key: 'z', ctrlKey: true });
+      fixture.detectChanges();
+      outside.remove();
+
       expect(canvas().model().nodes).toHaveLength(1);
     });
 

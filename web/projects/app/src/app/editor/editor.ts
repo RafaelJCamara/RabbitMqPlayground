@@ -1,4 +1,15 @@
-import { Component, computed, DestroyRef, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  DOCUMENT,
+  effect,
+  ElementRef,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { linkRules, type Id, type Issue } from '@rmq/domain';
 import { FlowCanvas } from '../canvas/flow/flow-canvas';
 import { buildCanvasVm, EMPTY_VM } from '../canvas/model/canvas-vm';
@@ -60,7 +71,7 @@ interface Renaming {
     KeyboardService,
   ],
   template: `
-    <div class="bg-surface text-fg flex h-dvh flex-col outline-none" tabindex="-1" (keydown)="keys.handle($event)">
+    <div class="bg-surface text-fg flex h-dvh flex-col">
       <rmq-top-bar />
       <div class="flex min-h-0 flex-1">
         <aside class="border-line bg-panel w-52 shrink-0 overflow-y-auto border-r p-3" aria-label="Toolbox">
@@ -97,6 +108,7 @@ interface Renaming {
       <rmq-context-menu (act)="onMenuAction($event)" (dismissed)="viewport.focus()" />
     </div>
   `,
+  host: { '(document:keydown)': 'onKey($event)' },
 })
 export class Editor implements IntentSurface, ActionSurface {
   private readonly session = inject(CanvasSession);
@@ -109,6 +121,8 @@ export class Editor implements IntentSurface, ActionSurface {
   protected readonly keys = inject(KeyboardService);
   private readonly actions = inject(EditorActions);
   private readonly inspector = viewChild.required(Inspector);
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly page = inject(DOCUMENT);
 
   protected readonly ready = computed(() => this.session.save().kind !== 'opening');
   private drawn = EMPTY_VM;
@@ -145,7 +159,9 @@ export class Editor implements IntentSurface, ActionSurface {
     effect(() => {
       const warning = this.session.quota();
       if (warning !== null) {
-        this.announcer.announce(warning.message, warning.level === 'critical' ? 'assertive' : 'polite');
+        // A write that failed has just been said, assertively, and a warning that interrupted it would take its place.
+        const failed = untracked(() => this.session.save().kind === 'failed');
+        this.announcer.announce(warning.message, warning.level === 'critical' && !failed ? 'assertive' : 'polite');
       }
     });
     effect(() => {
@@ -154,6 +170,18 @@ export class Editor implements IntentSurface, ActionSurface {
         this.announcer.announce(note.message);
       }
     });
+  }
+
+  /**
+   * A key is the editor's when it goes to something in the editor, or to nowhere: the focus is on the page itself when the control
+   * that had it is switched off, such as the Undo button that has nothing left to undo, and the keys must still work then (ADR-0035).
+   * It is heard on the document, in the bubble phase, after the library on the canvas has had its turn.
+   */
+  protected onKey(event: KeyboardEvent): void {
+    const target = event.target;
+    if (target === this.page.body || (target instanceof Node && this.element.contains(target))) {
+      this.keys.handle(event);
+    }
   }
 
   protected onIntent(intent: CanvasIntent): void {

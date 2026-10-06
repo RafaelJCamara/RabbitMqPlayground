@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { explainLink, LIMITS, type CanvasDocument } from '@rmq/domain';
 import { documentOf, queueRecord, sampleDocument } from '@rmq/testing';
@@ -298,6 +299,8 @@ describe('IntentHandler', () => {
   describe('a node from the toolbox', () => {
     it('is added, selected, and brought into view, when it is clicked', () => {
       handler.add({ kind: 'queue' }, 'gesture');
+      expect(viewport.reveal).not.toHaveBeenCalled();
+      TestBed.inject(ApplicationRef).tick();
 
       const [id] = Object.entries(store.document().queues).find(([, record]) => record.name === 'queue1') ?? [];
       expect(id).toBeDefined();
@@ -343,6 +346,7 @@ describe('IntentHandler', () => {
       start(documentOf({ queues }));
 
       handler.add({ kind: 'consumer' }, 'gesture');
+      TestBed.inject(ApplicationRef).tick();
 
       expect(selection.selection().nodes).toEqual([]);
       expect(viewport.reveal).not.toHaveBeenCalled();

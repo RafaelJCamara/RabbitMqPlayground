@@ -39,6 +39,14 @@ describe('ContextMenu', () => {
     expect(items.map((item) => item.querySelector('kbd')?.textContent)).toEqual(['F2', 'Delete']);
   });
 
+  it('is in a landmark of its own, because the CDK draws it outside every other one', async () => {
+    const { open } = await renderMenu();
+
+    const menu = await open({ kind: 'node', id: 'Q1' }, 'Actions for queue billing');
+
+    expect(screen.getByRole('region', { name: 'Context menu' })).toContainElement(menu);
+  });
+
   it('has the focus on its first item when it opens, so that the arrow keys work at once', async () => {
     const { open } = await renderMenu();
 

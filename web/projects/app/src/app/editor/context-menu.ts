@@ -40,24 +40,27 @@ const DELETE: MenuItem = { action: 'delete', label: 'Delete', icon: 'trash', key
       (cdkContextMenuClosed)="closed()"
     ></span>
     <ng-template #menu>
-      <div
-        cdkMenu
-        class="bg-panel border-border text-fg min-w-48 rounded-md border p-1 shadow-lg"
-        [attr.aria-label]="title()"
-      >
-        @for (item of items(); track item.action) {
-          <button
-            cdkMenuItem
-            type="button"
-            class="hover:bg-canvas focus:bg-canvas flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
-            [attr.data-testid]="'menu-' + item.action"
-            (cdkMenuItemTriggered)="choose(item.action)"
-          >
-            <rmq-icon [name]="item.icon" [size]="16" />
-            <span>{{ item.label }}</span>
-            <kbd class="text-muted ml-auto text-xs">{{ item.keys }}</kbd>
-          </button>
-        }
+      <!-- The CDK draws a menu in a container at the end of the page, outside every landmark, so the menu has one of its own. -->
+      <div role="region" aria-label="Context menu">
+        <div
+          cdkMenu
+          class="bg-panel border-border text-fg min-w-48 rounded-md border p-1 shadow-lg"
+          [attr.aria-label]="title()"
+        >
+          @for (item of items(); track item.action) {
+            <button
+              cdkMenuItem
+              type="button"
+              class="hover:bg-canvas focus:bg-canvas flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
+              [attr.data-testid]="'menu-' + item.action"
+              (cdkMenuItemTriggered)="choose(item.action)"
+            >
+              <rmq-icon [name]="item.icon" [size]="16" />
+              <span>{{ item.label }}</span>
+              <kbd class="text-muted ml-auto text-xs">{{ item.keys }}</kbd>
+            </button>
+          }
+        </div>
       </div>
     </ng-template>
   `,

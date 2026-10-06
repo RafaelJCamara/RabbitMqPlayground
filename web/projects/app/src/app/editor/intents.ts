@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
 import {
   findId,
   kindOf,
@@ -47,6 +47,7 @@ export class IntentHandler {
   private readonly status = inject(StatusStore);
   private readonly announcer = inject(Announcer);
   private readonly viewport = inject(FlowViewport);
+  private readonly injector = inject(Injector);
 
   /** Set by the editor, which owns the menu and the field for a name. */
   surface: IntentSurface | undefined;
@@ -125,7 +126,10 @@ export class IntentHandler {
     const position = lookup(document.layout.nodes, id);
     if (position !== undefined) {
       const { width, height } = frameOf(kind);
-      this.viewport.reveal({ id, x: position.x, y: position.y, width, height });
+      // The canvas draws the node on the next render, and the library fits what it has drawn, so the node is brought into view then.
+      afterNextRender(() => this.viewport.reveal({ id, x: position.x, y: position.y, width, height }), {
+        injector: this.injector,
+      });
     }
   }
 
