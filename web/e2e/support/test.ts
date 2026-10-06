@@ -8,7 +8,22 @@ import { expect, test as base } from '@playwright/test';
  * the browser logs "Failed to load resource" for it. Only that one console message is excused: a failing asset on the
  * same page is still a problem.
  */
-export const test = base.extend<{ problems: string[]; keepsCanvases: void }>({
+export const test = base.extend<{ problems: string[]; keepsCanvases: void; slowCpu: void }>({
+  /**
+   * `E2E_CPU_SLOWDOWN=4 npm run test:e2e` runs every page on a processor that is four times slower, which is what a runner of CI is like next to a developer's machine, and what
+   * shows a test that measures or types before the page is ready: it passed at once on the machine that it was written on. Left out, nothing is slowed.
+   */
+  slowCpu: [
+    async ({ page }, use) => {
+      const rate = Number(process.env['E2E_CPU_SLOWDOWN'] ?? '1');
+      if (rate > 1) {
+        const session = await page.context().newCDPSession(page);
+        await session.send('Emulation.setCPUThrottlingRate', { rate });
+      }
+      await use();
+    },
+    { auto: true },
+  ],
   /**
    * The browser of a test is promised to keep the canvases. Left to itself, headless Chromium would not promise, and the app says so in a note under the canvas that
    * appears about 300 ms after the first change and makes the canvas smaller by its height, so a position that a test measures a moment after an add is not where it
@@ -17,7 +32,10 @@ export const test = base.extend<{ problems: string[]; keepsCanvases: void }>({
   keepsCanvases: [
     async ({ context }, use) => {
       await context.addInitScript(() => {
-        StorageManager.prototype.persist = async () => true;
+        // The first document of a page is not a secure context, where there is no storage manager.
+        if (typeof StorageManager !== 'undefined') {
+          StorageManager.prototype.persist = async () => true;
+        }
       });
       await use();
     },

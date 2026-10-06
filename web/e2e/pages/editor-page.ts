@@ -84,9 +84,13 @@ export class EditorPage {
     );
   }
 
-  /** A button of the toolbox, which adds that when it is clicked: `Queue`, `Topic exchange`. */
+  /**
+   * A button of the toolbox, which adds that when it is clicked: `Queue`, `Topic exchange`. The canvas fits what it has drawn a moment after the node is there, which
+   * on a slow machine is later than the next thing that a test does, so the add ends when the canvas has stopped moving.
+   */
   async add(item: string): Promise<void> {
     await this.page.getByRole('button', { name: item, exact: true }).click();
+    await this.settled();
   }
 
   /**
@@ -244,10 +248,16 @@ export class EditorPage {
     );
   }
 
-  /** Selects a node by clicking it, and waits until the editor has heard of it, so that what follows is for that node. */
+  /**
+   * Selects a node by clicking it, and waits until the editor has heard of it, so that what follows is for that node. The click is Playwright's, which waits for the node to
+   * be still and to be what is under the pointer when it clicks: a click at a point that was read a moment before landed on the canvas when the canvas was fitting, and
+   * took the selection away.
+   */
   async select(label: string): Promise<void> {
-    const at = await this.centre(this.node(label));
-    await this.page.mouse.click(at.x, at.y);
+    const node = this.node(label);
+    const id = await node.getAttribute('data-node-id');
+    await node.click();
+    await expect.poll(() => this.page.evaluate(() => window.__rmq?.selection())).toEqual({ nodes: [id], edges: [] });
     await expect(this.page.getByTestId('inspector-title')).not.toHaveText('Inspector');
   }
 
