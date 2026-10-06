@@ -201,6 +201,14 @@ describe('describeCommand', () => {
       const rename: DocumentCommand = { type: 'rename', target: { kind: 'queue', name: 'billing' }, name: 'b2' };
 
       expect(describeCommand({ type: 'batch', commands: [queue('billing'), rename] })).toBe('2 changes');
+      // A node and a link, and something else as well, is not what a drop on nothing makes.
+      const bind: DocumentCommand = {
+        type: 'bind',
+        source: 'orders',
+        destination: { kind: 'queue', name: 'billing' },
+        key: 'a',
+      };
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), bind, rename] })).toBe('3 changes');
     });
 
     it('is a count of changes when the adding comes with two links, or a link comes with two additions', () => {

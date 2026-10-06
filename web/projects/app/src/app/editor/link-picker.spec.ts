@@ -57,6 +57,41 @@ describe('LinkPicker (ADR-0041)', () => {
     ).toBeVisible();
   });
 
+  it('groups the consumers that a queue can be linked to, after the exchanges and the queues', async () => {
+    await renderPicker([
+      { id: 'c1', kind: 'consumer', name: 'worker', summary: "Subscribes consumer 'worker' to queue 'billing'." },
+      OPTIONS[2]!,
+    ]);
+
+    expect(screen.getAllByRole('group')).toHaveLength(2);
+    expect(screen.getByRole('group', { name: 'Consumers' })).toBeInTheDocument();
+    expect(optionNames()).toEqual(['billing', 'worker']);
+  });
+
+  it('points its field at its list, and each group at its own name, by id', async () => {
+    await renderPicker();
+
+    const field = screen.getByRole('combobox');
+    expect(document.getElementById(field.getAttribute('aria-controls') as string)).toBe(screen.getByRole('listbox'));
+    expect(document.getElementById(field.getAttribute('aria-activedescendant') as string)).toBe(
+      screen.getAllByRole('option')[0],
+    );
+    expect(
+      document.getElementById(screen.getByRole('dialog').getAttribute('aria-labelledby') as string),
+    ).toHaveTextContent('Link exchange orders to…');
+  });
+
+  it('stays on the only target when End is pressed, and finds a target by a search that has spaces round it', async () => {
+    const { user } = await renderPicker([OPTIONS[2]!]);
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus());
+
+    await user.keyboard('{End}');
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', screen.getAllByRole('option')[0]?.id);
+
+    await user.keyboard('  bill  ');
+    expect(optionNames()).toEqual(['billing']);
+  });
+
   it('has no group for a kind that has no target', async () => {
     await renderPicker([OPTIONS[2]!]);
 
@@ -84,7 +119,9 @@ describe('LinkPicker (ADR-0041)', () => {
 
     await user.keyboard('{ArrowDown}');
     expect(active()).toBe(1);
-    await user.keyboard('{ArrowUp}{ArrowUp}');
+    await user.keyboard('{ArrowUp}');
+    expect(active()).toBe(0);
+    await user.keyboard('{ArrowUp}');
     expect(active()).toBe(3);
     await user.keyboard('{ArrowDown}');
     expect(active()).toBe(0);

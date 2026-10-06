@@ -11,7 +11,6 @@ const GROUPS: readonly { readonly kind: ElementKind; readonly label: string }[] 
   { kind: 'exchange', label: 'Exchanges' },
   { kind: 'queue', label: 'Queues' },
   { kind: 'consumer', label: 'Consumers' },
-  { kind: 'producer', label: 'Producers' },
 ];
 
 /**
@@ -119,9 +118,7 @@ export class LinkPicker {
   /** What the search leaves, by name or by kind, whatever the case. */
   protected readonly visible = computed(() => {
     const wanted = this.search().trim().toLowerCase();
-    return wanted === ''
-      ? this.options()
-      : this.options().filter(({ name, kind }) => name.toLowerCase().includes(wanted) || kind.includes(wanted));
+    return this.options().filter(({ name, kind }) => name.toLowerCase().includes(wanted) || kind.includes(wanted));
   });
 
   /** The groups that have something, in the order of the kinds, and the targets in the order that they were given. */
