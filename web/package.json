@@ -38,13 +38,15 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
+    "@dagrejs/dagre": "^3.1.1",
     "@foblex/2d": "^1.2.2",
     "@foblex/flow": "19.3.0",
     "@foblex/mediator": "^1.1.3",
     "@foblex/platform": "^1.0.4",
     "@foblex/utils": "^1.1.1",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@angular/build": "^22.2.1",
