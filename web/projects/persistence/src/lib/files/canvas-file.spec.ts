@@ -12,8 +12,12 @@ type Raw = Record<string, unknown>;
 /** What some editors put at the start of a UTF-8 file. */
 const BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
 
+/** A fixture as text with a line feed for a line ending, whatever the checkout has (OPEN_QUESTIONS 5). */
 const fixture = (name: string): string =>
-  readFileSync(fileURLToPath(new URL(`../../../../../fixtures/schema/v1/${name}`, import.meta.url)), 'utf8');
+  readFileSync(fileURLToPath(new URL(`../../../../../fixtures/schema/v1/${name}`, import.meta.url)), 'utf8').replaceAll(
+    '\r\n',
+    '\n',
+  );
 
 /** The text of a value, one level in: what the file has between its braces. */
 const indented = (text: string, spaces: number): string => text.trimEnd().replaceAll('\n', `\n${' '.repeat(spaces)}`);
