@@ -169,6 +169,8 @@ export function completeCommand(text: string, cursor: number, document: CanvasDo
     }
   } else if (expected?.kind === 'tail') {
     items.push(...tailItems(expected, typed));
+  } else if (expected?.kind === 'command') {
+    items.push(...commandItems(expected.words, typed));
   }
   // `move` and `move label` share a first word: after `move`, the second word of the longer name is also a way to go on.
   if (done.length === matched.count && matched.count === 1) {

@@ -1,13 +1,12 @@
 import { applyCommand } from '../commands/apply';
-import { didYouMean, joinList } from '../commands/helpers';
 import type { Command, DocumentCommand } from '../commands/types';
 import { fail, ok, type Issue, type Result } from '../document/issue';
 import type { CanvasDocument } from '../document/schema';
-import { suggest } from '../suggest';
 import { Cursor, Stop } from './cursor';
-import { matchSpec, nameWords, SPECS } from './registry';
+import { matchSpec, SPECS } from './registry';
 import { scratchIds } from './scratch';
 import { isAtom, tokenize, type Atom, type Token } from './tokenizer';
+import { rangeOf, unknownCommand } from './unknown';
 
 /**
  * Reading a typed command (ADR-0011, ADR-0025). The text becomes tokens, the first words name the command, and that
@@ -17,12 +16,6 @@ import { isAtom, tokenize, type Atom, type Token } from './tokenizer';
  * `;` makes a batch: each command is read against the canvas that the ones before it made, so a command can name what an
  * earlier one declared, and the batch is one change.
  */
-
-/** Where some tokens are in the text, from the start of the first to the end of the last. There is always one. */
-const rangeOf = (tokens: readonly Atom[]) => ({
-  start: (tokens[0] as Atom).start,
-  end: (tokens.at(-1) as Atom).end,
-});
 
 /** The leading words of the command that are bare, which is how a command is named: `"bind"` is not the command `bind`. */
 function bareWords(tokens: readonly Atom[]): string[] {
@@ -36,45 +29,17 @@ function bareWords(tokens: readonly Atom[]): string[] {
   return words;
 }
 
-/** Why the first words are not the name of a command. */
-function unknownCommand(tokens: readonly Atom[], words: readonly string[]): Issue {
-  const [first, second] = words;
-  if (first === undefined) {
-    return {
-      kind: 'syntax',
-      message: 'A command starts with its name, for example bind orders -> billing.',
-      at: rangeOf(tokens.slice(0, 1)),
-    };
-  }
-  // A word that starts several commands (`declare`, `add`) needs a second word.
-  const followers = SPECS.map(nameWords)
-    .filter((name) => name[0] === first && name.length === 2)
-    .map((name) => name[1] as string);
-  if (followers.length > 0) {
-    const close = second === undefined ? [] : suggest(second, followers);
-    const options = (close.length > 0 ? close : followers).map((word) => `${first} ${word}`);
-    return {
-      kind: 'unknown-command',
-      message: `${second === undefined ? `'${first}' needs a second word` : `'${first} ${second}' is not a command`}: ${joinList(options, 'or')}.`,
-      suggestions: options,
-      at: rangeOf(tokens.slice(0, second === undefined ? 1 : 2)),
-    };
-  }
-  const verbs = [...new Set(SPECS.map((spec) => nameWords(spec)[0] as string))];
-  const suggestions = suggest(first, verbs);
-  return {
-    kind: 'unknown-command',
-    message: `There is no command '${first}'.${didYouMean(suggestions)}`,
-    ...(suggestions.length === 0 ? {} : { suggestions }),
-    at: rangeOf(tokens.slice(0, 1)),
-  };
-}
-
 /** Reads one command, with no `;` in it. */
 function parseOne(tokens: readonly Atom[], document: CanvasDocument): Result<Command> {
   const matched = matchSpec(bareWords(tokens));
   if (matched === undefined) {
-    return fail(unknownCommand(tokens, bareWords(tokens)));
+    return fail(
+      unknownCommand(
+        tokens,
+        bareWords(tokens),
+        SPECS.map(({ name }) => name),
+      ),
+    );
   }
   const cursor = new Cursor(tokens.slice(matched.count), document, false, rangeOf(tokens).end);
   try {
@@ -137,10 +102,12 @@ export function parseCommand(text: string, document: CanvasDocument): Result<Com
       return fail({ ...parsed.error, batchIndex: index });
     }
     const command = parsed.value;
-    if (command.type === 'undo' || command.type === 'redo') {
+    if (command.type === 'undo' || command.type === 'redo' || command.type === 'help') {
+      const why =
+        command.type === 'help' ? 'answers a question and does not change the canvas' : 'is about the history and not the canvas';
       return fail({
         kind: 'batch',
-        message: `${command.type} is about the history and not the canvas, so it cannot be one of several commands. Type it by itself.`,
+        message: `${command.type} ${why}, so it cannot be one of several commands. Type it by itself.`,
         at: rangeOf(part),
         batchIndex: index,
       });

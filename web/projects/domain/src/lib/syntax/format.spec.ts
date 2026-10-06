@@ -229,6 +229,8 @@ describe('formatCommand', () => {
       ['a layout', { type: 'layout' }, 'layout'],
       ['an undo', { type: 'undo' }, 'undo'],
       ['a redo', { type: 'redo' }, 'redo'],
+      ['a help', { type: 'help' }, 'help'],
+      ['a help for a command of two words', { type: 'help', command: 'declare queue' }, 'help declare queue'],
     ])('for %s', (_what, command, text) => {
       expect(formatCommand(command, sample())).toBe(text);
     });

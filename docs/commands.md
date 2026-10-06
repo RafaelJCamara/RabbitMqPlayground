@@ -119,6 +119,20 @@ Takes an element off the canvas, with what hangs on it: the bindings of an excha
 delete archive
 ```
 
+## `help`
+
+Says what a command does and how it is written, with examples. Without a command it lists them all. It changes nothing, and it cannot be one of several commands.
+
+**Syntax:** `help [<command>]`
+
+**Examples:**
+
+```
+help
+help bind
+help declare queue
+```
+
 ## `layout`
 
 Puts every node in its place, from left to right in the way that a message travels: producers, exchanges, queues, consumers.

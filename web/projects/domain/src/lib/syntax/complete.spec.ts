@@ -48,6 +48,7 @@ describe('completeCommand', () => {
         'layout',
         'undo',
         'redo',
+        'help',
       ]);
       expect(at('').items.every(({ kind }) => kind === 'command')).toBe(true);
     });
@@ -398,6 +399,26 @@ describe('completeCommand', () => {
       expect(inserts(at('clear '))).toEqual([]);
       expect(inserts(at('add producer p '))).toEqual([]);
       expect(inserts(at('undo '))).toEqual([]);
+    });
+
+    it('offers, after help, the first word of each command', () => {
+      expect(inserts(at('help '))).toEqual(inserts(at('')).filter((word) => word !== 'help').concat('help'));
+      expect(at('help ').items.every(({ kind }) => kind === 'command')).toBe(true);
+      expect(inserts(at('help bi'))).toEqual(['bind']);
+      expect(completeCommand('help bi', 7, sample())).toMatchObject({ from: 5, to: 7 });
+    });
+
+    it('offers, after help and the first word of a command that has two, the second word', () => {
+      expect(inserts(at('help declare '))).toEqual(['exchange', 'queue']);
+      expect(inserts(at('help declare e'))).toEqual(['exchange']);
+      expect(inserts(at('help add '))).toEqual(['producer', 'consumer']);
+    });
+
+    it('offers label after help move, which is a command and also the start of one, and nothing after a whole command', () => {
+      expect(inserts(at('help move '))).toEqual(['label']);
+      expect(inserts(at('help bind '))).toEqual([]);
+      expect(inserts(at('help declare queue '))).toEqual([]);
+      expect(inserts(at('help frobnicate '))).toEqual([]);
     });
 
     it('treats a typed arrow as finished, and takes what follows it as a new word', () => {

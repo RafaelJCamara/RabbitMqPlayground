@@ -993,6 +993,69 @@ describe('parseCommand', () => {
     });
   });
 
+  describe('help', () => {
+    it('reads help with no command, and with the name of one, of one word or of two', () => {
+      expect(read('help')).toEqual({ type: 'help' });
+      expect(read('help bind')).toEqual({ type: 'help', command: 'bind' });
+      expect(read('help declare queue')).toEqual({ type: 'help', command: 'declare queue' });
+      expect(read('help move')).toEqual({ type: 'help', command: 'move' });
+      expect(read('help move label')).toEqual({ type: 'help', command: 'move label' });
+      expect(read('help help')).toEqual({ type: 'help', command: 'help' });
+    });
+
+    it('refuses a name that is not a command, with the names that are close to it', () => {
+      const text = 'help bnid';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({ kind: 'unknown-command', suggestions: ['bind'] });
+      expect(issue.message).toBe("There is no command 'bnid'. Did you mean 'bind'?");
+      expect(pointedAt(text, issue)).toBe('bnid');
+    });
+
+    it('says that a word that starts several commands needs a second word, and which', () => {
+      const text = 'help declare';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({
+        kind: 'unknown-command',
+        suggestions: ['declare exchange', 'declare queue'],
+      });
+      expect(pointedAt(text, issue)).toBe('declare');
+      expect(refused('help declare queu')).toMatchObject({ suggestions: ['declare queue'] });
+      expect(pointedAt('help declare queu', refused('help declare queu'))).toBe('declare queu');
+    });
+
+    it('is about one command, and a word after the name of one is refused', () => {
+      const text = 'help bind orders';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({
+        kind: 'syntax',
+        message: "Unexpected 'orders': help takes the name of one command, as in help bind or help declare queue.",
+      });
+      expect(pointedAt(text, issue)).toBe('orders');
+      expect(pointedAt('help declare queue jobs', refused('help declare queue jobs'))).toBe('jobs');
+    });
+
+    it('takes the name of a command bare, with no quotes and no arrow', () => {
+      expect(refused('help "bind"')).toMatchObject({ kind: 'syntax' });
+      expect(refused('help bind -> x')).toMatchObject({ kind: 'syntax' });
+      expect(pointedAt('help -> bind', refused('help -> bind'))).toBe('->');
+    });
+
+    it('cannot be one of several commands, because it answers a question and changes nothing', () => {
+      const text = 'declare queue a; help';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({ kind: 'batch', batchIndex: 1 });
+      expect(issue.message).toBe(
+        'help answers a question and does not change the canvas, so it cannot be one of several commands. Type it by itself.',
+      );
+      expect(pointedAt(text, issue)).toBe('help');
+      expect(refused('help; declare queue a')).toMatchObject({ kind: 'batch', batchIndex: 0 });
+    });
+  });
+
   describe('several commands with ;', () => {
     it('are a batch, and each is read against the canvas that the ones before it made', () => {
       const result = read('declare queue jobs; bind orders -> jobs key=job.#; move jobs x=1 y=2');

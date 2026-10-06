@@ -6,6 +6,7 @@ import { A_KIND, ELEMENT_KINDS, KIND_LABEL, type ElementKind, type ElementRef, t
 import type { CanvasDocument } from '../document/schema';
 import { suggest } from '../suggest';
 import type { Atom, Word } from './tokenizer';
+import { unknownCommand } from './unknown';
 import { anyQuoted, parseExists, splitAssignment, splitQualifier, textOf, wordText } from './words';
 import { parseValue } from './values';
 
@@ -58,7 +59,9 @@ export type Expected =
   | { readonly kind: 'ref'; readonly elements: readonly ElementKind[]; readonly label: string; readonly canvas?: true }
   | { readonly kind: 'name'; readonly label: string }
   | { readonly kind: 'arrow' }
-  | { readonly kind: 'tail'; readonly spec: TailSpec; readonly used: readonly string[] };
+  | { readonly kind: 'tail'; readonly spec: TailSpec; readonly used: readonly string[] }
+  /** The name of a command, of which `words` are typed. */
+  | { readonly kind: 'command'; readonly words: readonly string[] };
 
 /** A refusal in the middle of a parse. It is caught where the parse started and becomes the result. */
 export class Stop extends Error {
@@ -412,6 +415,57 @@ export class Cursor {
       ...(suggestions.length === 0 ? {} : { suggestions }),
       at: range(word),
     });
+  }
+
+  /**
+   * The name of a command, which is one word or two, for `help`: every word that is left, or none, which is an answer too. A name that is not a
+   * command is refused as a line that starts with it would be, with the names that were probably meant, and a word after the name of a command is
+   * one word too many. While the words are still being typed, what would complete a name is what is expected, and that includes `move`, which is
+   * a command and also the start of one.
+   */
+  commandName(names: readonly string[]): string | undefined {
+    const rest = this.tokens.slice(this.index);
+    this.index = this.tokens.length;
+    const odd = rest.find((token) => token.kind !== 'word' || token.segments.some((segment) => segment.quoted));
+    if (odd !== undefined) {
+      throw new Stop({
+        kind: 'syntax',
+        message:
+          'Write the name of a command as it is typed, with no quotes and no arrow, as in help bind or help declare queue.',
+        at: range(odd),
+      });
+    }
+    const words = rest as readonly Word[];
+    const name = words.map(({ text }) => text).join(' ');
+    if (this.probe && (words.length === 0 || names.some((candidate) => candidate.startsWith(`${name} `)))) {
+      throw new Expectation({ kind: 'command', words: words.map(({ text }) => text) });
+    }
+    if (words.length === 0) {
+      return undefined;
+    }
+    if (names.includes(name)) {
+      return name;
+    }
+    const [first, second, third] = words as readonly [Word, Word?, Word?];
+    const extra = names.includes(first.text)
+      ? second
+      : names.includes(`${first.text} ${second?.text}`)
+        ? third
+        : undefined;
+    if (extra !== undefined) {
+      throw new Stop({
+        kind: 'syntax',
+        message: `Unexpected '${extra.text}': help takes the name of one command, as in help bind or help declare queue.`,
+        at: range(extra),
+      });
+    }
+    throw new Stop(
+      unknownCommand(
+        words,
+        words.map(({ text }) => text),
+        names,
+      ),
+    );
   }
 
   /** There must be nothing more. */

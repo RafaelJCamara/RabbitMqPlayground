@@ -33,6 +33,7 @@ const TYPES: readonly Exclude<Command['type'], 'batch'>[] = [
   'layout',
   'undo',
   'redo',
+  'help',
 ];
 
 describe('the command registry (ADR-0011)', () => {
@@ -63,9 +64,9 @@ describe('the command registry (ADR-0011)', () => {
     }
   });
 
-  it('puts undo and redo in the scope of the app and every other command in that of the document', () => {
-    expect(SPECS.filter(({ scope }) => scope === 'app').map(({ name }) => name)).toEqual(['undo', 'redo']);
-    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 2);
+  it('puts undo, redo and help in the scope of the app and every other command in that of the document', () => {
+    expect(SPECS.filter(({ scope }) => scope === 'app').map(({ name }) => name)).toEqual(['undo', 'redo', 'help']);
+    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 3);
   });
 
   describe('its examples, which are the examples of docs/commands.md', () => {

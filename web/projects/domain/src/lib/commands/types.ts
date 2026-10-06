@@ -207,7 +207,17 @@ export interface Redo {
   readonly type: 'redo';
 }
 
-/** A command about the history of the document and not about the document: the app answers it from its `History`. */
-export type AppCommand = Undo | Redo;
+/**
+ * Asks what a command does, or lists them all. It is not about the document either: the app answers it from the registry of
+ * commands, and it changes nothing (ADR-0045).
+ */
+export interface Help {
+  readonly type: 'help';
+  /** The name of a command, as it is typed, one word or two. Left out, every command is listed. */
+  readonly command?: string;
+}
+
+/** A command about the history of the document, or about the commands, and not about the document: the app answers it. */
+export type AppCommand = Undo | Redo | Help;
 
 export type Command = DocumentCommand | AppCommand;

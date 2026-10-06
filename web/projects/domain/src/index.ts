@@ -16,6 +16,7 @@ export type {
   Delete,
   DocumentCommand,
   ExchangeChanges,
+  Help,
   Layout,
   Link,
   Move,

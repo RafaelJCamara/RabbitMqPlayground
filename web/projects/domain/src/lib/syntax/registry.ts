@@ -3,8 +3,12 @@ import type { CommandSpec } from './spec';
 import { bind, unbind } from './specs/bind';
 import { addConsumer, addProducer, declareExchange, declareQueue } from './specs/declare';
 import { link, subscribe, unlink, unsubscribe } from './specs/links';
+import { helpSpec } from './specs/help';
 import { clear, deleteElement, layout, move, moveLabel, redo, rename, undo } from './specs/place';
 import { set, unset } from './specs/set';
+
+/** `help` answers with the names of every command, which are these. */
+const help = helpSpec(() => SPECS.map(({ name }) => name));
 
 /**
  * Every command of the command bar (ADR-0011). It is one list, and the parser, the formatter, the completer, `help` and
@@ -32,6 +36,7 @@ export const SPECS: readonly CommandSpec[] = [
   layout,
   undo,
   redo,
+  help,
 ];
 
 /** The commands by what they are called, which is one word or two. */
