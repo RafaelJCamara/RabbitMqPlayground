@@ -74,6 +74,10 @@ async function select(page: Page, id: string): Promise<void> {
   const at = await centre(node(page, id));
   await page.mouse.click(at.x, at.y);
   await expect.poll(() => selection(page)).toEqual({ nodes: [id], edges: [] });
+  // The canvas is given the selection when the page is drawn again, a moment after the editor has it, and the inspector is drawn in the same pass and says whose it is.
+  await expect(page.getByRole('textbox', { name: 'Name' })).toHaveValue(
+    (await node(page, id).locator('.rmq-node-name').textContent()) ?? '',
+  );
 }
 
 const handle = (page: Page, id: string, which: 'in' | 'out') => node(page, id).locator(`[data-handle="${which}"]`);

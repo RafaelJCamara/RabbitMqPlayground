@@ -192,6 +192,7 @@ test.describe('a keyboard and nothing else (journey 3 of the plan)', () => {
         await page.keyboard.press(key);
         const selected = await page.evaluate(() => window.__rmq?.selection());
         if (selected?.nodes.length === 1 && selected.nodes[0] === id) {
+          await editor.drawnFor(editor.nodeById(id), id);
           return;
         }
       }
@@ -224,6 +225,7 @@ test.describe('a keyboard and nothing else (journey 3 of the plan)', () => {
       await page.keyboard.press('ArrowLeft');
     }
     await expect(live).toHaveText(/^Producer producer1/);
+    await editor.drawnFor(editor.nodeById('p1'), 'p1');
     await page.keyboard.press('l');
     await expect(live).toHaveText(/^Target 1 of 2: exchange exchange1/);
     await page.keyboard.press('Enter');

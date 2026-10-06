@@ -259,6 +259,20 @@ export class EditorPage {
     await node.click();
     await expect.poll(() => this.page.evaluate(() => window.__rmq?.selection())).toEqual({ nodes: [id], edges: [] });
     await expect(this.page.getByTestId('inspector-title')).not.toHaveText('Inspector');
+    await this.drawnFor(node, id);
+  }
+
+  /**
+   * Waits until the page has drawn the selection, and not only until the editor holds it. The canvas is given the selection when the page is drawn again, which is a
+   * moment after the editor has it, and a key that is pressed in between (the menu key, L) is for what was selected before: on a slow machine the menu opened for the
+   * node that the last add had selected. The inspector is drawn in the same pass, and says whose it is, in a field that a node that is not the document's does not have.
+   */
+  async drawnFor(node: Locator, id: string | null): Promise<void> {
+    if (id === '~default') {
+      return;
+    }
+    const name = await node.locator('.rmq-node-name').textContent();
+    await expect(this.page.getByRole('textbox', { name: 'Name' })).toHaveValue(name ?? '');
   }
 
   /** Renames the node that is selected, with F2: waits for the field to have the focus before it types, as a person does. */
