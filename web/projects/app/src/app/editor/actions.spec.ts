@@ -69,6 +69,30 @@ describe('EditorActions', () => {
     });
   });
 
+  describe('the default exchange', () => {
+    it('is turned on as a command of the toolbar, so that it is saved, logged and undone like every other change', () => {
+      const origins: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => origins.push(`${origin}:${command.type}`));
+      expect(store.document().settings.showDefaultExchange).toBe(false);
+
+      actions.setDefaultExchange(true);
+
+      expect(store.document().settings.showDefaultExchange).toBe(true);
+      expect(origins).toEqual(['toolbar:set']);
+
+      actions.undo('toolbar');
+      expect(store.document().settings.showDefaultExchange).toBe(false);
+    });
+
+    it('is turned off again by the same action', () => {
+      actions.setDefaultExchange(true);
+
+      actions.setDefaultExchange(false);
+
+      expect(store.document().settings.showDefaultExchange).toBe(false);
+    });
+  });
+
   describe('layout', () => {
     it('puts the nodes in their places as one step that the toolbar made, and fits the canvas once they are drawn there', () => {
       const origins: string[] = [];

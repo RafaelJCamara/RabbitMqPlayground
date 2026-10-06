@@ -6,6 +6,7 @@ import { DocumentStore } from '../core/state/document-store';
 import { ThemeService } from '../core/theme/theme-service';
 import { parseTheme, THEME_LABEL, THEME_PREFERENCES } from '../core/theme/theme';
 import { Icon } from '../core/ui/icon';
+import { Switch } from '../core/ui/switch';
 import { EditorActions } from './actions';
 import { formatChord } from './keyboard';
 import { saveText } from './save-text';
@@ -20,7 +21,7 @@ const BUTTON =
  */
 @Component({
   selector: 'rmq-top-bar',
-  imports: [Icon],
+  imports: [Icon, Switch],
   template: `
     <header class="border-line bg-panel flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2">
       <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
@@ -90,6 +91,14 @@ const BUTTON =
             <rmq-icon name="fit" [size]="18" />
             <span>Fit</span>
           </button>
+          <span class="flex items-center gap-2">
+            <span id="rmq-default-exchange-label" class="text-muted">Default exchange</span>
+            <rmq-switch
+              [checked]="store.document().settings.showDefaultExchange"
+              labelledBy="rmq-default-exchange-label"
+              (turn)="actions.setDefaultExchange($event)"
+            />
+          </span>
         </div>
       </div>
       <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

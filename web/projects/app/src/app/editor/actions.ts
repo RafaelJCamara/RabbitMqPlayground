@@ -48,6 +48,11 @@ export class EditorActions {
     }
   }
 
+  /** Shows or hides the default exchange, which is a setting of the canvas, so that it is saved, undone and logged like any other change (ADR-0043). */
+  setDefaultExchange(on: boolean): void {
+    this.bus.apply({ type: 'set', kind: 'canvas', changes: { showDefaultExchange: on } }, 'toolbar');
+  }
+
   /** Shows the whole canvas, and says so, because the picture is all that changes. */
   fit(): void {
     this.viewport.fit();

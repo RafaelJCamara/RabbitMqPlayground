@@ -134,6 +134,46 @@ describe('TopBar', () => {
     });
   });
 
+  describe('the default exchange (ADR-0043)', () => {
+    it('has a switch, named for what it shows, that is off while the canvas does not show it', async () => {
+      await renderBar();
+
+      const toggle = screen.getByRole('switch', { name: 'Default exchange' });
+
+      expect(toggle).toHaveAttribute('aria-checked', 'false');
+      expect(within(screen.getByRole('group', { name: 'View' })).getByRole('switch')).toBe(toggle);
+    });
+
+    it('turns the setting of the canvas on, with the top bar as the origin, as a command that is saved and undone like any other', async () => {
+      const { user, store, bus } = await renderBar();
+      const seen: string[] = [];
+      bus.onApplied(({ origin, command }) => seen.push(`${origin} ${command.type}`));
+
+      await user.click(screen.getByRole('switch', { name: 'Default exchange' }));
+
+      expect(store.document().settings.showDefaultExchange).toBe(true);
+      expect(seen).toEqual(['toolbar set']);
+      expect(screen.getByRole('switch', { name: 'Default exchange' })).toHaveAttribute('aria-checked', 'true');
+      expect(
+        screen.getByRole('button', { name: 'Undo: changed the default exchange setting of the canvas' }),
+      ).toBeEnabled();
+    });
+
+    it('turns it off again, and follows an undo, which puts the setting back', async () => {
+      const { user, store, bus, fixture } = await renderBar();
+      await user.click(screen.getByRole('switch', { name: 'Default exchange' }));
+
+      await user.click(screen.getByRole('switch', { name: 'Default exchange' }));
+      expect(store.document().settings.showDefaultExchange).toBe(false);
+
+      await user.click(screen.getByRole('switch', { name: 'Default exchange' }));
+      bus.undo('toolbar');
+      fixture.detectChanges();
+
+      expect(screen.getByRole('switch', { name: 'Default exchange' })).toHaveAttribute('aria-checked', 'false');
+    });
+  });
+
   describe('the view', () => {
     it('zooms out and in, resets, and fits, when the buttons are pressed', async () => {
       const { user, calls } = await renderBar();
