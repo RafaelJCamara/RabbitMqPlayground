@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import { allowedTargets, explainLink } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
 import { buildDocument, seedCanvas } from './support/seed';
+import { EDGES, NODES, TOPOLOGY } from './support/topology';
 import { expect, test } from './support/test';
 
 /**
@@ -21,35 +22,6 @@ const FOBLEX_VERSION = (
     version: string;
   }
 ).version;
-
-/** A topology that has one of each kind of node, an internal exchange, and an edge of each kind. The ids are `p1`, `x1`, `x2`, `q1` and `c1`. */
-const TOPOLOGY = buildDocument([
-  { type: 'add-producer', name: 'sender' },
-  {
-    type: 'declare-exchange',
-    name: 'orders',
-    exchangeType: 'topic',
-    durable: true,
-    autoDelete: false,
-    internal: false,
-  },
-  {
-    type: 'declare-exchange',
-    name: 'hidden',
-    exchangeType: 'fanout',
-    durable: true,
-    autoDelete: false,
-    internal: true,
-  },
-  { type: 'declare-queue', name: 'billing', durable: true },
-  { type: 'add-consumer', name: 'worker' },
-  { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'order.*' },
-  { type: 'bind', source: 'orders', destination: { kind: 'exchange', name: 'hidden' }, key: '#' },
-  { type: 'link', producer: 'sender', target: { kind: 'exchange', name: 'orders' } },
-  { type: 'subscribe', consumer: 'worker', queue: 'billing' },
-]);
-const EDGES = ['p1>x1', 'x1>q1', 'x1>x2', 'q1>c1'];
-const NODES = ['p1', 'x1', 'x2', 'q1', 'c1'];
 
 /** Opens the editor on that topology, and waits until the canvas is drawn and fitted, and every edge has been drawn. */
 async function open(page: Page): Promise<EditorPage> {
