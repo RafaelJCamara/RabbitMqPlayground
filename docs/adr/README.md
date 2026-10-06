@@ -41,7 +41,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted (wired into the app by 0031) |
 | [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
 | [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033) |
-| [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted |
+| [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted (the zoom is held by `FlowViewport`, 0033) |
 | [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted |
 | [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted |
 | [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md) | The Foblex contract suite, and how an upgrade fails loudly | Accepted |

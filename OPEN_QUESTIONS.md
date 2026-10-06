@@ -2,8 +2,9 @@
 
 Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#3](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/3)) was closed, and brought up to date after S2
-([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)) and S3
-([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)). Each one says what is open, why, what the options
+([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)), S3
+([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)) and S4
+([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
 [M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1 and 9 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) and
@@ -181,6 +182,10 @@ there"); whether "delete all" has to say that it will delete canvases that no ba
 carry the record of an unreadable canvas as it is, so that a newer version of the app can read it later. The last would need
 `list()` to give the raw record, which it does not. S9 builds the screens that have to say it.
 
+What S4 does meanwhile, which S9 may keep or change: the editor opens the canvas that was open last if it can be read, else the
+most recent one that can, else it makes one, and it leaves every canvas that cannot be read untouched. It says how many there
+are, in a line of the status strip, with the reason that nothing was changed, and offers nothing to do about them.
+
 ## Decisions taken in S1 that are easy to revisit
 
 - `route()` throws a `RangeError` for a routing key over 255 bytes and for a header value that is not exact, and does not
@@ -226,6 +231,29 @@ carry the record of an unreadable canvas as it is, so that a newer version of th
 - **The in-memory repository is a real one.** It is the repository that the app's specs use, and the one that the app can fall
   back on in a browser that keeps nothing, and a contract spec of 84 cases runs on it and on IndexedDB.
 
+## Decisions taken in S4 that are easy to revisit
+
+- **A node is drawn at the size of `NODE_SIZE`**, so the guess of S2 is the size that the canvas draws, and the auto-layout leaves
+  room for exactly that ([ADR-0032](docs/adr/0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md)). A longer name is
+  cut with an ellipsis on the canvas, and whole in the inspector and in the label that a screen reader reads.
+- **A node dropped from the toolbox lands where the middle of its preview was**, and not under the pointer, because the library puts
+  the preview off the pointer when the canvas is not at 100% ([ADR-0033](docs/adr/0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md)).
+  If that costs more workarounds, the first thing to replace is the library's drag from the toolbox with one of our own.
+- **Fit and "bring into view" show the whole canvas, at 100% or less, and do not centre on one node**, so that adding something far
+  away does not hide what is already there. A canvas that is bigger than the window is shown small, and zoom is from 25% to 200%.
+- **The note that the browser did not promise to keep the canvases is dismissed for as long as the page is open**, and comes back
+  the next time, until the browser agrees. It is not remembered between visits, because it is about the learner's data.
+- **The quota test makes the browser refuse at its API**, because the protocol's override of the quota changes neither the estimate
+  nor the outcome of a write of a canvas ([ADR-0037](docs/adr/0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md)).
+  It is worth trying the protocol again when Chromium is upgraded.
+- **The hint bar names the keys of the canvas for what is selected, and the table of shortcuts is the one place that lists them**
+  ([ADR-0035](docs/adr/0035-the-keyboard-service-scope-modifiers-and-text-fields.md)). Held keys do not repeat an action, undo and
+  redo included, which some editors let a learner hold down.
+- **The first wording of the messages was read on a screen**, and one was changed: a position that is not on the canvas says
+  whose position it is. The rest read well enough in the inspector and the status strip, and S5 will meet the ones about links.
+- **The inspector shows only what S4 can explain**: name, position, the type and flags of an exchange, the durable switch of a
+  queue, and for any node what it is joined to. What a producer sends and how a consumer takes messages is S6's and S8's.
+
 ## Follow-ups that are already owned
 
 These are not questions. S2 replays the refusals at declare and bind time against the fixtures, through the commands: the
@@ -238,7 +266,7 @@ steps through the engine's `dispatch`, which S1 could not do for lack of one.
 S3 hands on what the app has to wire, in the order that the slices come
 ([ADR-0028](docs/adr/0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md)):
 
-- **S4** makes the repository with `Date.now` and `crypto.randomUUID`, and calls `purgeExpired()` when it starts. It makes the
+- **S4** (done, [ADR-0031](docs/adr/0031-the-editors-state-the-command-bus-and-where-ids-come-from.md)) makes the repository with `Date.now` and `crypto.randomUUID`, and calls `purgeExpired()` when it starts. It makes the
   autosave of the one implicit canvas, calls `flush()` when the page is hidden (`visibilitychange`, `pagehide`), shows what each
   write came to, and asks `requestPersistence(navigator.storage)` after the first save, and not at start. It shows
   `quotaWarning` when a save fails with `quota-exceeded`, or from `readUsage`.
