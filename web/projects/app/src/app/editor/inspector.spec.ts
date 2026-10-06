@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { transientQueueReply } from '@rmq/engine';
 import { sampleDocument } from '@rmq/testing';
-import { render, screen, within } from '@testing-library/angular';
+import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -182,6 +182,21 @@ describe('Inspector', () => {
       expect(store.canUndo()).toBe(false);
     });
 
+    it('sends no command, and forgets an earlier refusal, when it is given the name that the document has', async () => {
+      const { user, fixture } = await renderInspector({ nodes: ['Q1'] });
+      await user.clear(nameField());
+      await user.type(nameField(), 'archive');
+      await user.tab();
+      expect(screen.getByTestId('refusal')).toBeInTheDocument();
+      const apply = vi.spyOn(TestBed.inject(CommandBus), 'apply');
+
+      fireEvent.change(nameField());
+      fixture.detectChanges();
+
+      expect(apply).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('refusal')).not.toBeInTheDocument();
+    });
+
     it('does not keep a refusal when something else is selected', async () => {
       const { user, choose } = await renderInspector({ nodes: ['Q1'] });
       await user.clear(nameField());
@@ -256,6 +271,20 @@ describe('Inspector', () => {
       );
     });
 
+    it('sends no command, and forgets an earlier refusal, when it is given the number that the document has', async () => {
+      const { user, fixture } = await renderInspector({ nodes: ['Q1'] });
+      await user.clear(xField());
+      await user.tab();
+      expect(screen.getByTestId('refusal')).toBeInTheDocument();
+      const apply = vi.spyOn(TestBed.inject(CommandBus), 'apply');
+
+      fireEvent.change(xField());
+      fixture.detectChanges();
+
+      expect(apply).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('refusal')).not.toBeInTheDocument();
+    });
+
     it('does nothing, with no command, when the number is the one that was there', async () => {
       const { user, store } = await renderInspector({ nodes: ['Q1'] });
 
@@ -273,6 +302,32 @@ describe('Inspector', () => {
       await user.selectOptions(screen.getByRole('combobox', { name: 'Type' }), 'fanout');
 
       expect(document().exchanges['E1']?.type).toBe('fanout');
+    });
+
+    it('goes back to the type that the document has, and says why, when a change of type is refused', async () => {
+      const { user, document } = await renderInspector({ nodes: ['E1'] });
+      const before = document().exchanges['E1']?.type;
+      vi.spyOn(TestBed.inject(CommandBus), 'apply').mockReturnValueOnce({
+        ok: false,
+        error: { kind: 'invalid-value', message: 'A topic exchange cannot be a fanout while it has keys.' },
+      });
+      const type = screen.getByRole('combobox', { name: 'Type' });
+
+      await user.selectOptions(type, 'fanout');
+
+      expect(type).toHaveValue(before);
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('cannot be a fanout while it has keys');
+    });
+
+    it('turns the internal flag on, and leaves the others as they were', async () => {
+      // The exchange called orders has a producer that publishes to it, which the broker would not allow once it is internal.
+      const { user, document } = await renderInspector({ nodes: ['E2'] });
+      const before = document().exchanges['E2'];
+      expect(before?.internal).toBe(false);
+
+      await user.click(screen.getByRole('switch', { name: 'Internal' }));
+
+      expect(document().exchanges['E2']).toEqual({ ...before, internal: true });
     });
 
     it('turns a flag on and off with its switch, and the switch shows what the document says', async () => {
@@ -296,12 +351,16 @@ describe('Inspector', () => {
       expect(document().exchanges['E1']?.durable).toBe(false);
     });
 
-    it('explains each field when its help is opened, in a sentence and not a tooltip', async () => {
+    it.each([
+      ['Durable', 'A durable exchange is still there after the broker restarts.'],
+      ['Auto-delete', 'The exchange goes away when the last queue or exchange is unbound from it.'],
+      ['Internal', 'Producers cannot publish to an internal exchange. Only another exchange can send messages to it.'],
+    ])('explains %s when its help is opened, in a sentence and not a tooltip', async (field, sentence) => {
       const { user } = await renderInspector({ nodes: ['E1'] });
 
-      await user.click(screen.getByRole('button', { name: 'Help: Internal' }));
+      await user.click(screen.getByRole('button', { name: `Help: ${field}` }));
 
-      expect(screen.getByText(/Producers cannot publish to an internal exchange/)).toBeVisible();
+      expect(screen.getByText(sentence)).toBeVisible();
     });
   });
 

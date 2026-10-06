@@ -143,14 +143,14 @@ export class TopBar {
     }
   });
 
-  /** The name of the button says what it would take back, when there is something. */
+  /** The name of the button says what it would take back, when there is something. Without it, the words on the button are its name. */
   protected readonly undoName = computed(() => {
     const label = this.store.undoLabel();
-    return label === undefined ? 'Undo' : `Undo: ${label}`;
+    return label === undefined ? null : `Undo: ${label}`;
   });
   protected readonly redoName = computed(() => {
     const label = this.store.redoLabel();
-    return label === undefined ? 'Redo' : `Redo: ${label}`;
+    return label === undefined ? null : `Redo: ${label}`;
   });
   protected readonly percent = computed(() => `${Math.round(this.viewport.zoom() * 100)}%`);
 

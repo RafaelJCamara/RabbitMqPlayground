@@ -71,6 +71,9 @@ describe('Timeline', () => {
     expect(timeline.undoDepth).toBe(2);
     expect(timeline.undo(doc('d'))?.label).toBe('three');
     expect(timeline.undo(doc('c'))?.label).toBe('two');
+    // The first step is gone, and so is its label: nothing is left to undo, and nothing says what it would be.
+    expect(timeline.canUndo).toBe(false);
+    expect(timeline.undoLabel).toBeUndefined();
     expect(timeline.undo(doc('b'))).toBeUndefined();
   });
 

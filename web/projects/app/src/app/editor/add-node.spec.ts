@@ -76,11 +76,11 @@ describe('addNode', () => {
   });
 
   it('puts a drop at whole numbers, and uses the size of the kind that is dropped', () => {
-    const { document } = made(empty(), empty(), { kind: 'producer' }, { x: 100.4, y: 50.6 });
+    const { document } = made(empty(), empty(), { kind: 'producer' }, { x: 100.6, y: 50.6 });
 
-    expect(Object.values(document.layout.nodes)).toEqual([
-      { x: Math.round(100.4 - NODE_SIZE.producer.width / 2), y: Math.round(50.6 - NODE_SIZE.producer.height / 2) },
-    ]);
+    // A producer is 140 by 56, so its top left is at (30.6, 22.6), which is the nearest whole numbers away from the pointer.
+    expect(NODE_SIZE.producer).toEqual({ width: 140, height: 56 });
+    expect(Object.values(document.layout.nodes)).toEqual([{ x: 31, y: 23 }]);
   });
 
   it('does not change the document that it is given', () => {

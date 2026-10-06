@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { CanvasSession, type SaveState } from '../core/session/canvas-session';
+import { ICONS } from '../core/ui/icons';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
@@ -162,6 +163,47 @@ describe('TopBar', () => {
       fixture.detectChanges();
       expect(screen.getByTestId('save-state')).toHaveTextContent('Not saved. The browser has no room left');
     });
+  });
+
+  describe('the sign of what a write came to', () => {
+    const signOf = () => screen.getByTestId('save-state').querySelector('svg path')?.getAttribute('d');
+
+    it.each<[string, SaveState, keyof typeof ICONS, string]>([
+      ['is saved', { kind: 'saved' }, 'check', 'text-muted'],
+      ['is being saved', { kind: 'saving' }, 'info', 'text-muted'],
+      ['is being opened', { kind: 'opening' }, 'info', 'text-muted'],
+      [
+        'could not be saved',
+        { kind: 'failed', error: { kind: 'quota-exceeded', message: 'The browser has no room left.' } },
+        'alert',
+        'text-danger',
+      ],
+      ['is not kept at all', { kind: 'memory', reason: 'The browser keeps nothing.' }, 'alert', 'text-warning'],
+    ])('has the sign and the colour that say so when the canvas %s', async (_what, state, icon, colour) => {
+      const { save, fixture } = await renderBar();
+
+      save.set(state);
+      fixture.detectChanges();
+
+      expect(signOf()).toBe(ICONS[icon]);
+      expect(screen.getByTestId('save-state')).toHaveClass(colour);
+      for (const other of ['text-muted', 'text-danger', 'text-warning'].filter((name) => name !== colour)) {
+        expect(screen.getByTestId('save-state')).not.toHaveClass(other);
+      }
+    });
+  });
+
+  it('lets the words on Undo and Redo be their names until there is something to say about what they do', async () => {
+    const { bus, fixture } = await renderBar();
+
+    expect(screen.getByRole('button', { name: 'Undo' })).not.toHaveAttribute('aria-label');
+    expect(screen.getByRole('button', { name: 'Redo' })).not.toHaveAttribute('aria-label');
+    bus.apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+    fixture.detectChanges();
+    expect(screen.getByRole('button', { name: 'Undo: added queue billing' })).toHaveAttribute(
+      'aria-label',
+      'Undo: added queue billing',
+    );
   });
 
   it('has a name in words for every button, so that none is only an icon', async () => {

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CONNECT_KEYS, GRAB_KEYS } from '../canvas/model/guard';
 import { EditorActions } from './actions';
 import { formatChord, isInCanvas, isTextEntry, KeyboardService, matches, SHORTCUTS, type Chord } from './keyboard';
 
@@ -47,6 +48,25 @@ describe('the table of shortcuts', () => {
     }
   });
 
+  it('lists the keys that the library takes itself, which the app says in its hints and never handles', () => {
+    const library = SHORTCUTS.filter((row) => row.owner === 'library');
+
+    expect(library.map((row) => [row.id, row.keys, row.chords.map((chord) => chord.key)])).toEqual([
+      ['navigate', 'Arrow keys', ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']],
+      ['grab', undefined, ['m']],
+      ['connect', undefined, ['l']],
+      ['delete', 'Delete', ['Delete', 'Backspace']],
+      ['zoom', '+ and -', ['+', '-', '0']],
+    ]);
+  });
+
+  it('gives the library the keys that the guard of the canvas holds back Ctrl and Cmd from, and no others', () => {
+    const keysOf = (id: string) => SHORTCUTS.find((row) => row.id === id)?.chords.map((chord) => chord.key);
+
+    expect(keysOf('grab')).toEqual(GRAB_KEYS);
+    expect(keysOf('connect')).toEqual(CONNECT_KEYS);
+  });
+
   it('has the rows that ADR-0035 lists for the app, and the keys that ADR-0017 gives to the library', () => {
     const named = (id: string) => SHORTCUTS.find((row) => row.id === id);
 
@@ -87,6 +107,12 @@ describe('matches', () => {
     expect(matches(chord, press({ key: 'z', ctrlKey: true }))).toBe(true);
     expect(matches(chord, press({ key: 'z', metaKey: true }))).toBe(true);
     expect(matches(chord, press({ key: 'z' }))).toBe(false);
+  });
+
+  it('takes Alt for a chord that names it, and not for one that does not', () => {
+    expect(matches({ key: 'x', alt: true }, press({ key: 'x', altKey: true }))).toBe(true);
+    expect(matches({ key: 'x', alt: true }, press({ key: 'x' }))).toBe(false);
+    expect(matches({ key: 'x' }, press({ key: 'x', altKey: true }))).toBe(false);
   });
 
   it('wants exactly the modifiers that the chord names, so a single key never matches with one held', () => {

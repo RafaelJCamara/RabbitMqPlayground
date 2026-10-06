@@ -158,6 +158,21 @@ describe('SelectionStore', () => {
     expect(selection.selection()).toEqual({ nodes: ['x1', 'q1'], edges: ['x1>q1'] });
   });
 
+  it('keeps one selected edge that is still there, and forgets one that is not', () => {
+    const document = documentOf({
+      exchanges: { x1: exchangeRecord('orders') },
+      queues: { q1: queueRecord('billing') },
+      bindings: { b1: bindingRecord('x1', { kind: 'queue', id: 'q1' }, 'k') },
+    });
+    selection.select([], ['x1>q1']);
+    selection.prune(document);
+    expect(selection.selection()).toEqual({ nodes: [], edges: ['x1>q1'] });
+
+    selection.select([], ['x1>gone']);
+    selection.prune(document);
+    expect(selection.selection()).toEqual({ nodes: [], edges: [] });
+  });
+
   it('keeps the very same selection when nothing was forgotten', () => {
     const document = documentOf({ queues: { q1: queueRecord('billing') } });
     selection.select(['q1']);

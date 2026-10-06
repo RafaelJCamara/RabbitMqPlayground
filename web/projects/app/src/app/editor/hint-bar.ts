@@ -34,7 +34,7 @@ export class HintBar {
     const [only] = nodes;
     const kind =
       nodes.length === 1 && edges.length === 0 && only !== undefined ? kindOf(this.store.document(), only) : undefined;
-    return { nodes: nodes.length, edges: edges.length, ...(kind === undefined ? {} : { kind }) };
+    return { nodes: nodes.length, edges: edges.length, kind };
   });
 
   protected readonly hints = computed(() => hintsFor(this.facts()));

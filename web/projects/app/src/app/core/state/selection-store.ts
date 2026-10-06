@@ -53,10 +53,10 @@ export class SelectionStore {
   /** Forgets the nodes and edges that the canvas does not have any more. */
   prune(document: CanvasDocument): void {
     const { nodes, edges } = this.current();
-    const keys = edges.length === 0 ? undefined : edgeKeys(document);
+    const keys = edgeKeys(document);
     this.select(
       nodes.filter((id) => kindOf(document, id) !== undefined),
-      edges.filter((key) => keys?.has(key) === true),
+      edges.filter((key) => keys.has(key)),
     );
   }
 }

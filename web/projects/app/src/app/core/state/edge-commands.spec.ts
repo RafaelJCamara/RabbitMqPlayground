@@ -44,7 +44,8 @@ describe('removeEdgeCommands', () => {
     const before = document();
     const commands = removeEdgeCommands(before, 'x1>q1');
 
-    expect(commands).toEqual([
+    // Exactly these: a binding that has no arguments is unbound without saying that it has none.
+    expect(commands).toStrictEqual([
       { type: 'unbind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'order.*' },
       { type: 'unbind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'invoice.#' },
     ]);

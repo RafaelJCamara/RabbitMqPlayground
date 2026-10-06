@@ -22,6 +22,12 @@ const memoryStorage = (initial: Record<string, string> = {}) => {
   };
 };
 
+describe('the name that the choice is kept under', () => {
+  it('is the one that earlier visits used, because a visitor who chose a theme would lose the choice if it changed', () => {
+    expect(THEME_STORAGE_KEY).toBe('rmq.theme');
+  });
+});
+
 describe('parseTheme', () => {
   it('knows light and dark, and takes anything else to be the system', () => {
     expect(parseTheme('light')).toBe('light');
