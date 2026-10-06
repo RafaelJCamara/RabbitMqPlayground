@@ -1,14 +1,6 @@
 import { DOCUMENT, inject, Injectable, signal } from '@angular/core';
+import { localStorageOf } from '../browser-storage';
 import { applyTheme, readStoredTheme, writeStoredTheme, type ThemePreference } from './theme';
-
-/** The browser's storage, or `null` when it will not give it (touching `localStorage` can throw). */
-function localStorageOf(page: Document): Storage | null {
-  try {
-    return page.defaultView?.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * The theme of the page (ADR-0032). It is applied when the app starts, by the root, so that a learner who chose a theme never sees
