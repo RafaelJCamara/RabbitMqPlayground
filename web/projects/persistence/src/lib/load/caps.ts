@@ -1,4 +1,5 @@
 import { tooLarge, type LoadError } from '../errors';
+import { isRecord } from '../shape';
 
 /**
  * How much a document may hold (ADR-0027). The schema has ranges for its numbers and the validation has the 255 bytes of a
@@ -23,9 +24,6 @@ export const SIZE_CAPS = {
   name: 200,
 } as const;
 
-type Raw = Readonly<Record<string, unknown>>;
-
-const isRecord = (value: unknown): value is Raw => typeof value === 'object' && value !== null && !Array.isArray(value);
 const count = (value: unknown): number => (isRecord(value) ? Object.keys(value).length : 0);
 const valuesOf = (value: unknown): unknown[] => (isRecord(value) ? Object.values(value) : []);
 

@@ -1,6 +1,7 @@
 import { emptyDocument } from '@rmq/domain';
 import { migrationFailed, reasonOf, unsupportedVersion, type LoadError } from '../errors';
 import { failure, succeed, type Outcome } from '../outcome';
+import { isRecord, type Raw } from '../shape';
 
 /**
  * Migrations (ADR-0027). A document that an older version of the app saved is brought up to date one version at a time, in
@@ -9,8 +10,6 @@ import { failure, succeed, type Outcome } from '../outcome';
 
 /** The schema version that this app writes, and understands up to. It is the domain's: there is no second number to forget. */
 export const CURRENT_SCHEMA_VERSION: number = emptyDocument().schemaVersion;
-
-type Raw = Readonly<Record<string, unknown>>;
 
 export interface Migration {
   /** The schema version that this step reads. It gives back the next one, `from + 1`. */
@@ -28,8 +27,6 @@ export interface Migration {
  * and so does writing one without the version. Version 1 is the first, so there is nothing to migrate yet.
  */
 export const MIGRATIONS: readonly Migration[] = [];
-
-const isRecord = (value: unknown): value is Raw => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
  * Runs the steps that take a document from the version that it has (`found`) to `target`. A version with no step is

@@ -1,6 +1,7 @@
 import { parseDocument, type CanvasDocument, type ParsedDocument } from '@rmq/domain';
 import { invalidError, newerVersion, notAnObject, reasonOf, summarise, unknownFormat, type LoadError } from '../errors';
 import { failure, succeed, type Outcome } from '../outcome';
+import { isRecord } from '../shape';
 import { checkCaps } from './caps';
 import { CURRENT_SCHEMA_VERSION, MIGRATIONS, runMigrations, type Migration } from './migrations';
 
@@ -16,9 +17,6 @@ export interface Pipeline {
   readonly migrations: readonly Migration[];
   readonly parse: (raw: unknown) => ParsedDocument;
 }
-
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const NOT_OURS = 'This does not look like a canvas that this app made:';
 const ONLY_OURS = 'Only a canvas that this app saved can be opened.';
