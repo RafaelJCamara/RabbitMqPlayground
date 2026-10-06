@@ -19,6 +19,11 @@ export const DRAWN_ATTRIBUTE = 'data-edge-id';
 export interface DrawnReport {
   drawn(ids: string[]): void;
   gone(ids: string[]): void;
+  /**
+   * The path of an edge is drawn another way, or an edge has come or gone (ADR-0044). It says nothing of which, because what it is for, putting the
+   * labels of the edges where they do not meet, is done again for all of them, a moment after the last change.
+   */
+  geometry?(): void;
 }
 
 const hasPath = (path: Element): boolean => (path.getAttribute('d') ?? '') !== '';
@@ -71,10 +76,20 @@ export function watchDrawnEdges(container: Element, report: DrawnReport): () => 
     return id !== null && id !== undefined && hasPath(path) !== known.has(id);
   };
 
+  /** An edge that comes or goes, or a path of an edge that is drawn another way, moves what is drawn on it. */
+  const changesGeometry = (record: MutationRecord): boolean =>
+    record.type === 'childList' ||
+    (record.target instanceof Element &&
+      record.target.classList.contains('f-connection-path') &&
+      record.target.closest(`[${EDGE_ATTRIBUTE}]`) !== null);
+
   update();
   const observer = new MutationObserver((records) => {
     if (records.some(changesWhatIsDrawn)) {
       update();
+    }
+    if (records.some(changesGeometry)) {
+      report.geometry?.();
     }
   });
   observer.observe(container, { subtree: true, attributes: true, attributeFilter: ['d'], childList: true });

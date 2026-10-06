@@ -83,9 +83,12 @@ export class EditorPage {
     await this.page.getByRole('button', { name: item, exact: true }).click();
   }
 
-  /** A node on the canvas, by what a screen reader says of it: `Queue billing`. */
+  /**
+   * A node on the canvas, by what a screen reader says of it: `Queue billing`. A node that has a lint says so after its label (`Exchange orders, topic, 1
+   * warning`, ADR-0044), and it is the same node, so the label may be followed by `, ` and what else is said.
+   */
   node(label: string): Locator {
-    return this.page.locator(`[data-node-id][aria-label="${label}"]`);
+    return this.page.locator(`[data-node-id][aria-label="${label}"], [data-node-id][aria-label^="${label}, "]`);
   }
 
   /** The middle of an element on the page. */

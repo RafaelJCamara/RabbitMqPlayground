@@ -82,6 +82,18 @@ export class FlowViewport {
       : toCanvas(viewport, { x: client.x - host.x, y: client.y - host.y });
   }
 
+  /** A point of the page, as a pointer reports it, measured from the top left of the canvas's host, or `null` when there is no canvas. */
+  fromClient(client: Point): Point | null {
+    const host = this.driver?.host();
+    return host === undefined ? null : { x: client.x - host.x, y: client.y - host.y };
+  }
+
+  /** How big the canvas's host is, or `null` when there is no canvas. */
+  hostSize(): Size | null {
+    const host = this.driver?.host();
+    return host === undefined ? null : { width: host.width, height: host.height };
+  }
+
   /** Where a rectangle of the canvas is, measured from the top left of the canvas's host, or `null` when there is no canvas. */
   onHost(rect: Point & Size): (Point & Size) | null {
     const viewport = this.live();

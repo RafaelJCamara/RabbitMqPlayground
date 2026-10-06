@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { edgeKeys, kindOf, type CanvasDocument, type Id } from '@rmq/domain';
+import { DEFAULT_EXCHANGE_ID, implicitEdgeKeys } from './default-exchange';
 
 /** What is selected, in ids: nodes by id and edges by their key (`from>to`, the key of an edge's label). */
 export interface Selection {
@@ -50,13 +51,18 @@ export class SelectionStore {
     this.select([], []);
   }
 
-  /** Forgets the nodes and edges that the canvas does not have any more. */
+  /**
+   * Forgets the nodes and edges that the canvas does not have any more. The default exchange and the implicit edges that start from it are not in the
+   * document and are drawn while the setting is on (ADR-0043), so they are kept while they are, and forgotten when they are not.
+   */
   prune(document: CanvasDocument): void {
     const { nodes, edges } = this.current();
     const keys = edgeKeys(document);
+    const implicit = implicitEdgeKeys(document);
+    const shown = document.settings.showDefaultExchange;
     this.select(
-      nodes.filter((id) => kindOf(document, id) !== undefined),
-      edges.filter((key) => keys.has(key)),
+      nodes.filter((id) => kindOf(document, id) !== undefined || (shown && id === DEFAULT_EXCHANGE_ID)),
+      edges.filter((key) => keys.has(key) || implicit.has(key)),
     );
   }
 }

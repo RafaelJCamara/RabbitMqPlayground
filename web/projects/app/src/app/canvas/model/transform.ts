@@ -92,3 +92,21 @@ export function fitViewport(
     y: (host.height - height * zoom) / 2 - top * zoom,
   };
 }
+
+/**
+ * Where a box of this `size` goes so that it is by an `anchor`, inside a host that is `host` big (ADR-0041): just below the anchor, or above it when there is no room
+ * below, and kept inside the host with `margin` to spare. Without an anchor it is in the middle of the top of the host.
+ */
+export function popoverPosition(anchor: (Point & Size) | null, size: Size, host: Size, margin = 8): Point {
+  const keep = (value: number, length: number, room: number): number =>
+    Math.max(margin, Math.min(value, room - length - margin));
+  if (anchor === null) {
+    return { x: keep((host.width - size.width) / 2, size.width, host.width), y: margin };
+  }
+  const below = anchor.y + anchor.height + 6;
+  const fits = below + size.height <= host.height - margin;
+  return {
+    x: keep(anchor.x, size.width, host.width),
+    y: keep(fits ? below : anchor.y - size.height - 6, size.height, host.height),
+  };
+}

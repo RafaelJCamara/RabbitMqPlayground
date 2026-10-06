@@ -21,7 +21,7 @@ import { armedTargets } from './link-targets';
 import { RMQ_A11Y_MESSAGES } from './messages';
 import { EXCHANGE_TYPES, kindOfNew, newNodeKey } from './new-node';
 import { frameOf, shapePath } from './shapes';
-import { fitViewport, liveViewport, toCanvas, toScreen } from './transform';
+import { fitViewport, liveViewport, popoverPosition, toCanvas, toScreen } from './transform';
 
 describe('connector ids', () => {
   it('make a connector id from a node id, and read the node id back from either', () => {
@@ -552,5 +552,33 @@ describe('fitViewport', () => {
     const b = fitViewport([box(-50, 20), box(0, 0), box(300, 700)], host, 40, 1);
 
     expect(a).toEqual(b);
+  });
+});
+
+describe('popoverPosition (ADR-0041)', () => {
+  const host = { width: 800, height: 600 };
+  const size = { width: 300, height: 200 };
+
+  it('puts the box just below the anchor, at its left edge', () => {
+    expect(popoverPosition({ x: 100, y: 100, width: 140, height: 56 }, size, host)).toEqual({ x: 100, y: 162 });
+  });
+
+  it('puts the box above the anchor when there is no room below', () => {
+    expect(popoverPosition({ x: 100, y: 500, width: 140, height: 56 }, size, host)).toEqual({ x: 100, y: 294 });
+  });
+
+  it('keeps the box inside the host, with a margin, on every side', () => {
+    expect(popoverPosition({ x: 700, y: 100, width: 140, height: 56 }, size, host).x).toBe(492);
+    expect(popoverPosition({ x: -50, y: 100, width: 140, height: 56 }, size, host).x).toBe(8);
+    expect(popoverPosition({ x: 100, y: -300, width: 140, height: 56 }, size, host).y).toBeGreaterThanOrEqual(8);
+    expect(popoverPosition({ x: 100, y: 590, width: 140, height: 56 }, size, host).y).toBeLessThanOrEqual(392);
+  });
+
+  it('puts the box in the middle of the top when there is no anchor, which is where a node is that is not drawn', () => {
+    expect(popoverPosition(null, size, host)).toEqual({ x: 250, y: 8 });
+  });
+
+  it('does not push the box out of a host that is smaller than it', () => {
+    expect(popoverPosition(null, size, { width: 100, height: 100 })).toEqual({ x: 8, y: 8 });
   });
 });

@@ -282,6 +282,17 @@ describe('FlowViewport', () => {
     expect(make().onHost({ x: 0, y: 0, width: 1, height: 1 })).toBeNull();
   });
 
+  it('takes a point of the page to the host, which is where a card goes that follows the pointer, and says how big the host is', () => {
+    const viewport = make();
+    expect(viewport.fromClient({ x: 1, y: 1 })).toBeNull();
+    expect(viewport.hostSize()).toBeNull();
+
+    viewport.attach(fakeDriver().driver);
+
+    expect(viewport.fromClient({ x: 130, y: 90 })).toEqual({ x: 30, y: 40 });
+    expect(viewport.hostSize()).toEqual({ width: 800, height: 600 });
+  });
+
   it('passes what the app asks to the canvas', () => {
     const viewport = make();
     const { driver, calls } = fakeDriver();
@@ -568,6 +579,65 @@ describe('watchDrawnEdges (ADR-0016, workaround 3)', () => {
     await settle();
 
     expect(scan).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('says that the geometry changed when the path of an edge is drawn another way, once for a burst', async () => {
+    const container = document.createElement('div');
+    const geometry = vi.fn();
+    const stop = watchDrawnEdges(container, { drawn: vi.fn(), gone: vi.fn(), geometry });
+    const first = edge(container, 'a>b', 'M0,0 L1,1');
+    const second = edge(container, 'c>d', 'M0,0 L1,1');
+    await settle();
+    geometry.mockClear();
+
+    first.path.setAttribute('d', 'M0,0 L9,9');
+    second.path.setAttribute('d', 'M0,0 L8,8');
+    await settle();
+
+    expect(geometry).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('says that the geometry changed when an edge comes, and when it goes', async () => {
+    const container = document.createElement('div');
+    const geometry = vi.fn();
+    const stop = watchDrawnEdges(container, { drawn: vi.fn(), gone: vi.fn(), geometry });
+
+    const { element } = edge(container, 'a>b', 'M0,0 L1,1');
+    await settle();
+    expect(geometry).toHaveBeenCalledTimes(1);
+
+    element.remove();
+    await settle();
+    expect(geometry).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it('does not say that the geometry changed for a path that is not an edge’s', async () => {
+    const container = document.createElement('div');
+    const geometry = vi.fn();
+    const stop = watchDrawnEdges(container, { drawn: vi.fn(), gone: vi.fn(), geometry });
+    const stray = document.createElement('path');
+    container.append(stray);
+    await settle();
+    geometry.mockClear();
+
+    stray.setAttribute('d', 'M5,5');
+    await settle();
+
+    expect(geometry).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('does not need a report of the geometry, which only the canvas asks for', async () => {
+    const container = document.createElement('div');
+    const stop = watchDrawnEdges(container, { drawn: vi.fn(), gone: vi.fn() });
+    const { path } = edge(container, 'a>b', 'M0,0 L1,1');
+
+    path.setAttribute('d', 'M0,0 L2,2');
+    await settle();
+
     stop();
   });
 

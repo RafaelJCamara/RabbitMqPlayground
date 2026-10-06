@@ -194,6 +194,82 @@ rmq-flow-canvas .rmq-handle.f-connector-connectable .rmq-handle-dot {
   transform: scale(1.4);
 }
 
+/*
+ * The label of an edge (ADR-0044): its chips, as one stack, which the library places along the edge as the content of the connection. The press on it is ours
+ * (the library's mouse and touch events are stopped there), so a drag along the edge moves it and does not pan the canvas.
+ */
+rmq-flow-canvas .rmq-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+rmq-flow-canvas .rmq-label-dragging {
+  cursor: grabbing;
+}
+
+rmq-flow-canvas .rmq-chip {
+  max-width: 160px;
+  overflow: hidden;
+  padding: 0 6px;
+  border: 1px solid var(--rmq-border);
+  border-radius: 999px;
+  background: var(--rmq-surface);
+  color: var(--rmq-fg);
+  font-size: 11px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+rmq-flow-canvas .rmq-more {
+  color: var(--rmq-muted);
+}
+
+rmq-flow-canvas .f-connection.f-selected .rmq-chip {
+  border-color: var(--rmq-accent);
+}
+
+/* A lint is a badge in the warning colours, on a node and on the label of a binding: what it says is in the inspector. */
+rmq-flow-canvas .rmq-lint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--rmq-warning);
+  border-radius: 50%;
+  background: var(--rmq-warning-bg);
+  color: var(--rmq-warning);
+}
+
+rmq-flow-canvas .rmq-node-lint {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+}
+
+/* What the document does not have as a binding is drawn with a dashed line: the link to a queue and the implicit bindings (ADR-0043). */
+rmq-flow-canvas .rmq-edge-dashed .f-connection-path {
+  stroke-dasharray: 6 4;
+}
+
+rmq-flow-canvas .rmq-edge-dashed .rmq-chip {
+  font-style: italic;
+}
+
+rmq-flow-canvas .rmq-node-virtual {
+  cursor: default;
+}
+
+rmq-flow-canvas .rmq-node-virtual .rmq-node-outline {
+  stroke-dasharray: 5 4;
+}
+
 @media (prefers-reduced-motion: reduce) {
   rmq-flow-canvas .rmq-node-outline,
   rmq-flow-canvas .rmq-handle-dot {

@@ -13,7 +13,12 @@ import {
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { buildCanvasVm } from './canvas-vm';
-import { DEFAULT_EXCHANGE_ID, defaultExchangePosition, implicitEdgeId, isVirtual } from './default-exchange';
+import {
+  DEFAULT_EXCHANGE_ID,
+  defaultExchangePosition,
+  implicitEdgeId,
+  isVirtual,
+} from '../../core/state/default-exchange';
 import { chipsOf, MAX_CHIPS, nodeLabel, splitChips } from './labels';
 
 const frozen = (document: CanvasDocument): CanvasDocument => deepFreeze(document);

@@ -32,9 +32,10 @@ import {
   withConnectionFlow,
 } from '@foblex/flow';
 import type { Id, LinkRules } from '@rmq/domain';
+import { isVirtual } from '../../core/state/default-exchange';
 import { Icon } from '../../core/ui/icon';
 import { NOTHING_SELECTED, type Selection } from '../../core/state/selection-store';
-import type { CanvasVm } from '../model/canvas-vm';
+import type { CanvasVm, EdgeVm } from '../model/canvas-vm';
 import { inId, NOTHING, outId } from '../model/connector-ids';
 import { classifyDrop } from '../model/drop';
 import { watchDrawnEdges } from '../model/drawn-edges';
@@ -43,14 +44,32 @@ import { deleteIntent, dropNewIntent, moveIntent, selectIntent } from '../model/
 import { blocksFoblex, CONNECT_KEYS, GRAB_KEYS } from '../model/guard';
 import { nodeIdAt, nodeIdOfTarget } from '../model/hit-test';
 import type { CanvasIntent, LinkVia } from '../model/intents';
+import { labelPlaces, samePlaces } from '../model/label-layout';
 import { armedTargets } from '../model/link-targets';
 import { RMQ_A11Y_MESSAGES } from '../model/messages';
+import { closestFraction, polylineOf } from '../model/path';
 import { fitViewport, type TransformModel } from '../model/transform';
 import { FlowBridge } from './flow-bridge';
 
 /** Room round the nodes when the canvas is fitted, in pixels, and the zoom that fit never goes past. */
 const FIT_PADDING = 40;
 const FIT_MAX_ZOOM = 1;
+
+/** How long the labels wait for the geometry to be still before they are placed again, so that they do not move while a node is dragged (ADR-0044). */
+const PLACEMENT_DELAY_MS = 120;
+/** How far a press on a label moves, in pixels of the page, before it is a drag and not a click, and how near the ends of its edge a label is let go. */
+const LABEL_DRAG_THRESHOLD = 3;
+const LABEL_MIN = 0.05;
+const LABEL_MAX = 0.95;
+
+/** A press on the label of an edge, which becomes a click or a drag. */
+interface LabelPress {
+  readonly key: string;
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+  moved: boolean;
+}
 
 const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((id) => b.includes(id));
@@ -105,6 +124,13 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   private dragging = false;
   private cleanups: (() => void)[] = [];
 
+  /** The places that the labels have been given along their edges, from the paths that the library drew (ADR-0044). */
+  private readonly placed = signal<ReadonlyMap<string, number>>(new Map());
+  private placementTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The label that is being dragged, and where it is along its edge, for as long as the pointer is down. */
+  protected readonly labelDrag = signal<{ readonly key: string; readonly at: number } | null>(null);
+  private press: LabelPress | null = null;
+
   /** Double-clicking a node renames it, so the library's double-click zoom is off. */
   protected readonly noDoubleClickZoom = (): boolean => false;
   protected readonly inId = inId;
@@ -117,6 +143,12 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
       this.model();
       afterNextRender(() => this.pushSelection(nodes, edges), { injector: this.injector });
       this.armedSource.set(nodes.length === 1 && edges.length === 0 ? (nodes[0] ?? null) : null);
+    });
+
+    // The labels are placed again when the document changes, and when the library draws an edge another way, once things are still.
+    effect(() => {
+      this.model();
+      this.placeLabelsSoon();
     });
 
     // Capture-phase listeners on the page run before the library's own (workarounds 2 and the guard of ADR-0017).
@@ -167,8 +199,104 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
       watchDrawnEdges(canvas.fConnectionsContainer().nativeElement, {
         drawn: (ids) => this.viewport.markDrawn(ids),
         gone: (ids) => this.viewport.markGone(ids),
+        geometry: () => this.placeLabelsSoon(),
       }),
     );
+  }
+
+  /** Works out where the labels go from the paths that are drawn, a moment after the last thing moved, and not while it still is moving. */
+  private placeLabelsSoon(): void {
+    clearTimeout(this.placementTimer);
+    this.placementTimer = setTimeout(() => {
+      const next = labelPlaces(this.model(), (key) => this.viewport.edgePath(key));
+      if (!samePlaces(next, this.placed())) {
+        this.placed.set(next);
+      }
+    }, PLACEMENT_DELAY_MS);
+  }
+
+  /** Where along its edge a label is drawn: where it is being dragged to, else where the document keeps it, else where the app placed it, else the middle. */
+  protected labelAt(edge: EdgeVm): number {
+    const drag = this.labelDrag();
+    return drag?.key === edge.id ? drag.at : (edge.labelAt ?? this.placed().get(edge.id) ?? 0.5);
+  }
+
+  /** An edge that is not a binding of the document is drawn with a dashed line: the link to a queue, and the implicit bindings (ADR-0043). */
+  protected isDashed(edge: EdgeVm): boolean {
+    return edge.kind === 'implicit' || (edge.kind === 'link' && edge.chips.length > 0);
+  }
+
+  /**
+   * The library starts a drag of the canvas, and a selection, from the first mouse or touch event of a press, and a press on a label is neither, so it
+   * does not hear of it (ADR-0044). The label is ours: a click selects its edge and a drag moves it, from its own pointer events.
+   */
+  protected onLabelStart(event: Event): void {
+    event.stopPropagation();
+  }
+
+  protected onLabelDown(event: PointerEvent, edge: EdgeVm): void {
+    if (event.button !== 0 || !event.isPrimary) {
+      return;
+    }
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.press = { key: edge.id, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+    this.intent.emit({ type: 'peek', key: null });
+  }
+
+  protected onLabelMove(event: PointerEvent): void {
+    const press = this.press;
+    if (press === null || press.pointerId !== event.pointerId || isVirtual(press.key)) {
+      return;
+    }
+    if (!press.moved && Math.hypot(event.clientX - press.x, event.clientY - press.y) < LABEL_DRAG_THRESHOLD) {
+      return;
+    }
+    press.moved = true;
+    const d = this.viewport.edgePath(press.key);
+    const line = d === null ? null : polylineOf(d);
+    const point = this.viewport.toCanvas({ x: event.clientX, y: event.clientY });
+    if (line !== null && point !== null) {
+      const at = Math.min(LABEL_MAX, Math.max(LABEL_MIN, closestFraction(line, point)));
+      this.labelDrag.set({ key: press.key, at });
+    }
+  }
+
+  /** A click selects the edge, which the library would have done; a drag that moved the label is one `move-label`, to two decimals. */
+  protected onLabelUp(event: PointerEvent): void {
+    const press = this.press;
+    if (press === null || press.pointerId !== event.pointerId) {
+      return;
+    }
+    this.press = null;
+    const drag = this.labelDrag();
+    this.labelDrag.set(null);
+    if (drag !== null) {
+      this.intent.emit({ type: 'move-label', key: drag.key, at: Math.round(drag.at * 100) / 100 });
+    } else if (!press.moved) {
+      this.intent.emit({ type: 'select', nodes: [], edges: [press.key] });
+    }
+  }
+
+  protected onLabelCancel(event: PointerEvent): void {
+    if (this.press?.pointerId === event.pointerId) {
+      this.press = null;
+      this.labelDrag.set(null);
+    }
+  }
+
+  /** A pointer that hovers over a label that has more than it shows asks for the list; a touch has no hover, and the inspector has the list. */
+  protected onLabelEnter(event: PointerEvent, edge: EdgeVm): void {
+    if (event.pointerType === 'touch' || edge.more.length === 0 || this.press !== null) {
+      return;
+    }
+    const { left, top, width, height } = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.intent.emit({ type: 'peek', key: edge.id, rect: { x: left, y: top, width, height } });
+  }
+
+  protected onLabelLeave(event: PointerEvent, edge: EdgeVm): void {
+    if (event.pointerType !== 'touch' && edge.more.length > 0) {
+      this.intent.emit({ type: 'peek', key: null });
+    }
   }
 
   /**
@@ -190,6 +318,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.placementTimer);
     for (const cleanup of this.cleanups) {
       cleanup();
     }
@@ -258,14 +387,15 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     const node = nodeIdOfTarget(event.target);
     const edge =
       event.target instanceof Element ? event.target.closest('[data-edge]')?.getAttribute('data-edge') : null;
-    if (node !== null) {
+    // The default exchange and its implicit edges are not the document's, have no menu, and leave the right click to the browser (ADR-0043).
+    if (node !== null && !isVirtual(node)) {
       event.preventDefault();
       this.intent.emit({
         type: 'context-menu',
         target: { kind: 'node', id: node },
         client: { x: event.clientX, y: event.clientY },
       });
-    } else if (edge !== null && edge !== undefined) {
+    } else if (edge !== null && edge !== undefined && !isVirtual(edge)) {
       event.preventDefault();
       this.intent.emit({
         type: 'context-menu',
@@ -279,7 +409,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
 
   protected onDoubleClick(event: MouseEvent): void {
     const id = nodeIdOfTarget(event.target);
-    if (id !== null) {
+    if (id !== null && !isVirtual(id)) {
       this.intent.emit({ type: 'rename', id });
     }
   }
@@ -302,7 +432,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
         : edges.length === 1 && nodes.length === 0 && edge !== undefined
           ? ({ kind: 'edge', key: edge } as const)
           : null;
-    if (target === null) {
+    if (target === null || isVirtual(target.kind === 'node' ? target.id : target.key)) {
       return;
     }
     event.preventDefault();

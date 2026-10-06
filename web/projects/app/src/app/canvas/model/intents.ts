@@ -1,6 +1,6 @@
 import type { Id } from '@rmq/domain';
 import type { NewNode } from './new-node';
-import type { Point } from './transform';
+import type { Point, Size } from './transform';
 
 /** How a link was made: by dragging a handle, by clicking one source and then a target, or from the keyboard (ADR-0017). */
 export type LinkVia = 'drag' | 'click' | 'keyboard';
@@ -41,4 +41,8 @@ export type CanvasIntent =
   /** A double click on a node: the learner wants to rename it. */
   | { readonly type: 'rename'; readonly id: Id }
   /** A node dragged from the toolbox and dropped on the canvas. */
-  | { readonly type: 'drop-new'; readonly node: NewNode; readonly at: Point };
+  | { readonly type: 'drop-new'; readonly node: NewNode; readonly at: Point }
+  /** The label of an edge, which has the key `key`, was dragged along the edge and let go: `at` is how far along it, from 0 to 1 (ADR-0044). */
+  | { readonly type: 'move-label'; readonly key: string; readonly at: number }
+  /** A pointer is over the label of an edge, which is at `rect` on the page, or it has left it, and `key` is `null` (ADR-0044). */
+  | { readonly type: 'peek'; readonly key: string | null; readonly rect?: Point & Size };

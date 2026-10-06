@@ -10,7 +10,7 @@ import {
   type Id,
 } from '@rmq/domain';
 import type { ExchangeType } from '@rmq/engine';
-import { DEFAULT_EXCHANGE_ID, defaultExchangePosition, implicitEdgeId } from './default-exchange';
+import { DEFAULT_EXCHANGE_ID, defaultExchangePosition, implicitEdgeId } from '../../core/state/default-exchange';
 import {
   bindingLabel,
   chipsOf,

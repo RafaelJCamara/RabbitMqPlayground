@@ -158,6 +158,38 @@ describe('SelectionStore', () => {
     expect(selection.selection()).toEqual({ nodes: ['x1', 'q1'], edges: ['x1>q1'] });
   });
 
+  describe('the default exchange (ADR-0043)', () => {
+    const queues = { q1: queueRecord('billing') };
+    const document = (shown: boolean) => {
+      const base = documentOf({ queues });
+      return { ...base, settings: { ...base.settings, showDefaultExchange: shown } };
+    };
+
+    it('keeps the node and the implicit edges of the default exchange while it is shown, which the document does not have', () => {
+      selection.select(['~default'], ['~default>q1', '~default>gone']);
+
+      selection.prune(document(true));
+
+      expect(selection.selection()).toEqual({ nodes: ['~default'], edges: ['~default>q1'] });
+    });
+
+    it('forgets them when it is not shown any more, so that undoing the setting leaves nothing selected that is not drawn', () => {
+      selection.select(['~default', 'q1'], ['~default>q1']);
+
+      selection.prune(document(false));
+
+      expect(selection.selection()).toEqual({ nodes: ['q1'], edges: [] });
+    });
+
+    it('does not keep an id that only looks like it', () => {
+      selection.select(['~other'], ['~default>q1x']);
+
+      selection.prune(document(true));
+
+      expect(selection.selection()).toEqual({ nodes: [], edges: [] });
+    });
+  });
+
   it('keeps one selected edge that is still there, and forgets one that is not', () => {
     const document = documentOf({
       exchanges: { x1: exchangeRecord('orders') },

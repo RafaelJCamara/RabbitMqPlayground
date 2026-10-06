@@ -1,7 +1,8 @@
 <!--
   The Foblex adapter's template (ADR-0016, ADR-0033). Nodes and connections have to be direct children of <f-canvas>: the library
   sorts its layers by comparing a node's parent element with its layer containers, and a wrapper component in between makes
-  every pointer-down throw "Unknown container". What goes inside a node is ours.
+  every pointer-down throw "Unknown container". What goes inside a node is ours, and so is what goes inside a connection: the
+  label of an edge is the library's connection content, so that it moves with the edge (ADR-0044).
 -->
 <f-flow
   class="rmq-flow"
@@ -32,6 +33,7 @@
     @for (edge of model().edges; track edge.id) {
       <f-connection
         class="rmq-edge"
+        [class.rmq-edge-dashed]="isDashed(edge)"
         [attr.data-edge]="edge.id"
         [attr.aria-label]="edge.label"
         [fConnectionId]="edge.id"
@@ -42,6 +44,34 @@
         [fReassignDisabled]="true"
       >
         <f-connection-marker-arrow />
+        @if (edge.chips.length > 0 || edge.warnings.length > 0) {
+          <div
+            fConnectionContent
+            class="rmq-label"
+            aria-hidden="true"
+            [class.rmq-label-dragging]="labelDrag()?.key === edge.id"
+            [position]="labelAt(edge)"
+            [attr.data-label]="edge.id"
+            (pointerdown)="onLabelDown($event, edge)"
+            (pointermove)="onLabelMove($event)"
+            (pointerup)="onLabelUp($event)"
+            (pointercancel)="onLabelCancel($event)"
+            (mousedown)="onLabelStart($event)"
+            (touchstart)="onLabelStart($event)"
+            (pointerenter)="onLabelEnter($event, edge)"
+            (pointerleave)="onLabelLeave($event, edge)"
+          >
+            @for (chip of edge.chips; track $index) {
+              <span class="rmq-chip">{{ chip }}</span>
+            }
+            @if (edge.more.length > 0) {
+              <span class="rmq-chip rmq-more">+{{ edge.more.length }} more</span>
+            }
+            @if (edge.warnings.length > 0) {
+              <span class="rmq-lint" data-testid="edge-lint"><rmq-icon name="alert" [size]="12" /></span>
+            }
+          </div>
+        }
       </f-connection>
     }
     <f-connection-for-create fType="bezier">
@@ -53,8 +83,10 @@
         fNode
         fDragHandle
         class="rmq-node"
+        [class.rmq-node-virtual]="node.virtual === true"
         [fNodeId]="node.id"
         [fNodePosition]="{ x: node.x, y: node.y }"
+        [fNodeDraggingDisabled]="node.virtual === true"
         [attr.data-node-id]="node.id"
         [attr.data-kind]="node.kind"
         [attr.aria-label]="node.label"
@@ -73,15 +105,21 @@
                 {{ type }}
               </span>
             } @else {
-              <span class="rmq-node-kind">{{ node.kind }}</span>
+              <span class="rmq-node-kind">{{ node.caption ?? node.kind }}</span>
             }
           </span>
         </div>
+        @if (node.warnings.length > 0) {
+          <span class="rmq-lint rmq-node-lint" data-testid="node-lint" aria-hidden="true">
+            <rmq-icon name="alert" [size]="12" />
+          </span>
+        }
         @if (node.hasInput) {
           <div
             fConnector
             fConnectorType="target"
             [fConnectorId]="inId(node.id)"
+            [fConnectorDisabled]="node.virtual === true"
             fConnectorConnectableSide="left"
             class="rmq-handle"
             data-handle="in"
@@ -94,6 +132,7 @@
             fConnector
             fConnectorType="source"
             [fConnectorId]="outId(node.id)"
+            [fConnectorDisabled]="node.virtual === true"
             fConnectorConnectableSide="right"
             [fCanBeConnectedTo]="targetsFor(node.id)"
             class="rmq-handle"
