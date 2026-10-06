@@ -1,6 +1,7 @@
 # ADR-0035: The keyboard service: scope, modifiers and text fields
 
-- **Status:** Accepted
+- **Status:** Accepted. Where its listener stands (on the document, for what is in the editor or nowhere) is settled by
+  [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0017](0017-canvas-keyboard-model.md) (section 4, "App shortcuts", and its rules for the app's keyboard handler),
