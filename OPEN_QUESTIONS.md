@@ -151,6 +151,36 @@ code, 1,213 mutants and 6 survivors. All six change nothing that can be seen: th
 `allowDeleted` (what is just made has no deletion), and the clean-up of an open that fails after another has replaced it,
 which cannot be built.
 
+Where S4 left it: S4 used the same generator, with the app's files for its targets (46 files of `core/`, `canvas/model/` and `editor/`; the
+Foblex adapter is outside the unit specs), and three other ways, because a generator that walks the syntax tree does not enter decorators
+and cannot reach the adapter.
+
+- **The code (AST mutants):** 2,178 mutants, of which 897 did not build and 1,110 of the other 1,281 were caught. The 171 survivors led to
+  68 new tests (the app's 553 became 621) and to stronger assertions in the ones that were there, and to about ten pieces of code that no
+  input could reach being taken out (the kind of a node checked before an id is looked up, though ids are unique across kinds; the
+  member-by-member comparison of a set that only grows or only shrinks; a shortcut of the selection that skipped a look at the edges; the
+  title and the reset of the context menu). A second run, of the 1,098 mutants that the changes could affect, left 31
+  survivors. 14 are in what only the e2e build has (the debug handle and its log of intents, which the end-to-end tier reads all day). 17 change
+  nothing that can be seen: counters of ids, the debug names of injection tokens, `trim` and `trimEnd` before `Number`, a key compared in
+  upper or lower case on both sides, a `kind` that nothing reads, a check that a name exists for an id that has a kind, the first value of a flag that every opening sets, and the classes of
+  the buttons.
+- **The inline templates (238 mutants):** each attribute, binding, listener and `@if` condition taken off or turned true and false. 139 were
+  caught at once, 34 did not build, 65 survived. They led to tests of how each field of the inspector is described by its refusal, the steps of
+  the number fields, the names of the groups of the top bar, and what is drawn while a canvas is being opened; to two things that nothing used
+  being taken out; and to the linter's `button-has-type`, because 15 mutants that took the type off a button were seen by no test and the
+  linter sees all 15 (it applies to inline templates, which was checked). 18 are left: the size of an icon (16) and `type="text"` (2).
+- **The adapter and the end-to-end tier (29 changes by hand):** each built into the e2e bundle and run against the tests that should notice
+  it. 23 were caught. Four were not and are now: the selection that the editor makes was not pushed into the library, a fit was not capped at 100%
+  (every test had several nodes), and the zoom had no tested ends. One was an attribute that nothing read, and is gone. One cannot be told: a
+  handle that is not armed having the list of the one that is. The worst find came from the plan of one of the changes and not from running
+  it: the test that the plan called for, a right click on the empty canvas with one node selected, failed on the code that was there. The check of the
+  target of the event, which the change would have removed, told nothing, and that right click opened the menu of the selected node
+  ([ADR-0040](docs/adr/0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md)).
+
+The scripts are the same ones, plus a generator for templates, a runner for the hand changes and a picker of what to run again, and are still outside
+the repository. The question of whether a tool should live in it is still open, and S4 makes the case for it a little stronger: a runner of the
+hand changes, and the lint rule that came out of the templates, are the parts that other slices would use.
+
 ## 8. Declaring a name twice, and unbinding what is not bound
 
 By RabbitMQ's documentation, a broker accepts a second declaration of an exchange or a queue with the same attributes, and
@@ -251,8 +281,20 @@ are, in a line of the status strip, with the reason that nothing was changed, an
 - **The hint bar names the keys of the canvas for what is selected, and the table of shortcuts is the one place that lists them**
   ([ADR-0035](docs/adr/0035-the-keyboard-service-scope-modifiers-and-text-fields.md)). Held keys do not repeat an action, undo and
   redo included, which some editors let a learner hold down.
-- **The first wording of the messages was read on a screen**, and one was changed: a position that is not on the canvas says
-  whose position it is. The rest read well enough in the inspector and the status strip, and S5 will meet the ones about links.
+- **The first wording of the messages was read on a screen**, and three were changed: a position that is not on the canvas says
+  whose position it is, and the status line says "the repeat setting" and "the default exchange setting" where it had said "whether
+  it repeats" and "whether the default exchange is shown", which did not read after "changed … of producer sender". The rest read
+  well enough in the inspector and the status strip, and S5 will meet the ones about links.
+- **A context menu is for the one thing that was pointed at.** Right-clicking one of several selected nodes selects that one, and
+  Rename and Delete in the menu act on it alone, while the Delete key still acts on everything that is selected. Some editors let the
+  menu act on the whole selection. That is a bigger menu (Rename means nothing for two nodes), and it can wait for a reason to build it.
+- **A right click on the empty canvas is the browser's**, even with one node selected: the menu of ours is for a node, an edge, or a key
+  ([ADR-0040](docs/adr/0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md)). A menu of our own
+  for the empty canvas ("Add here", "Paste") is a feature for later, and S9 may want it.
+- **The menu holds the click that opened it** ([ADR-0039](docs/adr/0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md)).
+  macOS and Linux open it while the button is still down, and the first run of the tests on Linux, in CI, found it: the author's
+  machine sends the events in the other order. The tests now send both orders on every system. If the CDK guards the way that the menu
+  is opened here some day, the hold can go.
 - **The inspector shows only what S4 can explain**: name, position, the type and flags of an exchange, the durable switch of a
   queue, and for any node what it is joined to. What a producer sends and how a consumer takes messages is S6's and S8's.
 

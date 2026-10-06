@@ -43,13 +43,14 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033) |
 | [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted (the zoom is held by `FlowViewport`, 0033) |
 | [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted |
-| [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted (the fit is the app's, by 0038) |
+| [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted (the fit is the app's, by 0038, and a menu on the canvas itself is the key's, by 0040) |
 | [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md) | The Foblex contract suite, and how an upgrade fails loudly | Accepted |
-| [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted (its listener moved to the document by 0037, and the menu held open by 0039) |
+| [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted (its listener moved to the document by 0037, the menu held open by 0039, and a menu on the canvas itself made the key's by 0040) |
 | [0036](0036-the-test-strategy-of-the-editor.md) | The test strategy of the editor | Accepted (the quota test changed by 0037, and the pointer tests by 0039) |
 | [0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md) | The editor's keys are heard on the document, and the browser's refusal is made at its API | Accepted |
 | [0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md) | The app fits the canvas, and does not ask the library to | Accepted |
 | [0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md) | The context menu stays open through the end of the click that opened it | Accepted |
+| [0040](0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md) | A menu on the canvas itself is for a key, and the last thing done says whether it was one | Accepted |
 
 ## Where to start
 
@@ -67,7 +68,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md),
   [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md), [0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md),
   [0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md),
-  [0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md).
+  [0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md),
+  [0040](0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),

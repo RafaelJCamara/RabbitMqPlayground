@@ -1,6 +1,7 @@
 # ADR-0033: The Foblex adapter: one component, intents out, and the four workarounds
 
-- **Status:** Accepted. How the canvas is fitted (by the app, not by the library) is settled by [ADR-0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md).
+- **Status:** Accepted. How the canvas is fitted (by the app, not by the library) is settled by [ADR-0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md),
+  and how it tells a key from a pointer for a menu on the canvas itself by [ADR-0040](0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0016](0016-node-editor-library.md) (its integration rules and its workarounds, which S4
