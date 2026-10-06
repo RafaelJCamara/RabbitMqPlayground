@@ -23,8 +23,8 @@ describe('helpOutput (ADR-0045)', () => {
   it('lists every command of the registry, in its order, each with its first sentence, and the batch as a note', () => {
     const output = helpOutput();
 
-    expect(output?.kind).toBe('list');
-    if (output?.kind !== 'list') {
+    expect(output.kind).toBe('list');
+    if (output.kind !== 'list') {
       return;
     }
     expect(output.commands.map(({ name }) => name)).toEqual(SPECS.map(({ name }) => name));
@@ -43,15 +43,17 @@ describe('helpOutput (ADR-0045)', () => {
 
     expect(bind).toEqual({ kind: 'one', doc: COMMAND_DOCS.find(({ name }) => name === 'bind') });
     expect(queue).toEqual({ kind: 'one', doc: COMMAND_DOCS.find(({ name }) => name === 'declare queue') });
-    expect(bind?.kind === 'one' && bind.doc.examples.length).toBeGreaterThan(0);
+    expect(bind.kind === 'one' && bind.doc.examples.length).toBeGreaterThan(0);
   });
 
-  it('answers for every command that the registry has, and for nothing else', () => {
+  it('answers for every command that the registry has, and gives the list for a topic that is not one, which is how to find it', () => {
     for (const { name } of SPECS) {
-      expect(helpOutput(name)?.kind, name).toBe('one');
+      expect(helpOutput(name).kind, name).toBe('one');
     }
-    expect(helpOutput('frobnicate')).toBeUndefined();
-    expect(helpOutput('declare')).toBeUndefined();
+    expect(helpOutput('frobnicate')).toEqual(helpOutput());
+    expect(helpOutput('declare')).toEqual(helpOutput());
+    // The batch is documented, but it is not a command that is named.
+    expect(helpOutput('batch')).toEqual(helpOutput());
   });
 
   it('is what the generated reference says, because both are made from the registry', () => {

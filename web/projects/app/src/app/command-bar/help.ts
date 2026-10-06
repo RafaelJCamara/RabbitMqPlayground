@@ -18,16 +18,15 @@ export function firstSentence(summary: string): string {
 
 /**
  * The answer to `help` or `help <command>`, made from the registry, so that it says what the reference of commands says and a command that is added is in it.
- * It is `undefined` for a name that is not a command, which the parser does not let through.
+ * A topic that is not the name of a command, which the parser does not let through, gets the list, which is the way to find one.
  */
-export function helpOutput(topic?: string): HelpOutput | undefined {
-  if (topic === undefined) {
-    return {
-      kind: 'list',
-      commands: SPECS.map(({ name, summary }) => ({ name, summary: firstSentence(summary) })),
-      several: firstSentence(BATCH_DOC.summary),
-    };
-  }
+export function helpOutput(topic?: string): HelpOutput {
   const doc = COMMAND_DOCS.find(({ name }) => name === topic && SPECS.some((spec) => spec.name === name));
-  return doc === undefined ? undefined : { kind: 'one', doc };
+  return doc === undefined
+    ? {
+        kind: 'list',
+        commands: SPECS.map(({ name, summary }) => ({ name, summary: firstSentence(summary) })),
+        several: firstSentence(BATCH_DOC.summary),
+      }
+    : { kind: 'one', doc };
 }
