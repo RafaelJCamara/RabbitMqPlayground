@@ -13,7 +13,7 @@ import type { Layout, Move, MoveLabel } from './types';
 
 const outside = (what: string, value: number): Issue => ({
   kind: 'invalid-value',
-  message: `The ${what} must be a number from -${LIMITS.coordinate} to ${LIMITS.coordinate}, and ${value} is not.`,
+  message: `The ${what} position of a node must be a number from -${LIMITS.coordinate} to ${LIMITS.coordinate}, and ${value} is not.`,
 });
 
 const isCoordinate = (value: number): boolean => Number.isFinite(value) && Math.abs(value) <= LIMITS.coordinate;

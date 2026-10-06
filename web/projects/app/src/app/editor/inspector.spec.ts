@@ -251,7 +251,9 @@ describe('Inspector', () => {
 
       expect(document().layout.nodes['Q1']?.y).toBe(0);
       expect(yField()).toHaveValue(0);
-      expect(screen.getByTestId('refusal')).toBeInTheDocument();
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent(
+        'The y position of a node must be a number from -1000000 to 1000000, and 99999999 is not.',
+      );
     });
 
     it('does nothing, with no command, when the number is the one that was there', async () => {

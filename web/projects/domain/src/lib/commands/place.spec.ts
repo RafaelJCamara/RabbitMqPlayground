@@ -115,7 +115,7 @@ describe('move', () => {
 
       expect(!result.ok && result.error.kind).toBe('invalid-value');
       expect(!result.ok && result.error.message).toBe(
-        `The ${axis} must be a number from -${LIMITS.coordinate} to ${LIMITS.coordinate}, and ${value} is not.`,
+        `The ${axis} position of a node must be a number from -${LIMITS.coordinate} to ${LIMITS.coordinate}, and ${value} is not.`,
       );
     });
 
