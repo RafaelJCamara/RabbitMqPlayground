@@ -8,7 +8,21 @@ import { expect, test as base } from '@playwright/test';
  * the browser logs "Failed to load resource" for it. Only that one console message is excused: a failing asset on the
  * same page is still a problem.
  */
-export const test = base.extend<{ problems: string[] }>({
+export const test = base.extend<{ problems: string[]; keepsCanvases: void }>({
+  /**
+   * The browser of a test is promised to keep the canvases. Left to itself, headless Chromium would not promise, and the app says so in a note under the canvas that
+   * appears about 300 ms after the first change and makes the canvas smaller by its height, so a position that a test measures a moment after an add is not where it
+   * is a moment later. The promise is given to the prototype, so that a test that makes its own (the ones about that note, in storage.spec.ts) still wins.
+   */
+  keepsCanvases: [
+    async ({ context }, use) => {
+      await context.addInitScript(() => {
+        StorageManager.prototype.persist = async () => true;
+      });
+      await use();
+    },
+    { auto: true },
+  ],
   problems: [
     async ({ page }, use) => {
       const problems: string[] = [];

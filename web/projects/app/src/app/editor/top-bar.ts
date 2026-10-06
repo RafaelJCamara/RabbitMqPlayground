@@ -11,8 +11,10 @@ import { EditorActions } from './actions';
 import { formatChord } from './keyboard';
 import { saveText } from './save-text';
 
+const THEME_ICON = { system: 'monitor', light: 'sun', dark: 'moon' } as const;
+
 const BUTTON =
-  'border-border bg-surface hover:bg-canvas disabled:text-muted flex min-h-8 items-center gap-1.5 rounded-md border px-2.5 py-1 disabled:cursor-not-allowed disabled:opacity-60';
+  'border-border bg-surface hover:bg-canvas disabled:text-muted flex min-h-8 items-center gap-1.5 rounded-md border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * The top bar (ADR-0010): the name of the product, which is the one heading of the page, what can be done to the whole canvas (undo and
@@ -102,26 +104,28 @@ const BUTTON =
         </div>
       </div>
       <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <p class="flex items-center gap-1.5" data-testid="save-state" [class]="saveClass()">
+        <p class="flex min-w-36 items-center gap-1.5" data-testid="save-state" [class]="saveClass()">
           <rmq-icon [name]="saveIcon()" [size]="16" />
           <span>{{ save().text }}</span>
         </p>
         <button
           type="button"
           [class]="button"
+          aria-label="Help"
           aria-haspopup="dialog"
           aria-keyshortcuts="?"
-          title="Keyboard shortcuts and commands (?)"
+          title="Help: keyboard shortcuts and commands (?)"
           data-testid="help"
           (click)="actions.openCheatSheet()"
         >
           <rmq-icon name="help" [size]="18" />
-          <span>Help</span>
         </button>
-        <label class="flex items-center gap-2">
-          <span class="text-muted">Theme</span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-muted" aria-hidden="true"><rmq-icon [name]="themeIcon()" [size]="18" /></span>
           <select
             class="border-border bg-surface rounded-md border px-2 py-1"
+            aria-label="Theme"
+            title="Theme"
             data-testid="theme"
             (change)="chooseTheme($event)"
           >
@@ -129,7 +133,7 @@ const BUTTON =
               <option [value]="choice" [selected]="choice === theme.preference()">{{ labels[choice] }}</option>
             }
           </select>
-        </label>
+        </span>
       </div>
     </header>
   `,
@@ -148,6 +152,8 @@ export class TopBar {
   protected readonly fitKeys = formatChord({ key: 'f' });
 
   protected readonly choices = THEME_PREFERENCES;
+  /** The icon that stands for the choice, in place of a word, so that the bar has room for what it says about saving. */
+  protected readonly themeIcon = computed(() => THEME_ICON[this.theme.preference()]);
   protected readonly labels = THEME_LABEL;
   protected readonly save = computed(() => saveText(this.session.save()));
   protected readonly saveIcon = computed(() =>

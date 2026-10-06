@@ -64,23 +64,25 @@ export class HowToLink {
   template: `
     @if (card.visible()) {
       <section
-        class="border-line bg-panel border-b px-4 py-2 text-sm"
+        class="border-line bg-panel border-b px-4 py-1.5 text-sm"
         aria-label="How to link"
         data-testid="how-to-link"
       >
         <div class="flex items-start gap-4">
           <div class="min-w-0 flex-1">
-            <h2 class="font-semibold">How to link</h2>
-            <ol class="mt-1 list-decimal pl-5 md:columns-2 md:gap-8">
+            <div class="flex flex-wrap items-baseline gap-x-4">
+              <h2 class="font-semibold">How to link</h2>
+              <p class="text-muted">
+                The command bar (<kbd class="border-border text-fg rounded border px-1 font-mono">/</kbd>) does the same
+                with a line, for example <code class="font-mono">bind orders -> billing</code>. Press
+                <kbd class="border-border text-fg rounded border px-1 font-mono">?</kbd> for every key and command.
+              </p>
+            </div>
+            <ol class="mt-0.5 flex flex-wrap gap-x-2 gap-y-1">
               @for (way of ways; track way) {
-                <li class="break-inside-avoid">{{ way }}</li>
+                <li class="border-line rounded border px-2">{{ way }}</li>
               }
             </ol>
-            <p class="text-muted mt-1">
-              The command bar (<kbd class="border-border text-fg rounded border px-1 font-mono">/</kbd>) does the same
-              with a line, for example <code class="font-mono">bind orders -> billing</code>. Press
-              <kbd class="border-border text-fg rounded border px-1 font-mono">?</kbd> for every key and command.
-            </p>
           </div>
           <button
             type="button"
@@ -97,5 +99,5 @@ export class HowToLink {
 })
 export class HowToLinkCard {
   protected readonly card = inject(HowToLink);
-  protected readonly ways = WAYS_TO_LINK;
+  protected readonly ways = WAYS_TO_LINK.map((way) => way.short);
 }

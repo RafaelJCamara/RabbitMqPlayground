@@ -75,11 +75,23 @@ describe('commandRows (ADR-0047)', () => {
 });
 
 describe('WAYS_TO_LINK (ADR-0041, ADR-0047)', () => {
-  it('has five ways, each a sentence', () => {
+  it('has five ways, each a sentence for the cheat-sheet and a few words for the card, which says the same in less', () => {
     expect(WAYS_TO_LINK).toHaveLength(5);
-    for (const way of WAYS_TO_LINK) {
-      expect(way.endsWith('.'), way).toBe(true);
+    for (const { short, full } of WAYS_TO_LINK) {
+      expect(full.endsWith('.'), full).toBe(true);
+      expect(short.length, short).toBeLessThan(full.length);
     }
+  });
+
+  it('says the same ways, in the same order, in both lengths', () => {
+    expect(WAYS_TO_LINK.map((way) => way.short.split(' ')[0])).toEqual([
+      'Drag',
+      'Click',
+      'Press',
+      'Right-click',
+      'Select',
+    ]);
+    expect(new Set(WAYS_TO_LINK.map((way) => way.short)).size).toBe(5);
   });
 });
 
@@ -96,7 +108,7 @@ describe('the cheat-sheet (ADR-0047)', () => {
 
     const ways = within(within(dialog).getByRole('list', { name: 'Five ways to link' })).getAllByRole('listitem');
 
-    expect(ways.map((way) => way.textContent?.trim())).toEqual([...WAYS_TO_LINK]);
+    expect(ways.map((way) => way.textContent?.trim())).toEqual(WAYS_TO_LINK.map((way) => way.full));
     expect(within(dialog).getByText(/The command bar does the same with a line, for example/)).toBeVisible();
   });
 

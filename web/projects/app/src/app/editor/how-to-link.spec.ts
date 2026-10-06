@@ -91,7 +91,7 @@ describe('HowToLinkCard (ADR-0047)', () => {
 
     const card = screen.getByRole('region', { name: 'How to link' });
     const ways = within(within(card).getByRole('list')).getAllByRole('listitem');
-    expect(ways.map((way) => way.textContent?.trim())).toEqual([...WAYS_TO_LINK]);
+    expect(ways.map((way) => way.textContent?.trim())).toEqual(WAYS_TO_LINK.map((way) => way.short));
     expect(card).toHaveTextContent(
       'The command bar (/) does the same with a line, for example bind orders -> billing.',
     );

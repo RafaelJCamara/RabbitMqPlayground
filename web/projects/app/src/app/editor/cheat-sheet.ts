@@ -130,7 +130,7 @@ export const CHEAT_SHEET_TITLE_ID = 'rmq-cheat-sheet-title';
 export class CheatSheet {
   protected readonly ref = inject(DialogRef);
   protected readonly titleId = CHEAT_SHEET_TITLE_ID;
-  protected readonly ways = WAYS_TO_LINK;
+  protected readonly ways = WAYS_TO_LINK.map((way) => way.full);
   protected readonly keys = keyRows();
   protected readonly commands = commandRows();
 }
