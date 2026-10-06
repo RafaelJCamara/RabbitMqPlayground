@@ -125,8 +125,9 @@ describe('CommandLog (ADR-0046)', () => {
   });
 
   it('keeps the last thousand lines, and goes on numbering', () => {
+    // A change that does not make the canvas bigger, so that a thousand of them are quick even when the machine is busy. The seed starts above its default, which would change nothing.
     for (let index = 0; index < LOG_LIMIT + 5; index += 1) {
-      bus.apply(declareQueue(`q${index}`), 'gesture');
+      bus.apply({ type: 'set', kind: 'canvas', changes: { seed: index + 2 } }, 'gesture');
     }
 
     expect(log.entries()).toHaveLength(LOG_LIMIT);
