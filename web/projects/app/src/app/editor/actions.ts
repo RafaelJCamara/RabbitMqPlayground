@@ -12,6 +12,10 @@ export interface ActionSurface {
   startRename(id: Id, origin?: CommandOrigin): void;
   /** Gives the focus to the first field of the inspector. It answers whether there was one. */
   focusInspector(): boolean;
+  /** Opens the command bar with the cursor in its field (ADR-0045). */
+  openCommandBar(): void;
+  /** Opens the cheat-sheet (ADR-0047). */
+  openCheatSheet(): void;
 }
 
 /**
@@ -79,6 +83,14 @@ export class EditorActions {
     } else {
       this.announcer.announce('Select one node first, then press F2 to rename it.');
     }
+  }
+
+  openCommandBar(): void {
+    this.surface?.openCommandBar();
+  }
+
+  openCheatSheet(): void {
+    this.surface?.openCheatSheet();
   }
 
   /** Takes the learner to the fields of what is selected. It answers whether there was anything to take them to. */

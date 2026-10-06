@@ -38,6 +38,11 @@ export interface Shortcut {
   /** How the keys are written, for a row that has several: `Arrow keys`. Left out, it is the first chord. */
   readonly keys?: string;
   readonly scope: Scope;
+  /**
+   * Whether it works while the cursor is in a field of text, which every other row leaves to the field (ADR-0035). Only a chord with Ctrl, Cmd or Alt can, because
+   * anything else is typed there, and only one that the field has no use for: Ctrl+K opens the command bar from anywhere (ADR-0045).
+   */
+  readonly inFields?: boolean;
   readonly owner: 'app' | 'library';
   /** Whether it is worth showing for this selection. */
   readonly shows: (selection: SelectionFacts) => boolean;
@@ -142,6 +147,35 @@ export const SHORTCUTS: readonly Shortcut[] = [
     shows: always,
     run: (actions) => actions.redo('key'),
   },
+  {
+    id: 'commands',
+    label: 'Commands',
+    chords: [{ key: '/' }],
+    scope: 'canvas',
+    owner: 'app',
+    shows: always,
+    run: (actions) => actions.openCommandBar(),
+  },
+  {
+    // The hint bar says `/`, and the cheat-sheet lists this one too.
+    id: 'commands-anywhere',
+    label: 'Commands, from anywhere',
+    chords: [{ key: 'k', mod: true }],
+    scope: 'app',
+    inFields: true,
+    owner: 'app',
+    shows: () => false,
+    run: (actions) => actions.openCommandBar(),
+  },
+  {
+    id: 'shortcuts',
+    label: 'Shortcuts',
+    chords: [{ key: '?' }],
+    scope: 'canvas',
+    owner: 'app',
+    shows: always,
+    run: (actions) => actions.openCheatSheet(),
+  },
 ];
 
 const isMac = (): boolean => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -157,9 +191,29 @@ export function formatChord(chord: Chord, mac: boolean = isMac()): string {
   return parts.join('+');
 }
 
+/** The keys of a row as a person is told them: the words that it has, or its chords with "or" between them. */
+export function keysOf(row: Shortcut, mac?: boolean): string {
+  return row.keys ?? row.chords.map((chord) => formatChord(chord, mac)).join(' or ');
+}
+
+/** The keys of the rows with these ids, in the order given, with "or" between them. An id that no row has is left out. */
+export function keysFor(ids: readonly string[], mac?: boolean): string {
+  return ids
+    .flatMap((id) => SHORTCUTS.filter((row) => row.id === id))
+    .map((row) => keysOf(row, mac))
+    .join(' or ');
+}
+
 const normal = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
 
-/** Whether a key press is this chord: the same key, without case for a letter, and exactly the modifiers that the chord names. */
+/** A character that has no case: a digit or a punctuation mark, which Shift may be what types on this keyboard. */
+const isSymbol = (key: string): boolean => key.length === 1 && key.toLowerCase() === key.toUpperCase();
+
+/**
+ * Whether a key press is this chord: the same key, without case for a letter, and exactly the modifiers that the chord names. Shift is not compared for a symbol
+ * unless the chord names it, because it is Shift that types `?` on most keyboards and `/` on some (ADR-0047). A letter and a key with a name keep it, because
+ * Shift makes Ctrl+Shift+Z another shortcut than Ctrl+Z.
+ */
 export function matches(
   chord: Chord,
   event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>,
@@ -167,7 +221,7 @@ export function matches(
   return (
     normal(event.key) === normal(chord.key) &&
     (event.ctrlKey || event.metaKey) === (chord.mod === true) &&
-    event.shiftKey === (chord.shift === true) &&
+    (event.shiftKey === (chord.shift === true) || (isSymbol(chord.key) && chord.shift === undefined)) &&
     event.altKey === (chord.alt === true)
   );
 }
@@ -189,21 +243,25 @@ export function isInCanvas(target: EventTarget | null): boolean {
 /**
  * The keyboard of the app (ADR-0035): one listener, in the bubble phase, on the root of the editor, which is after the library inside it
  * has had its turn. A key that the library used is `defaultPrevented` and is left alone, and so is a key that goes into a text
- * field, one that repeats, and one that an input method is still composing. A single character works only on the canvas (WCAG
- * 2.1.4), and never with a modifier.
+ * field (but for a row that says it works there), one that repeats, and one that an input method is still composing. A single character
+ * works only on the canvas (WCAG 2.1.4), and never with a modifier.
  */
 @Injectable()
 export class KeyboardService {
   private readonly actions = inject(EditorActions);
 
   handle(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.isComposing || event.repeat || isTextEntry(event.target)) {
+    if (event.defaultPrevented || event.isComposing || event.repeat) {
       return;
     }
+    const inField = isTextEntry(event.target);
     const inCanvas = isInCanvas(event.target);
     const shortcut = SHORTCUTS.find(
       (row) =>
-        row.run !== undefined && (row.scope === 'app' || inCanvas) && row.chords.some((chord) => matches(chord, event)),
+        row.run !== undefined &&
+        (!inField || row.inFields === true) &&
+        (row.scope === 'app' || inCanvas) &&
+        row.chords.some((chord) => matches(chord, event)),
     );
     if (shortcut?.run !== undefined && shortcut.run(this.actions) !== false) {
       event.preventDefault();

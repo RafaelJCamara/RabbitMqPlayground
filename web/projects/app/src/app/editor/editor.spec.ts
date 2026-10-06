@@ -1209,6 +1209,156 @@ describe('Editor', () => {
     });
   });
 
+  describe('the command bar and the cheat-sheet (ADR-0045, ADR-0047)', () => {
+    async function openEditor() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const fake = () => view.fixture.debugElement.query(By.directive(FakeCanvas));
+      const canvas = () => fake().componentInstance as FakeCanvas;
+      /** Presses a key on the canvas, which is where the focus is when a learner works on it. */
+      const onCanvas = (init: KeyboardEventInit & { key: string }) => {
+        fireEvent.keyDown(fake().nativeElement as HTMLElement, init);
+        view.fixture.detectChanges();
+      };
+      return { ...view, canvas, onCanvas, user: userEvent.setup() };
+    }
+    const bar = () => screen.getByRole('region', { name: 'Command bar' });
+    const field = () => screen.getByRole<HTMLInputElement>('combobox', { name: 'Command' });
+    const nodeNames = (canvas: () => FakeCanvas) =>
+      canvas()
+        .model()
+        .nodes.map((node) => node.name);
+
+    it('has the command bar under the canvas and over the hints, closed, with the keys that open it', async () => {
+      await openEditor();
+
+      expect(within(bar()).getByRole('button', { name: 'Commands' })).toHaveAttribute('aria-expanded', 'false');
+      expect(within(bar()).getByText('/ or Ctrl+K')).toBeVisible();
+      expect(screen.getByRole('main').compareDocumentPosition(bar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        bar().compareDocumentPosition(screen.getByRole('region', { name: 'Hints' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('opens on /, on the canvas, with the cursor in the field, and the slash is not typed into it', async () => {
+      const { onCanvas } = await openEditor();
+
+      onCanvas({ key: '/' });
+
+      await waitFor(() => expect(field()).toHaveFocus());
+      expect(field()).toHaveValue('');
+    });
+
+    it('opens on Ctrl+K from outside the canvas, and from a field of text, where / is typed', async () => {
+      const { user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Queue' }), { key: 'k', ctrlKey: true });
+      await waitFor(() => expect(field()).toHaveFocus());
+
+      await user.click(screen.getByRole('button', { name: 'Commands' }));
+      await user.click(screen.getByRole('textbox', { name: 'Name' }));
+      fireEvent.keyDown(screen.getByRole('textbox', { name: 'Name' }), { key: 'k', metaKey: true });
+      await waitFor(() => expect(field()).toHaveFocus());
+    });
+
+    it('closes with Escape, and gives the focus back to the canvas', async () => {
+      const { onCanvas, canvas, user } = await openEditor();
+      onCanvas({ key: '/' });
+      await waitFor(() => expect(field()).toHaveFocus());
+      canvas().calls.length = 0;
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('combobox', { name: 'Command' })).not.toBeInTheDocument();
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('makes a typed line a change of the canvas, as one step that Ctrl+Z on the canvas takes back', async () => {
+      const { onCanvas, canvas, user, fixture } = await openEditor();
+      onCanvas({ key: '/' });
+      await waitFor(() => expect(field()).toHaveFocus());
+
+      await user.keyboard('declare queue billing{Enter}');
+      fixture.detectChanges();
+      expect(nodeNames(canvas)).toEqual(['billing']);
+
+      await user.keyboard('{Escape}');
+      onCanvas({ key: 'z', ctrlKey: true });
+      expect(nodeNames(canvas)).toEqual([]);
+    });
+
+    it('shows what a gesture did as the line that a learner would type to do the same', async () => {
+      const { user, fixture } = await openEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+
+      expect(within(bar()).getByTestId('latest-command')).toHaveTextContent(/declare queue queue1/);
+      await user.click(screen.getByRole('button', { name: 'Commands' }));
+      expect(within(screen.getByTestId('command-log')).getByText(/declare queue queue1/)).toBeVisible();
+      expect(within(screen.getByTestId('command-log')).getByTestId('origin')).toHaveTextContent('gesture');
+    });
+
+    it('shows the refusal of a typed line in the bar, where it was typed, and not a second time on the status line', async () => {
+      const { onCanvas, user, fixture } = await openEditor();
+      onCanvas({ key: '/' });
+      await waitFor(() => expect(field()).toHaveFocus());
+
+      await user.keyboard('declare exchange amq.mine type=direct{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.getAllByTestId('refusal')).toHaveLength(1);
+      expect(within(bar()).getByTestId('refusal')).toBeVisible();
+      expect(within(screen.getByRole('contentinfo', { name: 'Status' })).queryByTestId('refusal')).toBeNull();
+    });
+
+    it('says what a typed line did on the status line, as a gesture does', async () => {
+      const { onCanvas, user, fixture } = await openEditor();
+      onCanvas({ key: '/' });
+      await waitFor(() => expect(field()).toHaveFocus());
+
+      await user.keyboard('declare queue billing{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('status-message')).toHaveTextContent('Added queue billing.');
+    });
+
+    it('says in the hint bar that / opens the commands and ? the shortcuts, for what is selected or not', async () => {
+      const { user, fixture } = await openEditor();
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('/ Commands');
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('? Shortcuts');
+
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('/ Commands');
+    });
+
+    it('opens the cheat-sheet on ?, and Escape closes it and gives the focus back to what had it', async () => {
+      const { onCanvas } = await openEditor();
+
+      onCanvas({ key: '?', shiftKey: true });
+
+      const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts and commands' });
+      expect(within(dialog).getByRole('list', { name: 'Five ways to link' })).toBeVisible();
+      fireEvent.keyDown(document.activeElement as Element, { key: 'Escape', code: 'Escape', keyCode: 27 });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('opens the cheat-sheet with the Help button of the top bar, wherever the focus is', async () => {
+      const { user } = await openEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Help' }));
+
+      expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts and commands' })).toBeVisible();
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus();
+    });
+  });
+
   describe('the top bar', () => {
     async function openEditor() {
       const view = await renderEditor(harness().providers);

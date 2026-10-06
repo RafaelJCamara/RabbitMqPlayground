@@ -58,10 +58,10 @@ export class StatusBar {
   protected readonly session = inject(CanvasSession);
   private readonly status = inject(StatusStore);
 
-  /** A refusal from the inspector is shown beside its control, so it is not repeated here. */
+  /** A refusal from the inspector is shown beside its control, and one from the command bar in the bar, so they are not repeated here. */
   protected readonly refusal = computed(() => {
     const refusal = this.status.refusal();
-    return refusal !== null && refusal.origin !== 'inspector' ? refusal : null;
+    return refusal !== null && refusal.origin !== 'inspector' && refusal.origin !== 'typed' ? refusal : null;
   });
   protected readonly message = computed(() => {
     const notice = this.status.notice();

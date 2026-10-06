@@ -28,13 +28,16 @@ import { DocumentStore } from '../core/state/document-store';
 import { describeNode, edgeEnds } from '../core/state/refs';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
+import { CommandBar } from '../command-bar/command-bar';
+import { CommandLog } from '../core/state/command-log';
 import { EditorActions, type ActionSurface } from './actions';
 import { BindingKey, type GiveUp } from './binding-key';
+import { CheatSheetService } from './cheat-sheet';
 import { contextItems, ContextMenu, type MenuChoice } from './context-menu';
 import { HintBar } from './hint-bar';
 import { Inspector } from './inspector';
 import { IntentHandler, type IntentSurface } from './intents';
-import { KeyboardService } from './keyboard';
+import { KeyboardService, keysFor } from './keyboard';
 import { LabelCard } from './label-card';
 import { LinkFlow, type CreateAsk, type KeyAsk, type LinkSurface, type TargetAsk } from './link-flow';
 import { LinkPicker } from './link-picker';
@@ -93,6 +96,7 @@ interface Peek {
     BindingKey,
     LinkPicker,
     LabelCard,
+    CommandBar,
   ],
   providers: [
     DocumentStore,
@@ -104,8 +108,10 @@ interface Peek {
     NewNodeFocus,
     LinkFlow,
     IntentHandler,
+    CommandLog,
     EditorActions,
     KeyboardService,
+    CheatSheetService,
   ],
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
@@ -179,6 +185,7 @@ interface Peek {
           <rmq-inspector />
         </aside>
       </div>
+      <rmq-command-bar [keys]="commandKeys" />
       <rmq-hint-bar />
       <rmq-status-bar />
       <rmq-context-menu #contextMenu (act)="onMenuAction($event)" (dismissed)="viewport.focus()" />
@@ -198,7 +205,11 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly keys = inject(KeyboardService);
   private readonly links = inject(LinkFlow);
   private readonly actions = inject(EditorActions);
+  private readonly cheatSheet = inject(CheatSheetService);
   private readonly inspector = viewChild.required(Inspector);
+  private readonly commandBar = viewChild.required(CommandBar);
+  /** The keys that open the command bar, as the table of shortcuts says them. */
+  protected readonly commandKeys = keysFor(['commands', 'commands-anywhere']);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly page = inject(DOCUMENT);
 
@@ -220,6 +231,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private cardHeld = false;
 
   constructor() {
+    // The log of equivalent commands listens to the bus from the start, so that nothing that the learner does is missing from it.
+    inject(CommandLog);
     void this.session.open();
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.peekTimer);
@@ -315,6 +328,16 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         context: target,
       });
     }
+  }
+
+  /** Opens the command bar with the cursor in its field, for the keys that are for it (ADR-0045). */
+  openCommandBar(): void {
+    this.commandBar().open();
+  }
+
+  /** Opens the cheat-sheet, for the key and the button that are for it (ADR-0047). */
+  openCheatSheet(): void {
+    this.cheatSheet.open();
   }
 
   /** Gives the focus to the first field of the inspector, for the key that edits what is selected. */

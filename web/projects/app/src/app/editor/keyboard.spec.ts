@@ -2,7 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONNECT_KEYS, GRAB_KEYS } from '../canvas/model/guard';
 import { EditorActions } from './actions';
-import { formatChord, isInCanvas, isTextEntry, KeyboardService, matches, SHORTCUTS, type Chord } from './keyboard';
+import {
+  formatChord,
+  isInCanvas,
+  isTextEntry,
+  KeyboardService,
+  keysFor,
+  keysOf,
+  matches,
+  SHORTCUTS,
+  type Chord,
+} from './keyboard';
 
 const press = (init: KeyboardEventInit & { key: string }) => ({
   ctrlKey: false,
@@ -67,6 +77,32 @@ describe('the table of shortcuts', () => {
     expect(keysOf('connect')).toEqual(CONNECT_KEYS);
   });
 
+  it('has no key press that two rows both take, although a symbol is matched without Shift', () => {
+    for (const { row, chord } of rows) {
+      const event = press({
+        key: chord.key,
+        ctrlKey: chord.mod === true,
+        shiftKey: chord.shift === true,
+        altKey: chord.alt === true,
+      });
+
+      const taken = rows.filter((other) => matches(other.chord, event)).map((other) => other.row.id);
+
+      expect(taken, formatChord(chord, false)).toEqual([row.id]);
+    }
+  });
+
+  it('lets only a chord with Ctrl, Cmd or Alt work in a field of text, because every other key is typed there', () => {
+    const inFields = SHORTCUTS.filter((row) => row.inFields === true);
+
+    expect(inFields.map((row) => row.id)).toEqual(['commands-anywhere']);
+    for (const row of inFields) {
+      for (const chord of row.chords) {
+        expect(chord.mod === true || chord.alt === true, row.id).toBe(true);
+      }
+    }
+  });
+
   it('has the rows that ADR-0035 lists for the app, and the keys that ADR-0017 gives to the library', () => {
     const named = (id: string) => SHORTCUTS.find((row) => row.id === id);
 
@@ -79,6 +115,31 @@ describe('the table of shortcuts', () => {
     expect(named('connect')!.owner).toBe('library');
     expect(named('delete')!.owner).toBe('library');
   });
+
+  it('has the rows that ADR-0045 and ADR-0047 add: the command bar, from the canvas and from anywhere, and the shortcuts', () => {
+    const named = (id: string) => SHORTCUTS.find((row) => row.id === id);
+
+    expect(named('commands')).toMatchObject({ label: 'Commands', scope: 'canvas', owner: 'app' });
+    expect(formatChord(named('commands')!.chords[0]!, false)).toBe('/');
+    expect(named('commands-anywhere')).toMatchObject({ label: 'Commands, from anywhere', scope: 'app', owner: 'app' });
+    expect(formatChord(named('commands-anywhere')!.chords[0]!, false)).toBe('Ctrl+K');
+    expect(formatChord(named('commands-anywhere')!.chords[0]!, true)).toBe('Cmd+K');
+    expect(named('shortcuts')).toMatchObject({ label: 'Shortcuts', scope: 'canvas', owner: 'app' });
+    expect(formatChord(named('shortcuts')!.chords[0]!, false)).toBe('?');
+  });
+
+  it('shows the command bar and the shortcuts for every selection, and the one that works from anywhere for none, because the hint says it already', () => {
+    for (const selection of [
+      { nodes: 0, edges: 0 },
+      { nodes: 1, edges: 0 },
+      { nodes: 0, edges: 1 },
+      { nodes: 3, edges: 0 },
+    ]) {
+      expect(SHORTCUTS.find((row) => row.id === 'commands')!.shows(selection)).toBe(true);
+      expect(SHORTCUTS.find((row) => row.id === 'shortcuts')!.shows(selection)).toBe(true);
+      expect(SHORTCUTS.find((row) => row.id === 'commands-anywhere')!.shows(selection)).toBe(false);
+    }
+  });
 });
 
 describe('formatChord', () => {
@@ -89,6 +150,27 @@ describe('formatChord', () => {
     expect(formatChord({ key: 'x', alt: true }, true)).toBe('Option+X');
     expect(formatChord({ key: 'F2' }, false)).toBe('F2');
     expect(formatChord({ key: 'm' }, false)).toBe('M');
+  });
+});
+
+describe('keysOf and keysFor', () => {
+  const row = (id: string) => SHORTCUTS.find((candidate) => candidate.id === id)!;
+
+  it('write the keys of a row as it says them, or as its chords with "or" between them', () => {
+    expect(keysOf(row('navigate'), false)).toBe('Arrow keys');
+    expect(keysOf(row('redo'), false)).toBe('Ctrl+Shift+Z or Ctrl+Y');
+    expect(keysOf(row('redo'), true)).toBe('Cmd+Shift+Z or Cmd+Y');
+    expect(keysOf(row('fit'), false)).toBe('F');
+  });
+
+  it('write the keys of the rows that are asked for, in the order asked, with "or" between them', () => {
+    expect(keysFor(['commands', 'commands-anywhere'], false)).toBe('/ or Ctrl+K');
+    expect(keysFor(['commands-anywhere', 'commands'], true)).toBe('Cmd+K or /');
+  });
+
+  it('leave out an id that no row has', () => {
+    expect(keysFor(['commands', 'nothing'], false)).toBe('/');
+    expect(keysFor([], false)).toBe('');
   });
 });
 
@@ -113,6 +195,28 @@ describe('matches', () => {
     expect(matches({ key: 'x', alt: true }, press({ key: 'x', altKey: true }))).toBe(true);
     expect(matches({ key: 'x', alt: true }, press({ key: 'x' }))).toBe(false);
     expect(matches({ key: 'x' }, press({ key: 'x', altKey: true }))).toBe(false);
+  });
+
+  it('does not compare Shift for a symbol, because it is Shift that makes some of them: ? on most keyboards, and / on some', () => {
+    expect(matches({ key: '?' }, press({ key: '?', shiftKey: true }))).toBe(true);
+    expect(matches({ key: '?' }, press({ key: '?' }))).toBe(true);
+    expect(matches({ key: '/' }, press({ key: '/', shiftKey: true }))).toBe(true);
+    expect(matches({ key: '/' }, press({ key: '/' }))).toBe(true);
+    expect(matches({ key: '5' }, press({ key: '5', shiftKey: true }))).toBe(true);
+  });
+
+  it('still compares the other modifiers for a symbol, and Shift when the chord names it', () => {
+    expect(matches({ key: '?' }, press({ key: '?', ctrlKey: true }))).toBe(false);
+    expect(matches({ key: '/' }, press({ key: '/', metaKey: true }))).toBe(false);
+    expect(matches({ key: '/' }, press({ key: '/', altKey: true }))).toBe(false);
+    expect(matches({ key: '+', shift: true }, press({ key: '+' }))).toBe(false);
+    expect(matches({ key: '+', shift: true }, press({ key: '+', shiftKey: true }))).toBe(true);
+  });
+
+  it('still compares Shift for a letter, and for a key with a name, which Shift makes another shortcut of', () => {
+    expect(matches({ key: 'k', mod: true }, press({ key: 'K', ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(matches({ key: 'F2' }, press({ key: 'F2', shiftKey: true }))).toBe(false);
+    expect(matches({ key: 'Enter' }, press({ key: 'Enter', shiftKey: true }))).toBe(false);
   });
 
   it('wants exactly the modifiers that the chord names, so a single key never matches with one held', () => {
@@ -183,7 +287,10 @@ describe('isInCanvas', () => {
 });
 
 describe('KeyboardService', () => {
-  let actions: Record<'undo' | 'redo' | 'fit' | 'renameSelected' | 'editSelected', ReturnType<typeof vi.fn>>;
+  let actions: Record<
+    'undo' | 'redo' | 'fit' | 'renameSelected' | 'editSelected' | 'openCommandBar' | 'openCheatSheet',
+    ReturnType<typeof vi.fn>
+  >;
   let service: KeyboardService;
   let root: HTMLElement;
 
@@ -194,6 +301,8 @@ describe('KeyboardService', () => {
       fit: vi.fn(),
       renameSelected: vi.fn(),
       editSelected: vi.fn(() => true),
+      openCommandBar: vi.fn(),
+      openCheatSheet: vi.fn(),
     };
     TestBed.configureTestingModule({
       providers: [KeyboardService, { provide: EditorActions, useValue: actions }],
@@ -272,6 +381,76 @@ describe('KeyboardService', () => {
 
       expect(actions.fit).not.toHaveBeenCalled();
       expect(actions.renameSelected).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the command bar and the cheat-sheet (ADR-0045, ADR-0047)', () => {
+    it('opens the command bar on /, on the canvas, and keeps the page from typing the slash into the field that it opens', () => {
+      const { prevented } = send('flow', { key: '/' });
+
+      expect(actions.openCommandBar).toHaveBeenCalledOnce();
+      expect(prevented).toBe(true);
+    });
+
+    it('opens it on / that needs Shift to be typed, as it does on some keyboards', () => {
+      send('flow', { key: '/', shiftKey: true });
+
+      expect(actions.openCommandBar).toHaveBeenCalledOnce();
+    });
+
+    it('opens the cheat-sheet on ?, with Shift as it is typed on most keyboards and without it as on others', () => {
+      send('flow', { key: '?', shiftKey: true });
+      send('flow', { key: '?' });
+
+      expect(actions.openCheatSheet).toHaveBeenCalledTimes(2);
+      expect(actions.openCommandBar).not.toHaveBeenCalled();
+    });
+
+    it('does nothing with / and ? outside the canvas, or in a field of text, where they are typed', () => {
+      for (const key of ['/', '?']) {
+        send('toolbox-button', { key });
+        send('name', { key });
+        send('type', { key });
+      }
+
+      expect(actions.openCommandBar).not.toHaveBeenCalled();
+      expect(actions.openCheatSheet).not.toHaveBeenCalled();
+    });
+
+    it('does nothing with / and ? when a modifier is held, because that is another key', () => {
+      send('flow', { key: '/', ctrlKey: true });
+      send('flow', { key: '?', metaKey: true });
+      send('flow', { key: '/', altKey: true });
+
+      expect(actions.openCommandBar).not.toHaveBeenCalled();
+      expect(actions.openCheatSheet).not.toHaveBeenCalled();
+    });
+
+    it('opens the command bar on Ctrl+K and Cmd+K, from the canvas and from outside it', () => {
+      send('flow', { key: 'k', ctrlKey: true });
+      send('toolbox-button', { key: 'K', metaKey: true });
+
+      expect(actions.openCommandBar).toHaveBeenCalledTimes(2);
+    });
+
+    it('opens it from a field of text too, which has no use for Ctrl+K, and keeps the browser from taking the key for its address bar', () => {
+      const { prevented } = send('name', { key: 'k', ctrlKey: true });
+      send('type', { key: 'k', metaKey: true });
+
+      expect(actions.openCommandBar).toHaveBeenCalledTimes(2);
+      expect(prevented).toBe(true);
+    });
+
+    it('leaves Ctrl+Shift+K to the browser', () => {
+      send('flow', { key: 'K', ctrlKey: true, shiftKey: true });
+
+      expect(actions.openCommandBar).not.toHaveBeenCalled();
+    });
+
+    it('still leaves Ctrl+Z to a field of text, because only the row for the command bar works in one', () => {
+      send('name', { key: 'z', ctrlKey: true });
+
+      expect(actions.undo).not.toHaveBeenCalled();
     });
   });
 

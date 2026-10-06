@@ -39,7 +39,12 @@ describe('EditorActions', () => {
       focus: () => calls.push('focus'),
       edgePath: () => null,
     });
-    surface = { startRename: vi.fn(), focusInspector: vi.fn(() => true) };
+    surface = {
+      startRename: vi.fn(),
+      focusInspector: vi.fn(() => true),
+      openCommandBar: vi.fn(),
+      openCheatSheet: vi.fn(),
+    };
     actions.surface = surface;
     store.load(sampleDocument());
   });
@@ -66,6 +71,16 @@ describe('EditorActions', () => {
 
       actions.redo('toolbar');
       expect(TestBed.inject(StatusStore).notice()).toMatchObject({ text: 'Nothing to redo.' });
+    });
+  });
+
+  describe('the command bar and the cheat-sheet', () => {
+    it('are opened by the editor, which has them, when a key or a button asks', () => {
+      actions.openCommandBar();
+      actions.openCheatSheet();
+
+      expect(surface.openCommandBar).toHaveBeenCalledOnce();
+      expect(surface.openCheatSheet).toHaveBeenCalledOnce();
     });
   });
 

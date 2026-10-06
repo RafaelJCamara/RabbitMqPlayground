@@ -106,6 +106,18 @@ const BUTTON =
           <rmq-icon [name]="saveIcon()" [size]="16" />
           <span>{{ save().text }}</span>
         </p>
+        <button
+          type="button"
+          [class]="button"
+          aria-haspopup="dialog"
+          aria-keyshortcuts="?"
+          title="Keyboard shortcuts and commands (?)"
+          data-testid="help"
+          (click)="actions.openCheatSheet()"
+        >
+          <rmq-icon name="help" [size]="18" />
+          <span>Help</span>
+        </button>
         <label class="flex items-center gap-2">
           <span class="text-muted">Theme</span>
           <select

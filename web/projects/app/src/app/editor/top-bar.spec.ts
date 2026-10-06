@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { CanvasSession, type SaveState } from '../core/session/canvas-session';
 import { ICONS } from '../core/ui/icons';
@@ -51,6 +51,20 @@ async function renderBar() {
 }
 
 describe('TopBar', () => {
+  describe('help (ADR-0047)', () => {
+    it('has a button, with its name in words, that asks for the cheat-sheet and says that it opens a dialog', async () => {
+      await renderBar();
+      const open = vi.spyOn(TestBed.inject(EditorActions), 'openCheatSheet').mockImplementation(() => undefined);
+
+      const help = screen.getByRole('button', { name: 'Help' });
+      expect(help).toHaveAttribute('aria-haspopup', 'dialog');
+      expect(help).toHaveAttribute('aria-keyshortcuts', '?');
+      await userEvent.setup().click(help);
+
+      expect(open).toHaveBeenCalledOnce();
+    });
+  });
+
   it('has the one heading of the page, which is the name of the product', async () => {
     await renderBar();
 

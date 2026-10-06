@@ -44,6 +44,8 @@ describe('HintBar', () => {
       '+ and - Zoom',
       expect.stringMatching(/^(Ctrl|Cmd)\+Z Undo$/),
       expect.stringMatching(/^(Ctrl|Cmd)\+Shift\+Z Redo$/),
+      '/ Commands',
+      '? Shortcuts',
     ]);
   });
 

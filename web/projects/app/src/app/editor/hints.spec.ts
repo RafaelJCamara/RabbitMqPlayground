@@ -13,6 +13,8 @@ describe('hintsFor', () => {
       { id: 'zoom', keys: '+ and -', label: 'Zoom' },
       { id: 'undo', keys: 'Ctrl+Z', label: 'Undo' },
       { id: 'redo', keys: 'Ctrl+Shift+Z', label: 'Redo' },
+      { id: 'commands', keys: '/', label: 'Commands' },
+      { id: 'shortcuts', keys: '?', label: 'Shortcuts' },
     ]);
   });
 
@@ -27,6 +29,8 @@ describe('hintsFor', () => {
       'F',
       'Ctrl+Z',
       'Ctrl+Shift+Z',
+      '/',
+      '?',
     ]);
     expect(labels({ nodes: 1, edges: 0, kind: 'queue' })).toContain('Link to another node');
     expect(labels({ nodes: 1, edges: 0, kind: 'queue' })).toContain('Rename');
