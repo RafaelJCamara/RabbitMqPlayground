@@ -44,7 +44,7 @@ export interface IdbStoreOptions {
 /** Another tab keeps an older version of the database open, so that this one cannot be upgraded until it lets go. */
 class BlockedError extends Error {
   constructor() {
-    super('Another tab keeps an older version of the database open.');
+    super();
     this.name = 'BlockedError';
   }
 }

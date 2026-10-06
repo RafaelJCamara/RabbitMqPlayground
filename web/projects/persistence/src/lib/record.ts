@@ -20,8 +20,8 @@ export interface CanvasRecord {
 }
 
 export interface ReadRecordOptions {
-  /** A record may be a tombstone. A backup entry may not. */
-  readonly allowDeleted: boolean;
+  /** A record may be a tombstone. A backup entry may not, and nor may what is just made, which is why this is false unless it is said. */
+  readonly allowDeleted?: boolean;
   /** Where the record is inside what is being read, so that a problem says where: `['canvases', '3']`. */
   readonly path?: readonly string[];
   /** What the record is called when a problem is about the whole of it. */
@@ -40,8 +40,8 @@ export function underPath(error: LoadError, prefix: readonly string[]): LoadErro
  * that it should not have is named, and then its document goes through `loadCanvas`, so that a record from an older version
  * is migrated and one from a newer version is refused. It never throws.
  */
-export function readRecord(raw: unknown, options: ReadRecordOptions): Outcome<CanvasRecord, LoadError> {
-  const { allowDeleted, path = [], whole = 'The canvas' } = options;
+export function readRecord(raw: unknown, options: ReadRecordOptions = {}): Outcome<CanvasRecord, LoadError> {
+  const { allowDeleted = false, path = [], whole = 'The canvas' } = options;
   if (!isRecord(raw)) {
     return failure(notAnObject(raw));
   }

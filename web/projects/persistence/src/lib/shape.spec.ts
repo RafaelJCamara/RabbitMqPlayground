@@ -102,6 +102,12 @@ describe('nameIssues', () => {
     }
   });
 
+  it('says where in what it is in, as a path of names with a dot between them', () => {
+    expect(nameIssues('', ['canvases', '1', 'name'])).toEqual([
+      { kind: 'empty-name', message: 'canvases.1.name: A canvas needs a name.', path: ['canvases', '1', 'name'] },
+    ]);
+  });
+
   it('refuses what is not text, and says what it is', () => {
     expect(nameIssues(5, ['name'])).toEqual([
       { kind: 'schema', message: 'name: a name is text, and this is 5.', path: ['name'] },

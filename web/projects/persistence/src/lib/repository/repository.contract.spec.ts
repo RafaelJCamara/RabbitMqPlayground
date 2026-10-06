@@ -365,6 +365,17 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
           const kept = await harness.store.transact('readonly', (tx) => tx.getRecord('newer'));
           expect(kept).toMatchObject({ name: 'Canvas newer', document: { schemaVersion: 2 } });
         }));
+
+      it('is refused for a canvas whose deletion is not a time, which is a record that is wrong, and says so', () =>
+        withHarness(async (harness) => {
+          await plant(harness, raw('odd', { deletedAt: 'when?' }));
+          const result = await harness.repository.save('odd', { name: 'x' });
+
+          expect(result).toMatchObject({ ok: false, error: { kind: 'invalid' } });
+          expect(!result.ok && result.error.message).toBe(
+            'This canvas is not valid: deletedAt: a time is a number of milliseconds since 1970, from 0, and this is "when?".',
+          );
+        }));
     });
 
     describe('putting a record', () => {

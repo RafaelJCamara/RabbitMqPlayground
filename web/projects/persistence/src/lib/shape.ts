@@ -64,9 +64,7 @@ export function nameIssues(value: unknown, path: readonly string[]): Issue[] {
   if (typeof value !== 'string') {
     return [shapeIssue(path, `a name is text, and this is ${summarise(value)}.`)];
   }
-  return value.trim() === ''
-    ? [{ kind: 'empty-name', message: `${path.join('.')}: A canvas needs a name.`, path }]
-    : [];
+  return /\S/.test(value) ? [] : [{ kind: 'empty-name', message: `${path.join('.')}: A canvas needs a name.`, path }];
 }
 
 /** A time is a number of milliseconds since 1970, and is not before it. */

@@ -222,10 +222,9 @@ const QUOTA_CODE = 22;
  * while it was in use, it means that something failed.
  */
 export function classifyStorageError(error: unknown, phase: 'open' | 'use'): StorageError {
-  const thing = typeof error === 'object' && error !== null ? error : {};
-  const name = 'name' in thing ? thing.name : undefined;
-  const code = 'code' in thing ? thing.code : undefined;
-  const message = 'message' in thing && typeof thing.message === 'string' ? thing.message : undefined;
+  const thing = (typeof error === 'object' && error !== null ? error : {}) as Readonly<Record<string, unknown>>;
+  const { name, code } = thing;
+  const message = typeof thing['message'] === 'string' ? thing['message'] : undefined;
 
   if (name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED' || code === QUOTA_CODE) {
     return {

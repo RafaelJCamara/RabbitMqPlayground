@@ -207,10 +207,7 @@ export function createCanvasRepository(store: RecordStore, options: RepositoryOp
       guard('readwrite', async (transaction) => {
         const id = canvas.id ?? newId();
         const time = now();
-        const read = readRecord(
-          { id, name: canvas.name, createdAt: time, updatedAt: time, document: canvas.document },
-          { allowDeleted: false },
-        );
+        const read = readRecord({ id, name: canvas.name, createdAt: time, updatedAt: time, document: canvas.document });
         if (!read.ok) {
           return read;
         }
@@ -231,16 +228,13 @@ export function createCanvasRepository(store: RecordStore, options: RepositoryOp
         if (!current.ok || (change.name === undefined && change.document === undefined)) {
           return current;
         }
-        const next = readRecord(
-          {
-            id,
-            name: change.name ?? current.value.name,
-            createdAt: current.value.createdAt,
-            updatedAt: now(),
-            document: change.document ?? current.value.document,
-          },
-          { allowDeleted: false },
-        );
+        const next = readRecord({
+          id,
+          name: change.name ?? current.value.name,
+          createdAt: current.value.createdAt,
+          updatedAt: now(),
+          document: change.document ?? current.value.document,
+        });
         if (next.ok) {
           await transaction.putRecord(toStored(next.value));
         }
