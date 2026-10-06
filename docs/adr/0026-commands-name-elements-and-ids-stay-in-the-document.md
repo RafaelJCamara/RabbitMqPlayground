@@ -70,7 +70,7 @@ which of the rules are the broker's and which are the simulator's. S2
   | A queue that is not durable | the broker | `541`, recorded ([ADR-0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md)) |
   | A producer linked to an internal exchange | the broker, at the publish | `403`, recorded |
   | A name over 255 bytes, a routing key or a binding key over 255 bytes | the client library, which refuses before anything is sent | none to record |
-  | A name that is empty, a name that another element of the kind has, a producer with two targets, unbinding or unlinking or unsubscribing what is not there, a number out of its range, a header integer beyond 2^53 ([ADR-0023](0023-header-integers-are-limited-to-safe-integers.md)) | the simulator | none |
+  | An empty name for a queue, a producer or a consumer, a name that another element of the kind has, a link that the connection rules of [ADR-0011](0011-explicit-linking-and-command-layer.md) do not allow, unbinding or unlinking or unsubscribing what is not there, a number out of its range, a header integer beyond 2^53 ([ADR-0023](0023-header-integers-are-limited-to-safe-integers.md)) | the simulator | none |
 
   The order in which a broker reports two faults of one binding is recorded
   (`routing/a-binding-with-two-faults-gets-one-refusal`): the default exchange, then the source, then the destination,
@@ -111,10 +111,10 @@ which of the rules are the broker's and which are the simulator's. S2
 These are rules of the simulator where a broker does something else, or where nothing was recorded. Each is a candidate for
 a scenario and, if it differs, a new ADR.
 
-- **Declaring a name that is taken.** A broker accepts a second declaration with the same attributes and refuses one with
-  other attributes with `406 PRECONDITION_FAILED`. The simulator refuses both as a duplicate name, with no reply of the
-  broker's, and a learner changes an element with `set`. The scenario vocabulary has no step that declares a name twice
-  (OPEN_QUESTIONS 8).
+- **Declaring a name that is taken.** By RabbitMQ's documentation a broker accepts a second declaration with the same
+  attributes and refuses one with other attributes with `406 PRECONDITION_FAILED`. No fixture has either, because the
+  scenario vocabulary has no step that declares a name twice (OPEN_QUESTIONS 8). The simulator refuses both as a duplicate
+  name, with no reply of the broker's, and a learner changes an element with `set`.
 - **Unbinding a binding that is not there**, which the vocabulary has no step for either. The simulator says that there is
   none, and what the bindings between the two ends are.
 - **The exchanges that every broker has**, `amq.direct`, `amq.fanout`, `amq.topic`, `amq.headers`, `amq.match` and
@@ -143,7 +143,7 @@ a scenario and, if it differs, a new ADR.
   line was written may not be there, or may mean two things (`queue:` and `exchange:` say which).
 - The caller has to provide ids, and a generator that repeats one is a bug that throws.
 - Where the simulator refuses and a broker accepts (a second declaration, an unbind of nothing), a learner who moves to a
-  real broker will find it quieter. The messages say that the broker accepts it.
+  real broker will find it quieter. The messages do not say so, because nothing was recorded to back the claim.
 - The rules of the simulator are numbers and texts that a person chose (the ranges, the column of a node, the sizes that a
   layout leaves room for), and the app may refine the sizes.
 

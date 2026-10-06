@@ -106,24 +106,38 @@ watch the right test fail, restore it. To do that quickly I used a small helper 
 says whether any test failed, and always restores the file. It lives outside the repository, so nobody else can re-run
 those checks, and its lists of mutants (about 150) are not kept.
 
-Options: commit it as a tool (for example `web/tools/mutation/`) with the mutant lists beside the specs, or keep mutation
-checking as a manual practice that each slice reports in its commit messages.
+S2 was too big for mutants that are picked by hand, so I generated them. About 450 lines of scripts, outside the repository
+as well, walk the syntax tree of the new code with the TypeScript compiler and make a mutant for each comparison,
+condition, boolean, block, string, number, array and method call (the operators of Stryker). 3,924 mutants of the S2 code
+ran in twelve copies of `web/`, first against the specs that sit nearest and then against every spec of the three
+libraries. 3,680 died at once. The 244 that survived led to about fifty new tests and assertions, which kill 123 of them,
+and `npm run docs:check` kills 23 more. They covered what no test had read: messages, the other fields of a consumer when
+one is set, the sharing that a delete that touches nothing has to keep, the exact places of an auto-layout, every value of
+every enumeration, the items that completion offers. 98 mutants are left, and each was read: 86 change nothing that can be
+seen (a guard that the next line makes redundant, a default that is never used, a constant that every kind of node shares,
+the order of a sort that only has to be the same every time), and 12 are in `topicSamples` of S1, which S2 did not touch.
+The same scripts ran each of the three properties alone against 722 of the mutants: `undo∘apply`, `parse∘format` and
+`reconcile` together kill 355 that way, and the replay of the fixtures kills 170, 20 of which the properties let through.
+
+Options: commit the generator and the runner as a tool (for example `web/tools/mutation/`, which needs nothing but
+TypeScript, and takes about 45 minutes for S2 on twelve workers), with a list of the equivalent mutants beside it, or keep
+mutation checking as a manual practice that each slice reports in its commit messages.
 
 ## 8. Declaring a name twice, and unbinding what is not bound
 
-A broker accepts a second declaration of an exchange or a queue with the same attributes, and refuses one with other
-attributes with `406 PRECONDITION_FAILED` and a text that says which argument differs. The simulator refuses both with its
-own rule, that a canvas has each name once, and carries no reply of the broker's
-([ADR-0026](docs/adr/0026-commands-name-elements-and-ids-stay-in-the-document.md)). The recorded scenarios cannot show the
-difference, because `validateScenario` refuses a step that declares a name twice and the vocabulary has no `unbind` step. A
-refused step with other attributes can be recorded today, but the accepted repeat cannot.
+By RabbitMQ's documentation, a broker accepts a second declaration of an exchange or a queue with the same attributes, and
+refuses one with other attributes with `406 PRECONDITION_FAILED` and a text that says which argument differs. No fixture
+has either. The simulator refuses both with its own rule, that a canvas has each name once, and carries no reply of the
+broker's ([ADR-0026](docs/adr/0026-commands-name-elements-and-ids-stay-in-the-document.md)). The recorded scenarios cannot
+show the difference, because `validateScenario` refuses a step that declares a name twice and the vocabulary has no
+`unbind` step. A refused step with other attributes can be recorded today, but the accepted repeat cannot.
 
 Options:
 
 - Keep the simulator's rule, and record the refused repeat so that the broker's `406` text is in a fixture.
 - Make a repeat with the same attributes change nothing, and answer one with other attributes with the `406` text. That
   needs the vocabulary to allow a repeated declaration and an `unbind` step, and a scenario for each.
-- Leave it as it is, and say so in the messages, which they already do for the commands that are quieter on a broker.
+- Leave the rule as it is, and say in the messages that a broker would accept the repeat, once a fixture backs the claim.
 
 S6 gives the engine its `dispatch` for `exchange.declare` and `queue.declare`, and has to say what the engine does with a
 name that is there, so it is the slice that settles it. The domain's `declare` and `unbind` would follow.
