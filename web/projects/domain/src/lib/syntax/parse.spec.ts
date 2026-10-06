@@ -809,6 +809,18 @@ describe('parseCommand', () => {
       expect(refused('set sender header:format')).toMatchObject({ kind: 'syntax' });
     });
 
+    it('is refused with a header whose text is longer than a canvas keeps, in the words of the rule (ADR-0029)', () => {
+      const header = (length: number) => `set sender header:n=${'x'.repeat(length)}`;
+
+      expect(read(header(10_000))).toMatchObject({ type: 'set', kind: 'producer' });
+      const issue = refused(header(10_001));
+      expect(issue).toMatchObject({
+        kind: 'header',
+        message: "The header 'n': a value that is text is at most 10,000 characters, and this one has 10,001.",
+      });
+      expect(pointedAt(header(10_001), issue)).toBe(`header:n=${'x'.repeat(10_001)}`);
+    });
+
     it('is refused with a header: where the element has no message', () => {
       expect(refused('set billing header:a=1')).toMatchObject({ kind: 'unknown-option' });
     });

@@ -32,6 +32,14 @@ export type {
   Unset,
   Unsubscribe,
 } from './lib/commands/types';
+export {
+  canvasFullIssue,
+  edgeCount,
+  elementCount,
+  noRoomForEdge,
+  noRoomForElement,
+  payloadIssue,
+} from './lib/document/capacity';
 export { COLLECTION, elements, findId, kindOf, lookup, nameOf, recordOf, type Element } from './lib/document/elements';
 export {
   bindingHeadersIssue,

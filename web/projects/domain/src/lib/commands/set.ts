@@ -1,6 +1,7 @@
 import { routingKeyIssue, type HeaderEntry, type HeaderValue } from '@rmq/engine';
+import { payloadIssue } from '../document/capacity';
 import { findId, lookup } from '../document/elements';
-import { messageHeadersIssue } from '../document/headers';
+import { messageHeadersIssue, tooManyEntriesIssue } from '../document/headers';
 import { fail, ok, type Issue, type Result } from '../document/issue';
 import { topicKeyIssue, transientQueueIssue } from '../document/rules';
 import { LIMITS, type CanvasDocument, type Id } from '../document/schema';
@@ -123,27 +124,29 @@ function setProducer(document: CanvasDocument, name: string, changes: ProducerCh
   if (id === undefined) {
     return fail(missingElementIssue(document, 'producer', name));
   }
+  const current = lookup(document.producers, id) as CanvasDocument['producers'][Id];
+  const headers =
+    changes.headers === undefined ? current.message.headers : mergeHeaders(current.message.headers, changes.headers);
   const problem = firstIssue(
     changes.key === undefined ? null : issueOfKey(routingKeyIssue(changes.key)),
+    changes.payload === undefined ? null : payloadIssue(changes.payload),
     changes.burst === undefined ? null : rangeIssue('burst', changes.burst, LIMITS.burst),
     changes.everyMs === undefined ? null : rangeIssue('interval', changes.everyMs, LIMITS.everyMs),
     changes.headers === undefined ? null : messageHeadersIssue(changes.headers),
+    // The headers that are set and the ones that the message has come to what it is left with (ADR-0029).
+    tooManyEntriesIssue('message', headers.length),
   );
   if (problem !== null) {
     return fail(problem);
   }
 
-  const current = lookup(document.producers, id) as CanvasDocument['producers'][Id];
   // The message and the interval are branches of their own, and one that is not changed stays the one that it was.
   const next = {
     ...current,
     message: keepIfSame(current.message, {
       payload: changes.payload ?? current.message.payload,
       key: changes.key ?? current.message.key,
-      headers:
-        changes.headers === undefined
-          ? current.message.headers
-          : mergeHeaders(current.message.headers, changes.headers),
+      headers,
     }),
     burst: changes.burst ?? current.burst,
     interval: keepIfSame(current.interval, {

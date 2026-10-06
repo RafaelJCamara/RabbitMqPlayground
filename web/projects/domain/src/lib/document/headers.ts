@@ -6,7 +6,9 @@ import {
   type HeaderEntry,
   type HeaderValue,
 } from '@rmq/engine';
+import { thousands } from './capacity';
 import type { Issue } from './issue';
+import { LIMITS } from './schema';
 
 /**
  * The rules about headers that a canvas keeps (ADR-0009, ADR-0023). What a value may be is the engine's rule, and is not
@@ -34,13 +36,34 @@ export function headerKeyIssue(key: string): Issue | null {
   return null;
 }
 
-/** Why `value` cannot be the value of the header called `key`, or `null` when it can. */
+/**
+ * Why `value` cannot be the value of the header called `key`, or `null` when it can. What a value may be is the engine's
+ * rule, and a value that is text is also kept to `LIMITS.textLength` characters (ADR-0029).
+ */
 export function headerValueProblem(key: string, value: HeaderCondition): Issue | null {
-  const issue = headerValueIssue(value);
+  const issue =
+    headerValueIssue(value) ??
+    (value.t === 'string' && value.v.length > LIMITS.textLength
+      ? `a value that is text is at most ${thousands(LIMITS.textLength)} characters, and this one has ${thousands(value.v.length)}`
+      : null);
   return issue === null ? null : { kind: 'header', message: `The header '${key}': ${issue}.` };
 }
 
-function entriesIssue(entries: readonly HeaderEntry<HeaderCondition>[]): Issue | null {
+/** Why a message cannot have this many headers, or a binding this many arguments, or `null` when it can (ADR-0029). */
+export function tooManyEntriesIssue(whose: 'message' | 'binding', count: number): Issue | null {
+  return count > LIMITS.headerEntries
+    ? {
+        kind: 'header',
+        message: `The ${whose === 'message' ? 'headers of one message' : 'arguments of one binding'} are at most ${LIMITS.headerEntries}, and there are ${count}. Take some off.`,
+      }
+    : null;
+}
+
+function entriesIssue(whose: 'message' | 'binding', entries: readonly HeaderEntry<HeaderCondition>[]): Issue | null {
+  const tooMany = tooManyEntriesIssue(whose, entries.length);
+  if (tooMany !== null) {
+    return tooMany;
+  }
   const seen = new Set<string>();
   for (const { key, value } of entries) {
     const issue = headerKeyIssue(key) ?? headerValueProblem(key, value);
@@ -60,7 +83,7 @@ function entriesIssue(entries: readonly HeaderEntry<HeaderCondition>[]): Issue |
 
 /** Why the headers of a message cannot be sent, or `null` when they can. */
 export function messageHeadersIssue(headers: readonly HeaderEntry<HeaderValue>[]): Issue | null {
-  return entriesIssue(headers);
+  return entriesIssue('message', headers);
 }
 
 /**
@@ -75,7 +98,7 @@ export function bindingHeadersIssue(headers: HeaderArguments): Issue | null {
       message: `'${X_MATCH}' is the mode of a headers binding (all, any, all-with-x or any-with-x), and not a condition. Write it as ${X_MATCH}=any, for example.`,
     };
   }
-  return entriesIssue(headers.args);
+  return entriesIssue('binding', headers.args);
 }
 
 /**

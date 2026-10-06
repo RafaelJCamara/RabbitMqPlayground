@@ -1,4 +1,5 @@
 import { routingKeyIssue } from '@rmq/engine';
+import { noRoomForEdge } from '../document/capacity';
 import { findId, lookup } from '../document/elements';
 import { bindingHeadersIssue, bindingSignature, canonicalHeaders } from '../document/headers';
 import { fail, ok, type ElementKind, type Result } from '../document/issue';
@@ -99,6 +100,11 @@ export function applyBind(
   }
   if (findBinding(document, command, ends.value) !== undefined) {
     return ok(document);
+  }
+  // A binding that is there is not another edge, so it is answered above even on a canvas that is full (ADR-0029).
+  const full = noRoomForEdge(document);
+  if (full !== null) {
+    return fail(full);
   }
 
   const headers = canonicalHeaders(command.headers);

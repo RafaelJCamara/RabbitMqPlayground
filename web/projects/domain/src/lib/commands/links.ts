@@ -1,3 +1,4 @@
+import { noRoomForEdge } from '../document/capacity';
 import { findId, lookup } from '../document/elements';
 import { fail, ok, type Result } from '../document/issue';
 import { internalExchangeIssue } from '../document/rules';
@@ -38,6 +39,11 @@ export function applyLink(document: CanvasDocument, command: Link): Result<Canva
   if (producer.target?.kind === kind && producer.target.id === targetId) {
     return ok(document);
   }
+  // A producer that has a target and is pointed at another still has one edge. One that has none gets its first (ADR-0029).
+  const full = producer.target === null ? noRoomForEdge(document) : null;
+  if (full !== null) {
+    return fail(full);
+  }
   return ok(withoutDanglingLabels(withProducer(document, producerId, { ...producer, target: { kind, id: targetId } })));
 }
 
@@ -65,6 +71,10 @@ export function applySubscribe(document: CanvasDocument, command: Subscribe): Re
   const consumer = lookup(document.consumers, consumerId) as CanvasDocument['consumers'][Id];
   if (consumer.queues.includes(queueId)) {
     return ok(document);
+  }
+  const full = noRoomForEdge(document);
+  if (full !== null) {
+    return fail(full);
   }
   return ok(withConsumer(document, consumerId, { ...consumer, queues: [...consumer.queues, queueId] }));
 }

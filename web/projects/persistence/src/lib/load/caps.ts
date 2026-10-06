@@ -1,3 +1,4 @@
+import { LIMITS } from '@rmq/domain';
 import { tooLarge, type LoadError } from '../errors';
 import { isRecord } from '../shape';
 
@@ -6,16 +7,19 @@ import { isRecord } from '../shape';
  * name, but nothing else bounded a document, and one with a million exchanges would be read to the end before anyone said so.
  * The caps are checked on the data before the schema runs, and they sit about ten times above the 200 nodes and 500 edges that
  * the plan runs, so that nothing a learner builds comes near them.
+ *
+ * The four that are about a canvas are the domain's (`LIMITS`, ADR-0029), because the commands refuse at the same numbers, so
+ * that a canvas that commands made always loads. The others are about files and names, which only this library has.
  */
 export const SIZE_CAPS = {
   /** Exchanges, queues, producers and consumers together. */
-  elements: 2_000,
+  elements: LIMITS.elements,
   /** Bindings, producer links and consumer subscriptions together. */
-  edges: 5_000,
+  edges: LIMITS.edges,
   /** Entries in the headers of one message, or in the arguments of one binding. */
-  headers: 100,
+  headers: LIMITS.headerEntries,
   /** Characters of one payload, and of one header value that is text. */
-  text: 10_000,
+  text: LIMITS.textLength,
   /** Characters in the text of a file or a backup. */
   file: 50_000_000,
   /** Canvases in a backup. */

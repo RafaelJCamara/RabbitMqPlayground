@@ -23,7 +23,7 @@ import {
 } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { canvasDocumentSchema, emptyDocument, type CanvasDocument } from './schema';
+import { canvasDocumentSchema, emptyDocument, LIMITS, type CanvasDocument } from './schema';
 import { parseDocument, validateDocument } from './validate';
 
 /** A document with a little of everything, and nothing wrong with it. */
@@ -372,6 +372,79 @@ describe('validateDocument', () => {
           }),
         ),
       ).toEqual([{ kind: 'header', path: 'producers.p.message.headers' }]);
+    });
+  });
+
+  describe('the size of a canvas (ADR-0029)', () => {
+    const range = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
+    const queues = (count: number) => Object.fromEntries(range(count).map((i) => [`q${i}`, queueRecord(`queue${i}`)]));
+
+    it('may hold as many elements and edges as the commands allow, and no more', () => {
+      expect(found(documentOf({ queues: queues(LIMITS.elements) }))).toEqual([]);
+      expect(found(documentOf({ queues: queues(LIMITS.elements + 1) }))).toEqual([{ kind: 'canvas-full', path: '' }]);
+
+      const edges = (count: number) =>
+        documentOf({
+          exchanges: { ex: exchangeRecord('e') },
+          queues: { q: queueRecord('q') },
+          bindings: Object.fromEntries(
+            range(count).map((i) => [`b${i}`, bindingRecord('ex', { kind: 'queue', id: 'q' }, `k${i}`)]),
+          ),
+        });
+      expect(found(edges(LIMITS.edges))).toEqual([]);
+      expect(found(edges(LIMITS.edges + 1))).toEqual([{ kind: 'canvas-full', path: '' }]);
+    });
+
+    it('says that the canvas is full in the words that a command uses, and how much it has', () => {
+      const [issue] = validateDocument(documentOf({ queues: queues(LIMITS.elements + 1) }));
+
+      expect(issue?.message).toBe(
+        'The canvas is full: a canvas holds at most 2,000 elements (exchanges, queues, producers and consumers), so that it can always be saved and opened again, and this one has 2,001. Delete something you no longer need to make room.',
+      );
+    });
+
+    it('may have a payload of 10,000 characters, a header of that much text, and 100 headers, and no more', () => {
+      const message = (payload: string, headers: ReturnType<typeof producerRecord>['message']['headers']) => ({
+        payload,
+        key: '',
+        headers,
+      });
+      const withMessage = (...args: Parameters<typeof message>) =>
+        found(documentWith({ producers: { p: producerRecord('s', null, { message: message(...args) }) } }));
+      const headers = (count: number) => range(count).map((i) => entry(`h${i}`, int(i)));
+
+      expect(withMessage('x'.repeat(LIMITS.textLength), [])).toEqual([]);
+      expect(withMessage('x'.repeat(LIMITS.textLength + 1), [])).toEqual([
+        { kind: 'invalid-value', path: 'producers.p.message.payload' },
+      ]);
+      expect(withMessage('', [entry('a', str('x'.repeat(LIMITS.textLength)))])).toEqual([]);
+      expect(withMessage('', [entry('a', str('x'.repeat(LIMITS.textLength + 1)))])).toEqual([
+        { kind: 'header', path: 'producers.p.message.headers' },
+      ]);
+      expect(withMessage('', headers(LIMITS.headerEntries))).toEqual([]);
+      expect(withMessage('', headers(LIMITS.headerEntries + 1))).toEqual([
+        { kind: 'header', path: 'producers.p.message.headers' },
+      ]);
+    });
+
+    it('may have 100 arguments on a binding, and no more', () => {
+      const bound = (count: number) =>
+        found(
+          documentWith({
+            bindings: {
+              ...valid.bindings,
+              b: bindingRecord(
+                'ex2',
+                { kind: 'queue', id: 'q1' },
+                '',
+                headerArguments('all', ...range(count).map((i) => entry(`h${i}`, int(i)))),
+              ),
+            },
+          }),
+        );
+
+      expect(bound(LIMITS.headerEntries)).toEqual([]);
+      expect(bound(LIMITS.headerEntries + 1)).toEqual([{ kind: 'header', path: 'bindings.b.headers' }]);
     });
   });
 

@@ -1,10 +1,11 @@
 import { routingKeyIssue, utf8Length } from '@rmq/engine';
+import { canvasFullIssue, edgeCount, elementCount, payloadIssue } from './capacity';
 import { COLLECTION, elements, kindOf, lookup } from './elements';
 import { bindingHeadersIssue, bindingSignature, messageHeadersIssue } from './headers';
 import type { ElementKind, Issue } from './issue';
 import { nameIssue } from './names';
 import { duplicateNameIssue, internalExchangeIssue, topicKeyIssue, transientQueueIssue } from './rules';
-import { canvasDocumentSchema, type CanvasDocument } from './schema';
+import { canvasDocumentSchema, LIMITS, type CanvasDocument } from './schema';
 import { edgeKeys } from './topology';
 
 /**
@@ -23,6 +24,17 @@ export function validateDocument(document: CanvasDocument): Issue[] {
   const add = (issue: Issue, ...path: string[]): void => {
     issues.push({ ...issue, path });
   };
+
+  // A canvas that has more than it may hold is refused by `loadCanvas` before it gets here, and by every command before it
+  // is made (ADR-0029). It is said here too, so that a document that arrives some other way gets the same sentence.
+  const elementTotal = elementCount(document);
+  if (elementTotal > LIMITS.elements) {
+    add(canvasFullIssue('elements', elementTotal));
+  }
+  const edgeTotal = edgeCount(document);
+  if (edgeTotal > LIMITS.edges) {
+    add(canvasFullIssue('edges', edgeTotal));
+  }
 
   // The vhost is a name too, and the broker writes it in some of its replies.
   if (document.vhost === '') {
@@ -151,6 +163,10 @@ export function validateDocument(document: CanvasDocument): Issue[] {
     const keyProblem = routingKeyIssue(producer.message.key);
     if (keyProblem !== null) {
       add({ kind: 'routing-key', message: `${keyProblem}.` }, 'producers', id, 'message', 'key');
+    }
+    const payload = payloadIssue(producer.message.payload);
+    if (payload !== null) {
+      add(payload, 'producers', id, 'message', 'payload');
     }
     const headers = messageHeadersIssue(producer.message.headers);
     if (headers !== null) {

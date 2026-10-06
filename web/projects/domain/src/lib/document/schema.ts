@@ -35,6 +35,18 @@ export const LIMITS = {
   seed: { min: 0, max: 0xffff_ffff },
   /** How far from the origin a node may be put. */
   coordinate: 1_000_000,
+  /**
+   * How much a canvas may hold (ADR-0029). One that holds more cannot be saved or opened again (ADR-0027), so no command
+   * makes one: the commands that add something refuse at these numbers. They sit about ten times above the 200 nodes and
+   * 500 edges that the plan runs. Exchanges, queues, producers and consumers together.
+   */
+  elements: 2_000,
+  /** Bindings, producer links and consumer subscriptions together. */
+  edges: 5_000,
+  /** Entries in the headers of one message, or in the arguments of one binding. */
+  headerEntries: 100,
+  /** Characters of one payload, and of one header value that is text. */
+  textLength: 10_000,
 } as const;
 
 const idSchema = z.string().regex(ID_PATTERN);

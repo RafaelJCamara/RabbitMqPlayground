@@ -1,5 +1,5 @@
-import { emptyDocument, type CanvasDocument, type ParsedDocument } from '@rmq/domain';
-import { deepFreeze, sampleDocument } from '@rmq/testing';
+import { edgeCount, elementCount, emptyDocument, LIMITS, type CanvasDocument, type ParsedDocument } from '@rmq/domain';
+import { bindingRecord, deepFreeze, documentOf, exchangeRecord, producerRecord, sampleDocument } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { notAnObject } from '../errors';
 import { SIZE_CAPS } from './caps';
@@ -139,6 +139,48 @@ describe('loadCanvas', () => {
 
       expect(failed(nothingLikeADocument).kind).toBe('newer-version');
       expect(failed(huge).kind).toBe('newer-version');
+    });
+  });
+
+  describe('a canvas that commands could make (ADR-0029)', () => {
+    it('loads when it holds as much as the commands allow, which is the loader’s own cap', () => {
+      const range = (count: number) => Array.from({ length: count }, (_, index) => index);
+      const document = documentOf({
+        exchanges: Object.fromEntries(
+          range(LIMITS.elements - 1).map((i) => [`E${i}`, exchangeRecord(`e${i}`, 'headers')]),
+        ),
+        producers: {
+          P: producerRecord('p', null, {
+            message: {
+              payload: 'x'.repeat(LIMITS.textLength),
+              key: '',
+              headers: range(LIMITS.headerEntries).map((i) => ({
+                key: `h${i}`,
+                value: { t: 'string' as const, v: 'y'.repeat(LIMITS.textLength) },
+              })),
+            },
+          }),
+        },
+        bindings: Object.fromEntries(
+          range(LIMITS.edges).map((i) => [
+            `B${i}`,
+            bindingRecord('E0', { kind: 'exchange', id: `E${(i % (LIMITS.elements - 2)) + 1}` }, `key.${i}`),
+          ]),
+        ),
+      });
+
+      expect(elementCount(document)).toBe(SIZE_CAPS.elements);
+      expect(edgeCount(document)).toBe(SIZE_CAPS.edges);
+      expect(loadCanvas(plain(document))).toEqual({ ok: true, value: { document, from: CURRENT_SCHEMA_VERSION } });
+    });
+
+    it('is refused for one more, by the same numbers that the commands refuse at', () => {
+      expect([SIZE_CAPS.elements, SIZE_CAPS.edges, SIZE_CAPS.headers, SIZE_CAPS.text]).toEqual([
+        LIMITS.elements,
+        LIMITS.edges,
+        LIMITS.headerEntries,
+        LIMITS.textLength,
+      ]);
     });
   });
 

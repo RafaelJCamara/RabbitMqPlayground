@@ -38,6 +38,7 @@ export type IssueKind =
   | 'no-header'
   | 'invalid-value'
   | 'nothing-to-change'
+  | 'canvas-full'
   | 'layout'
   | 'syntax'
   | 'unknown-command'

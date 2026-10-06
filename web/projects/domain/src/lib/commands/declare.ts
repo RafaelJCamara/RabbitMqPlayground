@@ -1,3 +1,4 @@
+import { noRoomForElement } from '../document/capacity';
 import { findId } from '../document/elements';
 import { fail, ok, type ElementKind, type Result } from '../document/issue';
 import { nameIssue } from '../document/names';
@@ -8,7 +9,8 @@ import type { AddConsumer, AddProducer, DeclareExchange, DeclareQueue } from './
 
 /**
  * The commands that put something new on the canvas. A name has to be one that a broker would take (ADR-0021) and that no
- * other element of its kind has, and a new node goes where its kind belongs (`defaultPosition`).
+ * other element of its kind has, there has to be room for one more (ADR-0029), and a new node goes where its kind belongs
+ * (`defaultPosition`). The room is checked last, so that a name that is wrong is told so even on a canvas that is full.
  */
 
 const taken = (document: CanvasDocument, kind: ElementKind, name: string): boolean =>
@@ -25,6 +27,10 @@ export function applyDeclareExchange(
   }
   if (taken(document, 'exchange', command.name)) {
     return fail(duplicateNameIssue('exchange', command.name));
+  }
+  const full = noRoomForElement(document);
+  if (full !== null) {
+    return fail(full);
   }
   const { name, exchangeType: type, durable, autoDelete, internal } = command;
   return ok(
@@ -58,6 +64,10 @@ export function applyDeclareQueue(
   if (taken(document, 'queue', command.name)) {
     return fail(duplicateNameIssue('queue', command.name));
   }
+  const full = noRoomForElement(document);
+  if (full !== null) {
+    return fail(full);
+  }
   return ok(
     withElement(document, 'queue', freshId(document, context, 'queue'), {
       name: command.name,
@@ -87,6 +97,10 @@ export function applyAddProducer(
   if (taken(document, 'producer', command.name)) {
     return fail(duplicateNameIssue('producer', command.name));
   }
+  const full = noRoomForElement(document);
+  if (full !== null) {
+    return fail(full);
+  }
   return ok(
     withElement(document, 'producer', freshId(document, context, 'producer'), {
       name: command.name,
@@ -112,6 +126,10 @@ export function applyAddConsumer(
   }
   if (taken(document, 'consumer', command.name)) {
     return fail(duplicateNameIssue('consumer', command.name));
+  }
+  const full = noRoomForElement(document);
+  if (full !== null) {
+    return fail(full);
   }
   return ok(
     withElement(document, 'consumer', freshId(document, context, 'consumer'), {
