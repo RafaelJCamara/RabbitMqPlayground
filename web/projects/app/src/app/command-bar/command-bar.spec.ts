@@ -270,6 +270,21 @@ describe('CommandBar, the log of equivalent commands (ADR-0046)', () => {
     expect(Object.keys(store.document().queues)).toHaveLength(1);
     expect(screen.queryByRole('listbox'), 'a line that is put there is not being typed').not.toBeInTheDocument();
   });
+
+  it('offers no completions for a line that was put in the field even when one could be, and offers them again when the learner types', async () => {
+    const { user, bus, fixture } = await renderBar();
+    bus.apply(declareQueue('billing'), 'gesture');
+    bus.undo('key');
+    await openBar(user);
+    fixture.detectChanges();
+
+    await user.click(screen.getByRole('button', { name: 'Use again: undo' }));
+
+    expect(field()).toHaveValue('undo');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await type(user, '{Backspace}');
+    expect(optionLabels()).toContain('undo');
+  });
 });
 
 describe('CommandBar, completion (ADR-0045)', () => {
@@ -633,6 +648,10 @@ describe('CommandBar, running a line (ADR-0045)', () => {
         "There is no command 'bnd'. Did you mean 'bind'?",
       );
       expect(screen.queryByTestId('refusal-reply')).not.toBeInTheDocument();
+      // The field is described by the answer, which it points at by id.
+      expect(document.getElementById(field().getAttribute('aria-describedby') as string)).toBe(
+        screen.getByTestId('command-answer'),
+      );
     });
 
     it('leaves the list shut, because the line was run and is not being typed any more', async () => {

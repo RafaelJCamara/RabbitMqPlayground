@@ -292,6 +292,14 @@ describe('IntentHandler', () => {
       ]);
     });
 
+    it('is rounded to the nearest thousandth and not scaled: 0.7004 is 0.7, and 0.9996 is 1', () => {
+      handler.handle({ type: 'move-label', key: 'E1>Q1', at: 0.7004 });
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.7 });
+
+      handler.handle({ type: 'move-label', key: 'E1>Q1', at: 0.9996 });
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 1 });
+    });
+
     it('is one step of undo', () => {
       const before = store.document();
 
