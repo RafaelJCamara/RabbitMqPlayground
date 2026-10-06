@@ -166,6 +166,46 @@ test.describe('journey 2: renaming', () => {
   });
 });
 
+test.describe('journey 2: the context menu', () => {
+  for (const [who, release] of [
+    ['macOS and Linux', 'auxclick'],
+    ['macOS for a Control click', 'click'],
+  ] as const) {
+    test(`stays open when the button that opened it comes up, as it does on ${who}`, async ({ page }) => {
+      const editor = await open(page);
+      await editor.add('Queue');
+      const at = await editor.centre(editor.node('Queue queue1'));
+
+      await editor.rightClickMenuFirst(at, release);
+
+      await expect(page.getByRole('menu', { name: 'Actions for queue queue1' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: /Rename/ })).toBeFocused();
+    });
+  }
+
+  test('closes with a click outside it, whichever way it was opened, and the focus goes back to the canvas', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+    const at = await editor.centre(editor.node('Queue queue1'));
+    const empty = { x: at.x + 300, y: at.y + 200 };
+
+    await editor.rightClickMenuFirst(at);
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.mouse.click(empty.x, empty.y);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(editor.flow).toBeFocused();
+
+    // The click on the empty canvas took the selection away, and a key opens the menu for what is selected.
+    await editor.select('Queue queue1');
+    await page.keyboard.press('Shift+F10');
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.mouse.click(empty.x, empty.y);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+  });
+});
+
 test.describe('journey 2: moving', () => {
   test('moves a node by dragging it, and the move is one step that undo takes back', async ({ page }) => {
     const editor = await open(page);

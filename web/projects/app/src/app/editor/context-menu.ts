@@ -1,5 +1,6 @@
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from '@angular/cdk/menu';
-import { afterNextRender, Component, inject, Injector, output, signal, viewChild } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { afterNextRender, Component, DestroyRef, inject, Injector, output, signal, viewChild } from '@angular/core';
 import type { ContextTarget } from '../canvas/model/intents';
 import type { Point } from '../canvas/model/transform';
 import { Icon } from '../core/ui/icon';
@@ -77,7 +78,14 @@ export class ContextMenu {
   private readonly trigger = viewChild.required(CdkContextMenuTrigger);
   private readonly menuRef = viewChild(CdkMenu);
   private readonly injector = inject(Injector);
+  private readonly page = inject(DOCUMENT);
   private chosen = false;
+  /** Holds the end of the click that opened the menu, from the moment that it opens until something else happens. */
+  private hold: AbortController | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.hold?.abort());
+  }
 
   /** Opens the menu for a node or an edge, where the pointer was. `title` says what it is for, for a screen reader. */
   open(target: ContextTarget, client: Point, title: string): void {
@@ -86,6 +94,34 @@ export class ContextMenu {
     this.items.set(target.kind === 'node' ? [RENAME, DELETE] : [DELETE]);
     this.chosen = false;
     this.trigger().open(client);
+    this.holdTheEndOfTheClick();
+  }
+
+  /**
+   * On macOS and Linux the browser sends `contextmenu` when the right button goes down, so the menu opens while the button is still
+   * held, and the release, an `auxclick` (a `click` for the Control click of a Mac), is a click outside a menu that has just opened,
+   * which closes it. The CDK keeps its own menu open through that when its listener opens it, and not when it is told to open at a
+   * point, which is how this one is opened: the canvas says what was pointed at, and a key opens it as well. Windows sends
+   * `contextmenu` after the release, so there is nothing to hold there, and the hold ends at the next press or key, which is when
+   * a click outside is meant to close the menu.
+   */
+  private holdTheEndOfTheClick(): void {
+    this.hold?.abort();
+    const hold = new AbortController();
+    this.hold = hold;
+    const options = { capture: true, signal: hold.signal };
+    const end = () => hold.abort();
+    // A click in the menu is a choice, and it is the menu that hears it.
+    const release = (event: Event) => {
+      if (!(event.target instanceof Node && this.menuRef()?.nativeElement.contains(event.target))) {
+        event.stopPropagation();
+        end();
+      }
+    };
+    this.page.addEventListener('pointerdown', end, options);
+    this.page.addEventListener('keydown', end, options);
+    this.page.addEventListener('click', release, options);
+    this.page.addEventListener('auxclick', release, options);
   }
 
   protected choose(action: MenuActionName): void {

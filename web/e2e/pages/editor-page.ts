@@ -97,6 +97,46 @@ export class EditorPage {
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   }
 
+  /**
+   * A right click in the order that a browser on macOS or Linux sends it: `contextmenu` when the button goes down, and the release of
+   * the button after it (`auxclick`; the Control click of a Mac ends in a `click` instead). Windows sends `contextmenu` after the
+   * release, and the mouse of a test follows the system that it runs on, so here the events are sent one by one, as that order has them,
+   * to see the menu on every system, and not only on the one that runs the tests.
+   */
+  async rightClickMenuFirst(at: { x: number; y: number }, release: 'auxclick' | 'click' = 'auxclick'): Promise<void> {
+    await this.page.evaluate(
+      ({ x, y, end }) => {
+        const target = document.elementFromPoint(x, y);
+        if (target === null) {
+          throw new Error('there is nothing at the point');
+        }
+        const control = end === 'click';
+        const init = (buttons: number): MouseEventInit => ({
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: window,
+          clientX: x,
+          clientY: y,
+          button: control ? 0 : 2,
+          buttons,
+          ctrlKey: control,
+        });
+        const pointer = (type: string, buttons: number) =>
+          target.dispatchEvent(new PointerEvent(type, { ...init(buttons), pointerType: 'mouse', isPrimary: true }));
+        const mouse = (type: string, buttons: number) => target.dispatchEvent(new MouseEvent(type, init(buttons)));
+        const down = control ? 1 : 2;
+        pointer('pointerdown', down);
+        mouse('mousedown', down);
+        mouse('contextmenu', down);
+        pointer('pointerup', 0);
+        mouse('mouseup', 0);
+        mouse(end, 0);
+      },
+      { ...at, end: release },
+    );
+  }
+
   /** Selects a node by clicking it, and waits until the editor has heard of it, so that what follows is for that node. */
   async select(label: string): Promise<void> {
     const at = await this.centre(this.node(label));

@@ -120,3 +120,103 @@ describe('ContextMenu', () => {
     expect(screen.getAllByRole('menuitem')).toHaveLength(1);
   });
 });
+
+/**
+ * macOS and Linux open the menu when the right button goes down, so the release of the button arrives after the menu is open, outside
+ * it. The events here are the ones that come after the menu is open, in the order that those systems send them.
+ */
+describe('ContextMenu, when the click that opened it comes to its end', () => {
+  const menuName = 'Actions for queue billing';
+  const queue: ContextTarget = { kind: 'node', id: 'Q1' };
+  const gone = () => waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  const releaseRightButton = () =>
+    fireEvent(document.body, new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 2 }));
+
+  it('stays open when the right button comes up, and closes with the next click outside', async () => {
+    const { open, dismissed } = await renderMenu();
+    await open(queue, menuName);
+
+    releaseRightButton();
+
+    expect(screen.getByRole('menu', { name: menuName })).toBeInTheDocument();
+    fireEvent.click(document.body);
+    await gone();
+    expect(dismissed).toEqual([1]);
+  });
+
+  it('stays open when a Control click of a Mac comes up, which ends in a click', async () => {
+    const { open } = await renderMenu();
+    await open(queue, menuName);
+
+    fireEvent.click(document.body, { ctrlKey: true });
+
+    expect(screen.getByRole('menu', { name: menuName })).toBeInTheDocument();
+  });
+
+  it('closes with a click outside that follows a press, which is a click meant to close it', async () => {
+    const { open } = await renderMenu();
+    await open(queue, menuName);
+
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
+
+    await gone();
+  });
+
+  it('closes with a click outside that follows a key, which is something other than the end of the click', async () => {
+    const { open } = await renderMenu();
+    await open(queue, menuName);
+
+    fireEvent.keyDown(document.body, { key: 'Shift', keyCode: 16 });
+    fireEvent.click(document.body);
+
+    await gone();
+  });
+
+  it('closes with a right click outside as well, once the first has come up', async () => {
+    const { open } = await renderMenu();
+    await open(queue, menuName);
+    releaseRightButton();
+
+    fireEvent.pointerDown(document.body, { button: 2 });
+    releaseRightButton();
+
+    await gone();
+  });
+
+  it('lets a click in the menu through, because that is a choice and not the end of the click that opened it', async () => {
+    const { open, chosen } = await renderMenu();
+    await open(queue, menuName);
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /Rename/ }));
+
+    expect(chosen).toEqual([{ action: 'rename', target: queue }]);
+  });
+
+  it('holds the end of the click that opens it again, when it is opened again where it is', async () => {
+    const { open, fixture } = await renderMenu();
+    await open(queue, menuName);
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
+    await gone();
+
+    fixture.componentInstance.open(queue, { x: 80, y: 90 }, menuName);
+    fixture.detectChanges();
+    await screen.findByRole('menu', { name: menuName });
+    releaseRightButton();
+
+    expect(screen.getByRole('menu', { name: menuName })).toBeInTheDocument();
+  });
+
+  it('stops holding it when the menu is taken away, so that the page hears its clicks', async () => {
+    const { open, fixture } = await renderMenu();
+    await open(queue, menuName);
+    fixture.destroy();
+    const heard: Event[] = [];
+    document.addEventListener('click', (event) => heard.push(event), { once: true });
+
+    fireEvent.click(document.body);
+
+    expect(heard).toHaveLength(1);
+  });
+});

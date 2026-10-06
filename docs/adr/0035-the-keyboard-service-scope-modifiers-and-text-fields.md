@@ -1,7 +1,8 @@
 # ADR-0035: The keyboard service: scope, modifiers and text fields
 
 - **Status:** Accepted. Where its listener stands (on the document, for what is in the editor or nowhere) is settled by
-  [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md).
+  [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md), and how the context menu
+  stays open when a pointer opens it by [ADR-0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0017](0017-canvas-keyboard-model.md) (section 4, "App shortcuts", and its rules for the app's keyboard handler),
