@@ -241,6 +241,8 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   If that costs more workarounds, the first thing to replace is the library's drag from the toolbox with one of our own.
 - **Fit and "bring into view" show the whole canvas, at 100% or less, and do not centre on one node**, so that adding something far
   away does not hide what is already there. A canvas that is bigger than the window is shown small, and zoom is from 25% to 200%.
+  The app works the fit out from where its nodes are and writes it into the library's transform, because the library's own fit did
+  not always come for a canvas with no edges ([ADR-0038](docs/adr/0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md)).
 - **The note that the browser did not promise to keep the canvases is dismissed for as long as the page is open**, and comes back
   the next time, until the browser agrees. It is not remembered between visits, because it is about the learner's data.
 - **The quota test makes the browser refuse at its API**, because the protocol's override of the quota changes neither the estimate
