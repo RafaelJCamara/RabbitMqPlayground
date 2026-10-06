@@ -96,7 +96,7 @@ describe('describeCommand', () => {
           changes: { payload: 'x', key: 'k', burst: 2, everyMs: 5, repeat: true, headers: [] },
         }),
       ).toBe(
-        'changed the payload, the routing key, the burst, the interval, whether it repeats and the headers of producer sender',
+        'changed the payload, the routing key, the burst, the interval, the repeat setting and the headers of producer sender',
       );
       expect(
         describeCommand({
@@ -111,6 +111,26 @@ describe('describeCommand', () => {
       );
     });
 
+    it('names the attributes of the canvas', () => {
+      expect(describeCommand({ type: 'set', kind: 'canvas', changes: { showDefaultExchange: true } })).toBe(
+        'changed the default exchange setting of the canvas',
+      );
+      expect(
+        describeCommand({ type: 'set', kind: 'canvas', changes: { publishMs: 1, brokerMs: 2, deliverMs: 3 } }),
+      ).toBe('changed the publish time, the broker time and the delivery time of the canvas');
+    });
+
+    it('puts an "and" before the last of two attributes, and a comma between the others', () => {
+      expect(
+        describeCommand({
+          type: 'set',
+          kind: 'exchange',
+          name: 'orders',
+          changes: { durable: true, autoDelete: false },
+        }),
+      ).toBe('changed the durable flag and the auto-delete flag of exchange orders');
+    });
+
     it('ignores an attribute that is not given', () => {
       expect(describeCommand({ type: 'set', kind: 'queue', name: 'billing', changes: { durable: undefined } })).toBe(
         'changed queue billing',
@@ -119,8 +139,17 @@ describe('describeCommand', () => {
   });
 
   describe('a batch', () => {
-    it('says what its one command did', () => {
+    it('says what its one command did, whatever it is', () => {
       expect(describeCommand({ type: 'batch', commands: [queue('billing')] })).toBe('added queue billing');
+      expect(
+        describeCommand({
+          type: 'batch',
+          commands: [{ type: 'set', kind: 'queue', name: 'billing', changes: { durable: true } }],
+        }),
+      ).toBe('changed the durable flag of queue billing');
+      expect(
+        describeCommand({ type: 'batch', commands: [{ type: 'delete', target: { kind: 'queue', name: 'billing' } }] }),
+      ).toBe('deleted queue billing');
     });
 
     it('is the adding, when what it does besides adding is putting that thing in its place (a drop from the toolbox)', () => {
@@ -145,6 +174,26 @@ describe('describeCommand', () => {
     it('is a count of changes, otherwise', () => {
       expect(describeCommand({ type: 'batch', commands: [queue('a'), queue('b'), move('a')] })).toBe('3 changes');
       expect(describeCommand({ type: 'batch', commands: [move('a'), move('b')] })).toBe('2 changes');
+    });
+
+    it('is a count of changes when the adding comes with something that is not putting it in its place', () => {
+      const bind: DocumentCommand = {
+        type: 'bind',
+        source: 'orders',
+        destination: { kind: 'queue', name: 'billing' },
+        key: 'a',
+      };
+
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), bind] })).toBe('2 changes');
+    });
+
+    it('is a count of changes when the taking away comes with something that is not', () => {
+      expect(
+        describeCommand({
+          type: 'batch',
+          commands: [{ type: 'delete', target: { kind: 'queue', name: 'old' } }, queue('billing')],
+        }),
+      ).toBe('2 changes');
     });
   });
 });
