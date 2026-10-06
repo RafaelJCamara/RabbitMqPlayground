@@ -1336,6 +1336,37 @@ describe('Editor', () => {
       expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('/ Commands');
     });
 
+    it('shows the card of the first run under the top bar, until the learner has linked', async () => {
+      const { user, fixture } = await openEditor();
+      const bus = fixture.debugElement.injector.get(CommandBus);
+
+      const card = screen.getByRole('region', { name: 'How to link' });
+      expect(screen.getByRole('banner').compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(card.compareDocumentPosition(screen.getByRole('main')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      bus.apply(
+        {
+          type: 'declare-exchange',
+          name: 'orders',
+          exchangeType: 'direct',
+          durable: true,
+          autoDelete: false,
+          internal: false,
+        },
+        'gesture',
+      );
+      fixture.detectChanges();
+      expect(screen.getByRole('region', { name: 'How to link' })).toBeVisible();
+
+      bus.apply(
+        { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'queue1' }, key: 'k' },
+        'gesture',
+      );
+      fixture.detectChanges();
+      expect(screen.queryByRole('region', { name: 'How to link' })).not.toBeInTheDocument();
+    });
+
     it('opens the cheat-sheet on ?, and Escape closes it and gives the focus back to what had it', async () => {
       const { onCanvas } = await openEditor();
 

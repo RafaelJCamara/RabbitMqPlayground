@@ -60,7 +60,8 @@ export const RMQ_A11Y_MESSAGES: A11yMessages = {
   moved: (x, y) => `Moved to ${x}, ${y}`,
   dropped: (label, x, y) => `${label} dropped at ${x}, ${y}`,
   moveCancelled: (label) => `${label} put back`,
-  connectStarted: (sourceLabel) => `Linking from ${lowerFirst(sourceLabel)}`,
+  connectStarted: (sourceLabel) =>
+    `Linking from ${lowerFirst(sourceLabel)}. The arrow keys choose a target, Enter links, Escape cancels.`,
   connectTarget: (label, index, total) => `Target ${index} of ${total}: ${lowerFirst(label)}`,
   connected: (sourceLabel, targetLabel) => `Linking ${lowerFirst(sourceLabel)} to ${lowerFirst(targetLabel)}`,
   connectCancelled: 'Link cancelled',

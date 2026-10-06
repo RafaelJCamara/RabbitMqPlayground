@@ -414,7 +414,9 @@ describe('the messages of the canvas', () => {
 
   it('read on from our own labels', () => {
     expect(m.nodeFocused('Queue billing', 2, 5)).toBe('Queue billing, 2 of 5');
-    expect(m.connectStarted('Exchange orders, topic')).toBe('Linking from exchange orders, topic');
+    expect(m.connectStarted('Exchange orders, topic')).toBe(
+      'Linking from exchange orders, topic. The arrow keys choose a target, Enter links, Escape cancels.',
+    );
     expect(m.connectTarget('Queue billing', 2, 4)).toBe('Target 2 of 4: queue billing');
     expect(m.connected('Exchange orders', 'Queue billing')).toBe('Linking exchange orders to queue billing');
     expect(m.connectionFocused('Binding from exchange orders to queue billing, key a')).toBe(

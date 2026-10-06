@@ -35,6 +35,7 @@ import { BindingKey, type GiveUp } from './binding-key';
 import { CheatSheetService } from './cheat-sheet';
 import { contextItems, ContextMenu, type MenuChoice } from './context-menu';
 import { HintBar } from './hint-bar';
+import { HowToLink, HowToLinkCard } from './how-to-link';
 import { Inspector } from './inspector';
 import { IntentHandler, type IntentSurface } from './intents';
 import { KeyboardService, keysFor } from './keyboard';
@@ -97,6 +98,7 @@ interface Peek {
     LinkPicker,
     LabelCard,
     CommandBar,
+    HowToLinkCard,
   ],
   providers: [
     DocumentStore,
@@ -109,6 +111,7 @@ interface Peek {
     LinkFlow,
     IntentHandler,
     CommandLog,
+    HowToLink,
     EditorActions,
     KeyboardService,
     CheatSheetService,
@@ -116,6 +119,7 @@ interface Peek {
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
       <rmq-top-bar />
+      <rmq-how-to-link />
       <div class="flex min-h-0 flex-1">
         <aside class="border-line bg-panel w-52 shrink-0 overflow-y-auto border-r p-3" aria-label="Toolbox">
           <rmq-toolbox (add)="intents.add($event, 'gesture')" />
