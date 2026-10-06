@@ -337,9 +337,8 @@ test.describe('journey 4: gestures and typed commands are interchangeable', () =
     await page.getByRole('textbox', { name: 'Name' }).press('Tab');
     await page.keyboard.press('Escape');
     await editor.select('Queue billing');
-    await page.keyboard.press('F2');
-    await page.keyboard.type('payments');
-    await page.keyboard.press('Enter');
+    await editor.renameSelected('Queue billing', 'payments');
+    await expect(editor.node('Queue payments')).toBeVisible();
     await page.getByRole('button', { name: /^Undo/ }).click();
     await editor.openCommandBar();
     await editor.runCommand('declare queue archive');
@@ -398,6 +397,7 @@ test.describe('journey 4: gestures and typed commands are interchangeable', () =
     await expect(editor.node('Queue queue2')).toBeVisible();
     await editor.dragLinkTo('x1', { x: bounds.x + bounds.width * 0.3, y: bounds.y + bounds.height - 50 });
     await page.getByRole('menuitem', { name: 'New queue' }).click();
+    await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
     await page.keyboard.type('us');
     await page.keyboard.press('Enter');
     await expect.poll(() => editor.edges()).toHaveLength(4);

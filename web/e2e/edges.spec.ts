@@ -276,9 +276,11 @@ test.describe('the warnings of the canvas, drawn where they are about', () => {
     await expect(page.getByTestId('inspector-warnings')).toContainText("Nothing is bound from the exchange 'orders'");
 
     await editor.dragLinkTo('x1', await editor.centre(editor.nodeById('q1')));
+    await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
     await page.keyboard.type('a.b');
     await page.keyboard.press('Enter');
-    await expect(editor.node('Exchange orders, topic')).toBeVisible();
+    await expect.poll(() => editor.edges()).toEqual(['orders -> billing key=a.b']);
+    await expect(editor.node('Exchange orders, topic', { exact: true })).toBeVisible();
     await expect(editor.nodeById('x1').locator('.rmq-lint')).toHaveCount(0);
   });
 

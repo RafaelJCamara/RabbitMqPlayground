@@ -265,12 +265,16 @@ test.describe('a keyboard and nothing else (journey 3 of the plan)', () => {
     await editor.flow.focus();
 
     await page.keyboard.press('/');
-    await page.keyboard.type('declare exchange orders type=topic');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('declare queue billing');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('bind orders -> billing key=#');
-    await page.keyboard.press('Enter');
+    await expect(editor.commandField).toBeFocused();
+    for (const line of [
+      'declare exchange orders type=topic',
+      'declare queue billing',
+      'bind orders -> billing key=#',
+    ]) {
+      await page.keyboard.type(line);
+      await page.keyboard.press('Enter');
+      await expect(editor.commandField).toHaveValue('');
+    }
     await page.keyboard.press('Escape');
 
     await expect.poll(() => editor.edges()).toEqual(['orders -> billing key=#']);

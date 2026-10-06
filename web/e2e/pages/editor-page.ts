@@ -93,8 +93,10 @@ export class EditorPage {
    * A node on the canvas, by what a screen reader says of it: `Queue billing`. A node that has a lint says so after its label (`Exchange orders, topic, 1
    * warning`, ADR-0044), and it is the same node, so the label may be followed by `, ` and what else is said.
    */
-  node(label: string): Locator {
-    return this.page.locator(`[data-node-id][aria-label="${label}"], [data-node-id][aria-label^="${label}, "]`);
+  node(label: string, options: { exact?: boolean } = {}): Locator {
+    return options.exact === true
+      ? this.page.locator(`[data-node-id][aria-label="${label}"]`)
+      : this.page.locator(`[data-node-id][aria-label="${label}"], [data-node-id][aria-label^="${label}, "]`);
   }
 
   /** A node by its id (`x1`), for the tests that say what the document has. */
@@ -175,13 +177,31 @@ export class EditorPage {
     return lines;
   }
 
-  /** The middle of an element on the page. */
+  /**
+   * The middle of an element on the page, once it has stopped moving: two reads of its box, a moment apart, that are the same. What a test measures is where the pointer
+   * is going to go, and a canvas that is still being laid out (a card that has just gone, a note that has just come, a node that is being fitted) puts the element somewhere
+   * else a moment later. Playwright's own actions wait for this; the mouse of a test does not, so it is waited for here.
+   */
   async centre(locator: Locator): Promise<{ x: number; y: number }> {
-    const box = await locator.boundingBox();
-    if (box === null) {
-      throw new Error('the element is not on the page');
+    let box = await locator.boundingBox();
+    for (let reads = 0; reads < 30; reads += 1) {
+      if (box === null) {
+        throw new Error('the element is not on the page');
+      }
+      await this.page.waitForTimeout(80);
+      const next = await locator.boundingBox();
+      if (
+        next !== null &&
+        next.x === box.x &&
+        next.y === box.y &&
+        next.width === box.width &&
+        next.height === box.height
+      ) {
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      }
+      box = next;
     }
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    throw new Error('the element does not stop moving');
   }
 
   /**
