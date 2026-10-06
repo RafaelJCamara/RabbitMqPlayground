@@ -37,10 +37,10 @@ describe('labelPlaces (ADR-0044)', () => {
     expect([...labelPlaces(model, () => horizontal(400, 0))]).toEqual([['a>b', 0.5]]);
   });
 
-  it('leaves out an edge that has no chip, and one that the library has not drawn yet', () => {
+  it('leaves out an edge that has no chip, even when it has a path, and one that the library has not drawn yet', () => {
     const model: CanvasVm = { nodes: [], edges: [edge('a>b', { chips: [] }), edge('c>d'), edge('e>f')] };
 
-    const places = labelPlaces(model, (key) => (key === 'e>f' ? horizontal(400, 0) : null));
+    const places = labelPlaces(model, (key) => (key === 'c>d' ? null : horizontal(400, 0)));
 
     expect([...places.keys()]).toEqual(['e>f']);
   });

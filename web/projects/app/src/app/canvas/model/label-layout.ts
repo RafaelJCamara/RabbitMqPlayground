@@ -17,7 +17,7 @@ export function labelPlaces(model: CanvasVm, pathOf: (key: string) => string | n
         key: edge.id,
         line,
         ...estimateLabelSize(edge.chips, edge.more.length),
-        ...(edge.labelAt === undefined ? {} : { fixed: edge.labelAt }),
+        fixed: edge.labelAt,
       });
     }
   }

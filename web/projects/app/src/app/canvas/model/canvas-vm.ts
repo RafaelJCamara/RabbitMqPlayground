@@ -201,7 +201,7 @@ function edgesOf(
     const { chips, more } = splitChips(all);
     edges.push(
       reuse<EdgeVm>(
-        { ...rest, chips, more, ...(at === undefined ? {} : { labelAt: at }), warnings: warnings.get(edge.id) ?? [] },
+        { ...rest, chips, more, labelAt: at, warnings: warnings.get(edge.id) ?? [] },
         previous.get(edge.id),
       ),
     );
