@@ -569,6 +569,12 @@ describe('popoverPosition (ADR-0041)', () => {
     expect(popoverPosition({ x: 100, y: 500, width: 140, height: 56 }, size, host)).toEqual({ x: 100, y: 294 });
   });
 
+  it('goes below the anchor while the whole box fits there with the margin to spare, and above it from the first unit that it does not', () => {
+    // Below the anchor is at 330 + 56 + 6 = 392, and 392 + 200 is 592, which leaves the margin of 8 of the 600.
+    expect(popoverPosition({ x: 100, y: 330, width: 140, height: 56 }, size, host).y).toBe(392);
+    expect(popoverPosition({ x: 100, y: 331, width: 140, height: 56 }, size, host).y).toBe(125);
+  });
+
   it('keeps the box inside the host, with a margin, on every side', () => {
     expect(popoverPosition({ x: 700, y: 100, width: 140, height: 56 }, size, host).x).toBe(492);
     expect(popoverPosition({ x: -50, y: 100, width: 140, height: 56 }, size, host).x).toBe(8);

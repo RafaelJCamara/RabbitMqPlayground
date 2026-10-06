@@ -181,7 +181,7 @@ export function inspectorView(document: CanvasDocument, selection: Selection): I
       key,
       edge: edge.kind,
       label: edge.label,
-      bindings: edge.kind === 'binding' ? bindingRows(document, key) : [],
+      bindings: bindingRows(document, key),
       warnings: edge.warnings,
       from: ends.from,
       to: ends.to,

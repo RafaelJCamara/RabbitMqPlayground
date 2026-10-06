@@ -132,6 +132,13 @@ describe('inspectorView', () => {
       const moved = { ...sampleDocument(), layout: { ...sampleDocument().layout, labels: { 'E1>Q1': { at: 0.25 } } } };
 
       expect(inspectorView(moved, select([], ['E1>Q1']))).toMatchObject({ labelPercent: 25 });
+      const near = (at: number) => ({
+        ...sampleDocument(),
+        layout: { ...sampleDocument().layout, labels: { 'E1>Q1': { at } } },
+      });
+      // To the nearest percent: the field is a whole number, and the document keeps a thousandth.
+      expect(inspectorView(near(0.456), select([], ['E1>Q1']))).toMatchObject({ labelPercent: 46 });
+      expect(inspectorView(near(0.454), select([], ['E1>Q1']))).toMatchObject({ labelPercent: 45 });
       expect(inspectorView(sampleDocument(), select([], ['E1>E3']))).toMatchObject({
         movable: true,
         labelPercent: null,

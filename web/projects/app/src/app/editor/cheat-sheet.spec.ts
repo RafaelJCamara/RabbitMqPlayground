@@ -190,8 +190,10 @@ describe('the cheat-sheet (ADR-0047)', () => {
 
     service.open();
     service.open();
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    // The CDK takes a dialog that a modal one covers out of the accessibility tree, so the dialogs are counted as the page has them.
+    expect(document.querySelectorAll('.cdk-dialog-container')).toHaveLength(1);
   });
 
   it('can be opened again once it was closed', async () => {
