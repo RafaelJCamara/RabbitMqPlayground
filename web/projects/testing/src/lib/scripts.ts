@@ -567,3 +567,15 @@ export function* playScript(steps: readonly Step[]): Generator<Transition> {
     }
   }
 }
+
+/** The canvas that a script ends with, which is empty if it has no steps. */
+export function finalDocument(steps: readonly Step[]): CanvasDocument {
+  let last: CanvasDocument = deepFreeze(emptyDocument());
+  for (const transition of playScript(steps)) {
+    last = transition.after;
+  }
+  return last;
+}
+
+/** Canvases that commands made: every one is valid and deeply frozen, and they run from empty to quite full. */
+export const arbDocument: fc.Arbitrary<CanvasDocument> = arbScript.map(finalDocument);
