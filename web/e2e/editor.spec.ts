@@ -244,6 +244,32 @@ test.describe('journey 2: deleting', () => {
     expect(await editor.layout()).toEqual({});
   });
 
+  test('opens the context menu from the keyboard, for what is selected, and deletes from it, and Escape gives the focus back', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+    await editor.add('Queue');
+    await editor.select('Queue queue1');
+
+    await page.keyboard.press('Shift+F10');
+    await expect(page.getByRole('menu', { name: 'Actions for queue queue1' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /Rename/ })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(editor.flow).toBeFocused();
+
+    await page.keyboard.press('ContextMenu');
+    await expect(page.getByRole('menuitem', { name: /Rename/ })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: /Delete/ })).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(editor.node('Queue queue1')).toHaveCount(0);
+    await expect(editor.node('Queue queue2')).toBeVisible();
+    await expect(editor.flow).toBeFocused();
+  });
+
   test('deletes an edge with the key, and a node with the edges that were on it as one step', async ({ page }) => {
     const editor = await open(page);
     await editor.add('Direct exchange');

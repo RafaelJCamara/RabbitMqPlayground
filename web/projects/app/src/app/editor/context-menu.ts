@@ -1,5 +1,5 @@
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem } from '@angular/cdk/menu';
-import { afterNextRender, Component, inject, Injector, output, signal, viewChild, viewChildren } from '@angular/core';
+import { afterNextRender, Component, inject, Injector, output, signal, viewChild } from '@angular/core';
 import type { ContextTarget } from '../canvas/model/intents';
 import type { Point } from '../canvas/model/transform';
 import { Icon } from '../core/ui/icon';
@@ -75,7 +75,7 @@ export class ContextMenu {
   protected readonly title = signal('Actions');
   private readonly target = signal<ContextTarget | null>(null);
   private readonly trigger = viewChild.required(CdkContextMenuTrigger);
-  private readonly entries = viewChildren(CdkMenuItem);
+  private readonly menuRef = viewChild(CdkMenu);
   private readonly injector = inject(Injector);
   private chosen = false;
 
@@ -96,9 +96,12 @@ export class ContextMenu {
     }
   }
 
-  /** The menu has the focus when it opens, on its first item, so that the arrow keys and Enter work at once. */
+  /**
+   * The menu has the focus when it opens, on its first item, so that the arrow keys and Enter work at once. It is the menu that
+   * does it, so that the first item is the active one too, and the first arrow key goes to the second.
+   */
   protected focusFirst(): void {
-    afterNextRender(() => this.entries()[0]?.focus(), { injector: this.injector });
+    afterNextRender(() => this.menuRef()?.focusFirstItem('program'), { injector: this.injector });
   }
 
   protected closed(): void {

@@ -7,6 +7,10 @@ import { ContextMenu, type MenuAction } from './context-menu';
 /** The CDK reads `keyCode`, which a browser sets for Escape and user-event leaves at 0, so the key is sent as a browser sends it. */
 const pressEscape = () => fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', keyCode: 27 });
 
+/** The CDK reads `keyCode` here too, so the arrow key is sent as a browser sends it. */
+const pressArrowDown = () =>
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'ArrowDown', keyCode: 40 });
+
 async function renderMenu() {
   const chosen: MenuAction[] = [];
   const dismissed: number[] = [];
@@ -53,6 +57,16 @@ describe('ContextMenu', () => {
     await open({ kind: 'node', id: 'Q1' }, 'Actions for queue billing');
 
     await waitFor(() => expect(screen.getAllByRole('menuitem')[0]).toHaveFocus());
+  });
+
+  it('goes to the second item with the first arrow key, because the first is the active one and not only the one with the focus', async () => {
+    const { open } = await renderMenu();
+    await open({ kind: 'node', id: 'Q1' }, 'Actions for queue billing');
+    await waitFor(() => expect(screen.getAllByRole('menuitem')[0]).toHaveFocus());
+
+    pressArrowDown();
+
+    expect(screen.getAllByRole('menuitem')[1]).toHaveFocus();
   });
 
   it('offers only delete for an edge', async () => {
