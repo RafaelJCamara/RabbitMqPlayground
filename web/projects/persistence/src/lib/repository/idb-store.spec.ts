@@ -387,11 +387,42 @@ describe('an event that comes for a connection that has been replaced', () => {
     await repository.list(); // which a call finds, and opens it again
     expect(vi.mocked(openDB)).toHaveBeenCalledTimes(2);
 
-    callbacks?.terminated?.(); // the event comes, late, for the first one
-    callbacks?.blocking?.(1, 2, new Event('versionchange') as never); // and so does a request of another tab for it
+    callbacks?.blocking?.(1, 2, new Event('versionchange') as never); // a request of another tab for it comes, late
     const listing = await repository.list();
 
     expect(listing.ok && listing.value.canvases.map(({ id }) => id)).toEqual(['a']);
+    expect(vi.mocked(openDB)).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('a connection that arrives after the store was closed', () => {
+  it('is closed at once, so that it cannot hold up an upgrade that another tab wants', async () => {
+    const store = createIdbStore();
+    const pending = repositoryOn(store).create({ id: 'a', name: 'n', document: emptyDocument() });
+    await store.close();
+    expect(await pending).toMatchObject({ ok: true });
+
+    let blocked = false;
+    const upgraded = await openDB(DB_NAME, 2, {
+      upgrade: () => undefined,
+      blocked: () => {
+        blocked = true;
+      },
+    });
+
+    expect(blocked).toBe(false);
+    upgraded.close();
+  });
+});
+
+describe('a repository that is closed', () => {
+  it('lets go of its connection, and opens it again at the next call', async () => {
+    const repository = repositoryOn(createIdbStore());
+    await repository.create({ id: 'a', name: 'n', document: emptyDocument() });
+    expect(vi.mocked(openDB)).toHaveBeenCalledTimes(1);
+    await repository.close();
+
+    expect(await repository.list()).toMatchObject({ ok: true });
     expect(vi.mocked(openDB)).toHaveBeenCalledTimes(2);
   });
 });

@@ -231,6 +231,9 @@ describe('loadCanvas', () => {
 
       expect(error.kind).toBe('invalid');
       expect(error.message).toBe('This canvas is not valid: The data could not be read: no, you may not');
+      expect(error.kind === 'invalid' && error.issues).toEqual([
+        { kind: 'schema', message: 'The data could not be read: no, you may not' },
+      ]);
     });
 
     it('is a typed error when it is a later step that cannot read it', () => {

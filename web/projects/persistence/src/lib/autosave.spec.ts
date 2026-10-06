@@ -330,6 +330,18 @@ describe('autosave', () => {
       expect(autosave.pending).toBe(false);
     });
 
+    it('is a flush that writes nothing, and says so, when it came back before anything was written', async () => {
+      const { autosave, written } = setup();
+      autosave.schedule('a');
+      await autosave.flush();
+      autosave.schedule('b');
+      autosave.schedule('a');
+
+      expect(await autosave.flush()).toEqual({ ok: true, value: false });
+      expect(written).toEqual(['a']);
+      expect(autosave.pending).toBe(false);
+    });
+
     it('is the same value when it is a number that is NaN, because Object.is says so, and different when it is -0', async () => {
       const written: number[] = [];
       const auto = createAutosave<number>({

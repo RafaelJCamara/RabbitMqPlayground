@@ -61,13 +61,11 @@ export function readRecord(raw: unknown, options: ReadRecordOptions): Outcome<Ca
       whole,
       path,
     ),
-    ...(has('id') ? idIssues(raw['id'], [...path, 'id'], whole) : []),
-    ...(has('name') ? nameIssues(name, [...path, 'name'], whole) : []),
-    ...(has('createdAt') ? timeIssues(raw['createdAt'], [...path, 'createdAt'], whole) : []),
-    ...(has('updatedAt') ? timeIssues(raw['updatedAt'], [...path, 'updatedAt'], whole) : []),
-    ...(allowDeleted && raw['deletedAt'] !== undefined
-      ? timeIssues(raw['deletedAt'], [...path, 'deletedAt'], whole)
-      : []),
+    ...(has('id') ? idIssues(raw['id'], [...path, 'id']) : []),
+    ...(has('name') ? nameIssues(name, [...path, 'name']) : []),
+    ...(has('createdAt') ? timeIssues(raw['createdAt'], [...path, 'createdAt']) : []),
+    ...(has('updatedAt') ? timeIssues(raw['updatedAt'], [...path, 'updatedAt']) : []),
+    ...(allowDeleted && raw['deletedAt'] !== undefined ? timeIssues(raw['deletedAt'], [...path, 'deletedAt']) : []),
   ];
   if (issues.length > 0) {
     return failure(invalidError(issues));

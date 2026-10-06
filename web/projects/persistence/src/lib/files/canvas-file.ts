@@ -45,7 +45,7 @@ export function readCanvasFile(data: unknown): Outcome<CanvasFile, LoadError> {
   }
   const issues = [
     ...keyIssues(raw, ['format', 'version', 'name', 'document'], [], 'The file'),
-    ...(Object.hasOwn(raw, 'name') ? nameIssues(name, ['name'], 'The file') : []),
+    ...(Object.hasOwn(raw, 'name') ? nameIssues(name, ['name']) : []),
   ];
   if (issues.length > 0) {
     return failure(invalidError(issues, 'This file'));

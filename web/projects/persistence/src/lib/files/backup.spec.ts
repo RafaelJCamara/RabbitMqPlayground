@@ -252,6 +252,14 @@ describe('the backup of many canvases', () => {
             'This canvas is not valid: canvases.2.id: the id "c1" is used by another canvas in this backup. An id belongs to one canvas.',
         },
       });
+      const duplicate = entries[2];
+      expect(duplicate?.ok === false && duplicate.error.kind === 'invalid' && duplicate.error.issues).toEqual([
+        {
+          kind: 'duplicate-id',
+          message: 'canvases.2.id: the id "c1" is used by another canvas in this backup. An id belongs to one canvas.',
+          path: ['canvases', '2', 'id'],
+        },
+      ]);
     });
   });
 

@@ -163,7 +163,9 @@ describe('runMigrations, on a chain that exists only here', () => {
 
       expect(result.ok).toBe(false);
       expect(!result.ok && result.error).toMatchObject({ kind: 'migration-failed', from: 1 });
-      expect(!result.ok && result.error.message).toContain('failed: the step did not give back an object.');
+      expect(!result.ok && result.error.message).toBe(
+        'This canvas uses schema version 1. Bringing it up to version 2 failed: the step did not give back an object. It is probably damaged. Nothing was loaded and nothing was changed.',
+      );
     });
 
     it('stops at the first step that fails, and does not run the ones after it', () => {

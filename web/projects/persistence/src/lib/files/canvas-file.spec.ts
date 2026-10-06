@@ -143,6 +143,19 @@ describe('the file of one canvas', () => {
       });
     });
 
+    it('is read when it is exactly as long as a file may be, and found not to be JSON, and not found too long', () => {
+      expect(parseCanvasFile(' '.repeat(SIZE_CAPS.file))).toMatchObject({ ok: false, error: { kind: 'not-json' } });
+    });
+
+    it('says what it was given when it is not text', () => {
+      const result = parseCanvasFile(5 as never);
+
+      expect(result).toMatchObject({ ok: false, error: { kind: 'not-json' } });
+      expect(!result.ok && result.error.message).toBe(
+        'This is not JSON, so it cannot be a canvas: it is not text, it is 5. The file may be cut off, or it may not be a canvas file at all.',
+      );
+    });
+
     it('is refused when it is not text at all, because loading never throws', () => {
       for (const odd of [undefined, null, 5, {}, [], Symbol('s')]) {
         expect(parseCanvasFile(odd as never)).toMatchObject({ ok: false, error: { kind: 'not-json' } });

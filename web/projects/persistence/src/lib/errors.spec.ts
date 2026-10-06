@@ -9,6 +9,7 @@ import {
   notFound,
   notJson,
   reasonOf,
+  StorageFailure,
   summarise,
   thousands,
   tooLarge,
@@ -251,6 +252,22 @@ describe('summarise', () => {
     expect(summarise(() => 1)).toBe('a function');
     expect(summarise(Symbol('s'))).toBe('a symbol');
   });
+
+  it('shows up to 40 characters of text as they are, and cuts what is longer at 40, with an ellipsis', () => {
+    expect(summarise('x'.repeat(40))).toBe(`"${'x'.repeat(40)}"`);
+    expect(summarise('x'.repeat(41))).toBe(`"${'x'.repeat(40)}…"`);
+  });
+});
+
+describe('StorageFailure', () => {
+  it('is an error that carries what the browser refused, and says so by its name', () => {
+    const thrown = new StorageFailure({ kind: 'blocked', message: 'Close the other tabs.' });
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown.name).toBe('StorageFailure');
+    expect(thrown.message).toBe('Close the other tabs.');
+    expect(thrown.error).toEqual({ kind: 'blocked', message: 'Close the other tabs.' });
+  });
 });
 
 describe('classifyStorageError', () => {
@@ -313,6 +330,16 @@ describe('classifyStorageError', () => {
         'The browser failed to read or save canvases (UnknownError: disk on fire). Try again, and if it keeps happening, export a backup.',
       detail: 'UnknownError: disk on fire',
     });
+  });
+
+  it('reports a name and a message together, and calls it unknown when it has less than that', () => {
+    const detail = (thrown: unknown) => classifyStorageError(thrown, 'use').detail;
+
+    expect(detail({ name: 'Odd', message: 'm' })).toBe('Odd: m');
+    expect(detail({ name: 'Odd' })).toBe('unknown');
+    expect(detail({ message: 'm' })).toBe('unknown');
+    expect(detail({ name: 'Odd', message: 5 })).toBe('unknown');
+    expect(detail({ name: 5, message: 'm' })).toBe('unknown');
   });
 
   it('copes with what is not an error at all', () => {

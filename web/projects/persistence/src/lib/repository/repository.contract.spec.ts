@@ -649,6 +649,8 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
             ['no-name', undefined, 'invalid'],
             ['z-newer', 'Canvas z-newer', 'newer-version'],
           ]);
+          // A canvas that has no name is listed without one, and not with a name that is nothing.
+          expect(Object.keys(listing.unreadable[2] ?? {}).sort()).toEqual(['error', 'id']);
         }));
 
       it('gives the error when it is read, so that the app can say why', () =>
@@ -681,7 +683,12 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
           await plant(harness, raw('odd', { deletedAt: 'when?' }));
           await plant(harness, raw('nan', { deletedAt: NaN }));
 
-          expect(unwrap(await harness.repository.list()).unreadable.map(({ id }) => id)).toEqual(['nan', 'odd']);
+          const unreadable = unwrap(await harness.repository.list()).unreadable;
+          expect(unreadable.map(({ id }) => id)).toEqual(['nan', 'odd']);
+          expect(unreadable.map(({ error }) => error.message)).toEqual([
+            'This canvas is not valid: deletedAt: a time is a number of milliseconds since 1970, from 0, and this is NaN.',
+            'This canvas is not valid: deletedAt: a time is a number of milliseconds since 1970, from 0, and this is "when?".',
+          ]);
           expect(unwrap(await harness.repository.purgeExpired())).toBe(0);
         }));
 
@@ -727,17 +734,21 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
         }));
 
       it.each([
-        ['lastOpenCanvas', 'not an id'],
-        ['lastOpenCanvas', 5],
-        ['lastBackupAt', -1],
-        ['lastBackupAt', 'yesterday'],
-        ['backupReminderSnoozedUntil', NaN],
-      ] as const)('does not keep %s as %j, and says what it has to be', (key, value) =>
+        ['lastOpenCanvas', 'not an id', 'the id of a canvas', '"not an id"'],
+        ['lastOpenCanvas', 5, 'the id of a canvas', '5'],
+        ['lastBackupAt', -1, 'a time, in milliseconds since 1970', '-1'],
+        ['lastBackupAt', 'yesterday', 'a time, in milliseconds since 1970', '"yesterday"'],
+        ['backupReminderSnoozedUntil', NaN, 'a time, in milliseconds since 1970', 'NaN'],
+      ] as const)('does not keep %s as %j, and says what it has to be', (key, value, wants, shown) =>
         withHarness(async ({ repository }) => {
           const result = await repository.setMeta(key as MetaKey, value as never);
+          const message = `${key}: this has to be ${wants}, and it is ${shown}.`;
 
           expect(errorKind(result)).toBe('invalid');
-          expect(!result.ok && result.error.message).toContain(`${key}: this has to be `);
+          expect(!result.ok && result.error.message).toBe(`This value is not valid: ${message}`);
+          expect(!result.ok && result.error.kind === 'invalid' && result.error.issues).toEqual([
+            { kind: 'invalid-value', message, path: [key] },
+          ]);
           expect(unwrap(await repository.getMeta(key))).toBeUndefined();
         }),
       );

@@ -106,6 +106,12 @@ describe('checkCaps', () => {
       ]);
       expect(found({ consumers: { c1: { queues: 'not a list' }, c2: null, c3: {} } })).toBeNull();
     });
+
+    it('are not counted for a consumer that reads from no queue, even when the canvas is at the cap', () => {
+      const consumers = { c1: {}, c2: { queues: 'x' }, c3: null, c4: { queues: [] }, c5: 5 };
+
+      expect(found({ bindings: many('b', at), consumers })).toBeNull();
+    });
   });
 
   describe('the layout', () => {
@@ -169,6 +175,33 @@ describe('checkCaps', () => {
       expect(found({ producers: { p1: { message: { headers: 'x', payload: null } } } })).toBeNull();
       expect(found({ producers: { p1: { message: { headers: [null, 5, 'x', {}, { value: null }] } } } })).toBeNull();
       expect(found({ producers: { p1: null, p2: 5 } })).toBeNull();
+      for (const headers of [undefined, null, 5, {}, { length: 500 }, true]) {
+        expect(found({ producers: { p1: { message: { payload: 'x', headers } } } }), String(headers)).toBeNull();
+      }
+    });
+
+    it('are all looked at, the last producer as much as the first', () => {
+      const fine = { message: { payload: 'x', headers: entries(2) } };
+      const long = { message: { payload: 'x'.repeat(SIZE_CAPS.text + 1), headers: [] } };
+      const many = { message: { payload: 'x', headers: entries(SIZE_CAPS.headers + 1) } };
+
+      expect(found({ producers: { p1: fine, p2: long } })).toEqual(['text', SIZE_CAPS.text + 1, SIZE_CAPS.text]);
+      expect(found({ producers: { p1: fine, p2: fine, p3: many } })).toEqual([
+        'headers',
+        SIZE_CAPS.headers + 1,
+        SIZE_CAPS.headers,
+      ]);
+    });
+
+    it('are all looked at, the last header as much as the first', () => {
+      const text = 'x'.repeat(SIZE_CAPS.text + 1);
+      const row = [
+        { key: 'a', value: { t: 'string', v: 'short' } },
+        { key: 'b', value: { t: 'exists' } },
+        { key: 'c', value: { t: 'string', v: text } },
+      ];
+
+      expect(found({ producers: producer(row) })).toEqual(['text', SIZE_CAPS.text + 1, SIZE_CAPS.text]);
     });
   });
 
@@ -202,6 +235,16 @@ describe('checkCaps', () => {
       expect(found({ bindings: { b1: { headers: null } } })).toBeNull();
       expect(found({ bindings: { b1: { headers: { args: 'x' } } } })).toBeNull();
       expect(found({ bindings: { b1: { headers: { args: [null, {}, { value: 5 }] } } } })).toBeNull();
+    });
+
+    it('are all looked at, the last binding as much as the first', () => {
+      const bindings = {
+        b1: { headers: { args: entries(2) } },
+        b2: { headers: { args: entries(2) } },
+        b3: { headers: { args: entries(SIZE_CAPS.headers + 1) } },
+      };
+
+      expect(found({ bindings })).toEqual(['headers', SIZE_CAPS.headers + 1, SIZE_CAPS.headers]);
     });
   });
 

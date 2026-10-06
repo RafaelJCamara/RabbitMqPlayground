@@ -102,6 +102,13 @@ describe('readUsage', () => {
     });
   });
 
+  it('takes a quota of a single byte, which is not nothing', async () => {
+    expect(await readUsage({ estimate: async () => ({ usage: 1, quota: 1 }) })).toEqual({
+      ok: true,
+      value: { usage: 1, quota: 1, fraction: 1 },
+    });
+  });
+
   it('keeps a fraction over 1, because a browser may say that it has used more than it allows', async () => {
     const usage = await readUsage({ estimate: async () => ({ usage: 12, quota: 10 }) });
 

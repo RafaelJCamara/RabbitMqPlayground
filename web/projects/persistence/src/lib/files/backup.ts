@@ -73,9 +73,9 @@ export function readBackup(data: unknown): Outcome<Backup, LoadError> {
   const canvases = raw['canvases'];
   const issues = [
     ...keyIssues(raw, ['format', 'version', 'exportedAt', 'canvases'], [], 'The backup'),
-    ...(Object.hasOwn(raw, 'exportedAt') ? timeIssues(raw['exportedAt'], ['exportedAt'], 'The backup') : []),
+    ...(Object.hasOwn(raw, 'exportedAt') ? timeIssues(raw['exportedAt'], ['exportedAt']) : []),
     ...(Object.hasOwn(raw, 'canvases') && !Array.isArray(canvases)
-      ? [shapeIssue(['canvases'], 'The backup', `the canvases are a list, and this is ${summarise(canvases)}.`)]
+      ? [shapeIssue(['canvases'], `the canvases are a list, and this is ${summarise(canvases)}.`)]
       : []),
   ];
   if (issues.length > 0 || !Array.isArray(canvases)) {

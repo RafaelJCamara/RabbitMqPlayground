@@ -73,9 +73,6 @@ class Connection {
   /** The open database. If it cannot be opened, this throws a `StorageFailure` that says why, and the next call tries again. */
   async get(): Promise<CanvasDatabase> {
     const attempt = (this.attempt ??= this.open());
-    if (attempt.database !== undefined) {
-      return attempt.database;
-    }
     try {
       return await Promise.race([attempt.opening, attempt.blocked]);
     } catch (error) {
@@ -84,15 +81,12 @@ class Connection {
   }
 
   /**
-   * Another tab wants this connection gone, or the browser ended it. Only the connection that the event is about is let go of: an
-   * event that comes late, for one that a call has already replaced, must not take the new one with it.
+   * Another tab wants this connection gone. Only the connection that the event is about is let go of: an event that comes late,
+   * for one that a call has already replaced, must not take the new one with it, and that one has been closed already.
    */
   private release(attempt: Attempt): void {
     if (this.attempt === attempt) {
       this.forget();
-    } else {
-      // It still has to close, so that the upgrade that someone is waiting for can go ahead.
-      attempt.database?.close();
     }
   }
 
@@ -119,8 +113,8 @@ class Connection {
           blocked: () => block(new BlockedError()),
           // Another tab wants a newer version of the database. It cannot have it while this one is open, so this lets go.
           blocking: () => this.release(attempt),
-          // The browser ended the connection, which it may do when the learner clears the site's data.
-          terminated: () => this.release(attempt),
+          // The browser may end the connection, when the learner clears the site's data. Nothing is done about it here: the next
+          // call finds the connection closed, and opens it again (see `begin`).
         })) as unknown as CanvasDatabase)(),
       blocked,
     };
@@ -150,11 +144,8 @@ class Connection {
   ): void {
     const run = async (): Promise<void> => {
       for (let version = oldVersion; version < newVersion; version++) {
-        const step = this.steps[version];
-        if (step === undefined) {
-          throw new Error(`There is no step that makes version ${version + 1} of the database.`);
-        }
-        await step(database, transaction);
+        // A version that has no step is a bug of the list, and it is a TypeError here, which undoes the upgrade like any step that fails.
+        await (this.steps[version] as UpgradeStep)(database, transaction);
       }
     };
     run().catch(() => {

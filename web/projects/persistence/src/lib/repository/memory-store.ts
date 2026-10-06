@@ -11,10 +11,7 @@ export function createMemoryStore(): RecordStore {
   let last: Promise<unknown> = Promise.resolve();
 
   const view: RecordTransaction = {
-    getRecord: async (id) => {
-      const record = canvases.get(id);
-      return record === undefined ? undefined : structuredClone(record);
-    },
+    getRecord: async (id) => structuredClone(canvases.get(id)),
     getRecords: async () => [...canvases.keys()].sort().map((id) => structuredClone(canvases.get(id) as StoredRecord)),
     putRecord: async (record) => {
       canvases.set(String(record['id']), structuredClone(record));

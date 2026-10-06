@@ -14,15 +14,11 @@ describe('isRecord', () => {
 
 describe('shapeIssue', () => {
   it('says where, then what, and keeps the path for a program', () => {
-    expect(shapeIssue(['canvases', '2', 'id'], 'The backup', 'this is wrong.')).toEqual({
+    expect(shapeIssue(['canvases', '2', 'id'], 'this is wrong.')).toEqual({
       kind: 'schema',
       message: 'canvases.2.id: this is wrong.',
       path: ['canvases', '2', 'id'],
     });
-  });
-
-  it('names the whole thing when the problem is about all of it', () => {
-    expect(shapeIssue([], 'The file', 'this is wrong.').message).toBe('The file: this is wrong.');
   });
 });
 
@@ -63,7 +59,7 @@ describe('keyIssues', () => {
 
 describe('idIssues', () => {
   it.each(['a', '1', 'A', '3f2a9c10-6a1e-4a43-9d2c-1c9a7ad4bb11', 'a.b:c_d-e', 'x'.repeat(64)])('accepts %s', (id) => {
-    expect(idIssues(id, ['id'], 'The canvas')).toEqual([]);
+    expect(idIssues(id, ['id'])).toEqual([]);
     expect(CANVAS_ID_PATTERN.test(id)).toBe(true);
   });
 
@@ -81,7 +77,7 @@ describe('idIssues', () => {
     [undefined, 'nothing'],
     [{}, 'an object'],
   ])('refuses %j, and says what an id is', (id, shown) => {
-    expect(idIssues(id, ['id'], 'The canvas')).toEqual([
+    expect(idIssues(id, ['id'])).toEqual([
       {
         kind: 'schema',
         message: `id: an id is 1 to 64 letters, digits, dots, colons, hyphens or underscores, and this is ${shown}.`,
@@ -94,23 +90,23 @@ describe('idIssues', () => {
 describe('nameIssues', () => {
   it('accepts any text that is not blank', () => {
     for (const name of ['a', ' a ', 'Orders and billing', '日本語', '😀']) {
-      expect(nameIssues(name, ['name'], 'The canvas')).toEqual([]);
+      expect(nameIssues(name, ['name'])).toEqual([]);
     }
   });
 
   it('refuses a name that is blank, as an empty name', () => {
     for (const name of ['', ' ', '\t\n  ']) {
-      expect(nameIssues(name, ['name'], 'The canvas')).toEqual([
+      expect(nameIssues(name, ['name'])).toEqual([
         { kind: 'empty-name', message: 'name: A canvas needs a name.', path: ['name'] },
       ]);
     }
   });
 
   it('refuses what is not text, and says what it is', () => {
-    expect(nameIssues(5, ['name'], 'The canvas')).toEqual([
+    expect(nameIssues(5, ['name'])).toEqual([
       { kind: 'schema', message: 'name: a name is text, and this is 5.', path: ['name'] },
     ]);
-    expect(nameIssues(null, ['canvases', '1', 'name'], 'The canvas')[0]?.message).toBe(
+    expect(nameIssues(null, ['canvases', '1', 'name'])[0]?.message).toBe(
       'canvases.1.name: a name is text, and this is null.',
     );
   });
@@ -118,7 +114,7 @@ describe('nameIssues', () => {
 
 describe('timeIssues', () => {
   it.each([0, 1, 1_791_273_384_000, 0.5])('accepts %j', (time) => {
-    expect(timeIssues(time, ['createdAt'], 'The canvas')).toEqual([]);
+    expect(timeIssues(time, ['createdAt'])).toEqual([]);
   });
 
   it.each([
@@ -130,7 +126,7 @@ describe('timeIssues', () => {
     [undefined, 'nothing'],
     [new Date(0), 'an object'],
   ])('refuses %j, and says what a time is', (time, shown) => {
-    expect(timeIssues(time, ['createdAt'], 'The canvas')).toEqual([
+    expect(timeIssues(time, ['createdAt'])).toEqual([
       {
         kind: 'schema',
         message: `createdAt: a time is a number of milliseconds since 1970, from 0, and this is ${shown}.`,
