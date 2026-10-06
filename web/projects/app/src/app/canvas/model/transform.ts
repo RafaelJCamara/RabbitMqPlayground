@@ -61,3 +61,34 @@ export function isInView(viewport: Viewport, size: Size, rect: Point & Size, mar
     bottomRight.y <= size.height - margin
   );
 }
+
+/**
+ * The viewport that shows all of these rectangles of the canvas, in the middle of a host that is `host` big, with `padding` pixels
+ * all round, and never zoomed in past `maxZoom`: a few small nodes are not blown up to fill the screen. It is `null` when there is
+ * nothing to show, or no room to show it in. It is worked out from where the nodes are and how big they are drawn, which the
+ * app knows, and not from what the library has measured, which it has only some moments after a node appears.
+ */
+export function fitViewport(
+  boxes: readonly (Point & Size)[],
+  host: Size,
+  padding: number,
+  maxZoom: number,
+): Viewport | null {
+  if (boxes.length === 0 || host.width <= 0 || host.height <= 0) {
+    return null;
+  }
+  const left = Math.min(...boxes.map(({ x }) => x));
+  const top = Math.min(...boxes.map(({ y }) => y));
+  const width = Math.max(...boxes.map(({ x, width }) => x + width)) - left;
+  const height = Math.max(...boxes.map(({ y, height }) => y + height)) - top;
+  const zoom = Math.min(
+    maxZoom,
+    Math.max(host.width - 2 * padding, 1) / Math.max(width, 1),
+    Math.max(host.height - 2 * padding, 1) / Math.max(height, 1),
+  );
+  return {
+    zoom,
+    x: (host.width - width * zoom) / 2 - left * zoom,
+    y: (host.height - height * zoom) / 2 - top * zoom,
+  };
+}

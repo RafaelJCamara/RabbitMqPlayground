@@ -45,8 +45,12 @@ import { nodeIdAt, nodeIdOfTarget } from '../model/hit-test';
 import type { CanvasIntent, LinkVia } from '../model/intents';
 import { armedTargets } from '../model/link-targets';
 import { RMQ_A11Y_MESSAGES } from '../model/messages';
-import type { TransformModel } from '../model/transform';
+import { fitViewport, type TransformModel } from '../model/transform';
 import { FlowBridge } from './flow-bridge';
+
+/** Room round the nodes when the canvas is fitted, in pixels, and the zoom that fit never goes past. */
+const FIT_PADDING = 40;
+const FIT_MAX_ZOOM = 1;
 
 const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((id) => b.includes(id));
@@ -149,11 +153,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
         const rect = this.host.getBoundingClientRect();
         return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
       },
-      fit: () => {
-        if (this.model().nodes.length > 0) {
-          canvas.fitToScreen({ x: 40, y: 40 }, false, true, 1);
-        }
-      },
+      fit: () => this.fit(canvas),
       zoomIn: () => zoom.zoomIn(),
       zoomOut: () => zoom.zoomOut(),
       resetZoom: () => zoom.reset(),
@@ -169,6 +169,24 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
         gone: (ids) => this.viewport.markGone(ids),
       }),
     );
+  }
+
+  /**
+   * Shows every node: the viewport is worked out from where the nodes are and how big they are drawn (the library's own fit waits for
+   * what it has measured of them, and does not always get it for the first node), written into the transform of the canvas, drawn, and
+   * said, so that the percentage of the zoom follows.
+   */
+  private fit(canvas: FCanvasComponent): void {
+    const { width, height } = this.host.getBoundingClientRect();
+    const next = fitViewport(this.model().nodes, { width, height }, FIT_PADDING, FIT_MAX_ZOOM);
+    if (next === null) {
+      return;
+    }
+    canvas.transform.scale = next.zoom;
+    canvas.transform.scaledPosition = { x: 0, y: 0 };
+    canvas.transform.position = { x: next.x, y: next.y };
+    canvas.redraw();
+    canvas.emitCanvasChangeEvent();
   }
 
   ngOnDestroy(): void {

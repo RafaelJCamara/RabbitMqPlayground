@@ -21,7 +21,7 @@ import { armedTargets } from './link-targets';
 import { RMQ_A11Y_MESSAGES } from './messages';
 import { EXCHANGE_TYPES, kindOfNew, newNodeKey } from './new-node';
 import { frameOf, shapePath } from './shapes';
-import { liveViewport, toCanvas, toScreen } from './transform';
+import { fitViewport, liveViewport, toCanvas, toScreen } from './transform';
 
 describe('connector ids', () => {
   it('make a connector id from a node id, and read the node id back from either', () => {
@@ -396,5 +396,67 @@ describe('the messages of the canvas', () => {
     expect(m.connectCancelled).toBe('Link cancelled');
     expect(m.selectionCleared).toBe('Selection cleared');
     expect([m.flow, m.node, m.group, m.connection]).toEqual(['topology editor', 'node', 'group', 'connection']);
+  });
+});
+
+describe('fitViewport', () => {
+  const host = { width: 800, height: 600 };
+  const box = (x: number, y: number, width = 100, height = 50) => ({ x, y, width, height });
+
+  it('shows nothing for no boxes, and for a host that has no room', () => {
+    expect(fitViewport([], host, 40, 1)).toBeNull();
+    expect(fitViewport([box(0, 0)], { width: 0, height: 600 }, 40, 1)).toBeNull();
+    expect(fitViewport([box(0, 0)], { width: 800, height: -1 }, 40, 1)).toBeNull();
+  });
+
+  it('puts one box in the middle of the host, at the zoom that it is drawn at, and does not blow it up', () => {
+    const viewport = fitViewport([box(640, 20, 160, 56)], host, 40, 1)!;
+
+    expect(viewport.zoom).toBe(1);
+    // The middle of the box, on the screen, is the middle of the host.
+    expect(toScreen(viewport, { x: 640 + 80, y: 20 + 28 })).toEqual({ x: 400, y: 300 });
+  });
+
+  it('zooms out until every box is in the host with the padding to spare, and keeps the middle of what is shown in the middle', () => {
+    const boxes = [box(0, 0), box(4000, 2000)];
+
+    const viewport = fitViewport(boxes, host, 40, 1)!;
+
+    expect(viewport.zoom).toBeCloseTo(Math.min(720 / 4100, 520 / 2050), 10);
+    for (const { x, y, width, height } of boxes) {
+      const topLeft = toScreen(viewport, { x, y });
+      const bottomRight = toScreen(viewport, { x: x + width, y: y + height });
+      expect(topLeft.x).toBeGreaterThanOrEqual(40 - 1e-6);
+      expect(topLeft.y).toBeGreaterThanOrEqual(40 - 1e-6);
+      expect(bottomRight.x).toBeLessThanOrEqual(800 - 40 + 1e-6);
+      expect(bottomRight.y).toBeLessThanOrEqual(600 - 40 + 1e-6);
+    }
+    const middleOfWhatIsShown = toScreen(viewport, { x: 2050, y: 1025 });
+    expect(middleOfWhatIsShown.x).toBeCloseTo(400, 6);
+    expect(middleOfWhatIsShown.y).toBeCloseTo(300, 6);
+  });
+
+  it('is limited by the side that is the tighter: a wide set of boxes by the width, a tall one by the height', () => {
+    expect(fitViewport([box(0, 0), box(5000, 0)], host, 40, 1)!.zoom).toBeCloseTo(720 / 5100, 10);
+    expect(fitViewport([box(0, 0), box(0, 5000)], host, 40, 1)!.zoom).toBeCloseTo(520 / 5050, 10);
+  });
+
+  it('never zooms in past the limit, however large the host and however small what is in it', () => {
+    expect(fitViewport([box(0, 0, 10, 10)], { width: 4000, height: 4000 }, 40, 1)!.zoom).toBe(1);
+    expect(fitViewport([box(0, 0, 10, 10)], { width: 4000, height: 4000 }, 40, 2)!.zoom).toBe(2);
+  });
+
+  it('answers a zoom above nothing when the padding leaves no room, so that the canvas is not turned inside out', () => {
+    const viewport = fitViewport([box(0, 0, 400, 300)], { width: 50, height: 50 }, 40, 1)!;
+
+    expect(viewport.zoom).toBeGreaterThan(0);
+    expect(Number.isFinite(viewport.x) && Number.isFinite(viewport.y)).toBe(true);
+  });
+
+  it('is the same viewport whatever the order of the boxes', () => {
+    const a = fitViewport([box(0, 0), box(300, 700), box(-50, 20)], host, 40, 1);
+    const b = fitViewport([box(-50, 20), box(0, 0), box(300, 700)], host, 40, 1);
+
+    expect(a).toEqual(b);
   });
 });

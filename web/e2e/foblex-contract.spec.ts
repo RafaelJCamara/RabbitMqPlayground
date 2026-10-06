@@ -106,6 +106,39 @@ test.describe('Foblex contract: the live viewport (workaround 1 of ADR-0016)', (
     expect(await drift(page), 'the live transform must match the painted nodes').toBeLessThanOrEqual(1);
   });
 
+  test('is written as well as read: a fit of the canvas puts every node inside it, as painted, and the zoom that is reported follows', async ({
+    page,
+  }) => {
+    // The adapter fits the canvas by writing the transform of the library and drawing it, because the library's own fit waits for
+    // what it has measured of the nodes, and does not always get it for the first node.
+    await open(page);
+    for (let i = 0; i < 5; i += 1) {
+      await page.getByRole('button', { name: 'Zoom in' }).click();
+    }
+    await expect.poll(() => page.evaluate(() => window.__rmq?.viewport()?.zoom ?? 0)).toBeGreaterThan(1.1);
+
+    await page.getByRole('button', { name: 'Fit' }).click();
+
+    await expect.poll(() => page.evaluate(() => window.__rmq?.viewport()?.zoom ?? 0)).toBeLessThanOrEqual(1);
+    await nextFrame(page);
+    expect(await drift(page), 'the nodes are painted where the transform says').toBeLessThanOrEqual(1);
+    const inside = await page.evaluate(() => {
+      const host = window.document.querySelector('f-flow')!.getBoundingClientRect();
+      return [...window.document.querySelectorAll('[data-node-id]')].every((element) => {
+        const box = element.getBoundingClientRect();
+        return (
+          box.left >= host.left - 1 &&
+          box.top >= host.top - 1 &&
+          box.right <= host.right + 1 &&
+          box.bottom <= host.bottom + 1
+        );
+      });
+    });
+    expect(inside, 'every node is inside the canvas').toBe(true);
+    const zoom = (await page.evaluate(() => window.__rmq?.viewport()?.zoom)) ?? 0;
+    await expect(page.getByTestId('zoom-reset')).toHaveText(`${Math.round(zoom * 100)}%`);
+  });
+
   test('follows the wheel, which zooms, as the nodes are painted', async ({ page }) => {
     await open(page);
     const before = await page.evaluate(() => window.__rmq?.viewport()?.zoom ?? 0);
