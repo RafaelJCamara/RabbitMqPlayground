@@ -107,6 +107,21 @@ describe('placeLabels (ADR-0044)', () => {
     expect(again.get('free')).toBe(places.get('free'));
   });
 
+  it('puts the box of a label round the point of its edge, and not beside it', () => {
+    // The label is 40 wide and 20 high, so in the middle of 400 it covers 180 to 220 across, and -10 to 10 down.
+    // A node from 170 to 185 is on its left, and one from -15 to -5 down is on its top: each is in the way, and neither would be if the box began at the point.
+    expect(placeLabels([label('a')], [{ x: 170, y: -50, width: 15, height: 100 }]).get('a')).toBe(0.6);
+    expect(placeLabels([label('a')], [{ x: 150, y: -15, width: 100, height: 10 }]).get('a')).toBe(0.3);
+  });
+
+  it('counts an overlap of less than a unit, across and down, as one', () => {
+    // 40.5 wide: the boxes at 0.5 and 0.4 of 400 meet by half a unit, so the second goes on to 0.3 where there is room.
+    const wide = { width: 40.5 };
+    expect(placeLabels([label('a', 400, 0, wide), label('b', 400, 0, wide)], []).get('b')).toBe(0.3);
+    // 20 high, on lines that are 19.5 apart: they meet by half a unit down, so the second goes to 0.4, which is where it is clear across.
+    expect(placeLabels([label('a'), label('b', 400, 19.5)], []).get('b')).toBe(0.4);
+  });
+
   it('does not let labels on other edges that are far away get in the way', () => {
     const places = placeLabels([label('a', 400, 0), label('b', 400, 500)], []);
 
@@ -145,5 +160,35 @@ describe('estimateLabelSize', () => {
 
   it('is a little for a label with no chip', () => {
     expect(estimateLabelSize([], 0).height).toBeGreaterThan(0);
+  });
+
+  it('is worked out from 6.6 for a character, 16 of room round the text, and rows of 20 with 2 between them', () => {
+    const sized = (chips: string[], more = 0) => {
+      const { width, height } = estimateLabelSize(chips, more);
+      return [Number(width.toFixed(1)), height];
+    };
+
+    expect(sized(['abc'])).toEqual([35.8, 20]);
+    expect(sized(['a'])).toEqual([22.6, 20]);
+    expect(sized(['abc', 'de'])).toEqual([35.8, 42]);
+    expect(sized(['abc', 'de', 'f'])).toEqual([35.8, 64]);
+    expect(sized([])).toEqual([16, 20]);
+  });
+
+  it('counts "+N more" as a chip of its own, from the first one that is left out', () => {
+    const sized = (chips: string[], more: number) => {
+      const { width, height } = estimateLabelSize(chips, more);
+      return [Number(width.toFixed(1)), height];
+    };
+
+    // "+1 more" is seven characters, "+12 more" is eight.
+    expect(sized(['a'], 1)).toEqual([62.2, 42]);
+    expect(sized(['a'], 12)).toEqual([68.8, 42]);
+    expect(sized(['a'], 0)).toEqual([22.6, 20]);
+  });
+
+  it('cuts the width of a chip at 160', () => {
+    expect(estimateLabelSize(['x'.repeat(200)], 0)).toEqual({ width: 160, height: 20 });
+    expect(estimateLabelSize(['x'.repeat(21)], 0).width).toBeCloseTo(21 * 6.6 + 16, 6);
   });
 });

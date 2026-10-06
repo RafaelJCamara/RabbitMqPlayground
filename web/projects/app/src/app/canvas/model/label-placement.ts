@@ -33,18 +33,16 @@ const GAP = 2;
 
 /** How big a label of these chips is, from its text: it is worked out, and not measured, so that it can be done before anything is drawn. */
 export function estimateLabelSize(chips: readonly string[], more: number): Size {
-  const rows = chips.length + (more > 0 ? 1 : 0);
   const texts = more > 0 ? [...chips, `+${more} more`] : chips;
-  const widest = Math.max(0, ...texts.map((text) => Math.min(MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING)));
-  const shown = Math.max(1, rows);
-  return { width: Math.max(widest, PADDING), height: shown * ROW + (shown - 1) * GAP };
+  const rows = Math.max(1, texts.length);
+  const widths = texts.map((text) => Math.min(MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING));
+  return { width: Math.max(PADDING, ...widths), height: rows * ROW + (rows - 1) * GAP };
 }
 
-const overlap = (a: Rect, b: Rect): number => {
-  const width = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
-  const height = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
-  return width > 0 && height > 0 ? width * height : 0;
-};
+/** How much of `a` is on `b`, as an area: nothing when they only touch, or are apart. */
+const overlap = (a: Rect, b: Rect): number =>
+  Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+  Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
 
 function boxAt(label: LabelBox, fraction: number): Rect {
   const point = pointAtFraction(label.line, fraction);
@@ -76,6 +74,7 @@ export function placeLabels(labels: readonly LabelBox[], obstacles: readonly Rec
       if (area < best.area) {
         best = { fraction, area };
       }
+      // Nothing is better than nothing, and a later place that is as good is not chosen over this one, so the rest are not looked at.
       if (area === 0) {
         break;
       }
