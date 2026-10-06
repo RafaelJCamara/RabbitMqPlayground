@@ -18,6 +18,9 @@ export class EditorPage {
   readonly theme: Locator;
   readonly flow: Locator;
   readonly hints: Locator;
+  readonly commandBar: Locator;
+  readonly commandField: Locator;
+  readonly howToLink: Locator;
 
   constructor(readonly page: Page) {
     this.heading = page.getByRole('heading', { level: 1 });
@@ -29,6 +32,9 @@ export class EditorPage {
     this.theme = page.getByRole('combobox', { name: 'Theme' });
     this.flow = page.locator('f-flow');
     this.hints = page.getByRole('region', { name: 'Hints' });
+    this.commandBar = page.getByRole('region', { name: 'Command bar' });
+    this.commandField = page.getByRole('combobox', { name: 'Command' });
+    this.howToLink = page.getByRole('region', { name: 'How to link' });
   }
 
   /** Opens the editor, and waits until it has opened the canvas and says that its changes are saved. */
@@ -89,6 +95,84 @@ export class EditorPage {
    */
   node(label: string): Locator {
     return this.page.locator(`[data-node-id][aria-label="${label}"], [data-node-id][aria-label^="${label}, "]`);
+  }
+
+  /** A node by its id (`x1`), for the tests that say what the document has. */
+  nodeById(id: string): Locator {
+    return this.page.locator(`[data-node-id="${id}"]`);
+  }
+
+  /** The dot on the left (`in`) or on the right (`out`) of a node. */
+  handle(id: string, which: 'in' | 'out'): Locator {
+    return this.nodeById(id).locator(`[data-handle="${which}"]`);
+  }
+
+  /** Lets a link go on a point, from the dot on the right of a node: a pointer that is pressed, moved over the threshold of a drag, moved on, and released. */
+  async dragLinkTo(id: string, to: { x: number; y: number }): Promise<void> {
+    const from = await this.centre(this.handle(id, 'out'));
+    await this.page.mouse.move(from.x, from.y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(from.x + 8, from.y + 4, { steps: 3 });
+    await this.page.mouse.move(to.x, to.y, { steps: 8 });
+    await this.page.mouse.up();
+  }
+
+  /** What the document has joined, by name and as the commands say it: `orders -> billing key=eu`, `sender -> orders`, `worker <- billing`. Sorted, so that a test can compare. */
+  edges(): Promise<string[]> {
+    return this.page.evaluate(() => {
+      const document = window.__rmq?.document() as {
+        exchanges: Record<string, { name: string }>;
+        queues: Record<string, { name: string }>;
+        producers: Record<string, { name: string; target: { kind: string; id: string } | null }>;
+        consumers: Record<string, { name: string; queues: string[] }>;
+        bindings: Record<string, { source: string; dest: { kind: string; id: string }; key: string }>;
+      } | null;
+      if (document === null || document === undefined) {
+        return [];
+      }
+      const name = (kind: string, id: string): string =>
+        (kind === 'exchange' ? document.exchanges : document.queues)[id]?.name ?? id;
+      return [
+        ...Object.values(document.bindings).map(
+          (binding) =>
+            `${name('exchange', binding.source)} -> ${name(binding.dest.kind, binding.dest.id)} key=${binding.key}`,
+        ),
+        ...Object.values(document.producers).flatMap((producer) =>
+          producer.target === null ? [] : [`${producer.name} -> ${name(producer.target.kind, producer.target.id)}`],
+        ),
+        ...Object.values(document.consumers).flatMap((consumer) =>
+          consumer.queues.map((queue) => `${consumer.name} <- ${name('queue', queue)}`),
+        ),
+      ].sort();
+    });
+  }
+
+  /** Opens the command bar with the key that is for it, from the canvas, and waits for the cursor to be in its field. */
+  async openCommandBar(): Promise<void> {
+    await this.flow.focus();
+    await this.page.keyboard.press('/');
+    await expect(this.commandField).toBeFocused();
+  }
+
+  /** Types a line into the field of the command bar, as a person does, and runs it. */
+  async runCommand(line: string): Promise<void> {
+    await this.commandField.focus();
+    await this.page.keyboard.insertText(line);
+    await this.page.keyboard.press('Enter');
+  }
+
+  /** The lines of the log of equivalent commands, oldest first, with the bar opened to read them, and left as it was found. */
+  async log(): Promise<string[]> {
+    const wasOpen = (await this.commandField.count()) > 0;
+    if (!wasOpen) {
+      await this.commandBar.getByRole('button', { name: 'Commands' }).click();
+      await this.commandField.waitFor();
+    }
+    const lines = await this.commandBar.getByTestId('command-log').locator('code').allTextContents();
+    if (!wasOpen) {
+      await this.commandBar.getByRole('button', { name: 'Commands' }).click();
+    }
+    return lines;
   }
 
   /** The middle of an element on the page. */
