@@ -139,4 +139,26 @@ export const REFUSAL_SCENARIOS: readonly Scenario[] = [
       publish('e', 'other', 'm2'),
     ],
   },
+  {
+    id: 'routing/a-binding-with-two-faults-gets-one-refusal',
+    kind: 'routing',
+    title:
+      'A binding that has two faults is refused with one reply, the one for the fault that the broker checks first: the default exchange, then the source, then the destination, then the key (M1 plan, S2)',
+    steps: [
+      declareExchange('t', 'topic'),
+      declareQueue('inbox'),
+      // The default exchange is checked before anything is looked up.
+      refused(bindKey('', queue('nope'), 'k')),
+      refused(bindKey('nope', exchange(''), 'k')),
+      // The source is looked up before the destination, whatever the destination is.
+      refused(bindKey('nope', queue('nope-too'), 'k')),
+      refused(bindKey('nope', exchange('nope-too'), 'k')),
+      // The key of a topic binding is read only when both ends are there.
+      refused(bindKey('t', queue('nope'), '#.#.#')),
+      refused(bindKey('t', exchange('nope'), '#.#.#')),
+      refused(bindKey('t', queue('inbox'), '#.#.#')),
+      bindKey('t', queue('inbox'), 'a.#'),
+      publish('t', 'a.b', 'm1'),
+    ],
+  },
 ];
