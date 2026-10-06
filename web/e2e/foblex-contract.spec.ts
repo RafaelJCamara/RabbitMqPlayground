@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import { allowedTargets, explainLink } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
 import { buildDocument, seedCanvas } from './support/seed';
+import { Finger } from './support/touch';
 import { EDGES, NODES, TOPOLOGY } from './support/topology';
 import { expect, test } from './support/test';
 
@@ -660,5 +661,144 @@ test.describe('Foblex contract: what the adapter reports from the pointer', () =
     const zoom = viewport?.zoom ?? 1;
     expect(Math.abs(intent.at.x - (preview.x - bounds.x - (viewport?.x ?? 0)) / zoom)).toBeLessThanOrEqual(2);
     expect(Math.abs(intent.at.y - (preview.y - bounds.y - (viewport?.y ?? 0)) / zoom)).toBeLessThanOrEqual(2);
+  });
+});
+
+test.describe('Foblex contract: the content of a connection, which is the label of an edge (ADR-0044)', () => {
+  /** Opens the editor on the topology with the label of its first edge at `at` of the way along it. */
+  async function openWithLabelAt(page: Page, at: number): Promise<EditorPage> {
+    await seedCanvas(
+      page,
+      buildDocument(
+        [
+          {
+            type: 'move-label',
+            from: { kind: 'exchange', name: 'orders' },
+            to: { kind: 'queue', name: 'billing' },
+            at,
+          },
+        ],
+        TOPOLOGY,
+      ),
+    );
+    const editor = new EditorPage(page);
+    await editor.goto();
+    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
+    await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length)).toBe(EDGES.length);
+    await editor.settled();
+    return editor;
+  }
+
+  /** Where on the screen the line of an edge is, at a fraction of its length. */
+  const pointAt = (page: Page, key: string, fraction: number): Promise<{ x: number; y: number }> =>
+    page.locator(`[data-edge="${key}"] path.f-connection-path`).evaluate((path: SVGPathElement, at: number) => {
+      const point = path.getPointAtLength(path.getTotalLength() * at);
+      const matrix = path.getScreenCTM()!;
+      return { x: point.x * matrix.a + matrix.e, y: point.y * matrix.d + matrix.f };
+    }, fraction);
+
+  for (const at of [0.25, 0.5, 0.75]) {
+    test(`is placed at a fraction of the length of its edge, which is where the document says that the label is (${at})`, async ({
+      page,
+    }) => {
+      await openWithLabelAt(page, at);
+      const label = await centre(page.locator('[data-label="x1>q1"]'));
+
+      const expected = await pointAt(page, 'x1>q1', at);
+
+      // The library places the content by the length of the line, and the label has a size of its own, so the centres are close and not equal.
+      expect(Math.hypot(label.x - expected.x, label.y - expected.y)).toBeLessThanOrEqual(14);
+    });
+  }
+
+  test('does not pan the canvas for a press on it that moves, which the library would do if the adapter did not stop the press, and does for one on nothing', async ({
+    page,
+  }) => {
+    await openWithLabelAt(page, 0.5);
+    const before = await page.evaluate(() => window.__rmq?.viewport());
+    const label = await centre(page.locator('[data-label="x1>q1"]'));
+
+    await page.mouse.move(label.x, label.y);
+    await page.mouse.down();
+    await page.mouse.move(label.x + 12, label.y + 4, { steps: 3 });
+    await page.mouse.move(label.x + 70, label.y + 10, { steps: 8 });
+    await page.mouse.up();
+    await nextFrame(page);
+    expect(await page.evaluate(() => window.__rmq?.viewport()), 'a press on the label').toEqual(before);
+
+    const bounds = (await flow(page).boundingBox())!;
+    const empty = { x: bounds.x + 30, y: bounds.y + bounds.height - 30 };
+    await page.mouse.move(empty.x, empty.y);
+    await page.mouse.down();
+    await page.mouse.move(empty.x + 12, empty.y + 4, { steps: 3 });
+    await page.mouse.move(empty.x + 70, empty.y + 10, { steps: 8 });
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => window.__rmq?.viewport()?.x)).not.toBe(before?.x);
+  });
+});
+
+test.describe('Foblex contract: a connector that is disabled (ADR-0043)', () => {
+  test('starts no link and lights no target, which is what keeps the default exchange from being linked from', async ({
+    page,
+  }) => {
+    await seedCanvas(
+      page,
+      buildDocument([{ type: 'set', kind: 'canvas', changes: { showDefaultExchange: true } }], TOPOLOGY),
+    );
+    const editor = new EditorPage(page);
+    await editor.goto();
+    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
+    await expect(node(page, '~default')).toBeVisible();
+    await editor.settled();
+    const before = (await intents(page)).length;
+
+    const from = await centre(handle(page, '~default', 'out'));
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 8, from.y + 4, { steps: 3 });
+    const lit = await page.evaluate(() => window.document.querySelectorAll('.f-connector-connectable').length);
+    await page.mouse.move((await centre(node(page, 'q1'))).x, (await centre(node(page, 'q1'))).y, { steps: 8 });
+    await page.mouse.up();
+
+    expect(lit).toBe(0);
+    const made = (await intents(page)).slice(before).filter((intent) => intent.type.startsWith('link'));
+    expect(made).toEqual([]);
+    expect(await page.evaluate(() => (window.__rmq?.document() as { bindings: object }).bindings)).toEqual(
+      (TOPOLOGY as unknown as { bindings: object }).bindings,
+    );
+  });
+});
+
+test.describe('Foblex contract: a link made with a finger', () => {
+  test.use({ hasTouch: true });
+
+  test('is reported as a link, as one made with a pointer is, and not as a move of the canvas', async ({ page }) => {
+    await open(page);
+    const finger = await Finger.on(page);
+
+    await finger.drag(await centre(handle(page, 'x2', 'out')), await centre(node(page, 'q1')));
+
+    await reported(page, { type: 'link', source: 'x2', target: 'q1', via: 'drag' });
+  });
+
+  test('moves a node when it is dragged, as one move that says it came from a pointer', async ({ page }) => {
+    await open(page);
+    const finger = await Finger.on(page);
+    const start = await page.evaluate(
+      () =>
+        (window.__rmq?.document() as { layout: { nodes: Record<string, { x: number; y: number }> } }).layout.nodes[
+          'c1'
+        ]!,
+    );
+    const from = await centre(node(page, 'c1'));
+
+    await finger.drag(from, { x: from.x + 40, y: from.y + 50 });
+
+    await reported(page, { type: 'move' });
+    const moves = (await intents(page)).filter((intent) => intent.type === 'move');
+    expect(moves).toHaveLength(1);
+    const moved = (moves[0] as unknown as { moves: { x: number; y: number }[] }).moves[0]!;
+    expect(moved.x).toBeGreaterThan(start.x);
+    expect(moved.y).toBeGreaterThan(start.y);
   });
 });
