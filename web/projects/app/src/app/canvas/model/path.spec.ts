@@ -99,11 +99,19 @@ describe('pointAtFraction', () => {
     expect(pointAtFraction(line, 0.75)).toEqual({ x: 10, y: 5 });
   });
 
-  it('stays on the path for a fraction that is out of range', () => {
+  it('stays on the path for a fraction that is out of range, however little it is out of it', () => {
     const line = polylineOf('M 0 0 L 100 0')!;
 
     expect(pointAtFraction(line, -1)).toEqual({ x: 0, y: 0 });
+    expect(pointAtFraction(line, -0.5)).toEqual({ x: 0, y: 0 });
+    expect(pointAtFraction(line, 1.5)).toEqual({ x: 100, y: 0 });
     expect(pointAtFraction(line, 2)).toEqual({ x: 100, y: 0 });
+  });
+
+  it('is the one point of a line that has no length, and goes over a point that is given twice', () => {
+    expect(pointAtFraction(polylineOf('M 5 5 L 5 5')!, 0.5)).toEqual({ x: 5, y: 5 });
+    expect(pointAtFraction(polylineOf('M 0 0 L 0 0 L 10 0')!, 0.5)).toEqual({ x: 5, y: 0 });
+    expect(pointAtFraction(polylineOf('M 0 0 L 10 0 L 10 0 L 10 10')!, 0.75)).toEqual({ x: 10, y: 5 });
   });
 });
 
@@ -113,6 +121,11 @@ describe('closestFraction', () => {
 
     expect(closestFraction(line, { x: 25, y: 30 })).toBeCloseTo(0.25, 5);
     expect(closestFraction(line, { x: 80, y: -5 })).toBeCloseTo(0.8, 5);
+  });
+
+  it('is 0 for a line that has no length, and goes over a point that is given twice', () => {
+    expect(closestFraction(polylineOf('M 5 5 L 5 5')!, { x: 1, y: 2 })).toBe(0);
+    expect(closestFraction(polylineOf('M 0 0 L 0 0 L 10 0')!, { x: 5, y: 3 })).toBeCloseTo(0.5, 5);
   });
 
   it('is 0 before the start and 1 after the end', () => {

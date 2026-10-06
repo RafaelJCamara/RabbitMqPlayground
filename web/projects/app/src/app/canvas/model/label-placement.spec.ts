@@ -112,6 +112,9 @@ describe('placeLabels (ADR-0044)', () => {
     // A node from 170 to 185 is on its left, and one from -15 to -5 down is on its top: each is in the way, and neither would be if the box began at the point.
     expect(placeLabels([label('a')], [{ x: 170, y: -50, width: 15, height: 100 }]).get('a')).toBe(0.6);
     expect(placeLabels([label('a')], [{ x: 150, y: -15, width: 100, height: 10 }]).get('a')).toBe(0.3);
+    // The top of the box is at -10, so a node that ends at -9 is in the way by a unit, and one that ends at -11 is not.
+    expect(placeLabels([label('a')], [{ x: 150, y: -15, width: 100, height: 6 }]).get('a')).toBe(0.3);
+    expect(placeLabels([label('a')], [{ x: 150, y: -15, width: 100, height: 4 }]).get('a')).toBe(0.5);
   });
 
   it('counts an overlap of less than a unit, across and down, as one', () => {

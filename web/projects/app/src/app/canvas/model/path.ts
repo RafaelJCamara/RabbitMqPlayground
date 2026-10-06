@@ -110,16 +110,16 @@ export function pointAtFraction(line: Polyline, fraction: number): Point {
   if (fraction >= 1) {
     return points.at(-1) as Point;
   }
+  // The line is longer than nothing and the fraction is inside it, so the piece that it falls in is found, and is not a piece of no length.
   const wanted = fraction * total;
   let index = 1;
-  while (index < distances.length - 1 && (distances[index] as number) < wanted) {
+  while ((distances[index] as number) < wanted) {
     index += 1;
   }
   const from = points[index - 1] as Point;
   const to = points[index] as Point;
   const start = distances[index - 1] as number;
-  const piece = (distances[index] as number) - start;
-  const along = piece === 0 ? 0 : (wanted - start) / piece;
+  const along = (wanted - start) / ((distances[index] as number) - start);
   return { x: from.x + (to.x - from.x) * along, y: from.y + (to.y - from.y) * along };
 }
 
