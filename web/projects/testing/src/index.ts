@@ -1,5 +1,15 @@
 export { arbSeed } from './lib/arbitraries';
 export {
+  applyEngineCommand,
+  applyEngineCommands,
+  bindingKey,
+  BrokerError,
+  canonicalTopology,
+  emptyBroker,
+  topologyOf,
+  type BrokerState,
+} from './lib/broker';
+export {
   DEFAULT_FC_NUM_RUNS,
   DEFAULT_FC_SEED,
   configureFastCheck,
