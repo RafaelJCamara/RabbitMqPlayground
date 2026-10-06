@@ -48,13 +48,13 @@ export interface Placed {
 @Injectable()
 export class FlowViewport {
   private readonly zoomValue = signal(1);
-  private readonly drawnEdges = signal<ReadonlySet<string>>(new Set());
+  private readonly drawnKeys = signal<ReadonlySet<string>>(new Set());
   private driver: ViewportDriver | undefined;
 
   /** How far the canvas is zoomed, as the library last said. 1 is 100%. */
   readonly zoom = this.zoomValue.asReadonly();
   /** The keys of the edges whose paths the library has drawn. It draws them a moment after the elements appear (ADR-0016). */
-  readonly drawn = this.drawnEdges.asReadonly();
+  readonly drawn = this.drawnKeys.asReadonly();
 
   /** Steers the canvas with this driver until the function that it returns is called. */
   attach(driver: ViewportDriver): () => void {
@@ -62,7 +62,7 @@ export class FlowViewport {
     return () => {
       if (this.driver === driver) {
         this.driver = undefined;
-        this.drawnEdges.set(new Set());
+        this.drawnKeys.set(new Set());
       }
     };
   }
@@ -136,10 +136,10 @@ export class FlowViewport {
   }
 
   private update(change: (drawn: Set<string>) => void): void {
-    const next = new Set(this.drawnEdges());
+    const next = new Set(this.drawnKeys());
     change(next);
-    if (next.size !== this.drawnEdges().size || [...next].some((id) => !this.drawnEdges().has(id))) {
-      this.drawnEdges.set(next);
+    if (next.size !== this.drawnKeys().size || [...next].some((id) => !this.drawnKeys().has(id))) {
+      this.drawnKeys.set(next);
     }
   }
 }
