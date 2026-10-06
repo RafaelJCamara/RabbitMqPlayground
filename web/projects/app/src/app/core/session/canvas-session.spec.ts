@@ -16,7 +16,7 @@ import {
   type ManualClock,
   type ManualTimer,
 } from '@rmq/testing';
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { Announcer } from '../announcer';
 import { CommandBus } from '../state/command-bus';
 import { DocumentStore } from '../state/document-store';
@@ -48,7 +48,12 @@ interface Harness {
   readonly made: { browser: number; memory: number };
 }
 
-function setup(options: { readonly browser?: (memory: CanvasRepository) => CanvasRepository } = {}): Harness {
+function setup(
+  options: {
+    readonly browser?: (memory: CanvasRepository) => CanvasRepository;
+    readonly memory?: (memory: CanvasRepository) => CanvasRepository;
+  } = {},
+): Harness {
   const clock = manualClock(5_000_000);
   const timer = manualTimer();
   const ids = idSequence('canvas');
@@ -75,7 +80,8 @@ function setup(options: { readonly browser?: (memory: CanvasRepository) => Canva
           },
           memory: () => {
             made.memory += 1;
-            return createMemoryRepository({ now: clock.now, newId: ids });
+            const repository = createMemoryRepository({ now: clock.now, newId: ids });
+            return options.memory?.(repository) ?? repository;
           },
         },
       },
@@ -112,6 +118,17 @@ function failing(
   return wrapped;
 }
 
+/** A repository whose writes wait to be let go, one by one, so that a test can change the canvas while a write is under way. */
+function holding(releases: (() => void)[]): (memory: CanvasRepository) => CanvasRepository {
+  return (memory) => ({
+    ...memory,
+    save: (id, change) => new Promise((resolve) => releases.push(() => resolve(memory.save(id, change)))),
+  });
+}
+
+/** Lets everything that is waiting on a promise go on, which a write of the autosave takes a few turns of. */
+const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 const declare = (bus: CommandBus, name: string) => bus.apply({ type: 'declare-queue', name, durable: true }, 'gesture');
 const stored = async (repository: CanvasRepository, id: string): Promise<CanvasRecord> => {
   const result = await repository.get(id);
@@ -120,6 +137,22 @@ const stored = async (repository: CanvasRepository, id: string): Promise<CanvasR
   }
   return result.value;
 };
+
+describe('the storage that the session asks the browser about', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+  afterEach(() => Reflect.deleteProperty(navigator, 'storage'));
+
+  it('is the one of the page, when the browser has it', () => {
+    const storage = { persist: vi.fn(), persisted: vi.fn(), estimate: vi.fn() };
+    Object.defineProperty(navigator, 'storage', { configurable: true, value: storage });
+
+    expect(TestBed.inject(STORAGE_MANAGER)).toBe(storage);
+  });
+
+  it('is nothing, when the browser does not have one', () => {
+    expect(TestBed.inject(STORAGE_MANAGER)).toBeUndefined();
+  });
+});
 
 describe('CanvasSession', () => {
   beforeEach(() => TestBed.resetTestingModule());
@@ -142,11 +175,12 @@ describe('CanvasSession', () => {
     });
 
     it('opens the canvas that was open last, and not the one that was edited last, when it is still there', async () => {
-      const { session, store, repository } = setup();
+      const { session, store, repository, clock } = setup();
       const first = await repository.create({
         name: 'First',
         document: documentOf({ queues: { q1: queueRecord('one') } }),
       });
+      clock.advance(1_000);
       await repository.create({ name: 'Second', document: documentOf({ queues: { q1: queueRecord('two') } }) });
       await repository.setMeta('lastOpenCanvas', first.ok ? first.value.id : '');
 
@@ -157,15 +191,16 @@ describe('CanvasSession', () => {
     });
 
     it('opens the canvas that was edited last when the one that was open is gone, or was never remembered', async () => {
-      const { session, store, repository } = setup();
+      const { session, store, repository, clock } = setup();
       await repository.create({ name: 'Older', document: documentOf({ queues: { q1: queueRecord('older') } }) });
+      clock.advance(1_000);
       await repository.create({ name: 'Newer', document: documentOf({ queues: { q1: queueRecord('newer') } }) });
       await repository.setMeta('lastOpenCanvas', 'gone');
 
       await session.open();
 
-      expect(session.name()).toBe('Older');
-      expect(store.document().queues['q1']?.name).toBe('older');
+      expect(session.name()).toBe('Newer');
+      expect(store.document().queues['q1']?.name).toBe('newer');
     });
 
     it('opens a canvas without a past, whatever was done before it was opened', async () => {
@@ -241,6 +276,31 @@ describe('CanvasSession', () => {
 
       expect(made.memory).toBe(1);
       expect(session.save()).toMatchObject({ kind: 'memory', reason: quotaError.message });
+    });
+
+    it('goes on saying that nothing is kept when a write in memory fails, and does not say that a write failed', async () => {
+      const { session, bus, timer } = setup({
+        browser: (memory) => failing(memory, { list: unavailable }),
+        memory: (repository) => ({ ...repository, save: async () => ({ ok: false, error: quotaError }) }),
+      });
+      await session.open();
+
+      declare(bus, 'a');
+      timer.advance(500);
+      await settle();
+
+      expect(session.save()).toEqual({ kind: 'memory', reason: unavailable.message });
+    });
+
+    it('says why, and does not open anything, when not even memory can open a canvas', async () => {
+      const { session } = setup({
+        browser: (memory) => failing(memory, { list: unavailable }),
+        memory: (repository) => failing(repository, { list: quotaError }),
+      });
+
+      await expect(session.open()).rejects.toThrow(
+        'A canvas could not be opened in memory: The browser has no room left to keep this canvas.',
+      );
     });
   });
 
@@ -372,10 +432,10 @@ describe('CanvasSession', () => {
 
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
       document.dispatchEvent(new Event('visibilitychange'));
-      await session.flush();
-
-      expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1);
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+
+      // The timer has not moved: it is the page that makes the write.
+      await vi.waitFor(async () => expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1));
     });
 
     it('does not flush when the page becomes visible again, because there is nothing to hurry', async () => {
@@ -398,9 +458,8 @@ describe('CanvasSession', () => {
       declare(bus, 'billing');
 
       window.dispatchEvent(new Event('pagehide'));
-      await session.flush();
 
-      expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1);
+      await vi.waitFor(async () => expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1));
     });
 
     it('stops listening to the page, and saving, once it is closed', async () => {
@@ -409,13 +468,63 @@ describe('CanvasSession', () => {
       declare(bus, 'billing');
       session.close();
       const save = vi.spyOn(repository, 'save');
+      const flush = vi.spyOn(session, 'flush');
 
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
       window.dispatchEvent(new Event('pagehide'));
       timer.advance(10_000);
       declare(bus, 'another');
-      await Promise.resolve();
+      await settle();
 
+      expect(flush).not.toHaveBeenCalled();
       expect(save).not.toHaveBeenCalled();
+    });
+
+    it('writes the canvas as it is now when the changes were taken back while a write of them was under way', async () => {
+      const releases: (() => void)[] = [];
+      const { session, bus, repository, timer } = setup({ browser: holding(releases) });
+      await session.open();
+      const id = await currentId(repository);
+      declare(bus, 'a');
+      timer.advance(500);
+      await settle(); // the write of the canvas with 'a' is under way
+
+      bus.undo(); // back to what is kept, so nothing waits to be written, and it says so
+      expect(session.save().kind).toBe('saved');
+      releases.shift()?.();
+      await settle(); // what is kept is now the canvas with 'a', which is not the one that is on the screen
+
+      expect(session.save()).toEqual({ kind: 'saving' });
+      timer.advance(500);
+      await settle();
+      releases.shift()?.();
+      await settle();
+      expect(session.save().kind).toBe('saved');
+      expect((await stored(repository, id)).document.queues).toEqual({});
+    });
+
+    it('is still saving when a write ends and another change is waiting behind it, and saved when that one is kept', async () => {
+      const releases: (() => void)[] = [];
+      const { session, bus, repository, timer } = setup({ browser: holding(releases) });
+      await session.open();
+      const id = await currentId(repository);
+      declare(bus, 'a');
+      timer.advance(500);
+      await settle();
+      declare(bus, 'b'); // while the write of 'a' is under way
+
+      releases.shift()?.();
+      await settle();
+
+      expect(session.save()).toEqual({ kind: 'saving' });
+      timer.advance(500);
+      await settle();
+      releases.shift()?.();
+      await settle();
+      expect(session.save().kind).toBe('saved');
+      expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(2);
     });
   });
 
@@ -526,6 +635,65 @@ describe('CanvasSession', () => {
       timer.advance(500);
       await session.flush();
       await vi.waitFor(() => expect(storage.estimate).toHaveBeenCalledTimes(2));
+    });
+
+    it('reads the estimate again at the moment that half a minute has gone, and not a moment before', async () => {
+      const { session, bus, timer, storage, clock } = setup();
+      await session.open();
+      declare(bus, 'a');
+      timer.advance(500);
+      await session.flush();
+      await vi.waitFor(() => expect(storage.estimate).toHaveBeenCalledTimes(1));
+
+      clock.advance(29_999);
+      declare(bus, 'b');
+      timer.advance(500);
+      await session.flush();
+      await settle();
+      expect(storage.estimate).toHaveBeenCalledTimes(1);
+
+      clock.advance(1);
+      declare(bus, 'c');
+      timer.advance(500);
+      await session.flush();
+      await vi.waitFor(() => expect(storage.estimate).toHaveBeenCalledTimes(2));
+    });
+
+    it('reads the estimate when a write fails for lack of room, even if it was read a moment ago', async () => {
+      let broken = false;
+      const { session, bus, timer, storage } = setup({
+        browser: (memory) => ({
+          ...memory,
+          save: async (id, change) => (broken ? { ok: false, error: quotaError } : memory.save(id, change)),
+        }),
+      });
+      await session.open();
+      declare(bus, 'a');
+      timer.advance(500);
+      await session.flush();
+      await vi.waitFor(() => expect(storage.estimate).toHaveBeenCalledTimes(1));
+
+      broken = true;
+      declare(bus, 'b');
+      timer.advance(500);
+      await settle();
+
+      await vi.waitFor(() => expect(storage.estimate).toHaveBeenCalledTimes(2));
+    });
+
+    it('does not read the estimate when a write fails for another reason', async () => {
+      const { session, bus, timer, storage } = setup({
+        browser: (memory) => ({ ...memory, save: async () => ({ ok: false, error: unavailable }) }),
+      });
+      await session.open();
+
+      declare(bus, 'a');
+      timer.advance(500);
+      await session.flush();
+      await settle();
+
+      expect(session.save()).toEqual({ kind: 'failed', error: unavailable });
+      expect(storage.estimate).not.toHaveBeenCalled();
     });
 
     it('says nothing while there is plenty of room, and clears a warning when there is again', async () => {

@@ -54,7 +54,7 @@ export const NOW = new InjectionToken<() => number>('NOW', { providedIn: 'root',
 /** `navigator.storage`, which asks the browser to keep the canvases and how much room there is. */
 export const STORAGE_MANAGER = new InjectionToken<StorageManagerLike | undefined>('STORAGE_MANAGER', {
   providedIn: 'root',
-  factory: () => (typeof navigator === 'undefined' ? undefined : navigator.storage),
+  factory: () => inject(DOCUMENT).defaultView?.navigator.storage,
 });
 
 /** What each write came to, for the top bar to show. */
