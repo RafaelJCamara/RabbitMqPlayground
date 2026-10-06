@@ -21,3 +21,25 @@ export {
   type UnreadableCanvas,
 } from './lib/repository/repository';
 export { createIdbRepository, createMemoryRepository, type IdbRepositoryOptions } from './lib/repository/repositories';
+export {
+  AUTOSAVE_DELAY_MS,
+  createAutosave,
+  systemTimer,
+  type Autosave,
+  type AutosaveOptions,
+  type AutosaveTimer,
+} from './lib/autosave';
+export {
+  formatBytes,
+  QUOTA_CRITICAL_AT,
+  QUOTA_LOW_AT,
+  quotaWarning,
+  readUsage,
+  requestPersistence,
+  type PersistResult,
+  type PersistStatus,
+  type QuotaLevel,
+  type QuotaWarning,
+  type StorageManagerLike,
+  type StorageUsage,
+} from './lib/storage-manager';
