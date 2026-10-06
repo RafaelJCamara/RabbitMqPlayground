@@ -12,6 +12,11 @@ import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { IntentHandler, type IntentSurface } from './intents';
+import { LinkFlow } from './link-flow';
+import { NewNodeFocus } from './new-node-focus';
+
+/** What the editor shows when a link is let go on nothing, written down. */
+const surfaceOf = (): IntentSurface => ({ openMenu: vi.fn(), startRename: vi.fn(), showPeek: vi.fn() });
 
 describe('IntentHandler', () => {
   let handler: IntentHandler;
@@ -29,7 +34,16 @@ describe('IntentHandler', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, FlowViewport, IntentHandler],
+      providers: [
+        DocumentStore,
+        SelectionStore,
+        StatusStore,
+        CommandBus,
+        FlowViewport,
+        NewNodeFocus,
+        LinkFlow,
+        IntentHandler,
+      ],
     });
     handler = TestBed.inject(IntentHandler);
     store = TestBed.inject(DocumentStore);
@@ -204,7 +218,20 @@ describe('IntentHandler', () => {
       expect(store.document()).toBe(before);
     });
 
-    it('says that there is nothing to link to when it was dropped on nothing', () => {
+    it('is explained, when it was dropped on the default exchange, which is not a node of the document, in its own words', () => {
+      handler.handle({ type: 'link-invalid', source: 'P1', target: '~default', via: 'drag' });
+
+      expect(status.refusal()?.issue.message).toContain('Nothing is linked to the default exchange');
+    });
+
+    it('opens the menu of what could be made, at the point where it was let go, when it was dropped on nothing', () => {
+      const asked: { client: unknown; nodes: number }[] = [];
+      TestBed.inject(LinkFlow).surface = {
+        askKey: vi.fn(),
+        askTarget: vi.fn(),
+        askNew: (ask) => asked.push({ client: ask.client, nodes: ask.nodes.length }),
+      };
+
       handler.handle({
         type: 'link-to-empty',
         source: 'E1',
@@ -213,14 +240,85 @@ describe('IntentHandler', () => {
         via: 'drag',
       });
 
-      expect(status.notice()).toEqual({
-        kind: 'message',
-        text: 'There is nothing to link to where you let go. Drop the link on a node.',
-      });
-      expect(announcer.announce).toHaveBeenCalledWith(
-        'There is nothing to link to where you let go. Drop the link on a node.',
-      );
+      expect(asked).toEqual([{ client: { x: 3, y: 4 }, nodes: 5 }]);
       expect(applied).toEqual([]);
+    });
+
+    it('says why nothing can be made, in the words of the rule, when the link started where nothing is linked from', () => {
+      handler.handle({ type: 'link-to-empty', source: 'C1', at: { x: 1, y: 2 }, client: { x: 3, y: 4 }, via: 'drag' });
+
+      expect(status.refusal()?.issue.message).toContain('A consumer is where a message ends');
+    });
+
+    it('says that a link from a key was a key, for a link let go on nothing as for any other', () => {
+      TestBed.inject(LinkFlow).surface = { askKey: vi.fn(), askTarget: vi.fn(), askNew: vi.fn() };
+
+      handler.handle({
+        type: 'link-to-empty',
+        source: 'C1',
+        at: { x: 0, y: 0 },
+        client: { x: 0, y: 0 },
+        via: 'keyboard',
+      });
+
+      expect(status.refusal()?.origin).toBe('key');
+    });
+  });
+
+  describe('a label that was dragged', () => {
+    it('is one move of the label, to where it was let go, which a typed line can say as well', () => {
+      handler.handle({ type: 'move-label', key: 'E1>Q1', at: 0.25 });
+
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.25 });
+      expect(applied.map(({ origin, command }) => [origin, command])).toEqual([
+        [
+          'gesture',
+          {
+            type: 'move-label',
+            from: { kind: 'exchange', name: 'orders' },
+            to: { kind: 'queue', name: 'billing' },
+            at: 0.25,
+          },
+        ],
+      ]);
+    });
+
+    it('is one step of undo', () => {
+      const before = store.document();
+
+      handler.handle({ type: 'move-label', key: 'E1>Q1', at: 0.25 });
+      bus.undo('toolbar');
+
+      expect(store.document()).toBe(before);
+    });
+
+    it('does nothing for an edge that is not on the canvas, or a key that is not an edge', () => {
+      handler.handle({ type: 'move-label', key: 'E1>gone', at: 0.25 });
+      handler.handle({ type: 'move-label', key: 'nonsense', at: 0.25 });
+      handler.handle({ type: 'move-label', key: '~default>Q1', at: 0.25 });
+
+      expect(applied).toEqual([]);
+    });
+  });
+
+  describe('the default exchange (ADR-0043)', () => {
+    it('is not deleted, which is said in words, and nothing else is deleted with it', () => {
+      const before = store.document();
+
+      handler.handle({ type: 'delete', nodes: ['~default', 'Q2'], edges: [], by: 'keyboard' });
+
+      expect(store.document()).toBe(before);
+      expect(status.refusal()?.issue.message).toBe(
+        'RabbitMQ makes the default exchange and its bindings itself, so they cannot be deleted or changed.',
+      );
+      expect(status.refusal()?.origin).toBe('key');
+    });
+
+    it('does not have its implicit edges deleted either', () => {
+      handler.handle({ type: 'delete', nodes: [], edges: ['~default>Q1'], by: 'pointer' });
+
+      expect(applied).toEqual([]);
+      expect(status.refusal()?.issue.kind).toBe('unsupported');
     });
   });
 
@@ -271,7 +369,7 @@ describe('IntentHandler', () => {
 
   describe('what the editor shows', () => {
     it('opens a menu where the canvas says, for what it says', () => {
-      const surface: IntentSurface = { openMenu: vi.fn(), startRename: vi.fn() };
+      const surface = surfaceOf();
       handler.surface = surface;
 
       handler.handle({ type: 'context-menu', target: { kind: 'node', id: 'Q1' }, client: { x: 10, y: 20 } });
@@ -280,7 +378,7 @@ describe('IntentHandler', () => {
     });
 
     it('starts a rename of the node that the canvas says', () => {
-      const surface: IntentSurface = { openMenu: vi.fn(), startRename: vi.fn() };
+      const surface = surfaceOf();
       handler.surface = surface;
 
       handler.handle({ type: 'rename', id: 'Q1' });
@@ -288,10 +386,22 @@ describe('IntentHandler', () => {
       expect(surface.startRename).toHaveBeenCalledWith('Q1');
     });
 
-    it('does nothing about a menu or a rename before the editor has a surface for them', () => {
+    it('shows the full text of a label while a pointer is over it, and takes it away when the pointer leaves', () => {
+      const surface = surfaceOf();
+      handler.surface = surface;
+
+      handler.handle({ type: 'peek', key: 'E1>Q1', rect: { x: 1, y: 2, width: 3, height: 4 } });
+      handler.handle({ type: 'peek', key: null });
+
+      expect(surface.showPeek).toHaveBeenNthCalledWith(1, 'E1>Q1', { x: 1, y: 2, width: 3, height: 4 });
+      expect(surface.showPeek).toHaveBeenNthCalledWith(2, null, undefined);
+    });
+
+    it('does nothing about a menu, a rename or a label before the editor has a surface for them', () => {
       expect(() => {
         handler.handle({ type: 'context-menu', target: { kind: 'node', id: 'Q1' }, client: { x: 0, y: 0 } });
         handler.handle({ type: 'rename', id: 'Q1' });
+        handler.handle({ type: 'peek', key: 'E1>Q1' });
       }).not.toThrow();
     });
   });

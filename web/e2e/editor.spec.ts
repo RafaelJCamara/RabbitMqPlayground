@@ -320,6 +320,8 @@ test.describe('journey 2: deleting', () => {
     await page.keyboard.press('ContextMenu');
     await expect(page.getByRole('menuitem', { name: /Rename/ })).toBeFocused();
     await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: /Link to…/ })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('menuitem', { name: /Delete/ })).toBeFocused();
     await page.keyboard.press('Enter');
 
@@ -330,10 +332,10 @@ test.describe('journey 2: deleting', () => {
 
   test('deletes an edge with the key, and a node with the edges that were on it as one step', async ({ page }) => {
     const editor = await open(page);
-    await editor.add('Direct exchange');
+    await editor.add('Fanout exchange');
     await editor.add('Queue');
-    // Link them with the keyboard: select the exchange, L, Enter.
-    await editor.select('Exchange exchange1, direct');
+    // Link them with the keyboard: select the exchange, L, Enter. A fanout ignores the key, so the binding is made at once.
+    await editor.select('Exchange exchange1, fanout');
     await page.keyboard.press('l');
     await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length)).toBe(1);

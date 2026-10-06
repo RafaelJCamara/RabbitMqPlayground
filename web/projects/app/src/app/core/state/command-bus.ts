@@ -1,5 +1,12 @@
 import { inject, Injectable } from '@angular/core';
-import { applyCommand, type CanvasDocument, type Command, type DocumentCommand, type Result } from '@rmq/domain';
+import {
+  applyCommand,
+  type CanvasDocument,
+  type Command,
+  type DocumentCommand,
+  type Issue,
+  type Result,
+} from '@rmq/domain';
 import { Announcer } from '../announcer';
 import { describeCommand, sentence } from './describe';
 import { DocumentStore } from './document-store';
@@ -46,8 +53,7 @@ export class CommandBus {
     const result = applyCommand(before, command, this.ids);
     if (!result.ok) {
       restoreIds();
-      this.status.refuse(result.error, origin);
-      this.announcer.announce(speakRefusal(result.error), 'assertive');
+      this.refuse(result.error, origin);
       return result;
     }
 
@@ -108,6 +114,17 @@ export class CommandBus {
     for (const listener of [...this.listeners]) {
       listener(applied);
     }
+  }
+
+  /** Tells a refusal that no command made, such as a link that a rule forbids, as a command that is refused is told: root cause first, aloud, assertively. */
+  refuse(issue: Issue, origin: CommandOrigin): void {
+    this.status.refuse(issue, origin);
+    this.announcer.announce(speakRefusal(issue), 'assertive');
+  }
+
+  /** Says what was done, or not done, on the status line and aloud. */
+  say(text: string): void {
+    this.tell(text);
   }
 
   private tell(text: string): void {

@@ -42,6 +42,7 @@ function describeSet(command: SetCommand): string {
 
 const ADDS = new Set<DocumentCommand['type']>(['declare-exchange', 'declare-queue', 'add-producer', 'add-consumer']);
 const REMOVALS = new Set<DocumentCommand['type']>(['delete', 'unbind', 'unlink', 'unsubscribe']);
+const LINKS = new Set<DocumentCommand['type']>(['bind', 'link', 'subscribe']);
 
 function describeBatch(batch: Batch): string {
   const { commands } = batch;
@@ -53,6 +54,18 @@ function describeBatch(batch: Batch): string {
   const [added] = adds;
   if (adds.length === 1 && added !== undefined && commands.every((c) => c === added || c.type === 'move')) {
     return describeCommand(added);
+  }
+  // A drop on nothing makes a node and joins it to where the link started, in one step (ADR-0042).
+  const links = commands.filter((command) => LINKS.has(command.type));
+  const [linked] = links;
+  if (
+    adds.length === 1 &&
+    added !== undefined &&
+    links.length === 1 &&
+    linked !== undefined &&
+    commands.every((c) => c === added || c === linked || c.type === 'move')
+  ) {
+    return `${describeCommand(added)} and ${describeCommand(linked)}`;
   }
   if (commands.every((command) => REMOVALS.has(command.type))) {
     return `deleted ${commands.length} items`;

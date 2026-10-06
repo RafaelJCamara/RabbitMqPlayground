@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { ContextTarget } from '../canvas/model/intents';
-import { ContextMenu, type MenuAction } from './context-menu';
+import { contextItems, ContextMenu, type MenuChoice } from './context-menu';
 
 /** The CDK reads `keyCode`, which a browser sets for Escape and user-event leaves at 0, so the key is sent as a browser sends it. */
 const pressEscape = () => fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', keyCode: 27 });
@@ -12,13 +12,18 @@ const pressArrowDown = () =>
   fireEvent.keyDown(document.activeElement ?? document.body, { key: 'ArrowDown', keyCode: 40 });
 
 async function renderMenu() {
-  const chosen: MenuAction[] = [];
+  const chosen: MenuChoice[] = [];
   const dismissed: number[] = [];
   const view = await render(ContextMenu, {
-    on: { act: (action: MenuAction) => chosen.push(action), dismissed: () => dismissed.push(1) },
+    on: { act: (choice: MenuChoice) => chosen.push(choice), dismissed: () => dismissed.push(1) },
   });
   const open = async (target: ContextTarget, title: string) => {
-    view.fixture.componentInstance.open(target, { x: 40, y: 60 }, title);
+    view.fixture.componentInstance.open({
+      title,
+      client: { x: 40, y: 60 },
+      items: contextItems(target, false),
+      context: target,
+    });
     view.fixture.detectChanges();
     return screen.findByRole('menu', { name: title });
   };
@@ -78,13 +83,56 @@ describe('ContextMenu', () => {
     expect(items.map((item) => item.querySelector('span')?.textContent)).toEqual(['Delete']);
   });
 
+  it('offers "Link to…" for a node that can be linked from, between rename and delete, with its key', async () => {
+    const { fixture } = await renderMenu();
+    const target: ContextTarget = { kind: 'node', id: 'Q1' };
+
+    fixture.componentInstance.open({
+      title: 'Actions for queue billing',
+      client: { x: 40, y: 60 },
+      items: contextItems(target, true),
+      context: target,
+    });
+    fixture.detectChanges();
+    await screen.findByRole('menu');
+
+    const items = screen.getAllByRole('menuitem');
+    expect(items.map((item) => item.querySelector('span')?.textContent)).toEqual(['Rename', 'Link to…', 'Delete']);
+    expect(items.map((item) => item.querySelector('kbd')?.textContent)).toEqual(['F2', 'L', 'Delete']);
+    expect(contextItems({ kind: 'edge', key: 'a>b' }, true).map(({ id }) => id)).toEqual(['delete']);
+  });
+
+  it('offers whatever items it is given, with no key where there is none, as the menu of a drop on nothing does', async () => {
+    const { fixture, chosen, user } = await renderMenu();
+
+    fixture.componentInstance.open({
+      title: 'Create and link from exchange orders',
+      client: { x: 10, y: 10 },
+      items: [
+        { id: 'queue', label: 'New queue', icon: 'queue' },
+        { id: 'exchange:topic', label: 'New topic exchange', icon: 'topic' },
+      ],
+      context: { source: 'orders' },
+    });
+    fixture.detectChanges();
+    await screen.findByRole('menu', { name: 'Create and link from exchange orders' });
+
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent?.trim())).toEqual([
+      'New queue',
+      'New topic exchange',
+    ]);
+    expect(document.querySelectorAll('[role="menuitem"] kbd')).toHaveLength(0);
+    await user.click(screen.getByRole('menuitem', { name: 'New topic exchange' }));
+    expect(chosen).toEqual([{ id: 'exchange:topic', context: { source: 'orders' } }]);
+  });
+
   it('says what was chosen, and for what, and closes', async () => {
     const { open, chosen, dismissed, user } = await renderMenu();
     await open({ kind: 'node', id: 'Q1' }, 'Actions for queue billing');
 
     await user.click(screen.getByRole('menuitem', { name: /Rename/ }));
 
-    expect(chosen).toEqual([{ action: 'rename', target: { kind: 'node', id: 'Q1' } }]);
+    expect(chosen).toEqual([{ id: 'rename', context: { kind: 'node', id: 'Q1' } }]);
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     expect(dismissed).toEqual([]);
   });
@@ -95,7 +143,7 @@ describe('ContextMenu', () => {
 
     await user.keyboard('{ArrowDown}{Enter}');
 
-    expect(chosen).toEqual([{ action: 'delete', target: { kind: 'edge', key: 'E1>Q1' } }]);
+    expect(chosen).toEqual([{ id: 'delete', context: { kind: 'edge', key: 'E1>Q1' } }]);
   });
 
   it('says that it was closed without a choice when Escape closes it, so that the focus can go back', async () => {
@@ -190,7 +238,7 @@ describe('ContextMenu, when the click that opened it comes to its end', () => {
 
     fireEvent.click(screen.getByRole('menuitem', { name: /Rename/ }));
 
-    expect(chosen).toEqual([{ action: 'rename', target: queue }]);
+    expect(chosen).toEqual([{ id: 'rename', context: queue }]);
   });
 
   it('holds the end of the click that opens it again, when it is opened again where it is', async () => {
@@ -200,7 +248,12 @@ describe('ContextMenu, when the click that opened it comes to its end', () => {
     fireEvent.click(document.body);
     await gone();
 
-    fixture.componentInstance.open(queue, { x: 80, y: 90 }, menuName);
+    fixture.componentInstance.open({
+      title: menuName,
+      client: { x: 80, y: 90 },
+      items: contextItems(queue, false),
+      context: queue,
+    });
     fixture.detectChanges();
     await screen.findByRole('menu', { name: menuName });
     releaseRightButton();

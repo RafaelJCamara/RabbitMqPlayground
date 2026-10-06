@@ -176,7 +176,34 @@ describe('describeCommand', () => {
       expect(describeCommand({ type: 'batch', commands: [move('a'), move('b')] })).toBe('2 changes');
     });
 
-    it('is a count of changes when the adding comes with something that is not putting it in its place', () => {
+    it('says both, the node and the link, when a drop on nothing made one and joined it to where the link started (ADR-0042)', () => {
+      const bind: DocumentCommand = {
+        type: 'bind',
+        source: 'orders',
+        destination: { kind: 'queue', name: 'billing' },
+        key: 'a',
+      };
+      const link: DocumentCommand = { type: 'link', producer: 'sender', target: { kind: 'queue', name: 'billing' } };
+      const subscribe: DocumentCommand = { type: 'subscribe', consumer: 'worker', queue: 'billing' };
+
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), bind] })).toBe(
+        'added queue billing and bound exchange orders to queue billing',
+      );
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), move('billing'), link] })).toBe(
+        'added queue billing and linked producer sender to queue billing',
+      );
+      expect(describeCommand({ type: 'batch', commands: [{ type: 'add-consumer', name: 'worker' }, subscribe] })).toBe(
+        'added consumer worker and subscribed consumer worker to queue billing',
+      );
+    });
+
+    it('is a count of changes when the adding comes with something that is neither its place nor a link', () => {
+      const rename: DocumentCommand = { type: 'rename', target: { kind: 'queue', name: 'billing' }, name: 'b2' };
+
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), rename] })).toBe('2 changes');
+    });
+
+    it('is a count of changes when the adding comes with two links, or a link comes with two additions', () => {
       const bind: DocumentCommand = {
         type: 'bind',
         source: 'orders',
@@ -184,7 +211,8 @@ describe('describeCommand', () => {
         key: 'a',
       };
 
-      expect(describeCommand({ type: 'batch', commands: [queue('billing'), bind] })).toBe('2 changes');
+      expect(describeCommand({ type: 'batch', commands: [queue('billing'), bind, bind] })).toBe('3 changes');
+      expect(describeCommand({ type: 'batch', commands: [queue('a'), queue('b'), bind] })).toBe('3 changes');
     });
 
     it('is a count of changes when the taking away comes with something that is not', () => {

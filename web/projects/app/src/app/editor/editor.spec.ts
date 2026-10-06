@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { transientQueueReply } from '@rmq/engine';
 import { createMemoryRepository, type CanvasRepository } from '@rmq/persistence';
@@ -368,7 +368,7 @@ describe('Editor', () => {
 
     it('turns a link that it reports into a binding, and the edge is drawn', async () => {
       const { canvas, user, fixture } = await openEditor();
-      await user.click(screen.getByRole('button', { name: 'Direct exchange' }));
+      await user.click(screen.getByRole('button', { name: 'Fanout exchange' }));
       await user.click(screen.getByRole('button', { name: 'Queue' }));
       fixture.detectChanges();
       const idOf = (kind: string) =>
@@ -399,6 +399,392 @@ describe('Editor', () => {
       fixture.debugElement.injector.get(CommandBus).undo('toolbar');
       fixture.detectChanges();
       expect(canvas().model().nodes).toHaveLength(1);
+    });
+  });
+
+  describe('linking (ADR-0041, ADR-0042)', () => {
+    async function openEditor(...items: string[]) {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      const user = userEvent.setup();
+      for (const item of items) {
+        await user.click(screen.getByRole('button', { name: item }));
+      }
+      view.fixture.detectChanges();
+      const idOf = (kind: string) =>
+        canvas()
+          .model()
+          .nodes.find((node) => node.kind === kind)!.id;
+      const bus = () => view.fixture.debugElement.injector.get(CommandBus);
+      return { ...view, canvas, user, idOf, bus };
+    }
+
+    const bindings = (store: DocumentStore) => Object.values(store.document().bindings);
+
+    it('asks for the key of a binding from a topic exchange in a popover with the cursor in it, and binds with the key that is typed', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Topic exchange', 'Queue');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+
+      const popover = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      expect(popover).toBeInTheDocument();
+      const field = screen.getByRole('textbox', { name: 'Binding key' });
+      await waitFor(() => expect(field).toHaveFocus());
+      expect(bindings(store)).toEqual([]);
+
+      await user.keyboard('order.*{Enter}');
+      fixture.detectChanges();
+
+      expect(bindings(store).map(({ key }) => key)).toEqual(['order.*']);
+      expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('keeps the popover open with the reason under the field when the key is refused, once, and binds when it is corrected', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Topic exchange', 'Queue');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
+
+      await user.keyboard('#.#.#{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('binding-key')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('#');
+      // The reason is under the field, and not also on the status line, where there would be two of it.
+      expect(screen.getAllByTestId('refusal-message')).toHaveLength(1);
+      expect(bindings(store)).toEqual([]);
+
+      await user.clear(screen.getByRole('textbox', { name: 'Binding key' }));
+      await user.keyboard('a.#{Enter}');
+      fixture.detectChanges();
+
+      expect(bindings(store).map(({ key }) => key)).toEqual(['a.#']);
+      expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
+    });
+
+    it('gives the link up on Escape, says so, makes nothing, and gives the focus back to the canvas', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Direct exchange', 'Queue');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
+      canvas().calls.length = 0;
+
+      await user.keyboard('{Escape}');
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
+      expect(bindings(store)).toEqual([]);
+      expect(screen.getByTestId('status-message')).toHaveTextContent('Link cancelled.');
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('gives the link up when the focus goes elsewhere, and leaves the focus where the learner put it', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Direct exchange', 'Queue');
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
+      canvas().calls.length = 0;
+
+      await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
+      expect(screen.getByTestId('status-message')).toHaveTextContent('Link cancelled.');
+      expect(canvas().calls).not.toContain('focus');
+    });
+
+    it('opens the picker from the menu, lists what the rules allow, and binds, through the popover, what is chosen', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Direct exchange', 'Queue');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'node', id: idOf('exchange') },
+        client: { x: 40, y: 40 },
+      });
+      fixture.detectChanges();
+      await screen.findByRole('menu', { name: 'Actions for exchange exchange1' });
+
+      await user.click(screen.getByRole('menuitem', { name: /Link to…/ }));
+      fixture.detectChanges();
+
+      const dialog = await screen.findByRole('dialog', { name: 'Link exchange exchange1 to…' });
+      expect(
+        within(dialog)
+          .getAllByRole('option')
+          .map((option) => option.querySelector('strong')?.textContent),
+      ).toEqual(['exchange1', 'queue1']);
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search the targets' })).toHaveFocus());
+
+      await user.keyboard('queue{Enter}');
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      await user.keyboard('k{Enter}');
+      expect(bindings(store).map(({ key }) => key)).toEqual(['k']);
+    });
+
+    it('says that the picker was given up, on Escape, and gives the focus back to the canvas', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Producer', 'Queue');
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'node', id: idOf('producer') },
+        client: { x: 5, y: 5 },
+      });
+      fixture.detectChanges();
+      await user.click(await screen.findByRole('menuitem', { name: /Link to…/ }));
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search the targets' })).toHaveFocus());
+      canvas().calls.length = 0;
+
+      await user.keyboard('{Escape}');
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('status-message')).toHaveTextContent('Link cancelled.');
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('does not offer "Link to…" for a consumer, which nothing is linked from', async () => {
+      const { canvas, fixture, idOf } = await openEditor('Consumer');
+
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'node', id: idOf('consumer') },
+        client: { x: 5, y: 5 },
+      });
+      fixture.detectChanges();
+
+      await screen.findByRole('menu', { name: 'Actions for consumer consumer1' });
+      expect(screen.queryByRole('menuitem', { name: /Link to…/ })).not.toBeInTheDocument();
+    });
+
+    it('opens a menu where the link was let go on nothing, and makes the node and the link as one step when it is chosen', async () => {
+      const { canvas, user, fixture, idOf, bus } = await openEditor('Producer');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+
+      canvas().intent.emit({
+        type: 'link-to-empty',
+        source: idOf('producer'),
+        at: { x: 400, y: 300 },
+        client: { x: 640, y: 480 },
+        via: 'drag',
+      });
+      fixture.detectChanges();
+
+      await screen.findByRole('menu', { name: 'Create and link from producer producer1' });
+      expect(screen.getAllByRole('menuitem').map((item) => item.textContent?.trim())).toEqual([
+        'New direct exchange',
+        'New fanout exchange',
+        'New topic exchange',
+        'New headers exchange',
+        'New queue',
+      ]);
+
+      await user.click(screen.getByRole('menuitem', { name: 'New fanout exchange' }));
+      fixture.detectChanges();
+
+      expect(Object.values(store.document().exchanges).map(({ name, type }) => [name, type])).toEqual([
+        ['exchange1', 'fanout'],
+      ]);
+      expect(Object.values(store.document().producers)[0]?.target).toMatchObject({ kind: 'exchange' });
+      expect(store.undoLabel()).toBe(
+        'added fanout exchange exchange1 and linked producer producer1 to exchange exchange1',
+      );
+      bus().undo('toolbar');
+      expect(Object.keys(store.document().exchanges)).toEqual([]);
+    });
+
+    it('asks for the key before it makes anything for a drop on nothing from a topic exchange, and the focus goes back to the canvas on Escape from the menu', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Topic exchange');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({
+        type: 'link-to-empty',
+        source: idOf('exchange'),
+        at: { x: 400, y: 300 },
+        client: { x: 640, y: 480 },
+        via: 'drag',
+      });
+      fixture.detectChanges();
+      await user.click(await screen.findByRole('menuitem', { name: 'New queue' }));
+      fixture.detectChanges();
+
+      await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      expect(Object.keys(store.document().queues)).toEqual([]);
+      await user.keyboard('new.*{Enter}');
+      fixture.detectChanges();
+
+      expect(Object.values(store.document().queues).map(({ name }) => name)).toEqual(['queue1']);
+      expect(bindings(store).map(({ key }) => key)).toEqual(['new.*']);
+    });
+
+    it('says why nothing can be made, and opens no menu, when the link started where nothing is linked from', async () => {
+      const { canvas, fixture, idOf } = await openEditor('Consumer');
+
+      canvas().intent.emit({
+        type: 'link-to-empty',
+        source: idOf('consumer'),
+        at: { x: 1, y: 1 },
+        client: { x: 1, y: 1 },
+        via: 'drag',
+      });
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('A consumer is where a message ends');
+    });
+
+    it('closes the menu of a drop on nothing with Escape, and makes nothing', async () => {
+      const { canvas, fixture, idOf } = await openEditor('Producer');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({
+        type: 'link-to-empty',
+        source: idOf('producer'),
+        at: { x: 1, y: 1 },
+        client: { x: 10, y: 10 },
+        via: 'drag',
+      });
+      fixture.detectChanges();
+      await screen.findByRole('menu');
+      canvas().calls.length = 0;
+
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', keyCode: 27 });
+      fixture.detectChanges();
+
+      await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+      expect(Object.keys(store.document().exchanges)).toEqual([]);
+      await waitFor(() => expect(canvas().calls).toContain('focus'));
+    });
+
+    it('moves the label of an edge when the canvas says that it was dragged, as one step that a typed line can say', async () => {
+      const { canvas, fixture, idOf, bus } = await openEditor('Fanout exchange', 'Queue');
+      const store = fixture.debugElement.injector.get(DocumentStore);
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+      const [edge] = canvas().model().edges;
+
+      canvas().intent.emit({ type: 'move-label', key: edge!.id, at: 0.25 });
+      fixture.detectChanges();
+
+      expect(store.document().layout.labels[edge!.id]).toEqual({ at: 0.25 });
+      expect(canvas().model().edges[0]?.labelAt).toBe(0.25);
+      bus().undo('toolbar');
+      expect(store.document().layout.labels[edge!.id]).toBeUndefined();
+    });
+  });
+
+  describe('the card of a label (ADR-0044)', () => {
+    async function openEditorWithManyKeys() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      const bus = view.fixture.debugElement.injector.get(CommandBus);
+      bus.apply(
+        {
+          type: 'batch',
+          commands: [
+            {
+              type: 'declare-exchange',
+              name: 'orders',
+              exchangeType: 'topic',
+              durable: true,
+              autoDelete: false,
+              internal: false,
+            },
+            { type: 'declare-queue', name: 'billing', durable: true },
+            ...['a', 'b', 'c', 'd', 'e'].map(
+              (key) =>
+                ({ type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key }) as const,
+            ),
+          ],
+        },
+        'typed',
+      );
+      view.fixture.detectChanges();
+      const [edge] = canvas().model().edges;
+      return { ...view, canvas, key: edge!.id };
+    }
+
+    it('lists every key of the edge while a pointer is over its label, one to a line, under whose they are', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+
+      canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+      fixture.detectChanges();
+
+      const card = screen.getByRole('group', { name: 'Bindings from exchange orders to queue billing' });
+      expect(
+        within(card)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    it('goes shortly after the pointer has left the label, and stays while the pointer is on the card', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+        const card = screen.getByTestId('label-card');
+
+        canvas().intent.emit({ type: 'peek', key: null });
+        fireEvent.pointerEnter(card);
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).toBeInTheDocument();
+
+        fireEvent.pointerLeave(card);
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('goes when the pointer has left the label and has not come onto the card', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+
+        canvas().intent.emit({ type: 'peek', key: null });
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+
+        expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('goes on Escape, wherever the focus is, without the pointer having to move (WCAG 1.4.13)', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+      fixture.detectChanges();
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+    });
+
+    it('does not open for an edge that is not on the canvas', async () => {
+      const { canvas, fixture } = await openEditorWithManyKeys();
+
+      canvas().intent.emit({ type: 'peek', key: 'a>gone', rect: { x: 1, y: 1, width: 1, height: 1 } });
+      canvas().intent.emit({ type: 'peek', key: 'nonsense', rect: { x: 1, y: 1, width: 1, height: 1 } });
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
     });
   });
 
@@ -470,7 +856,7 @@ describe('Editor', () => {
 
     it('opens for an edge, with delete only, and selects the edge', async () => {
       const { canvas, user, fixture } = await openEditor();
-      await user.click(screen.getByRole('button', { name: 'Direct exchange' }));
+      await user.click(screen.getByRole('button', { name: 'Fanout exchange' }));
       fixture.detectChanges();
       const idOf = (kind: string) =>
         canvas()
@@ -517,7 +903,7 @@ describe('Editor', () => {
 
     it('does not rename an edge, and does not delete it either, when it is asked to', async () => {
       const { canvas, user, fixture } = await openEditor();
-      await user.click(screen.getByRole('button', { name: 'Direct exchange' }));
+      await user.click(screen.getByRole('button', { name: 'Fanout exchange' }));
       fixture.detectChanges();
       const idOf = (kind: string) =>
         canvas()

@@ -11,10 +11,21 @@ import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { Inspector } from './inspector';
 import { IntentHandler } from './intents';
+import { LinkFlow } from './link-flow';
+import { NewNodeFocus } from './new-node-focus';
 
 async function renderInspector(selected: { nodes?: string[]; edges?: string[] } = {}) {
   const view = await render(Inspector, {
-    providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, FlowViewport, IntentHandler],
+    providers: [
+      DocumentStore,
+      SelectionStore,
+      StatusStore,
+      CommandBus,
+      FlowViewport,
+      NewNodeFocus,
+      LinkFlow,
+      IntentHandler,
+    ],
   });
   const store = TestBed.inject(DocumentStore);
   const selection = TestBed.inject(SelectionStore);

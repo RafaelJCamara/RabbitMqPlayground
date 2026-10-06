@@ -1,38 +1,31 @@
-import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
-import {
-  findId,
-  kindOf,
-  linkCommand,
-  linkRules,
-  lookup,
-  nameOf,
-  type CanvasDocument,
-  type DocumentCommand,
-  type Id,
-  type Result,
-} from '@rmq/domain';
-import { Announcer } from '../core/announcer';
+import { inject, Injectable } from '@angular/core';
+import { type CanvasDocument, type DocumentCommand, type Id, type Result } from '@rmq/domain';
 import { CommandBus } from '../core/state/command-bus';
+import { isVirtual } from '../core/state/default-exchange';
 import { DocumentStore } from '../core/state/document-store';
 import { removeEdgeCommands } from '../core/state/edge-commands';
 import type { CommandOrigin } from '../core/state/origin';
-import { refOf } from '../core/state/refs';
+import { describeNode, edgeEnds, refOf } from '../core/state/refs';
 import { SelectionStore } from '../core/state/selection-store';
-import { StatusStore } from '../core/state/status-store';
-import { FlowViewport } from '../canvas/model/flow-viewport';
-import type { CanvasIntent, ContextTarget, InputBy } from '../canvas/model/intents';
+import type { CanvasIntent, ContextTarget, InputBy, LinkVia } from '../canvas/model/intents';
 import type { NewNode } from '../canvas/model/new-node';
-import type { Point } from '../canvas/model/transform';
-import { frameOf } from '../canvas/model/shapes';
+import type { Point, Size } from '../canvas/model/transform';
 import { addNode } from './add-node';
+import { LinkFlow } from './link-flow';
+import { NewNodeFocus } from './new-node-focus';
 
-/** What the editor shows as a result of an intent that is not a command: a menu that opens, a name that is being edited. */
+/** What the editor shows as a result of an intent that is not a command: a menu that opens, a name that is being edited, the full text of a label. */
 export interface IntentSurface {
   openMenu(target: ContextTarget, client: Point): void;
   startRename(id: Id, origin?: CommandOrigin): void;
+  /** A pointer is over the label of an edge, at `rect` on the page, or has left it (`key` is `null`). */
+  showPeek(key: string | null, rect?: Point & Size): void;
 }
 
 const originOf = (by: InputBy): CommandOrigin => (by === 'keyboard' ? 'key' : 'gesture');
+
+/** A link that was dragged or clicked is a gesture, and one that the keyboard made is a key. */
+const linkOrigin = (via: LinkVia): CommandOrigin => (via === 'keyboard' ? 'key' : 'gesture');
 
 /**
  * Turns what the canvas reports into commands (ADR-0031, ADR-0033). The canvas never changes what is on it: it says what the learner
@@ -44,10 +37,8 @@ export class IntentHandler {
   private readonly bus = inject(CommandBus);
   private readonly store = inject(DocumentStore);
   private readonly selection = inject(SelectionStore);
-  private readonly status = inject(StatusStore);
-  private readonly announcer = inject(Announcer);
-  private readonly viewport = inject(FlowViewport);
-  private readonly injector = inject(Injector);
+  private readonly links = inject(LinkFlow);
+  private readonly focus = inject(NewNodeFocus);
 
   /** Set by the editor, which owns the menu and the field for a name. */
   surface: IntentSurface | undefined;
@@ -63,14 +54,21 @@ export class IntentHandler {
       case 'delete':
         this.remove(intent.nodes, intent.edges, originOf(intent.by));
         break;
+      // Every way to link ends in one function (ADR-0041), and a link that is let go on nothing in the menu that offers something to link to (ADR-0042).
       case 'link':
-        this.link(intent.source, intent.target, intent.via === 'keyboard' ? 'key' : 'gesture');
+        this.links.request(intent.source, intent.target, linkOrigin(intent.via));
         break;
       case 'link-invalid':
-        this.explainInvalidLink(intent.source, intent.target);
+        this.links.explainInvalid(intent.source, intent.target, linkOrigin(intent.via));
         break;
       case 'link-to-empty':
-        this.say('There is nothing to link to where you let go. Drop the link on a node.');
+        this.links.dropOnNothing(intent.source, intent.at, intent.client, linkOrigin(intent.via));
+        break;
+      case 'move-label':
+        this.moveLabel(intent.key, intent.at);
+        break;
+      case 'peek':
+        this.surface?.showPeek(intent.key, intent.rect);
         break;
       case 'context-menu':
         this.surface?.openMenu(intent.target, intent.client);
@@ -88,7 +86,7 @@ export class IntentHandler {
   add(node: NewNode, origin: CommandOrigin, at?: Point): void {
     const addition = addNode(this.store.document(), node, at);
     if (this.bus.apply(addition.command, origin).ok) {
-      this.showNew(addition.kind, addition.name);
+      this.focus.show(addition.kind, addition.name);
     }
   }
 
@@ -116,23 +114,6 @@ export class IntentHandler {
     this.remove(nodes, edges, origin);
   }
 
-  private showNew(kind: NewNode['kind'], name: string): void {
-    const document = this.store.document();
-    const id = findId(document, kind, name);
-    if (id === undefined) {
-      return;
-    }
-    this.selection.select([id]);
-    const position = lookup(document.layout.nodes, id);
-    if (position !== undefined) {
-      const { width, height } = frameOf(kind);
-      // The canvas draws the node on the next render, and the library fits what it has drawn, so the node is brought into view then.
-      afterNextRender(() => this.viewport.reveal({ id, x: position.x, y: position.y, width, height }), {
-        injector: this.injector,
-      });
-    }
-  }
-
   private move(
     moves: readonly { readonly id: Id; readonly x: number; readonly y: number }[],
     origin: CommandOrigin,
@@ -146,7 +127,29 @@ export class IntentHandler {
     this.apply(commands, origin, false);
   }
 
+  /** The label of an edge was dragged along it: where it is let go is the place that the document keeps, as one `move label`. */
+  private moveLabel(key: string, at: number): void {
+    const ends = edgeEnds(key);
+    const document = this.store.document();
+    const from = ends === undefined ? undefined : refOf(document, ends.from);
+    const to = ends === undefined ? undefined : refOf(document, ends.to);
+    if (from !== undefined && to !== undefined) {
+      this.bus.apply({ type: 'move-label', from, to, at }, 'gesture');
+    }
+  }
+
   private remove(nodes: readonly Id[], edges: readonly string[], origin: CommandOrigin): void {
+    // The default exchange and its implicit bindings are RabbitMQ's, and are not in the document, so there is nothing to delete (ADR-0043).
+    if ([...nodes, ...edges].some(isVirtual)) {
+      this.bus.refuse(
+        {
+          kind: 'unsupported',
+          message: 'RabbitMQ makes the default exchange and its bindings itself, so they cannot be deleted or changed.',
+        },
+        origin,
+      );
+      return;
+    }
     const document = this.store.document();
     // The edges go first, while both of their ends are there, and then the nodes, which take what is left of theirs with them.
     const commands: DocumentCommand[] = [
@@ -157,31 +160,6 @@ export class IntentHandler {
       }),
     ];
     this.apply(commands, origin, true);
-  }
-
-  private link(source: Id, target: Id, origin: CommandOrigin): void {
-    const command = linkCommand(this.store.document(), source, target);
-    if (command.ok) {
-      this.bus.apply(command.value, origin);
-    } else {
-      this.explain(command.error.message);
-    }
-  }
-
-  private explainInvalidLink(source: Id, target: Id): void {
-    const rules = linkRules(this.store.document());
-    this.explain(rules.explain(source, target));
-  }
-
-  /** A drop that cannot be made is a refusal, and says why in the words of the rule that forbids it. */
-  private explain(message: string): void {
-    this.status.refuse({ kind: 'invalid-link', message }, 'gesture');
-    this.announcer.announce(message, 'assertive');
-  }
-
-  private say(text: string): void {
-    this.status.say(text);
-    this.announcer.announce(text);
   }
 
   /** One command applies as it is, several as one batch, which is one step of undo. */
@@ -195,12 +173,6 @@ export class IntentHandler {
 
   /** The kind and the name of what a context menu or the inspector acts on, for the words of a button. */
   describe(id: Id): string | undefined {
-    const document = this.store.document();
-    const kind = kindOf(document, id);
-    if (kind === undefined) {
-      return undefined;
-    }
-    const name = nameOf(document, kind, id);
-    return name === undefined ? undefined : `${kind} ${name}`;
+    return describeNode(this.store.document(), id);
   }
 }

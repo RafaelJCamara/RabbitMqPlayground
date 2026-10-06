@@ -15,29 +15,43 @@ import type { Point } from '../canvas/model/transform';
 import { Icon } from '../core/ui/icon';
 import type { IconName } from '../core/ui/icons';
 
-export type MenuActionName = 'rename' | 'delete';
-
-/** What was chosen, and what it is for. */
-export interface MenuAction {
-  readonly action: MenuActionName;
-  readonly target: ContextTarget;
-}
-
-interface MenuItem {
-  readonly action: MenuActionName;
+/** One item of a menu: what it is called, its icon, and the key that does the same, if there is one. */
+export interface MenuItemSpec {
+  readonly id: string;
   readonly label: string;
   readonly icon: IconName;
-  readonly keys: string;
+  readonly keys?: string;
 }
 
-const RENAME: MenuItem = { action: 'rename', label: 'Rename', icon: 'rename', keys: 'F2' };
-const DELETE: MenuItem = { action: 'delete', label: 'Delete', icon: 'trash', keys: 'Delete' };
+/** What a menu is opened with: the point on the page, what it is for, its items, and what the learner will have chosen them for. */
+export interface MenuRequest {
+  /** What the menu is for, for a screen reader: `Actions for queue billing`. */
+  readonly title: string;
+  readonly client: Point;
+  readonly items: readonly MenuItemSpec[];
+  readonly context: unknown;
+}
+
+/** What was chosen, and what the menu was opened for. */
+export interface MenuChoice {
+  readonly id: string;
+  readonly context: unknown;
+}
+
+const RENAME: MenuItemSpec = { id: 'rename', label: 'Rename', icon: 'rename', keys: 'F2' };
+const LINK: MenuItemSpec = { id: 'link', label: 'Link to…', icon: 'link', keys: 'L' };
+const DELETE: MenuItemSpec = { id: 'delete', label: 'Delete', icon: 'trash', keys: 'Delete' };
+
+/** The items of the menu of a node or an edge: a node can be renamed, linked from if the rules let it be, and deleted, an edge can be deleted. */
+export function contextItems(target: ContextTarget, canLink: boolean): readonly MenuItemSpec[] {
+  return target.kind === 'node' ? [RENAME, ...(canLink ? [LINK] : []), DELETE] : [DELETE];
+}
 
 /**
- * The context menu of a node or an edge (ADR-0010): what the pointer can do there, which is also what a key does, and each item says
- * which key. It is the CDK's menu, which has the roles, the arrow keys, the type-ahead and the way out with Escape, opened where the
- * canvas says (a right click, or the menu key on the selection). It does nothing itself: it says what was chosen, or that it was
- * closed without a choice, so that the focus can go back to the canvas.
+ * A menu that opens at a point (ADR-0010, ADR-0042): the context menu of a node or an edge, with what the pointer can do there, which is also what a key does, and each item
+ * says which key; and the menu that a link let go on empty canvas opens, with what could be made there. It is the CDK's menu, which has the roles, the arrow keys, the
+ * type-ahead and the way out with Escape, opened where the canvas says (a right click, the menu key on the selection, the end of a link). It does nothing itself: it
+ * says what was chosen and for what it was opened, or that it was closed without a choice, so that the focus can go back to the canvas.
  */
 @Component({
   selector: 'rmq-context-menu',
@@ -57,16 +71,18 @@ const DELETE: MenuItem = { action: 'delete', label: 'Delete', icon: 'trash', key
           class="bg-panel border-border text-fg min-w-48 rounded-md border p-1 shadow-lg"
           [attr.aria-label]="title()"
         >
-          @for (item of items(); track item.action) {
+          @for (item of items(); track item.id) {
             <button
               cdkMenuItem
               type="button"
               class="hover:bg-canvas focus:bg-canvas flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
-              (cdkMenuItemTriggered)="choose(item.action)"
+              (cdkMenuItemTriggered)="choose(item.id)"
             >
               <rmq-icon [name]="item.icon" [size]="16" />
               <span>{{ item.label }}</span>
-              <kbd class="text-muted ml-auto text-xs">{{ item.keys }}</kbd>
+              @if (item.keys) {
+                <kbd class="text-muted ml-auto text-xs">{{ item.keys }}</kbd>
+              }
             </button>
           }
         </div>
@@ -76,13 +92,13 @@ const DELETE: MenuItem = { action: 'delete', label: 'Delete', icon: 'trash', key
 })
 export class ContextMenu {
   /** A choice was made. */
-  readonly act = output<MenuAction>();
+  readonly act = output<MenuChoice>();
   /** The menu was closed without one. */
   readonly dismissed = output<void>();
 
-  protected readonly items = signal<readonly MenuItem[]>([]);
+  protected readonly items = signal<readonly MenuItemSpec[]>([]);
   protected readonly title = signal('');
-  private readonly target = signal<ContextTarget | null>(null);
+  private readonly context = signal<unknown>(null);
   private readonly trigger = viewChild.required(CdkContextMenuTrigger);
   private readonly menuRef = viewChild(CdkMenu);
   private readonly injector = inject(Injector);
@@ -95,13 +111,13 @@ export class ContextMenu {
     inject(DestroyRef).onDestroy(() => this.hold?.abort());
   }
 
-  /** Opens the menu for a node or an edge, where the pointer was. `title` says what it is for, for a screen reader. */
-  open(target: ContextTarget, client: Point, title: string): void {
-    this.target.set(target);
-    this.title.set(title);
-    this.items.set(target.kind === 'node' ? [RENAME, DELETE] : [DELETE]);
+  /** Opens the menu where the pointer was, or where a key says. */
+  open(request: MenuRequest): void {
+    this.context.set(request.context);
+    this.title.set(request.title);
+    this.items.set(request.items);
     this.chosen = false;
-    this.trigger().open(client);
+    this.trigger().open(request.client);
     this.holdTheEndOfTheClick();
   }
 
@@ -132,12 +148,9 @@ export class ContextMenu {
     this.page.addEventListener('auxclick', release, options);
   }
 
-  protected choose(action: MenuActionName): void {
-    const target = this.target();
-    if (target !== null) {
-      this.chosen = true;
-      this.act.emit({ action, target });
-    }
+  protected choose(id: string): void {
+    this.chosen = true;
+    this.act.emit({ id, context: this.context() });
   }
 
   /**

@@ -1,6 +1,19 @@
 import { documentOf, exchangeRecord, queueRecord } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { edgeEnds, refOf } from './refs';
+import { describeNode, edgeEnds, refOf } from './refs';
+
+describe('describeNode', () => {
+  const document = documentOf({ exchanges: { x1: exchangeRecord('orders') }, queues: { q1: queueRecord('billing') } });
+
+  it('names a node by its kind and its name, as a sentence does', () => {
+    expect(describeNode(document, 'x1')).toBe('exchange orders');
+    expect(describeNode(document, 'q1')).toBe('queue billing');
+  });
+
+  it('is nothing for an id that is not on the canvas', () => {
+    expect(describeNode(document, 'gone')).toBeUndefined();
+  });
+});
 
 describe('refOf', () => {
   const document = documentOf({

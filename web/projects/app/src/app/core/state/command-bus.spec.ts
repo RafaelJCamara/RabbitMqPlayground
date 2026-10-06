@@ -167,6 +167,26 @@ describe('CommandBus', () => {
     });
   });
 
+  describe('refuse and say', () => {
+    it('tells a refusal that no command made, such as a link that a rule forbids, as a command that is refused is told', () => {
+      bus.refuse({ kind: 'invalid-link', message: 'Consumers subscribe to queues, not exchanges.' }, 'gesture');
+
+      expect(status.refusal()).toMatchObject({
+        origin: 'gesture',
+        issue: { kind: 'invalid-link', message: 'Consumers subscribe to queues, not exchanges.' },
+      });
+      expect(announcer.announce).toHaveBeenCalledWith('Consumers subscribe to queues, not exchanges.', 'assertive');
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('says something that was done, or not done, on the status line and aloud', () => {
+      bus.say('Link cancelled.');
+
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Link cancelled.' });
+      expect(announcer.announce).toHaveBeenCalledWith('Link cancelled.');
+    });
+  });
+
   describe('undo and redo', () => {
     it('take back and bring back the last change, and say what they did', () => {
       bus.apply(declareQueue('billing'), 'gesture');

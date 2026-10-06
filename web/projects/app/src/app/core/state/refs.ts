@@ -13,6 +13,12 @@ export function refOf(document: CanvasDocument, id: Id): ElementRef | undefined 
   return kind === undefined || name === undefined ? undefined : { kind, name };
 }
 
+/** What a sentence calls a node: `queue billing`, `exchange orders`. Nothing for an id that the canvas does not have. */
+export function describeNode(document: CanvasDocument, id: Id): string | undefined {
+  const ref = refOf(document, id);
+  return ref === undefined ? undefined : `${ref.kind} ${ref.name}`;
+}
+
 /** The ids at the two ends of an edge, from its key (`from>to`, the key of its label), or `undefined` if it is not one. */
 export function edgeEnds(key: string): { readonly from: Id; readonly to: Id } | undefined {
   const parts = key.split('>');
