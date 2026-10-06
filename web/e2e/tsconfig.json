@@ -9,5 +9,16 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../playwright.config.ts"]
+  "include": ["./**/*.ts", "../playwright.config.ts"],
+  "references": [
+    {
+      "path": "../projects/engine/tsconfig.lib.json"
+    },
+    {
+      "path": "../projects/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../projects/testing/tsconfig.lib.json"
+    }
+  ]
 }
