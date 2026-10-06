@@ -22,8 +22,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted (integers extended by 0023) |
 | [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted |
 | [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019, vocabulary extended by 0025, command layer by 0026) |
-| [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted |
-| [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted |
+| [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted (record, files and loader settled by 0027, repository and autosave by 0028) |
+| [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted (the validator is the loader of 0027) |
 | [0014](0014-broker-interop-via-definitions-json.md) | Broker interoperability via `definitions.json` only | Accepted |
 | [0015](0015-testing-strategy-and-definition-of-done.md) | Testing strategy and definition of done | Accepted |
 | [0016](0016-node-editor-library.md) | Node editor library: Foblex Flow | Accepted |
@@ -37,6 +37,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) | A queue that is not durable is refused, with the root cause first and the broker's reply after it | Accepted |
 | [0025](0025-the-command-grammar.md) | The grammar of the typed command | Accepted |
 | [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted |
+| [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted |
+| [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted |
 
 ## Where to start
 
@@ -45,7 +47,9 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 - **How it's built:** [0005](0005-frontend-angular.md), [0006](0006-client-only-app-dotnet-api-when-needed.md),
   [0007](0007-deterministic-simulation-engine.md), [0011](0011-explicit-linking-and-command-layer.md),
   [0018](0018-workspace-layout-and-dependency-rules.md), [0019](0019-undo-through-immutable-document-snapshots.md),
-  [0025](0025-the-command-grammar.md), [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md).
+  [0025](0025-the-command-grammar.md), [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md),
+  [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md),
+  [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),

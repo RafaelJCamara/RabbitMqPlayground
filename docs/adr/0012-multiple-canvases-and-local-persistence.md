@@ -1,6 +1,9 @@
 # ADR-0012: Multiple canvases and local persistence
 
-- **Status:** Accepted
+- **Status:** Accepted. The record, the files and the loader that "Storage" and "Files" need are settled by
+  [ADR-0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md), and the repository, the
+  tombstones and the autosave by
+  [ADR-0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

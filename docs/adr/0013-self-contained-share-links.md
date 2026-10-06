@@ -1,6 +1,7 @@
 # ADR-0013: Self-contained share links
 
-- **Status:** Accepted
+- **Status:** Accepted. The validator that a link goes through is the loader of
+  [ADR-0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
