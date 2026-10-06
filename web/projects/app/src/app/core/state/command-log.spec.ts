@@ -130,6 +130,7 @@ describe('CommandLog (ADR-0046)', () => {
       bus.apply({ type: 'set', kind: 'canvas', changes: { seed: index + 2 } }, 'gesture');
     }
 
+    expect(LOG_LIMIT, 'ADR-0046 says a thousand').toBe(1000);
     expect(log.entries()).toHaveLength(LOG_LIMIT);
     expect(log.entries()[0]?.id).toBe(6);
     expect(log.latest()?.id).toBe(LOG_LIMIT + 5);
