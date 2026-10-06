@@ -333,7 +333,11 @@ describe('validateDocument', () => {
 
       const [issue] = validateDocument(publishingTo({ kind: 'exchange', id: 'ex3' }));
 
-      expect(issue).toMatchObject({ kind: 'internal-exchange', refusal: internalExchangeReply('hidden', '/') });
+      expect(issue).toMatchObject({
+        kind: 'internal-exchange',
+        path: ['producers', 'p', 'target'],
+        refusal: internalExchangeReply('hidden', '/'),
+      });
     });
 
     it('may publish to a queue that is called like an internal exchange, because that is a queue', () => {
@@ -440,6 +444,90 @@ describe('validateDocument', () => {
         { kind: 'layout', path: 'layout.labels.q1>ex1' },
         { kind: 'layout', path: 'layout.labels.ex1>q2' },
       ]);
+    });
+  });
+
+  describe('says each problem in words that name what is wrong', () => {
+    const toQueue = (key: string) => bindingRecord('ex1', { kind: 'queue', id: 'q1' }, key);
+    const sameBinding = headerArguments('all', entry('a', int(1)));
+
+    it.each<[string, CanvasDocument, string[]]>([
+      ['a vhost with no name', documentOf({ vhost: '' }), ['A vhost needs a name.']],
+      [
+        'a vhost that is too long',
+        documentOf({ vhost: 'v'.repeat(256) }),
+        ['The name of a vhost is at most 255 bytes of UTF-8.'],
+      ],
+      [
+        'a binding that ends at a queue that is not there',
+        documentWith({ bindings: { noQueue: bindingRecord('ex1', { kind: 'queue', id: 'gone' }) } }),
+        ["The binding 'noQueue' ends at a queue that is not on the canvas."],
+      ],
+      [
+        'a binding that ends at an exchange that is not there',
+        documentWith({ bindings: { noExchange: bindingRecord('ex1', { kind: 'exchange', id: 'gone' }) } }),
+        ["The binding 'noExchange' ends at an exchange that is not on the canvas."],
+      ],
+      [
+        'a binding with a key that is too long',
+        documentWith({ bindings: { b: toQueue('k'.repeat(256)) } }),
+        ['A routing key is at most 255 bytes of UTF-8, and this one is 256.'],
+      ],
+      [
+        'a binding that is there twice',
+        documentWith({
+          bindings: {
+            one: bindingRecord('ex2', { kind: 'queue', id: 'q2' }, '', sameBinding),
+            two: bindingRecord('ex2', { kind: 'queue', id: 'q2' }, '', sameBinding),
+          },
+        }),
+        [
+          "The binding 'two' is the same binding as another one: the same ends, key and arguments. A broker keeps it once.",
+        ],
+      ],
+      [
+        'a producer that publishes to an exchange that is not there',
+        documentWith({ producers: { p: producerRecord('sender', { kind: 'exchange', id: 'gone' }) } }),
+        ["The producer 'sender' publishes to an exchange that is not on the canvas."],
+      ],
+      [
+        'a producer that publishes to a queue that is not there',
+        documentWith({ producers: { p: producerRecord('sender', { kind: 'queue', id: 'gone' }) } }),
+        ["The producer 'sender' publishes to a queue that is not on the canvas."],
+      ],
+      [
+        'a producer with a routing key that is too long',
+        documentWith({
+          producers: {
+            p: producerRecord('sender', null, { message: { payload: '', key: 'k'.repeat(256), headers: [] } }),
+          },
+        }),
+        ['A routing key is at most 255 bytes of UTF-8, and this one is 256.'],
+      ],
+      [
+        'a consumer of a queue that is not there',
+        documentWith({ consumers: { c: consumerRecord('w', ['q1', 'gone']) } }),
+        ["The consumer 'w' consumes from a queue that is not on the canvas."],
+      ],
+      [
+        'a consumer that consumes from a queue twice',
+        documentWith({ consumers: { c: consumerRecord('w', ['q1', 'q2', 'q1']) } }),
+        ["The consumer 'w' consumes from the queue 'billing' twice."],
+      ],
+      [
+        'a label for an edge that is not there',
+        documentWith({ labels: { 'q1>ex1': { at: 0.5 } } }),
+        ["A label is kept for the edge 'q1>ex1', which is not on the canvas."],
+      ],
+      [
+        'an element that has no position',
+        documentWith({
+          nodes: Object.fromEntries(Object.entries(documentOf(valid).layout.nodes).filter(([id]) => id !== 'q2')),
+        }),
+        ["The queue 'archive' has no position."],
+      ],
+    ])('%s', (_what, document, messages) => {
+      expect(validateDocument(document).map(({ message }) => message)).toEqual(messages);
     });
   });
 

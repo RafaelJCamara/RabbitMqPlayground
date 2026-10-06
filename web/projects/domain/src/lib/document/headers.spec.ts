@@ -128,6 +128,25 @@ describe('bindingSignature', () => {
     expect(sign(args(['a', str('1')], ['b', exists]))).toBe(sign(args(['b', exists], ['a', str('1')])));
   });
 
+  it('does not depend on the order of any number of arguments, in any of its orders', () => {
+    const permutations = <T>(items: readonly T[]): T[][] =>
+      items.length <= 1
+        ? [[...items]]
+        : items.flatMap((item, at) =>
+            permutations([...items.slice(0, at), ...items.slice(at + 1)]).map((rest) => [item, ...rest]),
+          );
+    const entries: [string, HeaderCondition][] = [
+      ['a', str('1')],
+      ['b', int(2)],
+      ['c', exists],
+      ['d', bool(true)],
+    ];
+    const orders = permutations(entries);
+
+    expect(orders).toHaveLength(24);
+    expect(new Set(orders.map((order) => sign(args(...order)))).size).toBe(1);
+  });
+
   it('is the same for no arguments and for an empty list with no x-match', () => {
     expect(sign(undefined)).toBe(sign(headerArguments(null)));
     expect(sign(undefined)).not.toBe(sign(headerArguments('all')));

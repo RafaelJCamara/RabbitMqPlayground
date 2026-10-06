@@ -93,8 +93,10 @@ describe('emptyDocument', () => {
       producers: {},
       consumers: {},
       layout: { nodes: {}, labels: {} },
-      settings: { showDefaultExchange: false, seed: DEFAULT_SEED, timing: DEFAULT_TIMING },
+      settings: { showDefaultExchange: false, seed: 1, timing: { publishMs: 500, brokerMs: 300, deliverMs: 500 } },
     });
+    expect(DEFAULT_SEED).toBe(1);
+    expect(DEFAULT_TIMING).toEqual({ publishMs: 500, brokerMs: 300, deliverMs: 500 });
   });
 
   it('takes a vhost and a seed', () => {
@@ -131,6 +133,22 @@ describe('the document schema', () => {
   it('accepts a binding without arguments, and a binding whose x-match is left out', () => {
     expect(issuesOf(changed(['bindings', 'b2', 'headers'], undefined))).toEqual([]);
     expect(issuesOf(changed(['bindings', 'b1', 'headers', 'xMatch'], null))).toEqual([]);
+  });
+
+  it('accepts every value of every enumeration: the exchange types, the modes of x-match, both kinds of target and of destination, both acknowledgements', () => {
+    for (const type of ['direct', 'fanout', 'topic', 'headers']) {
+      expect(issuesOf(changed(['exchanges', 'ex1', 'type'], type)), type).toEqual([]);
+    }
+    for (const mode of ['all', 'any', 'all-with-x', 'any-with-x', null]) {
+      expect(issuesOf(changed(['bindings', 'b1', 'headers', 'xMatch'], mode)), String(mode)).toEqual([]);
+    }
+    for (const kind of ['exchange', 'queue']) {
+      expect(issuesOf(changed(['producers', 'p1', 'target', 'kind'], kind)), kind).toEqual([]);
+      expect(issuesOf(changed(['bindings', 'b2', 'dest', 'kind'], kind)), kind).toEqual([]);
+    }
+    for (const ack of ['auto', 'manual']) {
+      expect(issuesOf(changed(['consumers', 'c1', 'ack'], ack)), ack).toEqual([]);
+    }
   });
 
   describe('refuses', () => {
