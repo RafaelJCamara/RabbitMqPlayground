@@ -4,7 +4,8 @@
   superseded by [ADR-0017](0017-canvas-keyboard-model.md). The "produces **patches**" clause of "One command layer" is
   superseded by [ADR-0019](0019-undo-through-immutable-document-snapshots.md). The vocabulary of "Command bar (M1)" is
   extended by [ADR-0025](0025-the-command-grammar.md), and "One command layer" by
-  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md).
+  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md). The state, and the bus that applies commands in the app, are
+  settled by [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md), and the hint bar by [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

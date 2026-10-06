@@ -1,6 +1,6 @@
 # ADR-0017: Canvas keyboard model — adopt Foblex Flow's keyboard layer
 
-- **Status:** Accepted
+- **Status:** Accepted. The keyboard service of the app is settled by [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** in [ADR-0011](0011-explicit-linking-and-command-layer.md), keyboard linking (item 4 of "Five ways to

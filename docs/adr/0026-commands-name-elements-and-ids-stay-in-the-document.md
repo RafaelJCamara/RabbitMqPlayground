@@ -1,6 +1,7 @@
 # ADR-0026: Commands name elements, ids stay in the document, and a refusal says whose rule it is
 
 - **Status:** Accepted. The sentence that a document that a command made always loads again is made true by [ADR-0029](0029-the-commands-refuse-at-the-size-caps.md).
+  The bus that applies the commands in the app is [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "One command layer" of [ADR-0011](0011-explicit-linking-and-command-layer.md) and the document model of

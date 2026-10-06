@@ -1,6 +1,7 @@
 # ADR-0015: Testing strategy and definition of done
 
-- **Status:** Accepted
+- **Status:** Accepted. The tests of the editor are settled by [ADR-0036](0036-the-test-strategy-of-the-editor.md), and the contract suite of Foblex Flow by
+  [ADR-0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

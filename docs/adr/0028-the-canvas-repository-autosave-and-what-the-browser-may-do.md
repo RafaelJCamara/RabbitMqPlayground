@@ -1,6 +1,6 @@
 # ADR-0028: The canvas repository, autosave, and what the browser may do to the storage
 
-- **Status:** Accepted
+- **Status:** Accepted. How the app opens a canvas and runs the autosave is settled by [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Storage" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md): the repository interface, the

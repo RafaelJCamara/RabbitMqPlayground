@@ -1,6 +1,7 @@
 # ADR-0016: Node editor library — Foblex Flow
 
-- **Status:** Accepted
+- **Status:** Accepted. The adapter and its four workarounds, as built, are in [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md), and the suite that guards them is
+  [ADR-0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

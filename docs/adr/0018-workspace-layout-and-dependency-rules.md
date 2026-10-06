@@ -1,6 +1,7 @@
 # ADR-0018: Workspace layout and dependency rules
 
-- **Status:** Accepted
+- **Status:** Accepted. The folders of the editor, and the direction of their dependencies, are settled by [ADR-0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md), and
+  what is tested where by [ADR-0036](0036-the-test-strategy-of-the-editor.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

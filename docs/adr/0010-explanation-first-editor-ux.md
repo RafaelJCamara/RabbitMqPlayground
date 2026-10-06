@@ -1,6 +1,7 @@
 # ADR-0010: Explanation-first editor UX
 
-- **Status:** Accepted
+- **Status:** Accepted. The visual language of the editor (tokens, themes, a colour and a shape for each kind of node) is settled by
+  [ADR-0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

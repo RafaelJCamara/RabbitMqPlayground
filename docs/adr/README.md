@@ -20,29 +20,33 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted |
 | [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted (rule 28 superseded by 0021, rule 4 extended by 0022) |
 | [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted (integers extended by 0023) |
-| [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted |
-| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019, vocabulary extended by 0025, command layer by 0026) |
+| [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted (visual language settled by 0032) |
+| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019, vocabulary extended by 0025, command layer by 0026, state and bus by 0031, hint bar by 0035) |
 | [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted (record, files and loader settled by 0027, repository and autosave by 0028) |
 | [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted (the validator is the loader of 0027) |
 | [0014](0014-broker-interop-via-definitions-json.md) | Broker interoperability via `definitions.json` only | Accepted |
-| [0015](0015-testing-strategy-and-definition-of-done.md) | Testing strategy and definition of done | Accepted |
-| [0016](0016-node-editor-library.md) | Node editor library: Foblex Flow | Accepted |
-| [0017](0017-canvas-keyboard-model.md) | Canvas keyboard model: Foblex Flow's keyboard layer | Accepted |
-| [0018](0018-workspace-layout-and-dependency-rules.md) | Workspace layout and dependency rules | Accepted |
-| [0019](0019-undo-through-immutable-document-snapshots.md) | Undo through immutable document snapshots | Accepted (choices extended by 0026) |
+| [0015](0015-testing-strategy-and-definition-of-done.md) | Testing strategy and definition of done | Accepted (the editor's tests settled by 0036, the contract suite by 0034) |
+| [0016](0016-node-editor-library.md) | Node editor library: Foblex Flow | Accepted (adapter built as 0033 says, guarded by 0034) |
+| [0017](0017-canvas-keyboard-model.md) | Canvas keyboard model: Foblex Flow's keyboard layer | Accepted (keyboard service settled by 0035) |
+| [0018](0018-workspace-layout-and-dependency-rules.md) | Workspace layout and dependency rules | Accepted (the editor's folders settled by 0030, what is tested where by 0036) |
+| [0019](0019-undo-through-immutable-document-snapshots.md) | Undo through immutable document snapshots | Accepted (choices extended by 0026, the store by 0031) |
 | [0020](0020-mit-licence.md) | MIT licence | Accepted |
 | [0021](0021-transient-queues-are-refused.md) | RabbitMQ 4.3 refuses transient queues, and the refusals the simulator reproduces | Accepted (the `durable` flag settled by 0024) |
 | [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md) | A topic binding key may have at most two `#` wildcards | Accepted |
 | [0023](0023-header-integers-are-limited-to-safe-integers.md) | Header integers are limited to the safe-integer range | Accepted |
 | [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) | A queue that is not durable is refused, with the root cause first and the broker's reply after it | Accepted |
 | [0025](0025-the-command-grammar.md) | The grammar of the typed command | Accepted |
-| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted (a document that a command made always loads, made true by 0029) |
+| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted (a document that a command made always loads, made true by 0029, the bus by 0031) |
 | [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted (the caps of a canvas are the domain's, by 0029) |
-| [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted |
+| [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted (wired into the app by 0031) |
 | [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
-| [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted |
+| [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033) |
 | [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted |
 | [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted |
+| [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted |
+| [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md) | The Foblex contract suite, and how an upgrade fails loudly | Accepted |
+| [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted |
+| [0036](0036-the-test-strategy-of-the-editor.md) | The test strategy of the editor | Accepted |
 
 ## Where to start
 
@@ -56,12 +60,15 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md),
   [0029](0029-the-commands-refuse-at-the-size-caps.md), [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md),
   [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md),
-  [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md).
+  [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md),
+  [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md),
+  [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),
   [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
-  [0015](0015-testing-strategy-and-definition-of-done.md).
+  [0015](0015-testing-strategy-and-definition-of-done.md), [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md),
+  [0036](0036-the-test-strategy-of-the-editor.md).
 
 ## Adding or changing a decision
 

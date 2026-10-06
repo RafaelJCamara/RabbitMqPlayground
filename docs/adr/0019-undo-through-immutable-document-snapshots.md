@@ -1,7 +1,8 @@
 # ADR-0019: Undo through immutable document snapshots
 
 - **Status:** Accepted. The choices that building it needed are in
-  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md).
+  [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md), and the store that holds the history in the app is in
+  [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** in [ADR-0011](0011-explicit-linking-and-command-layer.md), the part of "One command layer" that says a

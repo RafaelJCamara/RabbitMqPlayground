@@ -1,6 +1,6 @@
 # ADR-0030: The editor's folders, and how it is loaded behind its flag
 
-- **Status:** Accepted
+- **Status:** Accepted. What the adapter in `canvas/flow/` is and does is settled by [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** section 1 of the [M1 plan](../plans/m1.md) (the layout of `projects/app`) and [ADR-0018](0018-workspace-layout-and-dependency-rules.md)
