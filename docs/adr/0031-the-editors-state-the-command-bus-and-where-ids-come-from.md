@@ -1,7 +1,8 @@
 # ADR-0031: The editor's state: signal stores, one command bus, and where ids come from
 
 - **Status:** Accepted. The zoom is held by `FlowViewport`, which [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md)
-  describes, and not by a `ViewportStore` of its own.
+  describes, and not by a `ViewportStore` of its own. The bus also tells its listeners of `undo` and `redo`, takes back the ids of a command that is refused, and has a sixth origin, `typed`
+  ([ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md)).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0011](0011-explicit-linking-and-command-layer.md), [ADR-0019](0019-undo-through-immutable-document-snapshots.md),

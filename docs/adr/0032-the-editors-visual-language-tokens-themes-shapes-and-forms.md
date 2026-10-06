@@ -1,6 +1,6 @@
 # ADR-0032: The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain
 
-- **Status:** Accepted
+- **Status:** Accepted. The binding keys on an edge, as chips, are settled by [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Visual language and accessibility" of [ADR-0010](0010-explanation-first-editor-ux.md), and the target of WCAG 2.2 AA

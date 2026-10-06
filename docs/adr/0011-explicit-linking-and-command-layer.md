@@ -6,6 +6,11 @@
   extended by [ADR-0025](0025-the-command-grammar.md), and "One command layer" by
   [ADR-0026](0026-commands-name-elements-and-ids-stay-in-the-document.md). The state, and the bus that applies commands in the app, are
   settled by [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md), and the hint bar by [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md).
+  The five ways to link and what a link asks for are settled by [ADR-0041](0041-the-five-ways-to-link-share-one-path-and-a-binding-asks-for-its-key-first.md) (the floating toolbar is not built),
+  a drop on nothing by [ADR-0042](0042-a-drop-on-nothing-opens-the-create-menu-and-what-it-makes-is-one-batch.md), the default exchange by
+  [ADR-0043](0043-the-default-exchange-is-shown-on-request-and-is-not-in-the-document.md), the command bar by [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md),
+  the log of equivalent commands by [ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md), and the hint bar, the card and the cheat-sheet by
+  [ADR-0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

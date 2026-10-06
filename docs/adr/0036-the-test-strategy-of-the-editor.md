@@ -2,6 +2,8 @@
 
 - **Status:** Accepted. How the quota test makes the browser refuse is settled by [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md),
   and that a test of the pointer sends its events in the order of every system by [ADR-0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md).
+  How touch is sent, and the test that holds gestures and typed commands to each other, are settled by
+  [ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0015](0015-testing-strategy-and-definition-of-done.md) (the tiers and the definition of done) and

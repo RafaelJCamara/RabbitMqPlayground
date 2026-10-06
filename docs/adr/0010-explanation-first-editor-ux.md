@@ -1,7 +1,8 @@
 # ADR-0010: Explanation-first editor UX
 
 - **Status:** Accepted. The visual language of the editor (tokens, themes, a colour and a shape for each kind of node) is settled by
-  [ADR-0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md).
+  [ADR-0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md), and the chips on edges, the places of the labels and the lints as badges by
+  [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

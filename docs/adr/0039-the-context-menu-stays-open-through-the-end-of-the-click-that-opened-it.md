@@ -1,6 +1,7 @@
 # ADR-0039: The context menu stays open through the end of the click that opened it
 
-- **Status:** Accepted
+- **Status:** Accepted. The menu that a drop on nothing opens holds the end of the click as well
+  ([ADR-0042](0042-a-drop-on-nothing-opens-the-create-menu-and-what-it-makes-is-one-batch.md)).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) (a menu opens from a pointer and from a key, and
