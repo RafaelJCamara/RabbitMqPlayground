@@ -1,7 +1,7 @@
 import { afterNextRender, Component, computed, ElementRef, input, output, viewChild } from '@angular/core';
 import type { Issue } from '@rmq/domain';
 import type { Point, Size } from '../canvas/model/transform';
-import { RefusalNotice } from './refusal-notice';
+import { RefusalNotice } from '../core/ui/refusal-notice';
 
 /** How a name was given: with Enter, which keeps the field open when the name is refused, or by leaving the field. */
 export type RenameBy = 'enter' | 'blur';

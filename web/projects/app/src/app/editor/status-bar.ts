@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { CanvasSession } from '../core/session/canvas-session';
 import { StatusStore } from '../core/state/status-store';
-import { RefusalNotice } from './refusal-notice';
+import { RefusalNotice } from '../core/ui/refusal-notice';
 
 /**
  * The bottom of the editor (ADR-0010): what was done, or what was refused and why, and what concerns keeping the canvas. A

@@ -1,7 +1,7 @@
 import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
 import type { Issue } from '@rmq/domain';
 import type { Point } from '../canvas/model/transform';
-import { RefusalNotice } from './refusal-notice';
+import { RefusalNotice } from '../core/ui/refusal-notice';
 
 let nextPopover = 0;
 

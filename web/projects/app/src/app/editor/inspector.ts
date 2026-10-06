@@ -15,7 +15,7 @@ import { Switch } from '../core/ui/switch';
 import { IntentHandler } from './intents';
 import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
 import { LinkFlow } from './link-flow';
-import { RefusalNotice } from './refusal-notice';
+import { RefusalNotice } from '../core/ui/refusal-notice';
 
 /** The fields that can be refused, each of which shows what it was refused for: a name such as `name` or `x`, or `binding:` and the id of a binding of an edge, which is a field of its own. */
 type Field = string;

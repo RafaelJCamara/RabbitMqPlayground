@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import type { Issue } from '@rmq/domain';
-import { Icon } from '../core/ui/icon';
+import { Icon } from './icon';
 
 /**
  * A refusal, as a learner reads it (ADR-0024, ADR-0032): the root cause first, in plain words, and after it, set apart, what a broker
