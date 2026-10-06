@@ -76,10 +76,10 @@ else goes wrong, such as a getter that throws on a hostile object, it is `invali
 The functions that read a file and a backup add one kind, `not-json`, for text that is not JSON, and use the same kinds for
 their own envelope.
 
-Every message says the root cause in plain words and what to do. The one for a file from a newer version reads, for
-example, "This canvas was saved by a newer version of RabbitMQ Playground. It uses schema version 3, and this version
-understands up to 1. Reload the page to get the newest version, then open it again. Nothing was loaded and nothing was
-changed."
+Every message says the root cause in plain words and what to do. The one for a canvas from a newer version reads, for
+example, "This canvas was saved by a newer version of this app. It uses schema version 3, and this version understands up
+to 1. Reload the page to get the newest version, then open it again. Nothing was loaded and nothing was changed." No
+message names the product, which lives in one constant of the app.
 
 ### Size caps
 

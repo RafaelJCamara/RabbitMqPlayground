@@ -66,13 +66,14 @@ database does when two tabs have different versions of the app, and when exactly
 - **A tombstone does not live long.** `purgeExpired` removes the ones that are older than `TOMBSTONE_TTL_MS`, 60 seconds, and
   the app calls it when it starts. The tombstone backs a toast, and is not a bin: the learner asked for the canvas to go,
   and it should be gone soon, from the disk too. The number is easy to change if a "recently deleted" screen is ever wanted.
-- **A record that is not an object** cannot hold a `deletedAt`, so deleting it removes it.
+- **`restore` of an id that is not a tombstone is `not-found`, and `restoreAll` ignores such ids**, so that the Undo of "delete
+  all" brings back what is still there, even if some tombstones were purged meanwhile, and says which.
 
 ### The meta store
 
 - It holds small values by key: `lastOpenCanvas` (an id), `lastBackupAt` and `backupReminderSnoozedUntil` (times). A value
   that is not what its key says it is, which is how a value from a newer version or from the browser's tools looks, reads as
-  absent. When to remind someone to make a backup is the app's policy (S9), and not stored here.
+  absent, and `setMeta` refuses one. When to remind someone to make a backup is the app's policy (S9), and not stored here.
 
 ### `estimate()` and the browser's own estimate
 
@@ -111,8 +112,9 @@ and the repository adds `not-found` and `exists`. Where an error was thrown deci
   Raising `DB_VERSION` is a decision about the structure around the canvases, and has nothing to do with `schemaVersion`.
 - **The connection is opened when it is first needed, and is kept.** When another tab asks for a newer version it is closed at
   once, and opened again at the next call. When the browser ends it, the next call opens it again. A call that finds it closed
-  opens it once more. When another tab blocks an upgrade, the call answers `blocked`, the open stays pending, and the next call
-  uses the connection if the other tab has let go by then.
+  opens it once more. An event that comes late for a connection that a call has already replaced lets go of that one and
+  leaves the new one alone. When another tab blocks an upgrade, the call answers `blocked`, the open stays pending, and the
+  next call uses the connection if the other tab has let go by then.
 - **A transaction holds only IndexedDB's own promises.** Anything else that it waits for would close it.
 
 ### Autosave
@@ -126,9 +128,10 @@ open canvas. `write` is what saves it, for example `repository.save(id, { docume
 - **It can flush.** `flush()` writes what is waiting now and waits for a write that is under way, and answers whether anything was
   written. The app calls it when the page is hidden or closed.
 - **Writes never overlap.** One at a time, in order. A value that comes while a write is under way is written after it.
-- **It reports failure as a result.** A write that fails, or throws, is reported to `onResult` as an error (a thrown one as
-  `failed`), and to whoever called `flush`. The value stays waiting, nothing retries by itself, and the next `schedule` or
-  `flush` writes the latest value. So a full disk is a message, and a retry once the learner has freed space.
+- **It reports failure as a result.** A write that fails, or throws, is reported to `onResult` as an error (what a write throws
+  is read as any error of the browser is), and to whoever called `flush`. The value stays waiting, nothing retries by itself,
+  and the next `schedule` or `flush` writes the latest value. So a full disk is a message, and a retry once the learner has
+  freed space. A listener that throws does not stop the saving.
 - **`cancel()`** forgets what is waiting, for a canvas that is closed or deleted.
 
 ## Consequences

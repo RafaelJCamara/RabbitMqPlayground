@@ -2,7 +2,8 @@
 
 Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#3](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/3)) was closed, and brought up to date after S2
-([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)). Each one says what is open, why, what the options
+([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)) and S3
+([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
 [M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so the first one is missing:
 it was answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md).
@@ -16,6 +17,8 @@ it was answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refus
 | 6 | Is the shape of the trace and of `explainMiss` right for the Why? overlay? | S7 ([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)) |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
 | 8 | What does a second declaration of a name that is taken do, and what does an unbind of nothing do? | S6 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)) |
+| 9 | Should the commands refuse at the size caps, so that a document that commands made always loads? | S4 ([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) |
+| 10 | What do the home screen, the backup and "delete all" do with a canvas that cannot be read? | S9 ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) |
 
 ## 2. How does the engine report a refusal that closes the connection?
 
@@ -76,12 +79,20 @@ Options:
 My lean is the first. It affects every slice that adds fixtures: S6 (delivery) and S10 (export replay). The log of a record
 run is about 250 KB for the full set, and `dump restore` reads the output of `gh run view --log` as it is.
 
+Where S3 left it: S3 has no broker and added no scenario. Its fixtures, `fixtures/schema/vN`, are documents that the app
+writes and not recordings of a broker, so they do not meet this question. They are pinned by a manifest of hashes instead,
+and a spec fails on a file that was edited ([ADR-0027](docs/adr/0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md)).
+
 ## 5. Line endings
 
 On Windows, with Git's default `core.autocrlf=true`, a checkout is CRLF. That fails `npm run format:check` and the
 byte-for-byte fixture checks. S1 worked around it for one clone (`git config --local core.autocrlf false`, then restoring
 the files). A root `.gitattributes` with `* text=auto eol=lf` would fix it for every clone, and a spec could pin it, as
 `lefthook.yml` and `.gitignore` are pinned. It changes repository policy, so it has not been done.
+
+Where S3 left it: nothing new needed it. The manifest of the schema fixtures hashes what a file parses to, and not its
+bytes, and the specs that build the golden text of a file from a fixture read it with `\n` whatever the checkout has, so
+that neither depends on line endings. The conformance fixtures and the specs that compare them byte for byte still do.
 
 ## 6. The shape of the trace and of `explainMiss`
 
@@ -123,6 +134,22 @@ Options: commit the generator and the runner as a tool (for example `web/tools/m
 TypeScript, and takes about 45 minutes for S2 on twelve workers), with a list of the equivalent mutants beside it, or keep
 mutation checking as a manual practice that each slice reports in its commit messages.
 
+Where S3 left it: S3 ran the same scripts, unchanged, over `@rmq/persistence`. What differs from one slice to the next is two
+arguments, and a tool in the repository would take them: the files to mutate (`gen.mjs` takes absolute paths, and its default
+targets are S2's) and the specs to run (`run.mjs --projects=persistence --filters=projects/persistence/src/lib/`, because its
+file heuristics do not know persistence). A first run of 1,241 mutants took about 7 minutes on twelve workers, and the specs
+caught 1,179 of them. The 62
+that survived led to about two dozen tests and assertions (the words of messages that no test read, the later producer or
+binding that a cap looks at and not only the first, boundaries such as 40 characters or a file exactly as long as a file may
+be) and to simplifications of code that a mutant showed to be redundant: the fast path and a callback of the connection to the
+database, an argument of the shape checks that no message used, and the copy of a record that is not there. One survivor was
+more than that. A branch that closed a connection when an event came late for it had hidden that a connection that arrives
+after its store was closed was never closed, and a spec now shows that it is. A second run left 13 and a third, on the final
+code, 1,213 mutants and 6 survivors. All six change nothing that can be seen: the name of the phase in three calls of
+`classifyStorageError` (anything but `'open'` means `'use'`), the guard that stops a timer that is not running, the default of
+`allowDeleted` (what is just made has no deletion), and the clean-up of an open that fails after another has replaced it,
+which cannot be built.
+
 ## 8. Declaring a name twice, and unbinding what is not bound
 
 By RabbitMQ's documentation, a broker accepts a second declaration of an exchange or a queue with the same attributes, and
@@ -141,6 +168,39 @@ Options:
 
 S6 gives the engine its `dispatch` for `exchange.declare` and `queue.declare`, and has to say what the engine does with a
 name that is there, so it is the slice that settles it. The domain's `declare` and `unbind` would follow.
+
+## 9. Should the commands refuse at the size caps?
+
+`loadCanvas` refuses a document that has more than 2,000 elements, 5,000 edges, 100 header entries on one message or
+binding, or 10,000 characters in a payload or a header value, and the repository refuses to save one, so that nothing is kept
+that cannot be read back ([ADR-0027](docs/adr/0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md)).
+The commands do not know these numbers. `applyCommand` accepts a declare or a bind that takes a canvas over a cap, and then the
+autosave fails with a `too-large` error that says what is too big. Nobody builds 2,000 elements by hand, and the plan runs
+200, but the command bar can run a batch of any size, and the autosave is a worse place to find out than the gesture that
+took the canvas over the line. It also leaves a sentence of [ADR-0026](docs/adr/0026-commands-name-elements-and-ids-stay-in-the-document.md)
+true only in practice: "a document that a command made always loads again".
+
+Options:
+
+- Keep it. The caps are ten times what the plan runs, and the error says what to remove.
+- Move the numbers into `LIMITS` of the domain, and make `declare`, `add`, `bind`, `link` and `subscribe` refuse at the cap
+  with an `Issue` that says that the canvas is full. Persistence would then import them. That is a change of the domain, with
+  its tests, and a new ADR or an extension of ADR-0026.
+
+My lean is the second, in S4, when the gestures that add things are built. It is small, and it makes the sentence true
+without a footnote.
+
+## 10. Canvases that cannot be read
+
+`list()` answers the canvases that it can read, and, apart from them, the ones that it cannot: their id, their name if the
+record still has one, and why ([ADR-0028](docs/adr/0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md)). The
+learner can delete one, and "delete all" puts a tombstone on it too. A backup is made of the canvases that can be read, so it
+cannot hold one that a newer version of the app wrote, or one that is damaged.
+
+Open: what the home screen shows for such a canvas and what it offers (the reason, "delete", perhaps "download what is
+there"); whether "delete all" has to say that it will delete canvases that no backup can hold; and whether a backup should
+carry the record of an unreadable canvas as it is, so that a newer version of the app can read it later. The last would need
+`list()` to give the raw record, which it does not. S9 builds the screens that have to say it.
 
 ## Decisions taken in S1 that are easy to revisit
 
@@ -161,6 +221,31 @@ name that is there, so it is the slice that settles it. The domain's `declare` a
 - A queue that is not durable is refused as a rule of the whole document, so a file that has one cannot be loaded. The
   alternative, to load it and show a lint, would let a canvas exist that cannot be exported.
 
+## Decisions taken in S3 that are easy to revisit
+
+- **The size caps are numbers that a person chose**: 2,000 elements, 5,000 edges, 100 header entries on one message or binding,
+  10,000 characters in a payload or a header value, 50,000,000 characters in a file, 1,000 canvases in a backup and 200
+  characters in a name. They are ten times what the plan runs, and they live in persistence and not in the domain (question 9).
+- **A tombstone lives 60 seconds.** It backs an Undo toast and is not a bin, so that a canvas that the learner deleted is gone
+  from the disk soon. A "recently deleted" screen would need more.
+- **Autosave waits 500 ms after the last change, and has no longest wait.** A learner who changes the canvas every 400 ms for
+  ten minutes is saved once, at the end. The commands are gestures and not a stream, and the app flushes when the page is
+  hidden, but a longest wait is a few lines if profiling shows that a change is lost.
+- **The storage warning is raised at 80% of the quota, and made stronger at 95%.** The percent that it writes is rounded down.
+- **A name is any text that is not blank, up to 200 characters, and an id is 1 to 64 letters, digits, `.`, `:`, `_` or `-`.**
+  Two canvases may have the same name.
+- **A record is migrated when it is read and rewritten when it is saved**, and not when the database is upgraded, so that
+  going back to an older version of the app finds the canvases that it can still read. The cost is that an old record is
+  migrated on every read until the learner edits it.
+- **Every envelope is strict**: the record, the file of one canvas and the backup refuse a key that they do not have, as the
+  document does. A file that was edited by hand and has an extra key is refused and told which one, and not read and changed.
+- **`save` and `put` write over what is there.** `save` refuses a canvas that cannot be read, so that what a newer version of
+  the app wrote is never written over, and `put`, which an import uses, writes over anything, because the learner chose it.
+- **`restore` of an id that is not a tombstone is `not-found`, and `restoreAll` ignores such ids**, so that an Undo of "delete all"
+  brings back what is still there, and says which, even if some tombstones were purged.
+- **The in-memory repository is a real one.** It is the repository that the app's specs use, and the one that the app can fall
+  back on in a browser that keeps nothing, and a contract spec of 84 cases runs on it and on IndexedDB.
+
 ## Follow-ups that are already owned
 
 These are not questions. S2 replays the refusals at declare and bind time against the fixtures, through the commands: the
@@ -169,3 +254,17 @@ in a binding, a topic binding key with three `#` words, the transient queue, and
 [ADR-0021](docs/adr/0021-transient-queues-are-refused.md) and
 [ADR-0022](docs/adr/0022-topic-binding-keys-have-at-most-two-hash-wildcards.md). S6 has to replay the same declare and bind
 steps through the engine's `dispatch`, which S1 could not do for lack of one.
+
+S3 hands on what the app has to wire, in the order that the slices come
+([ADR-0028](docs/adr/0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md)):
+
+- **S4** makes the repository with `Date.now` and `crypto.randomUUID`, and calls `purgeExpired()` when it starts. It makes the
+  autosave of the one implicit canvas, calls `flush()` when the page is hidden (`visibilitychange`, `pagehide`), shows what each
+  write came to, and asks `requestPersistence(navigator.storage)` after the first save, and not at start. It shows
+  `quotaWarning` when a save fails with `quota-exceeded`, or from `readUsage`. It decides question 9.
+- **S9** builds the screens on `softDelete`, `softDeleteAll`, `restore` and `restoreAll` for the Undo toasts, the backup on
+  `writeBackup` and `parseBackup` (what to do with an id that is taken is its choice, and `put` is the door), and the JSON
+  files on `writeCanvasFile` and `parseCanvasFile`. It owns the reminder to make a backup, which the meta store only holds the
+  times of. It decides question 10.
+- **S10** ends the decoding of a share link in `loadCanvas` and nothing of its own, so that the caps, the versions and the
+  errors are the same as a file's. The limits of the codec itself are bytes before there is any data, and are its own.
