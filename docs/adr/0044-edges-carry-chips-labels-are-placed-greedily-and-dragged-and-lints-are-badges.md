@@ -1,6 +1,6 @@
 # ADR-0044: Edges carry chips, labels are placed greedily and can be dragged, and lints are badges
 
-- **Status:** Accepted
+- **Status:** Accepted. The reader of the paths, and the journeys that hold where the labels are put, are settled by [ADR-0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Editing" and "Readable labels" of [ADR-0010](0010-explanation-first-editor-ux.md) (labels that avoid overlapping, can be dragged, and are chips with the full text on hover; lints as

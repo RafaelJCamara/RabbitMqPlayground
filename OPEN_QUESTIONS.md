@@ -368,7 +368,7 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   starts a link now says what the keys are, and the card of the first run is a few chips where it was a list of sentences. The refusals of `help` and of a first word
   that is not a command, and the sentence for a command that changed nothing ("Nothing changed, because the canvas already is as that command says."), were read when
   their specs were written and not since. A bad one is mended with a small domain commit and its test.
-- **The reader of the paths of the edges knows `M`, `L` and `C`**, which is what the `bezier` type of edge draws. The `segment` type draws a rounded bend with `Q`, so a slice
+- **The reader of the paths of the edges knows `M`, `L` and `C`**, which is what the `bezier` type of edge draws ([ADR-0049](docs/adr/0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md)). The `segment` type draws a rounded bend with `Q`, so a slice
   that changes the type has to teach `path.ts` the command, and its spec says that a path that goes on with a `Q` is read as far as the command.
 - **The persistence note and the card of the first run move the canvas, once each, and the tests of the browser do not wait for the note.** The note that the
   browser did not promise to keep the canvases takes 66 pixels about 300 ms after the first change, and the card gives its 58 back when the first edge is made.
