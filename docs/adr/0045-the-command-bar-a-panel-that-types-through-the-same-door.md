@@ -1,6 +1,6 @@
 # ADR-0045: The command bar: a panel that types through the same door
 
-- **Status:** Accepted
+- **Status:** Accepted. What it keeps when it is closed, where a refusal of it is shown, and when its list is shut are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Command bar (M1)" of [ADR-0011](0011-explicit-linking-and-command-layer.md), "The verbs of M1" of [ADR-0025](0025-the-command-grammar.md) (`help` joins the registry in S5) and

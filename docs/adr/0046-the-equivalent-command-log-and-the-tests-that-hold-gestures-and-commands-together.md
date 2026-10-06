@@ -1,6 +1,6 @@
 # ADR-0046: The equivalent-command log, and the tests that hold gestures and typed commands together
 
-- **Status:** Accepted
+- **Status:** Accepted. How the contract suite and the replay were built are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Learning the commands" of [ADR-0011](0011-explicit-linking-and-command-layer.md) (every action is logged with its equivalent command), the bus of

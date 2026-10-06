@@ -1,6 +1,6 @@
 # ADR-0047: Guidance: the hint bar, the "How to link" card and the cheat-sheet
 
-- **Status:** Accepted
+- **Status:** Accepted. That the card is a few chips, and that the top bar fits one row, are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Making it visible" of [ADR-0011](0011-explicit-linking-and-command-layer.md) and the hint bar of [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) ("S5 adds the 'How to link' card and the cheat-sheet to it, and does not replace it"),

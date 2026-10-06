@@ -3,7 +3,8 @@
 - **Status:** Accepted. How the quota test makes the browser refuse is settled by [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md),
   and that a test of the pointer sends its events in the order of every system by [ADR-0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md).
   How touch is sent, and the test that holds gestures and typed commands to each other, are settled by
-  [ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md).
+  [ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md). What the tests wait for (the canvas to be still, a field to have the cursor,
+  a browser that promises storage), the time that the tests of the app are given, and a slow processor on request are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0015](0015-testing-strategy-and-definition-of-done.md) (the tiers and the definition of done) and
