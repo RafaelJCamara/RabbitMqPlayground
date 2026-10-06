@@ -261,7 +261,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** A click selects the edge, which the library would have done; a drag that moved the label is one `move-label`, to two decimals. */
+  /** A click selects the edge, which the library would have done; a drag that moved the label is one `move-label`, where it was let go (the editor keeps it to a thousandth). */
   protected onLabelUp(event: PointerEvent): void {
     const press = this.press;
     if (press === null || press.pointerId !== event.pointerId) {
@@ -271,7 +271,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     const drag = this.labelDrag();
     this.labelDrag.set(null);
     if (drag !== null) {
-      this.intent.emit({ type: 'move-label', key: drag.key, at: Math.round(drag.at * 100) / 100 });
+      this.intent.emit({ type: 'move-label', key: drag.key, at: drag.at });
     } else if (!press.moved) {
       this.intent.emit({ type: 'select', nodes: [], edges: [press.key] });
     }
@@ -284,9 +284,12 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** A pointer that hovers over a label that has more than it shows asks for the list; a touch has no hover, and the inspector has the list. */
+  /**
+   * A pointer that hovers over a label that has more than it shows asks for the list; a touch has no hover, and the inspector has the list. A press on a label does
+   * not meet this: the pointer is over the label before it presses, and is captured by it after, so it enters no other.
+   */
   protected onLabelEnter(event: PointerEvent, edge: EdgeVm): void {
-    if (event.pointerType === 'touch' || edge.more.length === 0 || this.press !== null) {
+    if (event.pointerType === 'touch' || edge.more.length === 0) {
       return;
     }
     const { left, top, width, height } = (event.currentTarget as HTMLElement).getBoundingClientRect();

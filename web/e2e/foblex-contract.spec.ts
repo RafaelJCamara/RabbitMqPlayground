@@ -769,6 +769,31 @@ test.describe('Foblex contract: a connector that is disabled (ADR-0043)', () => 
   });
 });
 
+test.describe('Foblex contract: a connector that is disabled, as a target (ADR-0043)', () => {
+  test('is not lit for a link that is dragged from another node, as one that the rules allow is, which is what keeps a link from ending on the default exchange', async ({
+    page,
+  }) => {
+    await seedCanvas(
+      page,
+      buildDocument([{ type: 'set', kind: 'canvas', changes: { showDefaultExchange: true } }], TOPOLOGY),
+    );
+    const editor = new EditorPage(page);
+    await editor.goto();
+    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
+    await expect(node(page, '~default')).toBeVisible();
+    await editor.settled();
+
+    const from = await centre(handle(page, 'x2', 'out'));
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 8, from.y + 4, { steps: 3 });
+
+    await expect(handle(page, 'q1', 'in'), 'a target that the rules allow').toHaveClass(/f-connector-connectable/);
+    await expect(handle(page, '~default', 'in')).not.toHaveClass(/f-connector-connectable/);
+    await page.mouse.up();
+  });
+});
+
 test.describe('Foblex contract: a link made with a finger', () => {
   test.use({ hasTouch: true });
 

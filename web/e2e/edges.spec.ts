@@ -1,8 +1,9 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { edgeKeys } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
 import { buildDocument, seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
+import { Finger } from './support/touch';
 
 /**
  * What an edge shows and what can be done to it (ADR-0043, ADR-0044): the chips of its label and the card that lists the rest, the label that is dragged along the edge, the
@@ -71,6 +72,12 @@ async function selectEdge(
   await expect(page.getByTestId('inspector-title')).toHaveText(title);
 }
 
+const distance = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** How the line of an edge, or the outline of a node, is dashed on the screen: `none` for a solid one. */
+const dashOf = (locator: Locator): Promise<string> =>
+  locator.evaluate((element) => getComputedStyle(element).strokeDasharray);
+
 const labelsOf = (page: Page) =>
   page.evaluate(
     () => (window.__rmq?.document() as { layout: { labels: Record<string, { at: number }> } }).layout.labels,
@@ -130,7 +137,15 @@ test.describe('the label of an edge', () => {
     const at = await editor.centre(label(page, 'x1>q1'));
 
     await page.mouse.move(at.x, at.y);
+    await expect(
+      page.getByTestId('label-card'),
+      'the pointer is over a label that has more than it shows',
+    ).toBeVisible();
     await page.mouse.down();
+    await expect(
+      page.getByTestId('label-card'),
+      'a press takes the card away, which a drag would move from under',
+    ).toHaveCount(0);
     await page.mouse.move(at.x + 10, at.y + 2, { steps: 3 });
     await page.mouse.move(at.x + 50, at.y + 6, { steps: 8 });
     await page.mouse.up();
@@ -146,6 +161,130 @@ test.describe('the label of an edge', () => {
 
     await page.getByRole('button', { name: /^Undo/ }).click();
     await expect.poll(() => labelsOf(page)).toEqual({});
+  });
+
+  test('follows the pointer along its edge while the pointer is down, and is where the pointer let it go', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    const key = 'x1>q2';
+    const start = await editor.centre(label(page, key));
+    const target = await onEdge(page, key, 0.7);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(target.x, target.y, { steps: 10 });
+
+    // While it is down the label is at the nearest point of its edge to the pointer, says that it is being dragged, and nothing has been decided.
+    await expect.poll(async () => distance(await editor.centre(label(page, key)), target)).toBeLessThan(6);
+    await expect(label(page, key)).toHaveClass(/rmq-label-dragging/);
+    expect(await labelsOf(page)).toEqual({});
+    await page.mouse.up();
+    await expect(label(page, key)).not.toHaveClass(/rmq-label-dragging/);
+
+    await expect.poll(async () => (await labelsOf(page))[key]?.at).toBeCloseTo(0.7, 1);
+  });
+
+  test('is not dragged by a button that is not the main one', async ({ page }) => {
+    const editor = await open(page);
+    const key = 'x1>q2';
+    const start = await editor.centre(label(page, key));
+    const target = await onEdge(page, key, 0.7);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(target.x, target.y, { steps: 10 });
+    await page.mouse.up({ button: 'middle' });
+
+    expect(await labelsOf(page)).toEqual({});
+    expect(await editor.log()).toEqual([]);
+  });
+
+  test('is a click and not a drag when the pointer moves less than three pixels while it is down, which a hand does', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    const key = 'x1>q2';
+    const start = await editor.centre(label(page, key));
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 2, start.y + 1);
+    await page.mouse.up();
+
+    await expect(page.getByTestId('inspector-title')).toHaveText('Binding');
+    expect(await labelsOf(page)).toEqual({});
+    expect(await editor.log()).toEqual([]);
+  });
+
+  test('is kept a twentieth of the way from each end of its edge, where its handles are, wherever the pointer is let go', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    const key = 'x1>q2';
+    const dragTo = async (to: { x: number; y: number }) => {
+      const from = await editor.centre(label(page, key));
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(to.x, to.y, { steps: 10 });
+      await page.mouse.up();
+    };
+
+    await dragTo(await editor.centre(editor.nodeById('q2')));
+    await expect.poll(async () => (await labelsOf(page))[key]?.at).toBeCloseTo(0.95, 5);
+
+    await dragTo(await editor.centre(editor.nodeById('x1')));
+    await expect.poll(async () => (await labelsOf(page))[key]?.at).toBeCloseTo(0.05, 5);
+  });
+
+  test('is put back where it was when the browser takes a drag over, and nothing is decided', async ({ page }) => {
+    const editor = await open(page);
+    const key = 'x1>q2';
+    const start = await editor.centre(label(page, key));
+    const target = await onEdge(page, key, 0.7);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(target.x, target.y, { steps: 10 });
+    await expect.poll(async () => distance(await editor.centre(label(page, key)), target)).toBeLessThan(6);
+
+    await label(page, key).dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', isPrimary: true });
+
+    await expect.poll(async () => distance(await editor.centre(label(page, key)), start)).toBeLessThan(3);
+    await page.mouse.up();
+    expect(await labelsOf(page)).toEqual({});
+    expect(await editor.log()).toEqual([]);
+  });
+
+  test.describe('by touch', () => {
+    test.use({ hasTouch: true });
+
+    test('is dragged by a finger, which does not pan the canvas or open the card, and a tap on it selects its edge', async ({
+      page,
+    }) => {
+      const editor = await open(page);
+      const finger = await Finger.on(page);
+      const key = 'x1>q1';
+      const viewport = await page.evaluate(() => window.__rmq?.viewport());
+      // The card that a pointer opens is taken away by the press that follows, so what is watched is whether it was ever there.
+      await page.evaluate(() => {
+        Reflect.set(window, '__cardSeen', false);
+        new MutationObserver(() => {
+          if (window.document.querySelector('[data-testid="label-card"]') !== null) {
+            Reflect.set(window, '__cardSeen', true);
+          }
+        }).observe(window.document.body, { childList: true, subtree: true });
+      });
+
+      await finger.drag(await editor.centre(label(page, key)), await onEdge(page, key, 0.7));
+
+      await expect.poll(async () => (await labelsOf(page))[key]?.at).toBeCloseTo(0.7, 1);
+      expect(await page.evaluate(() => window.__rmq?.viewport()), 'a finger on a label does not pan').toEqual(viewport);
+      await expect(page.getByTestId('label-card'), 'a finger does not hover').toHaveCount(0);
+
+      await finger.tap(await editor.centre(label(page, key)));
+      await expect(page.getByTestId('inspector-title')).toHaveText('Binding');
+      expect(await page.evaluate(() => Reflect.get(window, '__cardSeen')), 'the card was never opened').toBe(false);
+    });
   });
 
   test('has the place that the inspector says in percent, which a number sets, and which a text that is not a number leaves as it is', async ({
@@ -173,6 +312,59 @@ test.describe('the label of an edge', () => {
 
     await page.getByRole('button', { name: /^Undo/ }).click();
     await expect.poll(() => labelsOf(page)).toEqual({});
+  });
+});
+
+/** Two edges that cross at the middle of each, which is where both labels would be put if nothing kept them apart: `x1>q1` and `x2>q2`. */
+const CROSSING = buildDocument([
+  topic('one'),
+  topic('two'),
+  { type: 'declare-queue', name: 'first', durable: true },
+  { type: 'declare-queue', name: 'second', durable: true },
+  { type: 'bind', source: 'one', destination: { kind: 'queue', name: 'first' }, key: 'k1' },
+  { type: 'bind', source: 'two', destination: { kind: 'queue', name: 'second' }, key: 'k2' },
+  { type: 'move', target: { kind: 'exchange', name: 'one' }, x: 0, y: 0 },
+  { type: 'move', target: { kind: 'exchange', name: 'two' }, x: 0, y: 300 },
+  { type: 'move', target: { kind: 'queue', name: 'first' }, x: 500, y: 300 },
+  { type: 'move', target: { kind: 'queue', name: 'second' }, x: 500, y: 0 },
+]);
+
+test.describe('how an edge is drawn (ADR-0043)', () => {
+  test('is a solid line for a binding and for the link of a producer to an exchange, and a solid outline for an exchange', async ({
+    page,
+  }) => {
+    await open(page);
+
+    for (const key of ['x1>q1', 'x1>q2', 'p1>x1']) {
+      expect(await dashOf(page.locator(`[data-edge="${key}"] path.f-connection-path`)), key).toBe('none');
+    }
+    expect(await dashOf(page.locator('[data-node-id="x1"] .rmq-node-outline'))).toBe('none');
+  });
+});
+
+test.describe('where the labels are put (ADR-0044)', () => {
+  test('keeps the labels of two edges that cross at the middle of each apart, and the document keeps nothing of it', async ({
+    page,
+  }) => {
+    await open(page, CROSSING);
+    const [first, second] = [label(page, 'x1>q1'), label(page, 'x2>q2')];
+    const meet = async (): Promise<boolean> => {
+      const [a, b] = [(await first.boundingBox())!, (await second.boundingBox())!];
+      return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    };
+    const away = async (key: string, label: typeof first): Promise<number> => {
+      const [middle, box] = [await onEdge(page, key, 0.5), (await label.boundingBox())!];
+      return Math.hypot(box.x + box.width / 2 - middle.x, box.y + box.height / 2 - middle.y);
+    };
+    const [one, other] = [await onEdge(page, 'x1>q1', 0.5), await onEdge(page, 'x2>q2', 0.5)];
+    expect(Math.hypot(one.x - other.x, one.y - other.y), 'the edges cross at the middle of each').toBeLessThan(10);
+
+    // The library draws the edges, and the app waits for the geometry to be still before it puts a label where none meets another.
+    await expect.poll(meet).toBe(false);
+    const distances = [await away('x1>q1', first), await away('x2>q2', second)];
+    expect(Math.min(...distances), 'one label is in the middle of its edge').toBeLessThan(5);
+    expect(Math.max(...distances), 'and the other has moved along its own').toBeGreaterThan(20);
+    expect(await labelsOf(page), 'the document keeps only what a learner chose').toEqual({});
   });
 });
 
@@ -282,6 +474,8 @@ test.describe('the warnings of the canvas, drawn where they are about', () => {
     await expect.poll(() => editor.edges()).toEqual(['orders -> billing key=a.b']);
     await expect(editor.node('Exchange orders, topic', { exact: true })).toBeVisible();
     await expect(editor.nodeById('x1').locator('.rmq-lint')).toHaveCount(0);
+    await expect(label(page, 'x1>q1').locator('.rmq-chip')).toHaveText(['a.b']);
+    await expect(page.getByTestId('edge-lint'), 'a label with nothing wrong has no badge').toHaveCount(0);
   });
 
   test('are a badge on the label of a headers binding that matches nothing', async ({ page }) => {
@@ -340,6 +534,107 @@ test.describe('the default exchange (ADR-0043)', () => {
     await toggle(page).click();
     await expect(page.locator('[data-node-id="~default"]')).toHaveCount(0);
     await expect.poll(() => drawn(page)).toEqual(['p1>q1']);
+  });
+
+  test('is drawn with a dashed outline, and so are the link to a queue and the implicit bindings, which are not bindings of the document', async ({
+    page,
+  }) => {
+    await open(page, PRODUCER_TO_QUEUE);
+    await toggle(page).click();
+    await expect.poll(() => drawn(page)).toEqual(['p1>q1', '~default>q1', '~default>q2']);
+
+    for (const key of ['p1>q1', '~default>q1', '~default>q2']) {
+      expect(await dashOf(page.locator(`[data-edge="${key}"] path.f-connection-path`)), key).not.toBe('none');
+    }
+    expect(await dashOf(page.locator('[data-node-id="~default"] .rmq-node-outline'))).not.toBe('none');
+  });
+
+  test('has a right click that is left to the browser, for it and for its implicit bindings, and no menu from the menu key either', async ({
+    page,
+  }) => {
+    const editor = await open(page, PRODUCER_TO_QUEUE);
+    await toggle(page).click();
+    await expect.poll(() => drawn(page)).toEqual(['p1>q1', '~default>q1', '~default>q2']);
+    await editor.settled();
+    // The page has taken a right click for itself when it has stopped the browser's own menu, which is what is looked at after the page has had its turn.
+    await page.evaluate(() => {
+      window.document.addEventListener('contextmenu', (event) => {
+        Reflect.set(window, '__contextTaken', event.defaultPrevented);
+      });
+    });
+    const taken = () => page.evaluate(() => Reflect.get(window, '__contextTaken'));
+    const intentsOf = (type: string) =>
+      page.evaluate((wanted) => (window.__rmq?.intents() ?? []).filter((intent) => intent.type === wanted), type);
+
+    await page.mouse.click(
+      (await editor.centre(page.locator('[data-node-id="~default"]'))).x,
+      (await editor.centre(page.locator('[data-node-id="~default"]'))).y,
+      { button: 'right' },
+    );
+    expect(await taken(), 'the right click on the default exchange').toBe(false);
+
+    const onLine = await onEdge(page, '~default>q1', 0.8);
+    await page.mouse.click(onLine.x, onLine.y, { button: 'right' });
+    expect(await taken(), 'the right click on an implicit binding').toBe(false);
+
+    await editor.select('Default exchange');
+    await page.keyboard.press('ContextMenu');
+    expect(await taken(), 'the menu key on the default exchange').toBe(false);
+    expect(await intentsOf('context-menu')).toEqual([]);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+  });
+
+  test('is not renamed by a double click and not moved by a drag, because nothing of it is the document’s', async ({
+    page,
+  }) => {
+    const editor = await open(page, PRODUCER_TO_QUEUE);
+    await toggle(page).click();
+    await expect.poll(() => drawn(page)).toEqual(['p1>q1', '~default>q1', '~default>q2']);
+    await editor.settled();
+    const defaultExchange = page.locator('[data-node-id="~default"]');
+    const at = await editor.centre(defaultExchange);
+    // A press on a node that cannot be dragged pans the canvas, so where the node is is measured from another node, which the pan moves as much.
+    const apart = async () => {
+      const [a, b] = [(await defaultExchange.boundingBox())!, (await editor.nodeById('q1').boundingBox())!];
+      return { x: a.x - b.x, y: a.y - b.y };
+    };
+    const before = await apart();
+
+    await page.mouse.dblclick(at.x, at.y);
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 60, at.y + 40, { steps: 8 });
+    await page.mouse.up();
+
+    const seen = await page.evaluate(() => (window.__rmq?.intents() ?? []).map((intent) => intent.type));
+    expect(seen.filter((type) => type === 'rename' || type === 'move')).toEqual([]);
+    const after = await apart();
+    expect(after.x).toBeCloseTo(before.x, 1);
+    expect(after.y).toBeCloseTo(before.y, 1);
+  });
+
+  test('has implicit bindings whose labels stay where they are when they are dragged, since the document says nothing of them', async ({
+    page,
+  }) => {
+    const editor = await open(page, PRODUCER_TO_QUEUE);
+    await toggle(page).click();
+    await expect.poll(() => drawn(page)).toEqual(['p1>q1', '~default>q1', '~default>q2']);
+    await editor.settled();
+    const key = '~default>q1';
+    const start = await editor.centre(label(page, key));
+    const target = await onEdge(page, key, 0.7);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(target.x, target.y, { steps: 10 });
+    expect(
+      distance(await editor.centre(label(page, key)), start),
+      'the label does not follow the pointer',
+    ).toBeLessThan(3);
+    await page.mouse.up();
+
+    expect(await labelsOf(page)).toEqual({});
+    expect(await editor.log()).toEqual(['set canvas default-exchange=true']);
   });
 
   test('is a setting of the canvas, which is kept with it when the page is opened again', async ({ page }) => {
