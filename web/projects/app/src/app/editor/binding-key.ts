@@ -17,45 +17,46 @@ export type GiveUp = 'escape' | 'button' | 'blur';
   selector: 'rmq-binding-key',
   imports: [RefusalNotice],
   template: `
-    <form
-      class="border-border bg-panel text-fg absolute z-10 flex w-72 flex-col gap-2 rounded-md border p-3 text-sm shadow-lg"
+    <div
+      class="border-border bg-panel text-fg absolute z-10 w-72 rounded-md border p-3 text-sm shadow-lg"
       role="group"
       data-testid="binding-key"
       [attr.aria-label]="title()"
       [style.left.px]="position().x"
       [style.top.px]="position().y"
-      (submit)="give($event)"
       (focusout)="leave($event)"
     >
-      <label class="font-medium" [for]="fieldId">Binding key</label>
-      <input
-        #field
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
-        class="border-border bg-surface rounded-md border px-2 py-1.5"
-        [id]="fieldId"
-        [attr.aria-describedby]="error() ? helpId + ' ' + errorId : helpId"
-        [attr.aria-invalid]="error() ? 'true' : null"
-        (keydown.escape)="escape($event)"
-      />
-      <p class="text-muted text-xs" [id]="helpId">{{ help() }}</p>
-      @if (error(); as issue) {
-        <div [id]="errorId"><rmq-refusal-notice [issue]="issue" /></div>
-      }
-      <div class="flex gap-2">
-        <button type="submit" class="bg-accent text-accent-fg rounded-md px-3 py-1.5 font-medium hover:opacity-90">
-          Bind
-        </button>
-        <button
-          type="button"
-          class="border-border bg-surface hover:bg-canvas rounded-md border px-3 py-1.5"
-          (click)="cancelled.emit('button')"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+      <form class="flex flex-col gap-2" (submit)="give($event)">
+        <label class="font-medium" [for]="fieldId">Binding key</label>
+        <input
+          #field
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          class="border-border bg-surface rounded-md border px-2 py-1.5"
+          [id]="fieldId"
+          [attr.aria-describedby]="error() ? helpId + ' ' + errorId : helpId"
+          [attr.aria-invalid]="error() ? 'true' : null"
+          (keydown.escape)="escape($event)"
+        />
+        <p class="text-muted text-xs" [id]="helpId">{{ help() }}</p>
+        @if (error(); as issue) {
+          <div [id]="errorId"><rmq-refusal-notice [issue]="issue" /></div>
+        }
+        <div class="flex gap-2">
+          <button type="submit" class="bg-accent text-accent-fg rounded-md px-3 py-1.5 font-medium hover:opacity-90">
+            Bind
+          </button>
+          <button
+            type="button"
+            class="border-border bg-surface hover:bg-canvas rounded-md border px-3 py-1.5"
+            (click)="cancelled.emit('button')"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   `,
 })
 export class BindingKey {
