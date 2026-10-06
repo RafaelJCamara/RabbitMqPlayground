@@ -1,5 +1,14 @@
 import { applyCommand, type CanvasDocument } from '@rmq/domain';
-import { entry, exchangeRecord, bindingRecord, documentOf, headerArguments, queueRecord, sampleDocument, str } from '@rmq/testing';
+import {
+  entry,
+  exchangeRecord,
+  bindingRecord,
+  documentOf,
+  headerArguments,
+  queueRecord,
+  sampleDocument,
+  str,
+} from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { bindingRows, rebindCommand, unbindCommand } from './binding-commands';
 
@@ -105,7 +114,10 @@ describe('rebindCommand', () => {
 
     expect(command).toMatchObject({
       type: 'batch',
-      commands: [{ type: 'unbind', headers: { xMatch: 'any' } }, { type: 'bind', key: 'k', headers: { xMatch: 'any' } }],
+      commands: [
+        { type: 'unbind', headers: { xMatch: 'any' } },
+        { type: 'bind', key: 'k', headers: { xMatch: 'any' } },
+      ],
     });
   });
 
