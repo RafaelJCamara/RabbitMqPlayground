@@ -452,6 +452,55 @@ describe('watchDrawnEdges (ADR-0016, workaround 3)', () => {
     stop();
   });
 
+  it('does not say that an edge is gone when its element is moved in the container, which the library does to the edge that it selects', async () => {
+    const container = document.createElement('div');
+    const { seen, report } = reports();
+    const stop = watchDrawnEdges(container, report);
+    const first = edge(container, 'a>b', 'M0,0 L1,1');
+    edge(container, 'c>d', 'M0,0 L2,2');
+    await settle();
+    expect(seen.drawn).toEqual([['a>b', 'c>d']]);
+
+    container.append(first.element);
+    await settle();
+
+    expect(seen.gone).toEqual([]);
+    expect(seen.drawn).toEqual([['a>b', 'c>d']]);
+    stop();
+  });
+
+  it('says that an edge is gone when its path loses its d, and that it is drawn when the path has one again', async () => {
+    const container = document.createElement('div');
+    const { seen, report } = reports();
+    const stop = watchDrawnEdges(container, report);
+    const { path } = edge(container, 'a>b', 'M0,0 L1,1');
+    await settle();
+
+    path.setAttribute('d', '');
+    await settle();
+    expect(seen.gone).toEqual([['a>b']]);
+
+    path.setAttribute('d', 'M0,0 L5,5');
+    await settle();
+    expect(seen.drawn).toEqual([['a>b'], ['a>b']]);
+    stop();
+  });
+
+  it('says nothing when the path of a drawn edge is only drawn another way', async () => {
+    const container = document.createElement('div');
+    const { seen, report } = reports();
+    const stop = watchDrawnEdges(container, report);
+    const { path } = edge(container, 'a>b', 'M0,0 L1,1');
+    await settle();
+
+    path.setAttribute('d', 'M0,0 L9,9');
+    await settle();
+
+    expect(seen.drawn).toEqual([['a>b']]);
+    expect(seen.gone).toEqual([]);
+    stop();
+  });
+
   it('stops watching when it is stopped', async () => {
     const container = document.createElement('div');
     const report = { drawn: vi.fn(), gone: vi.fn() };

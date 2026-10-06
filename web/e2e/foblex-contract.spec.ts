@@ -476,6 +476,38 @@ test.describe('Foblex contract: what the adapter reports from the pointer', () =
     await reported(page, { type: 'rename', id: 'q1' });
   });
 
+  test('does not let the end of an edge be dragged off it, so that changing an edge is deleting it and linking again', async ({
+    page,
+  }) => {
+    // The library lets the end of an edge be picked up and dropped on another node, as a reassignment, unless it is told not to.
+    await open(page);
+    const edge = page.locator('[data-edge="x1>q1"]');
+    await expect(edge).toHaveClass(/f-connection-reassign-disabled/);
+    await expect(edge.locator('circle.f-connection-drag-handle-end')).toBeHidden();
+    // Where the line ends, a little before it, which is where the handle would be if it were shown.
+    const end = await edge.locator('path.f-connection-path').evaluate((path: SVGPathElement) => {
+      const point = path.getPointAtLength(path.getTotalLength() - 6);
+      const matrix = path.getScreenCTM()!;
+      return { x: point.x * matrix.a + matrix.e, y: point.y * matrix.d + matrix.f };
+    });
+    const bounds = (await flow(page).boundingBox())!;
+
+    await page.mouse.move(end.x, end.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x + 10, end.y + 10, { steps: 3 });
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height - 40, { steps: 8 });
+    await page.mouse.up();
+    await nextFrame(page);
+
+    expect(
+      (await intents(page)).filter(({ type }) => type.startsWith('link')),
+      'no link was made or tried by dropping the end of an edge',
+    ).toEqual([]);
+    await expect
+      .poll(() => page.evaluate(() => [...(window.__rmq?.drawnEdges() ?? [])].sort()))
+      .toEqual([...EDGES].sort());
+  });
+
   test('does not zoom for a double click on the empty canvas, which the library would do by default', async ({
     page,
   }) => {
