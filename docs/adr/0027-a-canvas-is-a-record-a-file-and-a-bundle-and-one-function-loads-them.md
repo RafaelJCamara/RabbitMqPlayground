@@ -1,6 +1,6 @@
 # ADR-0027: A canvas is a record, a file and a bundle, and one function loads all of them
 
-- **Status:** Accepted
+- **Status:** Accepted. The size caps that are about a canvas are the domain's `LIMITS`, and the commands refuse at them ([ADR-0029](0029-the-commands-refuse-at-the-size-caps.md)).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "The canvas", "Storage" and "Files" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md). The

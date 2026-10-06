@@ -36,9 +36,10 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0023](0023-header-integers-are-limited-to-safe-integers.md) | Header integers are limited to the safe-integer range | Accepted |
 | [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) | A queue that is not durable is refused, with the root cause first and the broker's reply after it | Accepted |
 | [0025](0025-the-command-grammar.md) | The grammar of the typed command | Accepted |
-| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted |
-| [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted |
+| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted (a document that a command made always loads, made true by 0029) |
+| [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted (the caps of a canvas are the domain's, by 0029) |
 | [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted |
+| [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
 
 ## Where to start
 
@@ -49,7 +50,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0018](0018-workspace-layout-and-dependency-rules.md), [0019](0019-undo-through-immutable-document-snapshots.md),
   [0025](0025-the-command-grammar.md), [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md),
   [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md),
-  [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md).
+  [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md),
+  [0029](0029-the-commands-refuse-at-the-size-caps.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),

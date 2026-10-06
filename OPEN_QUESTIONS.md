@@ -5,8 +5,9 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)) and S3
 ([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
-[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so the first one is missing:
-it was answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md).
+[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1 and 9 are missing:
+they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) and
+[ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md).
 
 | # | Question | Settled by |
 |---|---|---|
@@ -17,7 +18,6 @@ it was answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refus
 | 6 | Is the shape of the trace and of `explainMiss` right for the Why? overlay? | S7 ([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)) |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
 | 8 | What does a second declaration of a name that is taken do, and what does an unbind of nothing do? | S6 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)) |
-| 9 | Should the commands refuse at the size caps, so that a document that commands made always loads? | S4 ([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) |
 | 10 | What do the home screen, the backup and "delete all" do with a canvas that cannot be read? | S9 ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) |
 
 ## 2. How does the engine report a refusal that closes the connection?
@@ -169,27 +169,6 @@ Options:
 S6 gives the engine its `dispatch` for `exchange.declare` and `queue.declare`, and has to say what the engine does with a
 name that is there, so it is the slice that settles it. The domain's `declare` and `unbind` would follow.
 
-## 9. Should the commands refuse at the size caps?
-
-`loadCanvas` refuses a document that has more than 2,000 elements, 5,000 edges, 100 header entries on one message or
-binding, or 10,000 characters in a payload or a header value, and the repository refuses to save one, so that nothing is kept
-that cannot be read back ([ADR-0027](docs/adr/0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md)).
-The commands do not know these numbers. `applyCommand` accepts a declare or a bind that takes a canvas over a cap, and then the
-autosave fails with a `too-large` error that says what is too big. Nobody builds 2,000 elements by hand, and the plan runs
-200, but the command bar can run a batch of any size, and the autosave is a worse place to find out than the gesture that
-took the canvas over the line. It also leaves a sentence of [ADR-0026](docs/adr/0026-commands-name-elements-and-ids-stay-in-the-document.md)
-true only in practice: "a document that a command made always loads again".
-
-Options:
-
-- Keep it. The caps are ten times what the plan runs, and the error says what to remove.
-- Move the numbers into `LIMITS` of the domain, and make `declare`, `add`, `bind`, `link` and `subscribe` refuse at the cap
-  with an `Issue` that says that the canvas is full. Persistence would then import them. That is a change of the domain, with
-  its tests, and a new ADR or an extension of ADR-0026.
-
-My lean is the second, in S4, when the gestures that add things are built. It is small, and it makes the sentence true
-without a footnote.
-
 ## 10. Canvases that cannot be read
 
 `list()` answers the canvases that it can read, and, apart from them, the ones that it cannot: their id, their name if the
@@ -225,7 +204,8 @@ carry the record of an unreadable canvas as it is, so that a newer version of th
 
 - **The size caps are numbers that a person chose**: 2,000 elements, 5,000 edges, 100 header entries on one message or binding,
   10,000 characters in a payload or a header value, 50,000,000 characters in a file, 1,000 canvases in a backup and 200
-  characters in a name. They are ten times what the plan runs, and they live in persistence and not in the domain (question 9).
+  characters in a name. They are ten times what the plan runs. The four that are about a canvas are the domain's `LIMITS`,
+  and the commands refuse at them ([ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md)).
 - **A tombstone lives 60 seconds.** It backs an Undo toast and is not a bin, so that a canvas that the learner deleted is gone
   from the disk soon. A "recently deleted" screen would need more.
 - **Autosave waits 500 ms after the last change, and has no longest wait.** A learner who changes the canvas every 400 ms for
@@ -261,7 +241,7 @@ S3 hands on what the app has to wire, in the order that the slices come
 - **S4** makes the repository with `Date.now` and `crypto.randomUUID`, and calls `purgeExpired()` when it starts. It makes the
   autosave of the one implicit canvas, calls `flush()` when the page is hidden (`visibilitychange`, `pagehide`), shows what each
   write came to, and asks `requestPersistence(navigator.storage)` after the first save, and not at start. It shows
-  `quotaWarning` when a save fails with `quota-exceeded`, or from `readUsage`. It decides question 9.
+  `quotaWarning` when a save fails with `quota-exceeded`, or from `readUsage`.
 - **S9** builds the screens on `softDelete`, `softDeleteAll`, `restore` and `restoreAll` for the Undo toasts, the backup on
   `writeBackup` and `parseBackup` (what to do with an id that is taken is its choice, and `put` is the door), and the JSON
   files on `writeCanvasFile` and `parseCanvasFile`. It owns the reminder to make a backup, which the meta store only holds the
