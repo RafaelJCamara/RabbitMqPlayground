@@ -3,8 +3,9 @@
 Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#3](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/3)) was closed, and brought up to date after S2
 ([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)), S3
-([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)) and S4
-([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)). Each one says what is open, why, what the options
+([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)), S4
+([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) and S5
+([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
 [M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1 and 9 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) and
@@ -177,9 +178,48 @@ and cannot reach the adapter.
   target of the event, which the change would have removed, told nothing, and that right click opened the menu of the selected node
   ([ADR-0040](docs/adr/0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md)).
 
-The scripts are the same ones, plus a generator for templates, a runner for the hand changes and a picker of what to run again, and are still outside
-the repository. The question of whether a tool should live in it is still open, and S4 makes the case for it a little stronger: a runner of the
-hand changes, and the lint rule that came out of the templates, are the parts that other slices would use.
+Where S5 left it: S5 used the same scripts, with one more (`keep-changed.mjs`), because a slice that changes a file in a few places should be mutated in those places,
+and not in the whole of a file that is mostly older code. It keeps the mutants that are in a line that the slice added or changed since the commit before it, which cut
+the 3,344 mutants of the 47 files of `core/`, `canvas/model/`, `command-bar/` and `editor/` to the 2,009 that are in a line that S5 changed.
+
+- **The domain (162 mutants** in what S5 changed there: `help`, `wordText` and the refusal of a first word that is no command): 156 were caught. Of the six that were not, five
+  are tests now (a name that is quoted in part, the first word being what a refusal is about, `help` alone being a command with no topic and not a command that is
+  undefined, a verb that has only one command of two words), and one changes nothing that can be seen: the space in `startsWith(name + ' ')`, which the completer filters again.
+- **The code of the app (2,009 mutants** in the changed lines): 699 did not build, 1,106 of the other 1,310 were caught, and 204 were not. Those and the templates below led to 49 new tests in 17 specs,
+  and to stronger assertions in many more (the app's tests went from 1,085 to 1,132), and to eighteen pieces of code that no input could reach being taken out: the quadratic curve that the path reader had for an edge type that the app does not
+  use, two guards of the point at a fraction that a line with a length cannot meet, the overlap and the size of a label as one expression each, the pieces of the link flow that
+  were there for a node that is not on the canvas, for a reason that is never missing and for a command that is not a link, the group of producers in the picker, which nothing is linked to, the
+  call that cleared a timer that a flag already ignored, and a condition of the view of an edge that its rows already made. A second run of the 903 mutants that the changes could
+  affect left 74, and a third, of the code as it ended, left 59. Each of the 59 was read, and none can be seen: 13 are the counters and the ids that tell two components of one kind apart,
+  which matter only if two are on a page; 6 are classes, a selector and a default that every caller replaces; 10 are the first value of something that the next line sets
+  (the cursor and the flag of typing of the bar, `-1` that is `-2`, the seed of the best place of a label); 3 are `trim` or `trimEnd` where only whether something is left is asked;
+  and 27 are guards and exits that are there for speed or for safety and change nothing (the early exit of the greedy placement, which the strict `<` makes unneeded for the result;
+  the tie between two places that are as near; a vertex that two pieces share; the guard against a division by nothing in the picker and in a line of no length, which `NaN` passes through; the
+  other thing that is asked for being closed when one is opened, which the focus does as well; a sentence for an exchange that has nothing to link to, which cannot be, since it can be bound to
+  itself; a node and its link that are not a batch, which a point always makes one; the `undefined` that a key with nothing in it is).
+- **The inline templates (285 mutants** in the changed lines): 39 did not build, 175 were caught at once, and 71 were not. 17 of those removed the type of a button, and the linter's
+  `button-has-type` sees all 17, as in S4. The others led to eight of those tests and to assertions in a dozen more: what is hidden from a screen reader (the arrow, the prompt, the words that name a group, the icon of the theme), the
+  ids that the field, the list, the panel and the answer are pointed at by, that the list has its name and its options are out of the order of Tab, that a press in the list leaves the cursor
+  in the field and Enter on an option takes it, that a refusal marks a field invalid in the bar and in both fields of the inspector, that a link has no section of bindings, that a
+  clean binding has no warning and no note of header arguments, the steps of the place of a label, the regions and the scroll of the cheat-sheet, the reason that the picker gives and the
+  titles of the icons. 19 are left and change nothing that a test can see: the type of a text field (4), the size of an icon (13), the `submit` of a button that is one by default, and a
+  detail of an option that every option has.
+- **The adapter and the end-to-end tier (42 changes by hand)**: the labels (their place, the drag, the press, the card and its hover), the lines that are dashed, and everything that keeps the default
+  exchange from being the document's (the menu, the double click, the drag, the connectors). 23 were caught at once. 19 were not, and what they showed is the most useful thing that the
+  sweeps found: nothing in the browser saw where the labels are put, so the greedy placement of ADR-0044 had its unit specs and no journey, and the same went for a drag by a button that is
+  not the main one, a press that moves a little, the card that a press takes away and a finger makes appear for a moment, the dashes, and each of the ways that the default exchange is left
+  alone. Thirteen journeys (one of them of the contract suite) were written for them, and 12 of the 19 are caught now. One of the 19 was a guard that cannot be reached, and is gone. Seven
+  are left: the wait of 120 milliseconds before the labels are placed (a label that jumps while a node is dragged is a thing that no state at the end can show), a timer that is not
+  cleared and a set of places that is set again (both do the same work twice), the placing of the labels again when the geometry changes (which the document changing does at once,
+  and the geometry only when the library draws the paths after the document, a moment later than the wait), a drag by a second pointer (a label is captured by the pointer that pressed it, so none other
+  reaches it), the input of the default exchange being disabled (the list of the targets that the rules allow already leaves it out), and a label that carries only a lint (none of the
+  lints of M1 is on an edge that has no chip).
+- **The replay**: the property of ADR-0046 was checked by hand changes of the code that it is about (ids that a refused batch spent, an undo that was not logged), which it finds at the 100
+  runs of the hook, and it ran at 5,000 runs with seven seeds when it was written, and with nine more after the mutations had changed the link flow, and once at 40,000.
+
+The scripts are the same ones, plus a generator for templates, a runner for the hand changes, a picker of what to run again and, since S5, the keeper of the lines that changed. They are
+still outside the repository. The question of whether a tool should live in it is still open, and S5 makes the case for it a little stronger again: the hand changes found the one gap that the
+other sweeps could not (a thing that only a browser sees), and the three runs of S5 each needed the copies to be brought up to date with a command that is easy to forget.
 
 ## 8. Declaring a name twice, and unbinding what is not bound
 
@@ -297,6 +337,43 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   is opened here some day, the hold can go.
 - **The inspector shows only what S4 can explain**: name, position, the type and flags of an exchange, the durable switch of a
   queue, and for any node what it is joined to. What a producer sends and how a consumer takes messages is S6's and S8's.
+
+## Decisions taken in S5 that are easy to revisit
+
+- **A binding asks for its key before it exists** ([ADR-0041](docs/adr/0041-the-five-ways-to-link-share-one-path-and-a-binding-asks-for-its-key-first.md)).
+  From a direct or a topic exchange the popover opens first, and Enter makes the whole `bind`, so undo is one step and the line in the log is the one that a
+  learner would type. The alternative, a binding with an empty key that the learner then edits, is two steps and a binding that matches almost nothing in between.
+- **An id is spent only by a command that is accepted** ([ADR-0046](docs/adr/0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md)).
+  The bus takes the ids back when a command or a batch is refused, and without that a log typed again would make other ids than the gestures did. A later
+  slice that makes ids outside the bus would break that, and the replay property is the test that says so.
+- **The default exchange is a node that is not in the document** ([ADR-0043](docs/adr/0043-the-default-exchange-is-shown-on-request-and-is-not-in-the-document.md)):
+  `~default` cannot be an id, it is read-only and can be selected, it is put a row above the highest exchange, and a producer's link to a queue is drawn through
+  it when it is shown. It cannot be dragged. If a learner is to move it, the layout has to hold more than ids.
+- **The command bar is a panel in the layout, and not a palette over the canvas** ([ADR-0045](docs/adr/0045-the-command-bar-a-panel-that-types-through-the-same-door.md)).
+  It costs a line of the window when it is closed, and it never covers the node that has the focus. Ctrl/Cmd+K works in a field of text, and `/` does not, and what
+  was typed is kept when the bar is closed ([ADR-0048](docs/adr/0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md)).
+- **The log of equivalent commands is the session's: 1,000 lines, in memory, never saved with the canvas.** The history of the bar is 100 lines in `localStorage`
+  (`rmq.command-history`), because it is about the person and not about the document. A canvas that is opened has an empty log, and S7's event log is meant to show
+  the lines beside the events.
+- **The card of the first run is a few chips, and goes for good with the first edge or "Got it"** (`rmq.how-to-link`). The cheat-sheet has the whole sentence of each
+  way. The tour of S11 may replace the card.
+- **A label is three chips and "+N more", at a place that is a thousandth of the way along its edge, and the greedy placement runs 120 ms after the geometry
+  is still** ([ADR-0044](docs/adr/0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md)). The size of a label is worked out from
+  6.6 pixels for a character and not measured, so that it can be placed before anything is drawn. A second pass with the measured sizes is what to do if a
+  learner ever sees two labels meet.
+- **What the bar suggests on a canvas that lacks something uses example names**: `orders`, `billing`, `sender` and `worker` for what is missing, and the names
+  of the canvas for what is to be bound. They are not names that a canvas has to have, and a learner who takes a suggestion gets those names. The "did you mean"
+  buttons write the name that was probably meant in place of the words at fault, quoted when the grammar needs it.
+- **The wordings that S5 added are still first drafts**, as ADR-0025 says. Two changed once they were seen on a screen: the sentence that the library speaks when `L`
+  starts a link now says what the keys are, and the card of the first run is a few chips where it was a list of sentences. The refusals of `help` and of a first word
+  that is not a command, and the sentence for a command that changed nothing ("Nothing changed, because the canvas already is as that command says."), were read when
+  their specs were written and not since. A bad one is mended with a small domain commit and its test.
+- **The reader of the paths of the edges knows `M`, `L` and `C`**, which is what the `bezier` type of edge draws. The `segment` type draws a rounded bend with `Q`, so a slice
+  that changes the type has to teach `path.ts` the command, and its spec says that a path that goes on with a `Q` is read as far as the command.
+- **The persistence note and the card of the first run move the canvas, once each, and the tests of the browser do not wait for the note.** The note that the
+  browser did not promise to keep the canvases takes 66 pixels about 300 ms after the first change, and the card gives its 58 back when the first edge is made.
+  A learner sees a canvas that moves under the first thing that they do. The tests are given the promise ([ADR-0048](docs/adr/0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md)),
+  and the note is tested alone. Room kept for the note, or a note that is drawn over the status bar, would stop the move.
 
 ## Follow-ups that are already owned
 
