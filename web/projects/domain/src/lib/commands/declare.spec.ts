@@ -188,7 +188,7 @@ describe('declare queue', () => {
       });
     });
 
-    it('but only after the name, which a broker reads first', () => {
+    it('but only after the name, which is the simulator’s order: no fixture has a queue with both faults', () => {
       expect(applyDeclareQueue(empty(), queue('amq.x', false), sequentialIds())).toMatchObject({
         error: { kind: 'reserved-name' },
       });

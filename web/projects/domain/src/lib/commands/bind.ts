@@ -17,8 +17,8 @@ import type { BindCommand, UnbindCommand } from './types';
  * Binding and unbinding. A binding names an exchange and a queue or an exchange, and the checks run in the order that a
  * broker runs them: what a client library refuses before anything is sent (a key over 255 bytes), the default exchange
  * (403), the source and then the destination that are not there (404), and the key of a topic binding (406). A fault of
- * each kind has a reply that was recorded (ADR-0021, ADR-0022). Where a command has two faults, which a broker reports
- * first was not recorded for every pair, and this order is the one that its source gives (ADR-0026).
+ * each kind has a reply that was recorded (ADR-0021, ADR-0022), and so has the order in which a broker reports two of them
+ * (`routing/a-binding-with-two-faults-gets-one-refusal`, ADR-0026).
  */
 
 interface Ends {

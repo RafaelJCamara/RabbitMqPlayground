@@ -40,7 +40,8 @@ export function applyDeclareExchange(
 
 /**
  * A queue that is not durable is refused with the broker's own 541 and a message that says why (ADR-0021, ADR-0024). The
- * name is checked first, because a broker reads it before anything else about the declaration.
+ * name is checked first, then the flag, then whether the name is taken. No fixture has a queue with two of these faults, so
+ * that order is the simulator's.
  */
 export function applyDeclareQueue(
   document: CanvasDocument,
