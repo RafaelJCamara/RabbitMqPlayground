@@ -13,7 +13,7 @@ import type { Destination } from '@rmq/engine';
  * `x1` is the first exchange, `q2` the second queue, `p1` a producer, `c1` a consumer and `b3` the third binding.
  */
 
-const PREFIX: Readonly<Record<IdKind, string>> = {
+const LETTER: Readonly<Record<IdKind, string>> = {
   exchange: 'x',
   queue: 'q',
   producer: 'p',
@@ -21,17 +21,20 @@ const PREFIX: Readonly<Record<IdKind, string>> = {
   binding: 'b',
 };
 
-/** A context whose ids count up from 1 for each kind of thing. */
-export function sequentialIds(): ApplyContext {
+/** A context whose ids count up from 1 for each kind of thing, and start with `prefix`. */
+export function prefixedIds(prefix: string): ApplyContext {
   const counters = new Map<IdKind, number>();
   return {
     newId(kind) {
       const next = (counters.get(kind) ?? 0) + 1;
       counters.set(kind, next);
-      return `${PREFIX[kind]}${next}`;
+      return `${prefix}${LETTER[kind]}${next}`;
     },
   };
 }
+
+/** A context whose ids count up from 1 for each kind of thing: `x1`, `x2`, `q1`. */
+export const sequentialIds = (): ApplyContext => prefixedIds('');
 
 /** Applies commands in order, and throws, saying which and why, if one of them is refused. */
 export function applyAll(

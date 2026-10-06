@@ -1,5 +1,16 @@
 export { arbSeed } from './lib/arbitraries';
-export { applyAll, exchangeEnd, queueEnd, sequentialIds, undoRedoProblems } from './lib/commands';
+export { applyAll, exchangeEnd, prefixedIds, queueEnd, sequentialIds, undoRedoProblems } from './lib/commands';
+export {
+  arbIntent,
+  arbScript,
+  arbStep,
+  build,
+  commandFor,
+  playScript,
+  type Intent,
+  type Step,
+  type Transition,
+} from './lib/scripts';
 export {
   bindingRecord,
   consumerRecord,
