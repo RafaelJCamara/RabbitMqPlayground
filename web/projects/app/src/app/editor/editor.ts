@@ -533,9 +533,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   /** The pointer is on the card, which keeps it, or has left it, which takes it away shortly. */
   protected onCardHeld(held: boolean): void {
     this.cardHeld = held;
-    if (held) {
-      clearTimeout(this.peekTimer);
-    } else {
+    if (!held) {
       this.showPeek(null);
     }
   }

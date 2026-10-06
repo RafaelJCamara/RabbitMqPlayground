@@ -552,6 +552,27 @@ describe('Editor', () => {
       expect(canvas().calls).toContain('focus');
     });
 
+    it('gives the picker up when the focus goes elsewhere, and leaves the focus where the learner put it', async () => {
+      const { canvas, user, fixture, idOf } = await openEditor('Producer', 'Queue');
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'node', id: idOf('producer') },
+        client: { x: 5, y: 5 },
+      });
+      fixture.detectChanges();
+      await user.click(await screen.findByRole('menuitem', { name: /Link to…/ }));
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search the targets' })).toHaveFocus());
+      canvas().calls.length = 0;
+
+      await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('status-message')).toHaveTextContent('Link cancelled.');
+      expect(canvas().calls).not.toContain('focus');
+    });
+
     it('does not offer "Link to…" for a consumer, which nothing is linked from', async () => {
       const { canvas, fixture, idOf } = await openEditor('Consumer');
 
@@ -724,6 +745,67 @@ describe('Editor', () => {
           .getAllByRole('listitem')
           .map((item) => item.textContent),
       ).toEqual(['a', 'b', 'c', 'd', 'e']);
+      // The label is 80 high from 100, and the card is 4 under it.
+      expect(card).toHaveStyle({ left: '100px', top: '184px' });
+    });
+
+    it('goes 150 milliseconds after the pointer has left the label, and not a moment before', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+
+        canvas().intent.emit({ type: 'peek', key: null });
+        vi.advanceTimersByTime(149);
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).toBeInTheDocument();
+
+        vi.advanceTimersByTime(1);
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stays when the pointer comes onto it before the label has said that the pointer left, whichever of the two comes first', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+
+        fireEvent.pointerEnter(screen.getByTestId('label-card'));
+        canvas().intent.emit({ type: 'peek', key: null });
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+
+        expect(screen.queryByTestId('label-card')).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('is not taken away by a key that is not Escape, and a pointer that is on it is still on it', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+        fireEvent.pointerEnter(screen.getByTestId('label-card'));
+
+        fireEvent.keyDown(document.body, { key: 'a' });
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).toBeInTheDocument();
+
+        canvas().intent.emit({ type: 'peek', key: null });
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('goes shortly after the pointer has left the label, and stays while the pointer is on the card', async () => {
@@ -923,6 +1005,22 @@ describe('Editor', () => {
 
       expect(screen.queryByRole('menu')).not.toBeInTheDocument();
       expect(canvas().selection().nodes).toEqual([queue.id]);
+    });
+
+    it('does not open for an edge of the default exchange, which is not the document’s, and leaves the selection as it was', async () => {
+      const { canvas, queue, fixture } = await openEditor();
+      canvas().intent.emit({ type: 'select', nodes: [queue.id], edges: [] });
+      fixture.detectChanges();
+
+      canvas().intent.emit({
+        type: 'context-menu',
+        target: { kind: 'edge', key: '~default>q1' },
+        client: { x: 5, y: 5 },
+      });
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(canvas().selection()).toEqual({ nodes: [queue.id], edges: [] });
     });
 
     it('does not rename an edge, and does not delete it either, when it is asked to', async () => {
