@@ -34,6 +34,10 @@ updates:
         patterns: ["testcontainers", "@testcontainers/*", "amqplib"]
       tailwind:
         patterns: ["tailwindcss", "@tailwindcss/*", "postcss"]
+      # Foblex Flow is pinned to an exact version (ADR-0016), and its helper packages move with it. An upgrade is one pull
+      # request, and the Foblex contract suite (web/e2e/foblex-contract.spec.ts) runs on it and fails loudly if a workaround broke.
+      foblex:
+        patterns: ["@foblex/*"]
     ignore:
       # The Angular compiler accepts one TypeScript minor at a time, so TypeScript moves with Angular.
       - dependency-name: typescript
