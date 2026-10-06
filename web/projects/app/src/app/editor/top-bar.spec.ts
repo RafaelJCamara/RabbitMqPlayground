@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { render, screen } from '@testing-library/angular';
+import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -57,6 +57,19 @@ describe('TopBar', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'RabbitMQ Playground' })).toBeInTheDocument();
   });
 
+  it('has two groups of buttons, each with a name: what is done to the canvas, and how it is looked at', async () => {
+    await renderBar();
+
+    const edit = screen.getByRole('group', { name: 'Edit' });
+    const view = screen.getByRole('group', { name: 'View' });
+    expect(
+      within(edit)
+        .getAllByRole('button')
+        .map((button) => button.textContent?.trim()),
+    ).toEqual(['Undo', 'Redo', 'Auto-layout']);
+    expect(within(view).getAllByRole('button')).toHaveLength(4);
+  });
+
   describe('undo and redo', () => {
     it('are not available when there is nothing to take back or to put back', async () => {
       await renderBar();
@@ -94,6 +107,10 @@ describe('TopBar', () => {
       await renderBar();
 
       expect(screen.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-keyshortcuts', 'Control+Z Meta+Z');
+      expect(screen.getByRole('button', { name: 'Redo' })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'Control+Shift+Z Control+Y Meta+Shift+Z',
+      );
       expect(screen.getByRole('button', { name: 'Undo' }).getAttribute('title')).toMatch(/^Undo \((Ctrl|Cmd)\+Z\)$/);
       expect(screen.getByRole('button', { name: 'Redo' }).getAttribute('title')).toMatch(
         /^Redo \((Ctrl|Cmd)\+Shift\+Z\)$/,

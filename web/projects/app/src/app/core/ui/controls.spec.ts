@@ -91,6 +91,13 @@ describe('Switch', () => {
     expect(screen.getByText('On')).toBeInTheDocument();
   });
 
+  it('hides the track and the words On and Off from a screen reader, which is told the state by the switch itself', async () => {
+    const { control } = await renderSwitch(true);
+
+    expect(screen.getByText('On')).toHaveAttribute('aria-hidden', 'true');
+    expect(control().querySelectorAll('[aria-hidden="true"]')).toHaveLength(2);
+  });
+
   it('says that it is off in words, and in the state that a screen reader reads', async () => {
     const { control } = await renderSwitch(false);
 

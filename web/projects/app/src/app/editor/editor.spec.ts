@@ -119,6 +119,29 @@ describe('Editor', () => {
     expect(listed.ok && listed.value.canvases.map((canvas) => canvas.name)).toEqual([UNTITLED]);
   });
 
+  it('has no canvas to draw, and says that it is opening one, until the canvas has been opened', async () => {
+    let release: () => void = () => undefined;
+    const opened = new Promise<void>((resolve) => (release = resolve));
+    const { providers } = harness({
+      browser: (memory) => ({
+        ...memory,
+        list: async () => {
+          await opened;
+          return memory.list();
+        },
+      }),
+    });
+    const { fixture } = await renderEditor(providers);
+
+    expect(screen.getByTestId('opening')).toHaveTextContent('Opening your canvas');
+    expect(fixture.debugElement.query(By.directive(FakeCanvas))).toBeNull();
+
+    release();
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    expect(screen.queryByTestId('opening')).not.toBeInTheDocument();
+    expect(fixture.debugElement.query(By.directive(FakeCanvas))).not.toBeNull();
+  });
+
   it('says what each write came to, and says why when it failed', async () => {
     const { providers, timer } = harness({
       browser: (memory) => ({
@@ -649,15 +672,14 @@ describe('Editor', () => {
       await startRename();
       const store = fixture.debugElement.injector.get(DocumentStore);
       const before = store.document();
-      const applied: string[] = [];
-      fixture.debugElement.injector.get(CommandBus).onApplied(({ command }) => applied.push(command.type));
+      const apply = vi.spyOn(fixture.debugElement.injector.get(CommandBus), 'apply');
 
       await user.keyboard('{Enter}');
       fixture.detectChanges();
 
       expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
       expect(store.document()).toBe(before);
-      expect(applied).toEqual([]);
+      expect(apply).not.toHaveBeenCalled();
     });
 
     it('does not open for a node that is not there', async () => {

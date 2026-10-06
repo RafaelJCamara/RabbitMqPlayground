@@ -62,7 +62,6 @@ const DELETE: MenuItem = { action: 'delete', label: 'Delete', icon: 'trash', key
               cdkMenuItem
               type="button"
               class="hover:bg-canvas focus:bg-canvas flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
-              [attr.data-testid]="'menu-' + item.action"
               (cdkMenuItemTriggered)="choose(item.action)"
             >
               <rmq-icon [name]="item.icon" [size]="16" />

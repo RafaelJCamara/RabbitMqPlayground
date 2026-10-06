@@ -18,6 +18,7 @@ describe('Toolbox', () => {
     const { buttons } = await renderToolbox();
 
     expect(screen.getByRole('toolbar', { name: 'Add a node' })).toBeInTheDocument();
+    expect(screen.getByRole('toolbar', { name: 'Add a node' })).toHaveAttribute('aria-orientation', 'vertical');
     expect(buttons().map((button) => button.textContent?.trim())).toEqual([
       'Producer',
       'Direct exchange',

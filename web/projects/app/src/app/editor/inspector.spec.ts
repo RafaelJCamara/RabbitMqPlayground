@@ -36,6 +36,14 @@ async function renderInspector(selected: { nodes?: string[]; edges?: string[] } 
   };
 }
 
+/** The element that describes a control: the one that its `aria-describedby` names, which has to be there, and hold the refusal. */
+const describedBy = (control: HTMLElement) => {
+  const id = control.getAttribute('aria-describedby');
+  const description = id === null ? null : document.getElementById(id);
+  expect(description, `what ${control.id} says that it is described by`).not.toBeNull();
+  expect(description).toContainElement(screen.getByTestId('refusal'));
+};
+
 const nameField = () => screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement;
 const xField = () => screen.getByRole('spinbutton', { name: 'X' }) as HTMLInputElement;
 const yField = () => screen.getByRole('spinbutton', { name: 'Y' }) as HTMLInputElement;
@@ -252,9 +260,17 @@ describe('Inspector', () => {
       expect(store.canUndo()).toBe(false);
       expect(xField()).toHaveValue(300);
       expect(xField()).toHaveAttribute('aria-invalid', 'true');
+      describedBy(xField());
       expect(screen.getByTestId('refusal-message')).toHaveTextContent(
         'X has to be a number. The node stays where it is.',
       );
+    });
+
+    it('steps by ten in both fields, as the arrow keys of the canvas move a node', async () => {
+      await renderInspector({ nodes: ['Q1'] });
+
+      expect(xField()).toHaveAttribute('step', '10');
+      expect(yField()).toHaveAttribute('step', '10');
     });
 
     it('is refused, in the words of the domain, when it is further out than a canvas goes', async () => {
@@ -266,6 +282,8 @@ describe('Inspector', () => {
 
       expect(document().layout.nodes['Q1']?.y).toBe(0);
       expect(yField()).toHaveValue(0);
+      expect(yField()).toHaveAttribute('aria-invalid', 'true');
+      describedBy(yField());
       expect(screen.getByTestId('refusal-message')).toHaveTextContent(
         'The y position of a node must be a number from -1000000 to 1000000, and 99999999 is not.',
       );
@@ -316,7 +334,19 @@ describe('Inspector', () => {
       await user.selectOptions(type, 'fanout');
 
       expect(type).toHaveValue(before);
+      expect(type).toHaveAttribute('aria-invalid', 'true');
+      describedBy(type);
       expect(screen.getByTestId('refusal-message')).toHaveTextContent('cannot be a fanout while it has keys');
+    });
+
+    it('describes a switch by the refusal under it, when its flag cannot be turned on', async () => {
+      // The exchange called orders has a producer that publishes to it, which the broker would not allow once it is internal.
+      const { user, document } = await renderInspector({ nodes: ['E1'] });
+
+      await user.click(screen.getByRole('switch', { name: 'Internal' }));
+
+      expect(document().exchanges['E1']?.internal).toBe(false);
+      describedBy(screen.getByRole('switch', { name: 'Internal' }));
     });
 
     it('turns the internal flag on, and leaves the others as they were', async () => {
@@ -467,6 +497,10 @@ describe('Inspector', () => {
       expect(screen.getByTestId('inspector-edge')).toHaveTextContent(
         'Binding from exchange orders to queue billing, key order.*',
       );
+      expect(screen.getByRole('button', { name: 'Delete this binding' })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'Delete',
+      );
       await user.click(screen.getByRole('button', { name: 'Delete this binding' }));
 
       expect(Object.keys(document().bindings)).toEqual(['B2', 'B3']);
@@ -488,6 +522,7 @@ describe('Inspector', () => {
       const { user, document, store } = await renderInspector({ nodes: ['Q2', 'C1'] });
 
       expect(screen.getByRole('heading', { name: '2 items selected' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete 2 items' })).toHaveAttribute('aria-keyshortcuts', 'Delete');
       await user.click(screen.getByRole('button', { name: 'Delete 2 items' }));
 
       expect(document().queues['Q2']).toBeUndefined();

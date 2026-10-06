@@ -220,6 +220,8 @@ export default defineConfig([
   {
     files: ['projects/app/src/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
+    // Inline templates are linted as files like these. A button with no type submits the form that it may one day be in.
+    rules: { '@angular-eslint/template/button-has-type': 'error' },
   },
 
   // Dependency rules, one block per project (production code only; specs follow below)

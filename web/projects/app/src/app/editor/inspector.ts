@@ -213,7 +213,6 @@ let nextInspector = 0;
           type="button"
           class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
           aria-keyshortcuts="Delete"
-          [attr.aria-label]="'Delete ' + count + ' items'"
           (click)="remove()"
         >
           <rmq-icon name="trash" [size]="18" />

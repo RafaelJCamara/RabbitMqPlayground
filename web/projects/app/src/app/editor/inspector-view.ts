@@ -96,7 +96,7 @@ function nodeView(document: CanvasDocument, id: Id): NodeView | undefined {
     return undefined;
   }
   const { x, y } = lookup(document.layout.nodes, id) ?? defaultPosition(document, kind);
-  // Ids are the same nowhere in a document, whatever the kind, so each of these is found only for its own kind.
+  // An id belongs to one element, whatever its kind, so an exchange is found only for an exchange, and a queue only for a queue.
   const exchange = lookup(document.exchanges, id);
   const queue = lookup(document.queues, id);
   return {
