@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { alignTopic, splitTopic, topicMatches, topicSamples } from './topic';
+import { alignTopic, hashWordCount, splitTopic, TOPIC_MAX_HASH_WORDS, topicMatches, topicSamples } from './topic';
 
 describe('splitTopic', () => {
   it.each<[string, string[]]>([
@@ -16,6 +16,42 @@ describe('splitTopic', () => {
     ['*.#', ['*', '#']],
   ])('splits %j into %j: the empty string has no words, and any dot makes empty ones', (text, words) => {
     expect(splitTopic(text)).toEqual(words);
+  });
+});
+
+describe('hashWordCount (ADR-0022)', () => {
+  it('allows two # words in a binding key', () => {
+    expect(TOPIC_MAX_HASH_WORDS).toBe(2);
+  });
+
+  it.each<[string, number]>([
+    ['', 0],
+    ['#', 1],
+    ['a.b', 0],
+    ['#.#', 2],
+    ['#.#.#', 3],
+    ['a.#.b.#.c', 2],
+    ['a.#.b.#.c.#', 3],
+    ['#.*.#.*.#', 3],
+    ['*.*.*', 0],
+    // Only a whole word that is exactly # counts.
+    ['##.#.#', 2],
+    ['a#.#', 1],
+    ['#a.#', 1],
+    ['# .#', 1],
+    ['#..#', 2],
+    ['.#.', 1],
+  ])('counts the # words of %j as %i', (key, count) => {
+    expect(hashWordCount(key)).toBe(count);
+  });
+
+  it('is the number of words that are exactly #, for any key', () => {
+    fc.assert(
+      fc.property(fc.array(fc.constantFrom('#', '*', 'a', '##', ''), { maxLength: 8 }), (words) => {
+        expect(hashWordCount(words.join('.'))).toBe(splitTopic(words.join('.')).filter((word) => word === '#').length);
+        expect(hashWordCount(words.join('.'))).toBeLessThanOrEqual(words.length);
+      }),
+    );
   });
 });
 

@@ -1,4 +1,14 @@
 export { RABBITMQ_BASELINE, type RabbitMqBaseline } from './lib/baseline';
+export type {
+  Bind,
+  EngineCommand,
+  ExchangeDeclare,
+  ExchangeDelete,
+  QueueDeclare,
+  QueueDelete,
+  TopologyCommand,
+  Unbind,
+} from './lib/command';
 export {
   headerValueIssue,
   matchHeaders,
@@ -14,8 +24,23 @@ export {
 export { ROUTING_KEY_MAX_BYTES, routingKeyIssue, utf8Length } from './lib/keys';
 export { createPrng, type Prng } from './lib/prng';
 export {
+  defaultExchangeReply,
+  internalExchangeReply,
+  noExchangeReply,
+  noQueueReply,
+  RESERVED_NAME_PREFIX,
+  reservedNameReply,
+  topicWildcardsReply,
+  transientQueueReply,
+  type BrokerReply,
+  type Refusal,
+  type RefusalCode,
+} from './lib/refusal';
+export {
   alignTopic,
+  hashWordCount,
   splitTopic,
+  TOPIC_MAX_HASH_WORDS,
   topicMatches,
   topicSamples,
   type TopicAlignment,

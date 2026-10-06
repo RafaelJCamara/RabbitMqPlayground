@@ -1,5 +1,6 @@
 import { headerValueIssue, matchHeaders, type HeadersMatch } from './headers';
 import { routingKeyIssue } from './keys';
+import { internalExchangeReply, noExchangeReply } from './refusal';
 import { alignTopic, splitTopic, type TopicAlignment } from './topic';
 import type { Binding, Destination, Exchange, ExchangeType, Message, Topology } from './topology';
 
@@ -183,14 +184,10 @@ export function route(topology: Topology, message: Message): RouteResult {
   const exchanges = new Map(topology.exchanges.map((exchange) => [exchange.name, exchange]));
   const start = exchanges.get(message.exchange);
   if (start === undefined) {
-    return { ok: false, code: 404, text: `NOT_FOUND - no exchange '${message.exchange}' in vhost '${topology.vhost}'` };
+    return { ok: false, ...noExchangeReply(message.exchange, topology.vhost) };
   }
   if (start.internal) {
-    return {
-      ok: false,
-      code: 403,
-      text: `ACCESS_REFUSED - cannot publish to internal exchange '${message.exchange}' in vhost '${topology.vhost}'`,
-    };
+    return { ok: false, ...internalExchangeReply(message.exchange, topology.vhost) };
   }
 
   const queueNames = new Set(topology.queues);

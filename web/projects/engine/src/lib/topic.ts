@@ -4,12 +4,21 @@ import { ROUTING_KEY_MAX_BYTES, utf8Length } from './keys';
  * Topic matching (ADR-0008, rule 4). A key is split into words on `.`, and the empty key has no words, so `""` and `"."`
  * are different: the first has none and the second has two empty ones. In a pattern `*` is exactly one word, which may
  * be empty, and `#` is zero or more. They are wildcards only as a whole word, so `a*` is an ordinary word. Words are
- * compared byte for byte. A binding key may have at most two `#` words (ADR-0022), which the editors check, not this.
+ * compared byte for byte. A binding key may have at most two `#` words (ADR-0022): matching does not look at that, and
+ * whoever makes a binding checks it with `hashWordCount`.
  */
+
+/** The most `#` words that a binding key of a topic exchange may have (ADR-0022). */
+export const TOPIC_MAX_HASH_WORDS = 2;
 
 /** The words of a routing key or a binding key. */
 export function splitTopic(text: string): string[] {
   return text === '' ? [] : text.split('.');
+}
+
+/** How many words of a binding key are exactly `#`. `##` is an ordinary word, and so is `a#`. */
+export function hashWordCount(key: string): number {
+  return splitTopic(key).filter((word) => word === '#').length;
 }
 
 /** A grid of yes and no, `rows` by `columns`. */
