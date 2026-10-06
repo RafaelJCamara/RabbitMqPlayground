@@ -101,6 +101,23 @@ describe('parseCommand', () => {
       expect(refused('-> a')).toMatchObject({ kind: 'syntax' });
     });
 
+    it('is refused when it is partly quoted, which is a name too, and points at the first word only', () => {
+      for (const [text, word] of [
+        ['bi"nd" orders -> billing', 'bi"nd"'],
+        ['"bi"nd orders -> billing', '"bi"nd'],
+        ['"bind" orders -> billing', '"bind"'],
+        ['-> a', '->'],
+      ] as const) {
+        const issue = refused(text);
+
+        expect(issue, text).toMatchObject({
+          kind: 'syntax',
+          message: 'A command starts with its name, for example bind orders -> billing.',
+        });
+        expect(pointedAt(text, issue), text).toBe(word);
+      }
+    });
+
     it('needs a second word when the first starts several commands, and offers them', () => {
       expect(refused('declare')).toMatchObject({
         kind: 'unknown-command',
@@ -120,6 +137,46 @@ describe('parseCommand', () => {
       expect(issue.suggestions).toEqual(['declare queue']);
       expect(pointedAt(text, issue)).toBe('declare queu');
       expect(refused('declare zzz').suggestions).toEqual(['declare exchange', 'declare queue']);
+    });
+
+    it.each<[string, string]>([
+      ['declare exchange', 'Expected the name of the exchange.'],
+      ['declare exchange events', 'Add type=direct|fanout|topic|headers.'],
+      ['declare queue', 'Expected the name of the queue.'],
+      ['add producer', 'Expected the name of the producer.'],
+      ['add consumer', 'Expected the name of the consumer.'],
+      ['bind', 'Expected the exchange to bind from.'],
+      ['bind orders', "Expected '->'."],
+      ['bind orders ->', 'Expected the queue or exchange to bind to.'],
+      ['unbind', 'Expected the exchange to bind from.'],
+      ['unbind orders ->', 'Expected the queue or exchange to bind to.'],
+      ['link', 'Expected the producer.'],
+      ['link sender', "Expected '->'."],
+      ['link sender ->', 'Expected the exchange or queue it publishes to.'],
+      ['unlink', 'Expected the producer.'],
+      ['subscribe', 'Expected the consumer.'],
+      ['subscribe worker', 'Expected the queue to consume from.'],
+      ['unsubscribe', 'Expected the consumer.'],
+      ['unsubscribe worker', 'Expected the queue to stop consuming from.'],
+      ['set', 'Expected an element or canvas.'],
+      ['unset', 'Expected the producer.'],
+      ['move', 'Expected the element to move.'],
+      ['move label', 'Expected the element that the edge starts at.'],
+      ['move label orders', "Expected '->'."],
+      ['move label orders ->', 'Expected the element that the edge ends at.'],
+      ['move label orders -> billing', 'Add at=<number>.'],
+      ['rename', 'Expected the element to rename.'],
+      ['rename billing', 'Expected the new name.'],
+      ['delete', 'Expected the element to delete.'],
+    ])('says what is wanted when the words of %j run out', (text, message) => {
+      expect(refused(text)).toMatchObject({ kind: 'missing-argument', message, at: { start: text.length } });
+    });
+
+    it('points at the first word when it needs a second and the next thing is not a word', () => {
+      const text = 'declare -> x';
+
+      expect(pointedAt(text, refused(text))).toBe('declare');
+      expect(pointedAt('declare', refused('declare'))).toBe('declare');
     });
   });
 
@@ -608,12 +665,40 @@ describe('parseCommand', () => {
       });
     });
 
-    it('only has the attributes that it was given', () => {
-      expect(read('set sender burst=2')).toEqual({
+    it('only has the attributes that it was given, and no key for one that it was not', () => {
+      expect(read('set sender burst=2')).toStrictEqual({
         type: 'set',
         kind: 'producer',
         name: 'sender',
         changes: { burst: 2 },
+      });
+      expect(read('set orders durable=false')).toStrictEqual({
+        type: 'set',
+        kind: 'exchange',
+        name: 'orders',
+        changes: { durable: false },
+      });
+      expect(read('set worker prefetch=0')).toStrictEqual({
+        type: 'set',
+        kind: 'consumer',
+        name: 'worker',
+        changes: { prefetch: 0 },
+      });
+      expect(read('set canvas seed=9')).toStrictEqual({ type: 'set', kind: 'canvas', changes: { seed: 9 } });
+      expect(read('set billing durable=true')).toStrictEqual({
+        type: 'set',
+        kind: 'queue',
+        name: 'billing',
+        changes: { durable: true },
+      });
+    });
+
+    it.each(['direct', 'fanout', 'topic', 'headers'] as const)('reads %s as the type of an exchange', (type) => {
+      expect(read(`set orders type=${type}`)).toStrictEqual({
+        type: 'set',
+        kind: 'exchange',
+        name: 'orders',
+        changes: { exchangeType: type },
       });
     });
 
@@ -772,6 +857,19 @@ describe('parseCommand', () => {
       expect(read('move billing x=1e2')).toMatchObject({ x: 100 });
     });
 
+    it('has the coordinates that it was given and no key for the other', () => {
+      expect(read('move billing x=5')).toStrictEqual({
+        type: 'move',
+        target: { kind: 'queue', name: 'billing' },
+        x: 5,
+      });
+      expect(read('move billing y=5')).toStrictEqual({
+        type: 'move',
+        target: { kind: 'queue', name: 'billing' },
+        y: 5,
+      });
+    });
+
     it('reads -0 as 0', () => {
       expect(Object.is((read('move billing x=-0') as { x: number }).x, 0)).toBe(true);
     });
@@ -917,7 +1015,7 @@ describe('parseCommand', () => {
       const text = 'declare queue a;; declare queue b';
       const issue = refused(text);
 
-      expect(issue.message).toBe("Expected a command before ';'.");
+      expect(issue).toMatchObject({ kind: 'syntax', message: "Expected a command before ';'." });
       expect(pointedAt(text, issue)).toBe(';');
       expect(refused(';')).toMatchObject({ message: "Expected a command before ';'." });
       expect(refused('; declare queue a').message).toBe("Expected a command before ';'.");

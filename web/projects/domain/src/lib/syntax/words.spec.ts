@@ -177,6 +177,10 @@ describe('splitAssignment', () => {
 
     expect(noKey && [textOf(noKey.key), textOf(noKey.value)]).toEqual(['', 'x']);
     expect(noValue && [textOf(noValue.key), textOf(noValue.value)]).toEqual(['x', '']);
+    // Nothing on a side is no segments, and not a segment of no text.
+    expect(noKey?.key).toEqual([]);
+    expect(noValue?.value).toEqual([]);
+    expect(splitAssignment(word('='))).toEqual({ key: [], value: [] });
   });
 
   it('keeps quoted parts on the side that they were on, and remembers that they were quoted', () => {
@@ -247,6 +251,9 @@ describe('parseExists', () => {
       'a=exists(b)',
       '"exists(a)"',
       'exists(a)"x"',
+      '"exists("a)',
+      'exists(a")"',
+      '"exists("a")"',
       'Exists(a)',
       'exists a',
     ]) {

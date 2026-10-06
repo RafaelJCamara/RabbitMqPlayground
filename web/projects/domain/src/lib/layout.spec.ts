@@ -85,6 +85,49 @@ describe('autoLayout', () => {
     expect(new Set(Object.values(positions).map(({ x }) => x)).size).toBe(4);
   });
 
+  it('puts each column the width of its nodes and the column gap from the one before, and rows the node gap apart', () => {
+    const chain = deepFreeze(
+      documentOf({
+        exchanges: { E: exchangeRecord('e') },
+        queues: { Q: queueRecord('q') },
+        bindings: { B: bindingRecord('E', { kind: 'queue', id: 'Q' }) },
+        producers: { P: producerRecord('p', { kind: 'exchange', id: 'E' }) },
+        consumers: { C: consumerRecord('c', ['Q']) },
+      }),
+    );
+
+    expect(autoLayout(chain)).toEqual({
+      P: { x: 0, y: 0 },
+      E: { x: NODE_SIZE.producer.width + COLUMN_SEPARATION, y: 0 },
+      Q: { x: NODE_SIZE.producer.width + NODE_SIZE.exchange.width + 2 * COLUMN_SEPARATION, y: 0 },
+      C: {
+        x: NODE_SIZE.producer.width + NODE_SIZE.exchange.width + NODE_SIZE.queue.width + 3 * COLUMN_SEPARATION,
+        y: 0,
+      },
+    });
+    // The numbers that the sizes and the gaps come to, so that a change of one is a change that a test shows.
+    expect(autoLayout(chain)).toEqual({
+      P: { x: 0, y: 0 },
+      E: { x: 260, y: 0 },
+      Q: { x: 540, y: 0 },
+      C: { x: 820, y: 0 },
+    });
+
+    const two = deepFreeze(
+      documentOf({
+        exchanges: { E: exchangeRecord('e') },
+        producers: {
+          P1: producerRecord('p1', { kind: 'exchange', id: 'E' }),
+          P2: producerRecord('p2', { kind: 'exchange', id: 'E' }),
+        },
+      }),
+    );
+    const rows = autoLayout(two);
+
+    expect(Math.abs((rows['P1']?.y ?? 0) - (rows['P2']?.y ?? 0))).toBe(NODE_SIZE.producer.height + NODE_SEPARATION);
+    expect(rows['E']?.y).toBe(48);
+  });
+
   it('puts the nodes that nothing is linked to in the column of their kind, left to right: producer, exchange, queue, consumer', () => {
     const document = deepFreeze(
       documentOf({
@@ -194,6 +237,16 @@ describe('autoLayout', () => {
     );
 
     expect(Object.keys(autoLayout(document)).sort()).toEqual(['E', 'K', 'P']);
+    // It is as if the edges were not there: the same places as for the nodes with nothing linked to them.
+    expect(autoLayout(document)).toEqual(
+      autoLayout(
+        documentOf({
+          exchanges: { E: exchangeRecord('e') },
+          producers: { P: producerRecord('p') },
+          consumers: { K: consumerRecord('k') },
+        }),
+      ),
+    );
   });
 
   it('does not depend on where the nodes were, and gives the same answer every time', () => {

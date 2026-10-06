@@ -165,6 +165,9 @@ describe('Cursor', () => {
       expect(stopped(() => cursorOver('zzzz').ref(['queue', 'exchange', 'consumer'], 'a')).message).toBe(
         "There is no queue, exchange or consumer named 'zzzz'.",
       );
+      expect(stopped(() => cursorOver('zzzz').ref(['queue', 'exchange', 'consumer'], 'a'))).not.toHaveProperty(
+        'suggestions',
+      );
     });
 
     it('stops at an arrow, and at the end, saying what was wanted and where', () => {
@@ -275,6 +278,24 @@ describe('Cursor', () => {
       expect(stopped(() => cursorOver('mode=fast ratio=1,5').options(spec)).kind).toBe('invalid-value');
     });
 
+    it('takes both ends of the range of a whole number, and of a number, and refuses what is one step outside', () => {
+      expect(cursorOver('mode=fast count=1').options(spec).options['count']).toBe(1);
+      expect(cursorOver('mode=fast count=9').options(spec).options['count']).toBe(9);
+      expect(cursorOver('mode=fast ratio=0').options(spec).options['ratio']).toBe(0);
+      expect(cursorOver('mode=fast ratio=1').options(spec).options['ratio']).toBe(1);
+      for (const outside of ['count=0', 'count=10', 'ratio=-0.1', 'ratio=1.1']) {
+        expect(stopped(() => cursorOver(`mode=fast ${outside}`).options(spec)).kind, outside).toBe('invalid-value');
+      }
+    });
+
+    it('reads a whole number of zero with no sign, as it does a number', () => {
+      const zero: TailSpec = { options: [option('zero', { kind: 'int', min: -5, max: 5 })] };
+
+      expect(Object.is(cursorOver('zero=-0').options(zero).options['zero'], 0)).toBe(true);
+      expect(Object.is(cursorOver('zero=0').options(zero).options['zero'], 0)).toBe(true);
+      expect(cursorOver('zero=-5').options(zero).options['zero']).toBe(-5);
+    });
+
     it('reads a value in quotes as the text that it says, for an option that takes any kind', () => {
       expect(cursorOver('mode="fast" flag="true" count="3"').options(spec).options).toEqual({
         mode: 'fast',
@@ -293,15 +314,35 @@ describe('Cursor', () => {
       expect(stopped(() => cursorOver('mode=fast flag=yes').options(spec)).message).toBe(
         "flag must be true or false, and 'yes' is not.",
       );
+      expect(stopped(() => cursorOver('mode=fast flag=flase').options(spec))).toMatchObject({
+        message: "flag must be true or false, and 'flase' is not. Did you mean 'false'?",
+        suggestions: ['false'],
+      });
+      expect(stopped(() => cursorOver('mode=fast flag=tru').options(spec)).suggestions).toEqual(['true']);
       expect(stopped(() => cursorOver('mode=quick').options(spec)).message).toBe(
         "mode must be fast or slow, and 'quick' is not.",
       );
     });
 
-    it('stops at an option that is not there, and says which there are', () => {
-      expect(stopped(() => cursorOver('mode=fast colour=red').options(spec)).message).toBe(
+    it('stops at an option that is not there, and says which there are, and what was meant when it is close', () => {
+      const issue = stopped(() => cursorOver('mode=fast colour=red').options(spec));
+
+      expect(issue.message).toBe(
         "There is no option 'colour' here. Its options are mode, flag, count, ratio and label.",
       );
+      expect(issue).not.toHaveProperty('suggestions');
+      expect(stopped(() => cursorOver('mode=fast lable=x').options(spec))).toMatchObject({
+        message:
+          "There is no option 'lable' here. Its options are mode, flag, count, ratio and label. Did you mean 'label'?",
+        suggestions: ['label'],
+      });
+    });
+
+    it('says that a command takes no options when it has none, and an option is named', () => {
+      expect(stopped(() => cursorOver('x=1').options({ options: [] }))).toMatchObject({
+        kind: 'unknown-option',
+        message: "There is no option 'x' here. It takes none.",
+      });
     });
 
     it('stops at a missing required option, saying how to write it, whatever kind it is', () => {
@@ -331,6 +372,8 @@ describe('Cursor', () => {
 
     it('says only that a word is not name=value when the command has no options to suggest', () => {
       expect(stopped(() => cursorOver('zzz').options({ options: [] })).message).toBe("Write 'zzz' as name=value.");
+      expect(stopped(() => cursorOver('zzz').options({ options: [] }))).not.toHaveProperty('suggestions');
+      expect(stopped(() => cursorOver('mode=fast zzz').options(spec))).not.toHaveProperty('suggestions');
     });
 
     it('stops at an arrow among the options', () => {
@@ -342,9 +385,10 @@ describe('Cursor', () => {
     });
 
     it('stops at an option that is there twice, and at a word that starts with =', () => {
-      expect(stopped(() => cursorOver('mode=fast mode=slow').options(spec)).message).toBe(
-        'mode is there twice. Give it once.',
-      );
+      expect(stopped(() => cursorOver('mode=fast mode=slow').options(spec))).toMatchObject({
+        kind: 'syntax',
+        message: 'mode is there twice. Give it once.',
+      });
       expect(stopped(() => cursorOver('mode=fast =x').options(spec)).kind).toBe('unknown-option');
     });
 

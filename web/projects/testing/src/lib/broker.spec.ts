@@ -114,6 +114,26 @@ describe('the broker oracle', () => {
     });
   });
 
+  describe('deleting an exchange', () => {
+    it('does not delete a binding to a queue when an exchange of the same name goes', () => {
+      const state = build(exchange('a'), exchange('n'), queue('n'), bind('a', 'queue', 'n'), {
+        op: 'exchange.delete',
+        name: 'n',
+      });
+
+      expect(state.bindings).toHaveLength(1);
+    });
+
+    it('deletes a binding from the exchange to a queue, and keeps the ones from the other exchanges', () => {
+      const state = build(exchange('a'), exchange('b'), queue('q'), bind('a', 'queue', 'q'), bind('b', 'queue', 'q'), {
+        op: 'exchange.delete',
+        name: 'a',
+      });
+
+      expect(state.bindings.map(({ source }) => source)).toEqual(['b']);
+    });
+  });
+
   describe('binding', () => {
     const base = [exchange('a'), exchange('b'), queue('q')] as const;
 
@@ -252,6 +272,42 @@ describe('the broker oracle', () => {
       expect(canonicalTopology(topologyOf(one))).toEqual(canonicalTopology(topologyOf(other)));
     });
 
+    it('puts any number of bindings in the same order, whatever order they were made in', () => {
+      const permutations = <T>(items: readonly T[]): T[][] =>
+        items.length <= 1
+          ? [[...items]]
+          : items.flatMap((item, at) =>
+              permutations([...items.slice(0, at), ...items.slice(at + 1)]).map((rest) => [item, ...rest]),
+            );
+      const bindings = [
+        bind('a', 'queue', 'q', 'k1'),
+        bind('a', 'queue', 'q', 'k2'),
+        bind('b', 'queue', 'r'),
+        bind('b', 'exchange', 'a', 'z'),
+      ];
+      const [first, ...others] = permutations(bindings).map((order) =>
+        canonicalTopology(topologyOf(build(exchange('a'), exchange('b'), queue('q'), queue('r'), ...order))),
+      );
+
+      expect(others).toHaveLength(23);
+      for (const other of others) {
+        expect(other).toEqual(first);
+      }
+      // By what a broker keeps: the source, the kind and name of the destination, then the key.
+      expect(first?.bindings.map(({ key }) => key)).toEqual(['k1', 'k2', 'z', '']);
+    });
+
+    it('keeps the arguments of a binding that has conditions and no x-match, and an x-match and no conditions', () => {
+      const conditions: Bind = { ...bind('a', 'queue', 'q'), headers: headerArguments(null, entry('x', int(1))) };
+      const mode: Bind = { ...bind('a', 'queue', 'r'), headers: headerArguments('any') };
+      const [first, second] = canonicalTopology(
+        topologyOf(build(exchange('a'), queue('q'), queue('r'), conditions, mode)),
+      ).bindings;
+
+      expect(first?.headers).toEqual({ xMatch: null, args: [entry('x', int(1))] });
+      expect(second?.headers).toEqual({ xMatch: 'any', args: [] });
+    });
+
     it('sorts the arguments of a binding by key, and drops arguments that say nothing', () => {
       const unordered: Bind = {
         ...bind('a', 'queue', 'q'),
@@ -285,6 +341,15 @@ describe('the broker oracle', () => {
 
       expect(() => canonicalTopology(topology)).not.toThrow();
     });
+  });
+
+  it('is an error of its own, with a name', () => {
+    expect(() => build(exchange(''))).toThrow(BrokerError);
+    try {
+      build(exchange(''));
+    } catch (error) {
+      expect((error as Error).name).toBe('BrokerError');
+    }
   });
 
   it('names the command that it refused, and why', () => {

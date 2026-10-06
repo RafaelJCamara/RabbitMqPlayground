@@ -142,6 +142,7 @@ describe('tokenize', () => {
         const result = tokenize(bad);
 
         expect(result.ok, JSON.stringify(bad)).toBe(false);
+        expect(!result.ok && result.error.kind).toBe('syntax');
         expect(!result.ok && result.error.message).toContain('A quoted text may only have the escapes');
         expect(!result.ok && result.error.at).toEqual({ start: 0, end: bad.length });
       }

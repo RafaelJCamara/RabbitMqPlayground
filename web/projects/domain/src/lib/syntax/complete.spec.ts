@@ -83,6 +83,9 @@ describe('completeCommand', () => {
     it('is nothing when what comes before is not the bare words of a command', () => {
       expect(inserts(at('"declare" '))).toEqual([]);
       expect(inserts(at('-> '))).toEqual([]);
+      // A word that is partly quoted is a name, and not the name of a command.
+      expect(inserts(at('de"clare" '))).toEqual([]);
+      expect(inserts(at('"de"clare '))).toEqual([]);
     });
 
     it('offers the second word of move label, as well as the elements, after move', () => {
@@ -270,6 +273,92 @@ describe('completeCommand', () => {
       expect(inserts(at('set worker prefetch='))).toEqual([]);
       expect(inserts(at('bind orders -> billing format='))).toEqual([]);
       expect(inserts(at('declare exchange e type=direct type='))).toEqual([]);
+    });
+  });
+
+  describe('what an item shows', () => {
+    /** The kind of an item, what it inserts, the label that the list shows, and what it is for. */
+    const shown = (text: string): string[] =>
+      at(text).items.map(({ kind, insert, label, detail }) => `${kind} | ${insert} | ${label} | ${detail ?? ''}`);
+
+    it('is its kind, what it inserts, its label, which is the same, and a few words on what it is for', () => {
+      expect(shown('declare ')).toEqual([
+        'command | exchange | exchange | Puts an exchange on the canvas',
+        'command | queue | queue | Puts a queue on the canvas',
+      ]);
+      expect(shown('set ')).toEqual([
+        'keyword | canvas | canvas | the canvas itself',
+        'name | orders | orders | exchange',
+        'name | docs | docs | exchange',
+        'name | hidden | hidden | exchange',
+        'name | billing | billing | queue',
+        'name | archive | archive | queue',
+        'name | sender | sender | producer',
+        'name | worker | worker | consumer',
+      ]);
+      expect(shown('bind orders ')).toEqual(['keyword | -> | -> | from … to …']);
+      expect(shown('bind orders -> billing ')).toEqual([
+        'option | key= | key= | the binding key: the routing key for a direct exchange, a pattern for a topic one',
+        'option | x-match= | x-match= | how the conditions of a headers binding are combined',
+        'keyword | exists( | exists( | a header that has to be there',
+      ]);
+      expect(shown('set sender ')).toEqual([
+        'option | payload= | payload= | the body of the message',
+        'option | key= | key= | the routing key of the message',
+        'option | burst= | burst= | messages in one publish',
+        'option | every= | every= | milliseconds between publishes',
+        'option | repeat= | repeat= | publish again and again',
+        'keyword | header: | header: | a header of the message',
+      ]);
+      expect(shown('unset sender ')).toEqual(['keyword | header: | header: | a header of the message']);
+      expect(shown('declare exchange e type=')).toEqual([
+        'value | type=direct | direct | how it routes',
+        'value | type=fanout | fanout | how it routes',
+        'value | type=topic | topic | how it routes',
+        'value | type=headers | headers | how it routes',
+      ]);
+      expect(shown('move billing ')).toEqual(['option | x= | x= | how far right', 'option | y= | y= | how far down']);
+    });
+
+    it('says what each option of the other commands is for', () => {
+      expect(shown('declare exchange e ')).toEqual([
+        'option | type= | type= | how it routes',
+        'option | durable= | durable= | survives a restart (default true)',
+        'option | auto-delete= | auto-delete= | goes when its last binding does (default false)',
+        'option | internal= | internal= | no client can publish to it (default false)',
+      ]);
+      expect(shown('declare queue q ')).toEqual([
+        'option | type= | type= | only classic for now',
+        'option | durable= | durable= | has to be true (default true)',
+      ]);
+      expect(shown('set orders ')).toEqual([
+        'option | type= | type= | how it routes',
+        'option | durable= | durable= | survives a restart',
+        'option | auto-delete= | auto-delete= | goes when its last binding does',
+        'option | internal= | internal= | no client can publish to it',
+      ]);
+      expect(shown('set billing ')).toEqual(['option | durable= | durable= | has to be true']);
+      expect(shown('set worker ')).toEqual([
+        'option | ack= | ack= | when a message is taken as handled',
+        'option | prefetch= | prefetch= | messages in flight at once, 0 for no limit',
+        'option | processing= | processing= | milliseconds to handle a message',
+      ]);
+      expect(shown('set canvas ')).toEqual([
+        'option | default-exchange= | default-exchange= | draw the default exchange',
+        'option | seed= | seed= | the seed of the simulation',
+        'option | publish-ms= | publish-ms= | milliseconds to publish',
+        'option | broker-ms= | broker-ms= | milliseconds in the broker',
+        'option | deliver-ms= | deliver-ms= | milliseconds to deliver',
+      ]);
+      expect(shown('move label orders -> billing ')).toEqual(['option | at= | at= | how far along the edge']);
+    });
+
+    it('offers header: only where a header goes, and only for what starts with what is typed', () => {
+      expect(inserts(at('set sender he'))).toEqual(['header:']);
+      expect(inserts(at('unset sender he'))).toEqual(['header:']);
+      expect(inserts(at('set sender x'))).toEqual([]);
+      expect(inserts(at('set worker he'))).toEqual([]);
+      expect(inserts(at('bind orders -> billing he'))).toEqual([]);
     });
   });
 
