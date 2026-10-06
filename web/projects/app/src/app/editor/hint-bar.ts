@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { elements, kindOf } from '@rmq/domain';
+import { kindOf } from '@rmq/domain';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { hintsFor } from './hints';
@@ -14,11 +14,6 @@ import type { SelectionFacts } from './keyboard';
   selector: 'rmq-hint-bar',
   template: `
     <section class="border-line bg-surface border-t px-4 py-1.5 text-xs" aria-label="Hints" data-testid="hints">
-      @if (empty()) {
-        <p class="text-muted mb-1" data-testid="hint-empty">
-          The canvas is empty. Add a node from the toolbox, by clicking it or dragging it onto the canvas.
-        </p>
-      }
       <ul class="text-muted flex flex-wrap gap-x-4 gap-y-1">
         @for (hint of hints(); track hint.id) {
           <li>
@@ -33,8 +28,6 @@ import type { SelectionFacts } from './keyboard';
 export class HintBar {
   private readonly store = inject(DocumentStore);
   private readonly selection = inject(SelectionStore);
-
-  protected readonly empty = computed(() => elements(this.store.document()).length === 0);
 
   private readonly facts = computed<SelectionFacts>(() => {
     const { nodes, edges } = this.selection.selection();

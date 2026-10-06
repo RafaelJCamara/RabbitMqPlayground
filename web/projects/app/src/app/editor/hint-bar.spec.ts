@@ -93,19 +93,9 @@ describe('HintBar', () => {
     expect(keys).toEqual(expect.arrayContaining(['F2', 'Enter', 'M', 'L', 'Delete']));
   });
 
-  it('says that the canvas is empty, and how to add to it, until something is on it', async () => {
-    const { store, fixture } = await renderBar(emptyDocument());
-    expect(screen.getByTestId('hint-empty')).toHaveTextContent('The canvas is empty. Add a node from the toolbox');
+  it('has the same hints for a canvas that is empty, because what the keys do does not depend on what is on it', async () => {
+    const { shown } = await renderBar(emptyDocument());
 
-    store.load(sampleDocument());
-    fixture.detectChanges();
-
-    expect(screen.queryByTestId('hint-empty')).not.toBeInTheDocument();
-  });
-
-  it('does not say that the canvas is empty when it has something on it', async () => {
-    await renderBar();
-
-    expect(screen.queryByTestId('hint-empty')).not.toBeInTheDocument();
+    expect(shown().slice(0, 3)).toEqual(['Arrow keys Move between nodes', 'F Fit the canvas', '+ and - Zoom']);
   });
 });

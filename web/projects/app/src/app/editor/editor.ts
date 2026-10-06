@@ -88,6 +88,17 @@ interface Renaming {
           } @else {
             <p class="text-muted p-6" data-testid="opening">Opening your canvas…</p>
           }
+          @if (ready() && model().nodes.length === 0) {
+            <p
+              class="text-muted pointer-events-none absolute inset-0 grid place-items-center p-8 text-center"
+              data-testid="canvas-empty"
+            >
+              <span>
+                Your canvas is empty.<br />
+                Click an item in the toolbox, or drag one here, to add it.
+              </span>
+            </p>
+          }
           @if (renaming(); as rename) {
             <rmq-rename-field
               [rect]="rename.rect"

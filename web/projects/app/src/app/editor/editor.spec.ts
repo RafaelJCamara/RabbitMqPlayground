@@ -727,13 +727,39 @@ describe('Editor', () => {
       const view = await renderEditor(harness().providers);
       await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
       const user = userEvent.setup();
-      expect(screen.getByTestId('hint-empty')).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('F2 Rename');
 
       await user.click(screen.getByRole('button', { name: 'Queue' }));
       view.fixture.detectChanges();
 
-      expect(screen.queryByTestId('hint-empty')).not.toBeInTheDocument();
       expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('F2 Rename');
+    });
+  });
+
+  describe('an empty canvas', () => {
+    it('says that it is empty and how to add to it, until something is on it', async () => {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      expect(screen.getByTestId('canvas-empty')).toHaveTextContent('Your canvas is empty.');
+      expect(screen.getByTestId('canvas-empty')).toHaveTextContent('Click an item in the toolbox, or drag one here');
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+
+      expect(screen.queryByTestId('canvas-empty')).not.toBeInTheDocument();
+    });
+
+    it('is empty again, and says so, when what was added is undone', async () => {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+
+      await user.click(screen.getByRole('button', { name: /^Undo/ }));
+      view.fixture.detectChanges();
+
+      expect(screen.getByTestId('canvas-empty')).toBeInTheDocument();
     });
   });
 

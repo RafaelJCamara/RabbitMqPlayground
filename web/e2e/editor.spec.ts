@@ -94,13 +94,14 @@ test.describe('journey 2: adding to the canvas', () => {
     expect(await page.evaluate(() => window.__rmq?.intents().filter(({ type }) => type === 'drop-new').length)).toBe(1);
   });
 
-  test('says what the keys do, for what is selected, and that an empty canvas is empty', async ({ page }) => {
+  test('says that an empty canvas is empty, and what the keys do for what is selected', async ({ page }) => {
     const editor = await open(page);
-    await expect(page.getByTestId('hint-empty')).toBeVisible();
+    await expect(page.getByTestId('canvas-empty')).toBeVisible();
+    await expect(editor.hints).not.toContainText('Rename');
 
     await editor.add('Queue');
 
-    await expect(page.getByTestId('hint-empty')).toHaveCount(0);
+    await expect(page.getByTestId('canvas-empty')).toHaveCount(0);
     await expect(editor.hints).toContainText('F2');
     await expect(editor.hints).toContainText('Rename');
     await expect(editor.hints).toContainText('Link to another node');
@@ -350,6 +351,37 @@ test.describe('journey 2: arranging and looking', () => {
     await page.getByRole('button', { name: 'Fit' }).click();
     await expect.poll(() => editor.zoomPercent()).toBeLessThanOrEqual(100);
     await expect.poll(() => allNodesInside(page, editor)).toBe(true);
+  });
+});
+
+test.describe('journey 2: panning', () => {
+  test('pans when the empty canvas is dragged, which is not a step of undo, and zooms with the wheel', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+    await editor.settled();
+    const layout = await editor.layout();
+    const before = await editor.centre(editor.node('Queue queue1'));
+    const bounds = (await editor.flow.boundingBox())!;
+    const emptySpot = { x: bounds.x + 60, y: bounds.y + bounds.height - 60 };
+
+    await dragBetween(page, emptySpot, { x: emptySpot.x + 120, y: emptySpot.y - 40 });
+
+    await expect
+      .poll(async () => {
+        const at = await editor.centre(editor.node('Queue queue1'));
+        return Math.round(Math.hypot(at.x - (before.x + 120), at.y - (before.y - 40)));
+      })
+      .toBeLessThanOrEqual(6);
+    expect(await editor.layout()).toEqual(layout);
+    await expect(page.getByRole('button', { name: 'Undo: added queue queue1' })).toBeEnabled();
+
+    const zoom = await editor.zoomPercent();
+    const middle = await editor.centre(editor.flow);
+    await page.mouse.move(middle.x, middle.y);
+    await page.mouse.wheel(0, -300);
+    await expect.poll(() => editor.zoomPercent()).toBeGreaterThan(zoom);
   });
 });
 
