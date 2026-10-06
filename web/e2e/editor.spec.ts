@@ -1,4 +1,5 @@
 import { EditorPage } from './pages/editor-page';
+import { buildDocument, seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -26,8 +27,11 @@ async function dragBetween(
   await page.mouse.up();
 }
 
-/** Whether every node is inside the canvas, all of it, as the page paints it. */
-async function allNodesInside(page: import('@playwright/test').Page, editor: EditorPage): Promise<boolean> {
+/**
+ * Whether every node is inside the canvas, all of it, as the page paints it, with `room` pixels to spare on each side (a pixel less is
+ * allowed for a node that is painted between two pixels).
+ */
+async function allNodesInside(page: import('@playwright/test').Page, editor: EditorPage, room = 0): Promise<boolean> {
   const flow = (await editor.flow.boundingBox())!;
   const boxes = await page.locator('[data-node-id]').evaluateAll((elements) =>
     elements.map((element) => {
@@ -39,10 +43,10 @@ async function allNodesInside(page: import('@playwright/test').Page, editor: Edi
     boxes.length > 0 &&
     boxes.every(
       (box) =>
-        box.x >= flow.x - 1 &&
-        box.y >= flow.y - 1 &&
-        box.x + box.width <= flow.x + flow.width + 1 &&
-        box.y + box.height <= flow.y + flow.height + 1,
+        box.x >= flow.x + room - 1 &&
+        box.y >= flow.y + room - 1 &&
+        box.x + box.width <= flow.x + flow.width - room + 1 &&
+        box.y + box.height <= flow.y + flow.height - room + 1,
     )
   );
 }
@@ -370,7 +374,7 @@ test.describe('journey 2: arranging and looking', () => {
 
     await page.getByRole('button', { name: 'Auto-layout' }).click();
 
-    await expect.poll(() => allNodesInside(page, editor)).toBe(true);
+    await expect.poll(() => allNodesInside(page, editor, 39)).toBe(true);
     expect((await editor.layout())['consumer1']!.x).toBeLessThan(6000);
     await expect(page.getByRole('button', { name: 'Undo: arranged the canvas' })).toBeEnabled();
   });
@@ -409,14 +413,14 @@ test.describe('journey 2: arranging and looking', () => {
     await expect.poll(() => editor.zoomPercent()).toBeGreaterThan(120);
     await page.keyboard.press('f');
     await expect.poll(() => editor.zoomPercent()).toBeLessThanOrEqual(100);
-    await expect.poll(() => allNodesInside(page, editor)).toBe(true);
+    await expect.poll(() => allNodesInside(page, editor, 39)).toBe(true);
 
     await page.getByRole('button', { name: 'Zoom in' }).click();
     await page.getByRole('button', { name: 'Zoom in' }).click();
     await page.getByRole('button', { name: 'Zoom in' }).click();
     await page.getByRole('button', { name: 'Fit' }).click();
     await expect.poll(() => editor.zoomPercent()).toBeLessThanOrEqual(100);
-    await expect.poll(() => allNodesInside(page, editor)).toBe(true);
+    await expect.poll(() => allNodesInside(page, editor, 39)).toBe(true);
   });
 });
 
@@ -474,6 +478,27 @@ test.describe('journey 2: keeping what was done', () => {
     }
     expect((await editor.layout())['orders']!.x).toBe(420);
     await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  });
+});
+
+test.describe('journey 2: opening what was kept', () => {
+  test('shows all of a canvas when it is opened, however far apart its nodes were put', async ({ page }) => {
+    await seedCanvas(
+      page,
+      buildDocument([
+        { type: 'declare-queue', name: 'near', durable: true },
+        { type: 'declare-queue', name: 'far', durable: true },
+        { type: 'move', target: { kind: 'queue', name: 'near' }, x: 0, y: 0 },
+        { type: 'move', target: { kind: 'queue', name: 'far' }, x: 6000, y: 3000 },
+      ]),
+    );
+    const editor = new EditorPage(page);
+
+    await editor.goto();
+    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
+
+    await expect.poll(() => allNodesInside(page, editor, 39)).toBe(true);
+    expect(await editor.zoomPercent()).toBeLessThan(100);
   });
 });
 

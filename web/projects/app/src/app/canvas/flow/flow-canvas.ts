@@ -284,8 +284,15 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** The menu key and Shift+F10 send the event to the canvas itself, so the menu is for the one thing that is selected. */
+  /**
+   * The menu key and Shift+F10 send the event to the canvas itself, so the menu is for the one thing that is selected. A pointer on
+   * the empty canvas sends it to the canvas itself as well, so it is the last thing that was done, a key and not a press, that says
+   * which it is: a right click on nothing is left to the browser.
+   */
   private contextMenuFromKeyboard(event: MouseEvent): void {
+    if (this.lastInput !== 'keyboard') {
+      return;
+    }
     const { nodes, edges } = this.selection();
     const [node] = nodes;
     const [edge] = edges;
@@ -295,7 +302,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
         : edges.length === 1 && nodes.length === 0 && edge !== undefined
           ? ({ kind: 'edge', key: edge } as const)
           : null;
-    if (target === null || event.target !== this.hostFlow()) {
+    if (target === null) {
       return;
     }
     event.preventDefault();

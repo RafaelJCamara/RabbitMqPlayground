@@ -49,6 +49,14 @@ const selection = (page: Page) => page.evaluate(() => window.__rmq?.selection())
 const flow = (page: Page): Locator => page.locator('f-flow');
 const node = (page: Page, id: string): Locator => page.locator(`[data-node-id="${id}"]`);
 
+/** Where on the screen the line of an edge is, at the middle of its length. */
+const onEdge = (page: Page, key: string): Promise<{ x: number; y: number }> =>
+  page.locator(`[data-edge="${key}"] path.f-connection-path`).evaluate((path: SVGPathElement) => {
+    const point = path.getPointAtLength(path.getTotalLength() / 2);
+    const matrix = path.getScreenCTM()!;
+    return { x: point.x * matrix.a + matrix.e, y: point.y * matrix.d + matrix.f };
+  });
+
 async function centre(locator: Locator): Promise<{ x: number; y: number }> {
   const box = await locator.boundingBox();
   if (box === null) {
@@ -507,6 +515,49 @@ test.describe('Foblex contract: what the adapter reports from the pointer', () =
 
     await page.mouse.dblclick(at.x, at.y);
     await reported(page, { type: 'rename', id: 'q1' });
+  });
+
+  test('reports a context menu for an edge, from a right click on its line', async ({ page }) => {
+    await open(page);
+    const at = await onEdge(page, 'x1>q1');
+
+    await page.mouse.click(at.x, at.y, { button: 'right' });
+
+    await reported(page, { type: 'context-menu', target: { kind: 'edge', key: 'x1>q1' } });
+  });
+
+  test('takes the right click for the menu on a node and on an edge, and leaves it to the browser anywhere else', async ({
+    page,
+  }) => {
+    await open(page);
+    await select(page, 'q1');
+    const bounds = (await flow(page).boundingBox())!;
+    const empty = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height - 60 };
+    const onNode = await centre(node(page, 'q1'));
+    const onTheEdge = await onEdge(page, 'x1>q1');
+    // Whether the page took the event, as a script that sends the same one is told. A right click that the page does not take
+    // shows the menu of the browser, which is what it should on the empty canvas, even when one node is selected.
+    const taken = (at: { x: number; y: number }) =>
+      page.evaluate(({ x, y }) => {
+        const event = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
+          button: 2,
+        });
+        document.elementFromPoint(x, y)?.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, at);
+
+    expect(await taken(empty)).toBe(false);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    expect(await taken(onNode)).toBe(true);
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    expect(await taken(onTheEdge)).toBe(true);
+    await expect(page.getByRole('menu', { name: 'Actions for this edge' })).toBeVisible();
   });
 
   test('does not let the end of an edge be dragged off it, so that changing an edge is deleting it and linking again', async ({
