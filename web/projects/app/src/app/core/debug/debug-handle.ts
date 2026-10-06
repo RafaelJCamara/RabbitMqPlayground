@@ -1,16 +1,28 @@
 import { DOCUMENT, type EnvironmentProviders, inject, provideEnvironmentInitializer } from '@angular/core';
+import type { CanvasDocument } from '@rmq/domain';
 import { APP_NAME } from '../app-info';
 import { FeatureFlags } from '../flags/feature-flags';
 import type { FlagName } from '../flags/flags';
+import { DebugSources, type DebugViewport } from './debug-sources';
 
 /**
- * What `window.__rmq` offers to end-to-end tests. It only reads: nothing here changes the app. Later slices add the
- * document, the engine's view and the drawn edges.
+ * What `window.__rmq` offers to end-to-end tests. It only reads: nothing here changes the app. What the editor knows is
+ * empty or `null` until the editor has started (ADR-0031).
  */
 export interface RmqDebugHandle {
   readonly app: string;
   /** The feature flags that are on. */
   readonly flags: () => readonly FlagName[];
+  /** The document that is open, or `null`. */
+  readonly document: () => CanvasDocument | null;
+  /** The nodes (by id) and edges (by key) that are selected. */
+  readonly selection: () => { readonly nodes: readonly string[]; readonly edges: readonly string[] };
+  /** The keys of the edges that the canvas has drawn. */
+  readonly drawnEdges: () => readonly string[];
+  /** What the canvas has reported: moves, selections, links, drops. Oldest first. */
+  readonly intents: () => readonly unknown[];
+  /** The live transform of the canvas, or `null`. */
+  readonly viewport: () => DebugViewport | null;
 }
 
 declare global {
@@ -20,8 +32,19 @@ declare global {
   }
 }
 
-export function createDebugHandle(flags: FeatureFlags): RmqDebugHandle {
-  return Object.freeze({ app: APP_NAME, flags: () => [...flags.enabled] });
+export function createDebugHandle(flags: FeatureFlags, sources: DebugSources = new DebugSources()): RmqDebugHandle {
+  return Object.freeze({
+    app: APP_NAME,
+    flags: () => [...flags.enabled],
+    document: () => sources.current?.document() ?? null,
+    selection: () => {
+      const selection = sources.current?.selection();
+      return { nodes: [...(selection?.nodes ?? [])], edges: [...(selection?.edges ?? [])] };
+    },
+    drawnEdges: () => [...(sources.current?.drawnEdges() ?? [])],
+    intents: () => [...(sources.current?.intents() ?? [])],
+    viewport: () => sources.current?.viewport() ?? null,
+  });
 }
 
 /** Defines `__rmq` as a property that cannot be reassigned, redefined or listed. A second call changes nothing. */
@@ -41,7 +64,7 @@ export function provideDebugHandle(): EnvironmentProviders {
   return provideEnvironmentInitializer(() => {
     const win = inject(DOCUMENT).defaultView;
     if (win) {
-      installDebugHandle(win, createDebugHandle(inject(FeatureFlags)));
+      installDebugHandle(win, createDebugHandle(inject(FeatureFlags), inject(DebugSources)));
     }
   });
 }
