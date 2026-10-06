@@ -79,6 +79,14 @@ export type ElementKind = 'exchange' | 'queue' | 'producer' | 'consumer';
 
 export const ELEMENT_KINDS: readonly ElementKind[] = ['exchange', 'queue', 'producer', 'consumer'];
 
+/** The words that name a kind in a sentence. */
+export const KIND_LABEL: Readonly<Record<ElementKind, string>> = {
+  exchange: 'exchange',
+  queue: 'queue',
+  producer: 'producer',
+  consumer: 'consumer',
+};
+
 /** An element, as a command names it: by kind and name. Ids stay inside the document (ADR-0026). */
 export interface ElementRef {
   readonly kind: ElementKind;

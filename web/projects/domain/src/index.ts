@@ -1,4 +1,37 @@
 export { COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
+export { applyCommand } from './lib/commands/apply';
+export { defaultPosition, type ApplyContext, type IdKind } from './lib/commands/helpers';
+export type {
+  AddConsumer,
+  AddProducer,
+  AppCommand,
+  Batch,
+  BindCommand,
+  CanvasChanges,
+  Clear,
+  Command,
+  ConsumerChanges,
+  DeclareExchange,
+  DeclareQueue,
+  Delete,
+  DocumentCommand,
+  ExchangeChanges,
+  Layout,
+  Link,
+  Move,
+  MoveLabel,
+  ProducerChanges,
+  QueueChanges,
+  Redo,
+  Rename,
+  SetCommand,
+  Subscribe,
+  UnbindCommand,
+  Undo,
+  Unlink,
+  Unset,
+  Unsubscribe,
+} from './lib/commands/types';
 export { COLLECTION, elements, findId, kindOf, lookup, nameOf, recordOf, type Element } from './lib/document/elements';
 export {
   bindingHeadersIssue,
@@ -13,6 +46,7 @@ export {
 export {
   ELEMENT_KINDS,
   fail,
+  KIND_LABEL,
   ok,
   type ElementKind,
   type ElementRef,
@@ -20,11 +54,13 @@ export {
   type IssueKind,
   type Result,
 } from './lib/document/issue';
-export { hasReservedPrefix, KIND_LABEL, NAME_MAX_BYTES, nameIssue, type NameOptions } from './lib/document/names';
+export { hasReservedPrefix, NAME_MAX_BYTES, nameIssue, type NameOptions } from './lib/document/names';
 export {
+  defaultExchangeIssue,
   duplicateNameIssue,
   internalExchangeIssue,
   missingEndIssue,
+  reservedNameIssue,
   topicKeyIssue,
   transientQueueIssue,
 } from './lib/document/rules';
@@ -47,4 +83,7 @@ export {
   type QueueRecord,
 } from './lib/document/schema';
 export { edgeKey, edgeKeys, toTopology } from './lib/document/topology';
+export { History, HISTORY_LIMIT } from './lib/history';
+export { autoLayout, COLUMN_SEPARATION, NODE_SEPARATION, NODE_SIZE } from './lib/layout';
+export { editDistance, suggest } from './lib/suggest';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';

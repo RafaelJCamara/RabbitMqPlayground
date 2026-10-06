@@ -1,4 +1,5 @@
 export { arbSeed } from './lib/arbitraries';
+export { applyAll, exchangeEnd, queueEnd, sequentialIds, undoRedoProblems } from './lib/commands';
 export {
   bindingRecord,
   consumerRecord,
@@ -6,6 +7,8 @@ export {
   exchangeRecord,
   producerRecord,
   queueRecord,
+  SAMPLE,
+  sampleDocument,
   type DocumentParts,
 } from './lib/documents';
 export {

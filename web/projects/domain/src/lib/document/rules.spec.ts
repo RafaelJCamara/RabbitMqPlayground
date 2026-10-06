@@ -1,15 +1,21 @@
 import {
+  defaultExchangeReply,
   internalExchangeReply,
   noExchangeReply,
   noQueueReply,
+  reservedNameReply,
   topicWildcardsReply,
   transientQueueReply,
 } from '@rmq/engine';
 import { describe, expect, it } from 'vitest';
 import {
+  BUILT_IN_EXCHANGES,
+  builtInExchangeIssue,
+  defaultExchangeIssue,
   duplicateNameIssue,
   internalExchangeIssue,
   missingEndIssue,
+  reservedNameIssue,
   topicKeyIssue,
   transientQueueIssue,
 } from './rules';
@@ -103,5 +109,60 @@ describe('duplicateNameIssue', () => {
     expect(duplicateNameIssue('producer', 'p').message).toContain('There is already a producer named');
     expect(duplicateNameIssue('consumer', 'c').message).toContain('There is already a consumer named');
     expect(duplicateNameIssue('queue', 'q').refusal).toBeUndefined();
+  });
+});
+
+describe('reservedNameIssue', () => {
+  it('carries the 403 that the broker gave, for an exchange and for a queue, and says what the prefix is for', () => {
+    expect(reservedNameIssue('exchange', 'amq.mine')).toEqual({
+      kind: 'reserved-name',
+      message:
+        "'amq.mine' starts with 'amq.', which RabbitMQ keeps for its own exchanges and queues. Choose a name that does not start with 'amq.'.",
+      refusal: reservedNameReply('exchange', 'amq.mine'),
+    });
+    expect(reservedNameIssue('queue', 'amq.x').refusal).toEqual(reservedNameReply('queue', 'amq.x'));
+  });
+});
+
+describe('defaultExchangeIssue', () => {
+  it('carries the 403 that the broker gave, whatever was tried', () => {
+    expect(defaultExchangeIssue('declare').refusal).toEqual(defaultExchangeReply());
+    expect(defaultExchangeIssue('bind').refusal).toEqual(defaultExchangeReply());
+    expect(defaultExchangeIssue('declare').kind).toBe('default-exchange');
+  });
+
+  it('says what the default exchange is, and what to do instead, in words for what was tried', () => {
+    expect(defaultExchangeIssue('declare').message).toBe(
+      'The default exchange is the one with no name. It is built in, so it cannot be declared. Every queue is already reachable through it, by its own name.',
+    );
+    expect(defaultExchangeIssue('bind').message).toBe(
+      'The default exchange is the one with no name. It is built in, so nothing can be bound from it or to it. Every queue is already bound to it, by its own name.',
+    );
+  });
+});
+
+describe('builtInExchangeIssue', () => {
+  it('lists the exchanges that every broker has, all with the prefix that a client may not declare', () => {
+    expect(BUILT_IN_EXCHANGES).toEqual([
+      'amq.direct',
+      'amq.fanout',
+      'amq.topic',
+      'amq.headers',
+      'amq.match',
+      'amq.rabbitmq.trace',
+    ]);
+    for (const name of BUILT_IN_EXCHANGES) {
+      expect(name.startsWith('amq.')).toBe(true);
+    }
+  });
+
+  it('says that the simulator does not have it yet, and is not a reply of the broker, which would have accepted it', () => {
+    const issue = builtInExchangeIssue('amq.topic');
+
+    expect(issue.kind).toBe('built-in-exchange');
+    expect(issue.refusal).toBeUndefined();
+    expect(issue.message).toBe(
+      "'amq.topic' is one of the exchanges that RabbitMQ has built in. The simulator does not have them yet, so declare an exchange of your own, with a name that does not start with 'amq.'.",
+    );
   });
 });

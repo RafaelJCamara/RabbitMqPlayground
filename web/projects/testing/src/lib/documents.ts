@@ -86,3 +86,44 @@ export function documentOf(parts: DocumentParts = {}): CanvasDocument {
     },
   };
 }
+
+/**
+ * A canvas with a little of everything and nothing wrong with it. Its ids are in capitals (`E1`, `Q2`, `B3`, `P1`, `C1`),
+ * so that they never meet the ones that `sequentialIds` makes for what a spec adds to it.
+ *
+ *     P1 sender ──▶ E1 orders (topic) ──'order.*'──▶ Q1 billing ──▶ C1 worker
+ *                        └──'#'──▶ E3 hidden (fanout, internal)
+ *                   E2 docs (headers) ──any pdf──▶ Q2 archive
+ */
+export const SAMPLE: DocumentParts = {
+  exchanges: {
+    E1: exchangeRecord('orders', 'topic'),
+    E2: exchangeRecord('docs', 'headers'),
+    E3: exchangeRecord('hidden', 'fanout', { internal: true }),
+  },
+  queues: { Q1: queueRecord('billing'), Q2: queueRecord('archive') },
+  bindings: {
+    B1: bindingRecord('E1', { kind: 'queue', id: 'Q1' }, 'order.*'),
+    B2: bindingRecord('E2', { kind: 'queue', id: 'Q2' }, '', {
+      xMatch: 'any',
+      args: [{ key: 'format', value: { t: 'string', v: 'pdf' } }],
+    }),
+    B3: bindingRecord('E1', { kind: 'exchange', id: 'E3' }, '#'),
+  },
+  producers: {
+    P1: producerRecord(
+      'sender',
+      { kind: 'exchange', id: 'E1' },
+      {
+        message: { payload: 'hello', key: 'order.new', headers: [{ key: 'n', value: { t: 'integer', v: 1 } }] },
+        burst: 2,
+        interval: { everyMs: 500, on: true },
+      },
+    ),
+  },
+  consumers: { C1: consumerRecord('worker', ['Q1'], { ack: 'manual', prefetch: 3, processingMs: 200 }) },
+  labels: { 'E1>Q1': { at: 0.5 } },
+};
+
+/** A new copy of `SAMPLE`, as a document. */
+export const sampleDocument = (): CanvasDocument => documentOf(SAMPLE);

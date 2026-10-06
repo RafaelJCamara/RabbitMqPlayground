@@ -23,7 +23,6 @@ export function validateDocument(document: CanvasDocument): Issue[] {
   const add = (issue: Issue, ...path: string[]): void => {
     issues.push({ ...issue, path });
   };
-  const exchangeName = (id: string): string => lookup(document.exchanges, id)?.name ?? id;
 
   // The vhost is a name too, and the broker writes it in some of its replies.
   if (document.vhost === '') {
@@ -145,11 +144,8 @@ export function validateDocument(document: CanvasDocument): Issue[] {
           id,
           'target',
         );
-      } else if (
-        producer.target.kind === 'exchange' &&
-        lookup(document.exchanges, producer.target.id)?.internal === true
-      ) {
-        add(internalExchangeIssue(exchangeName(producer.target.id), document.vhost), 'producers', id, 'target');
+      } else if (producer.target.kind === 'exchange' && 'internal' in target && target.internal) {
+        add(internalExchangeIssue(target.name, document.vhost), 'producers', id, 'target');
       }
     }
     const keyProblem = routingKeyIssue(producer.message.key);

@@ -1,5 +1,6 @@
-import { defaultExchangeReply, RESERVED_NAME_PREFIX, reservedNameReply, utf8Length } from '@rmq/engine';
-import type { ElementKind, Issue } from './issue';
+import { RESERVED_NAME_PREFIX, utf8Length } from '@rmq/engine';
+import { KIND_LABEL, type ElementKind, type Issue } from './issue';
+import { defaultExchangeIssue, reservedNameIssue } from './rules';
 
 /**
  * What a name may be. A name is not empty and is at most 255 bytes of UTF-8, because AMQP writes names as short strings
@@ -9,14 +10,6 @@ import type { ElementKind, Issue } from './issue';
  */
 
 export const NAME_MAX_BYTES = 255;
-
-/** The words that name a kind in a sentence. */
-export const KIND_LABEL: Readonly<Record<ElementKind, string>> = {
-  exchange: 'exchange',
-  queue: 'queue',
-  producer: 'producer',
-  consumer: 'consumer',
-};
 
 /** Whether a name starts with the prefix that is the broker's own. */
 export const hasReservedPrefix = (name: string): boolean => name.startsWith(RESERVED_NAME_PREFIX);
@@ -33,12 +26,7 @@ export interface NameOptions {
 export function nameIssue(kind: ElementKind, name: string, options: NameOptions = {}): Issue | null {
   if (name === '') {
     if (kind === 'exchange') {
-      return {
-        kind: 'default-exchange',
-        message:
-          'The default exchange is the one with no name. It is built in, so it cannot be declared. Every queue is already reachable through it, by its own name.',
-        refusal: defaultExchangeReply(),
-      };
+      return defaultExchangeIssue('declare');
     }
     return { kind: 'empty-name', message: `A ${KIND_LABEL[kind]} needs a name.` };
   }
@@ -54,11 +42,7 @@ export function nameIssue(kind: ElementKind, name: string, options: NameOptions 
   // Only a queue can be named by the broker. A client always names an exchange.
   const namedByBroker = kind === 'queue' && options.serverNamed === true;
   if ((kind === 'exchange' || kind === 'queue') && hasReservedPrefix(name) && !namedByBroker) {
-    return {
-      kind: 'reserved-name',
-      message: `'${name}' starts with '${RESERVED_NAME_PREFIX}', which RabbitMQ keeps for its own exchanges and queues. Choose a name that does not start with '${RESERVED_NAME_PREFIX}'.`,
-      refusal: reservedNameReply(kind, name),
-    };
+    return reservedNameIssue(kind, name);
   }
 
   return null;

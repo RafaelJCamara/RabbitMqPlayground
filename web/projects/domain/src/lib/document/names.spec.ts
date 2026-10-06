@@ -1,7 +1,7 @@
 import { defaultExchangeReply, reservedNameReply, utf8Length } from '@rmq/engine';
 import { describe, expect, it } from 'vitest';
-import { ELEMENT_KINDS } from './issue';
-import { hasReservedPrefix, KIND_LABEL, NAME_MAX_BYTES, nameIssue } from './names';
+import { ELEMENT_KINDS, KIND_LABEL } from './issue';
+import { hasReservedPrefix, NAME_MAX_BYTES, nameIssue } from './names';
 
 describe('nameIssue', () => {
   it('is 255 bytes, which is what AMQP can write in a short string (ADR-0021)', () => {

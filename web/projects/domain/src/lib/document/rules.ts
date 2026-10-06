@@ -1,20 +1,46 @@
 import {
+  defaultExchangeReply,
   hashWordCount,
   internalExchangeReply,
   noExchangeReply,
   noQueueReply,
+  RESERVED_NAME_PREFIX,
+  reservedNameReply,
   TOPIC_MAX_HASH_WORDS,
   topicWildcardsReply,
   transientQueueReply,
 } from '@rmq/engine';
-import type { ElementKind, Issue } from './issue';
-import { KIND_LABEL } from './names';
+import { KIND_LABEL, type ElementKind, type Issue } from './issue';
 
 /**
  * The refusals of ADR-0021 and ADR-0022 and the rules of the simulator, as `Issue`s. A command and the validation of a
  * document refuse the same thing in the same words, so each refusal is made here, once. Each carries the broker's reply
  * where one was recorded, and a message that says what is wrong at its root.
  */
+
+/** `403`: an exchange or a queue whose name starts with `amq.`, which the broker keeps for itself (ADR-0008, rule 9). */
+export function reservedNameIssue(kind: 'exchange' | 'queue', name: string): Issue {
+  return {
+    kind: 'reserved-name',
+    message: `'${name}' starts with '${RESERVED_NAME_PREFIX}', which RabbitMQ keeps for its own exchanges and queues. Choose a name that does not start with '${RESERVED_NAME_PREFIX}'.`,
+    refusal: reservedNameReply(kind, name),
+  };
+}
+
+/**
+ * `403`: the default exchange, which has no name, declared or bound (ADR-0008, rule 6). It is built in: a queue is already
+ * reachable through it, by its own name, and nothing can be bound from it or to it.
+ */
+export function defaultExchangeIssue(during: 'declare' | 'bind'): Issue {
+  return {
+    kind: 'default-exchange',
+    message:
+      during === 'declare'
+        ? 'The default exchange is the one with no name. It is built in, so it cannot be declared. Every queue is already reachable through it, by its own name.'
+        : 'The default exchange is the one with no name. It is built in, so nothing can be bound from it or to it. Every queue is already bound to it, by its own name.',
+    refusal: defaultExchangeReply(),
+  };
+}
 
 /** `541`: a queue that is not durable (ADR-0021, ADR-0024). */
 export function transientQueueIssue(name: string): Issue {
@@ -60,5 +86,26 @@ export function duplicateNameIssue(kind: ElementKind, name: string): Issue {
   return {
     kind: 'duplicate-name',
     message: `There is already ${kind === 'exchange' ? 'an' : 'a'} ${KIND_LABEL[kind]} named '${name}'. Names are unique within a kind.`,
+  };
+}
+
+/**
+ * The exchanges that every broker has: the ones whose names start with `amq.` and that a client did not declare. The
+ * simulator does not have them until M2, so a binding that names one finds nothing, where a broker would find it.
+ */
+export const BUILT_IN_EXCHANGES: readonly string[] = [
+  'amq.direct',
+  'amq.fanout',
+  'amq.topic',
+  'amq.headers',
+  'amq.match',
+  'amq.rabbitmq.trace',
+];
+
+/** A name that is one of the broker's own exchanges, which the simulator does not have yet. It is not a refusal. */
+export function builtInExchangeIssue(name: string): Issue {
+  return {
+    kind: 'built-in-exchange',
+    message: `'${name}' is one of the exchanges that RabbitMQ has built in. The simulator does not have them yet, so declare an exchange of your own, with a name that does not start with 'amq.'.`,
   };
 }
