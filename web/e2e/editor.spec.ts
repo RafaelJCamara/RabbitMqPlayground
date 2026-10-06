@@ -288,6 +288,20 @@ test.describe('journey 2: deleting', () => {
     expect(await editor.layout()).toEqual({});
   });
 
+  test('deletes with the key the node that was just added, which the editor selects and the library has to select as well', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+    await editor.add('Queue');
+    await editor.flow.focus();
+
+    await page.keyboard.press('Delete');
+
+    await expect(editor.node('Queue queue2')).toHaveCount(0);
+    await expect(editor.node('Queue queue1')).toBeVisible();
+  });
+
   test('opens the context menu from the keyboard, for what is selected, and deletes from it, and Escape gives the focus back', async ({
     page,
   }) => {
@@ -421,6 +435,37 @@ test.describe('journey 2: arranging and looking', () => {
     await page.getByRole('button', { name: 'Fit' }).click();
     await expect.poll(() => editor.zoomPercent()).toBeLessThanOrEqual(100);
     await expect.poll(() => allNodesInside(page, editor, 39)).toBe(true);
+  });
+});
+
+test.describe('journey 2: how far it zooms', () => {
+  test('fits one small node at 100%, and does not blow it up to fill the canvas', async ({ page }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+    await editor.flow.focus();
+    for (let i = 0; i < 3; i += 1) {
+      await page.keyboard.press('+');
+    }
+    await expect.poll(() => editor.zoomPercent()).toBeGreaterThan(100);
+
+    await page.keyboard.press('f');
+
+    await expect.poll(() => editor.zoomPercent()).toBe(100);
+  });
+
+  test('zooms out to 25% and in to 200%, and no further, with the buttons', async ({ page }) => {
+    const editor = await open(page);
+    await editor.add('Queue');
+
+    for (let i = 0; i < 20; i += 1) {
+      await page.getByRole('button', { name: 'Zoom out' }).click();
+    }
+    await expect.poll(() => editor.zoomPercent()).toBe(25);
+
+    for (let i = 0; i < 30; i += 1) {
+      await page.getByRole('button', { name: 'Zoom in' }).click();
+    }
+    await expect.poll(() => editor.zoomPercent()).toBe(200);
   });
 });
 
