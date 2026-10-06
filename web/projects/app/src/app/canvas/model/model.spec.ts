@@ -265,6 +265,29 @@ describe('buildCanvasVm', () => {
     }
   });
 
+  it('keeps the list of nodes, and each node, when only an edge is added, because no node is drawn differently for it', () => {
+    const before = buildCanvasVm(sample());
+    const document = sampleDocument();
+
+    const next = buildCanvasVm(
+      documentOf({
+        ...document,
+        exchanges: document.exchanges,
+        queues: document.queues,
+        producers: document.producers,
+        consumers: document.consumers,
+        bindings: { ...document.bindings, B4: bindingRecord('E2', { kind: 'queue', id: 'Q1' }, 'x') },
+        nodes: document.layout.nodes,
+        labels: document.layout.labels,
+      }),
+      before,
+    );
+
+    expect(next.nodes).toBe(before.nodes);
+    expect(next.edges).not.toBe(before.edges);
+    expect(next.edges).toHaveLength(before.edges.length + 1);
+  });
+
   it('keeps the nodes and the edges apart: a change of one leaves the other list as it was', () => {
     const before = buildCanvasVm(sample());
     const renamed = sampleDocument();
