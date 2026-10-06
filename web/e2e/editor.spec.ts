@@ -444,6 +444,9 @@ test.describe('journey 2: how far it zooms', () => {
   test('fits one small node at 100%, and does not blow it up to fill the canvas', async ({ page }) => {
     const editor = await open(page);
     await editor.add('Queue');
+    // The canvas fits what it has drawn once the node is there, and a zoom that came before it would be undone by it.
+    await expect(editor.node('Queue queue1')).toBeVisible();
+    await editor.settled();
     await editor.flow.focus();
     for (let i = 0; i < 3; i += 1) {
       await page.keyboard.press('+');
