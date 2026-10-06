@@ -12,6 +12,7 @@ import { FlowCanvas } from '../canvas/flow/flow-canvas';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { CanvasVm } from '../canvas/model/canvas-vm';
 import type { CanvasIntent } from '../canvas/model/intents';
+import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import {
   AUTOSAVE_TIMER,
@@ -507,6 +508,178 @@ describe('Editor', () => {
       fixture.detectChanges();
 
       expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the keyboard', () => {
+    async function openEditor() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const fake = () => view.fixture.debugElement.query(By.directive(FakeCanvas));
+      const canvas = () => fake().componentInstance as FakeCanvas;
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+      const [queue] = canvas().model().nodes;
+      /** Presses a key on the canvas, which is where the focus is when a learner works on it. */
+      const onCanvas = (init: KeyboardEventInit & { key: string }) => {
+        fireEvent.keyDown(fake().nativeElement as HTMLElement, init);
+        view.fixture.detectChanges();
+      };
+      return { ...view, canvas, user, queue: queue!, onCanvas };
+    }
+
+    it('renames what is selected on F2, in a field over the node, and says that a key started it', async () => {
+      const { onCanvas, fixture } = await openEditor();
+      const seen: string[] = [];
+      fixture.debugElement.injector.get(CommandBus).onApplied(({ origin }) => seen.push(origin));
+
+      onCanvas({ key: 'F2' });
+
+      const field = await screen.findByRole('textbox', { name: 'Rename queue queue1' });
+      await waitFor(() => expect(field).toHaveFocus());
+      const user = userEvent.setup();
+      await user.keyboard('payments{Enter}');
+      expect(seen).toEqual(['key']);
+    });
+
+    it('says what to do when F2 is pressed with nothing selected', async () => {
+      const { onCanvas, canvas, fixture } = await openEditor();
+      canvas().intent.emit({ type: 'select', nodes: [], edges: [] });
+      fixture.detectChanges();
+
+      onCanvas({ key: 'F2' });
+
+      expect(screen.queryByTestId('rename-field')).not.toBeInTheDocument();
+      expect(fixture.debugElement.injector.get(Announcer).last()).toBe(
+        'Select one node first, then press F2 to rename it.',
+      );
+    });
+
+    it('takes the focus to the inspector on Enter, and Escape in the inspector gives it back to the canvas', async () => {
+      const { onCanvas, canvas, user } = await openEditor();
+      canvas().calls.length = 0;
+
+      onCanvas({ key: 'Enter' });
+      expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+
+      await user.keyboard('{Escape}');
+      expect(canvas().calls).toContain('focus');
+    });
+
+    it('does nothing on Enter when nothing is selected', async () => {
+      const { onCanvas, canvas, fixture } = await openEditor();
+      canvas().intent.emit({ type: 'select', nodes: [], edges: [] });
+      fixture.detectChanges();
+
+      onCanvas({ key: 'Enter' });
+
+      expect(document.activeElement).not.toBe(screen.queryByRole('textbox', { name: 'Name' }));
+    });
+
+    it('fits the canvas on F', async () => {
+      const { onCanvas, canvas } = await openEditor();
+
+      onCanvas({ key: 'f' });
+
+      expect(canvas().calls).toContain('fit');
+    });
+
+    it('undoes and redoes from the page, with Ctrl+Z and Ctrl+Shift+Z, wherever the focus is in the editor', async () => {
+      const { canvas, fixture } = await openEditor();
+      const toolbox = screen.getByRole('button', { name: 'Queue' });
+      expect(canvas().model().nodes).toHaveLength(1);
+
+      fireEvent.keyDown(toolbox, { key: 'z', ctrlKey: true });
+      fixture.detectChanges();
+      expect(canvas().model().nodes).toHaveLength(0);
+
+      fireEvent.keyDown(toolbox, { key: 'Z', ctrlKey: true, shiftKey: true });
+      fixture.detectChanges();
+      expect(canvas().model().nodes).toHaveLength(1);
+    });
+
+    it('leaves Ctrl+Z to a field that is typed into, where it undoes the typing and not the canvas', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      const name = screen.getByRole('textbox', { name: 'Name' });
+      await user.click(name);
+
+      fireEvent.keyDown(name, { key: 'z', ctrlKey: true });
+      fixture.detectChanges();
+
+      expect(canvas().model().nodes).toHaveLength(1);
+    });
+
+    it('does not act on a single key that is pressed outside the canvas', async () => {
+      const { canvas } = await openEditor();
+      canvas().calls.length = 0;
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Queue' }), { key: 'f' });
+
+      expect(canvas().calls).not.toContain('fit');
+    });
+  });
+
+  describe('the top bar', () => {
+    async function openEditor() {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      return { ...view, canvas, user: userEvent.setup() };
+    }
+
+    it('undoes what the toolbox added, and puts it back', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+
+      await user.click(screen.getByRole('button', { name: 'Undo: added queue queue1' }));
+      fixture.detectChanges();
+      expect(canvas().model().nodes).toEqual([]);
+
+      await user.click(screen.getByRole('button', { name: 'Redo: added queue queue1' }));
+      fixture.detectChanges();
+      expect(canvas().model().nodes).toHaveLength(1);
+    });
+
+    it('arranges the canvas, and fits it once the nodes are in their places', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      await user.click(screen.getByRole('button', { name: 'Producer' }));
+      fixture.detectChanges();
+      canvas().calls.length = 0;
+
+      await user.click(screen.getByRole('button', { name: 'Auto-layout' }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(canvas().calls).toContain('fit');
+    });
+
+    it('zooms, resets and fits', async () => {
+      const { canvas, user } = await openEditor();
+
+      await user.click(screen.getByRole('button', { name: 'Zoom in' }));
+      await user.click(screen.getByRole('button', { name: 'Zoom out' }));
+      await user.click(screen.getByRole('button', { name: /^Reset the zoom/ }));
+      await user.click(screen.getByRole('button', { name: 'Fit' }));
+
+      expect(canvas().calls).toEqual(['zoomIn', 'zoomOut', 'resetZoom', 'fit']);
+    });
+  });
+
+  describe('the hint bar', () => {
+    it('says what the keys do for what is selected, and changes with the selection', async () => {
+      const view = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const user = userEvent.setup();
+      expect(screen.getByTestId('hint-empty')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      view.fixture.detectChanges();
+
+      expect(screen.queryByTestId('hint-empty')).not.toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('F2 Rename');
     });
   });
 

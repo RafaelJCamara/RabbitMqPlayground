@@ -1,0 +1,172 @@
+import { ApplicationRef } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { sampleDocument } from '@rmq/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FlowViewport } from '../canvas/model/flow-viewport';
+import { Announcer } from '../core/announcer';
+import { CommandBus } from '../core/state/command-bus';
+import { DocumentStore } from '../core/state/document-store';
+import { SelectionStore } from '../core/state/selection-store';
+import { StatusStore } from '../core/state/status-store';
+import { EditorActions, type ActionSurface } from './actions';
+
+describe('EditorActions', () => {
+  let actions: EditorActions;
+  let store: DocumentStore;
+  let selection: SelectionStore;
+  let announcer: Announcer;
+  let calls: string[];
+  let surface: ActionSurface;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, FlowViewport, EditorActions],
+    });
+    actions = TestBed.inject(EditorActions);
+    store = TestBed.inject(DocumentStore);
+    selection = TestBed.inject(SelectionStore);
+    announcer = TestBed.inject(Announcer);
+    vi.spyOn(announcer, 'announce');
+    calls = [];
+    TestBed.inject(FlowViewport).attach({
+      transform: () => ({ position: { x: 0, y: 0 }, scaledPosition: { x: 0, y: 0 }, scale: 1 }),
+      host: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      fit: () => calls.push('fit'),
+      zoomIn: () => calls.push('zoomIn'),
+      zoomOut: () => calls.push('zoomOut'),
+      resetZoom: () => calls.push('resetZoom'),
+      select: () => undefined,
+      focus: () => calls.push('focus'),
+      edgePath: () => null,
+    });
+    surface = { startRename: vi.fn(), focusInspector: vi.fn(() => true) };
+    actions.surface = surface;
+    store.load(sampleDocument());
+  });
+
+  describe('undo and redo', () => {
+    it('take back the last change and put it back, and say so', () => {
+      TestBed.inject(CommandBus).apply({ type: 'declare-queue', name: 'extra', durable: true }, 'gesture');
+      expect(Object.values(store.document().queues).map((queue) => queue.name)).toContain('extra');
+
+      actions.undo();
+      expect(Object.values(store.document().queues).map((queue) => queue.name)).toEqual(['billing', 'archive']);
+      expect(TestBed.inject(StatusStore).notice()).toMatchObject({
+        kind: 'message',
+        text: 'Undid: added queue extra.',
+      });
+
+      actions.redo();
+      expect(Object.values(store.document().queues).map((queue) => queue.name)).toContain('extra');
+    });
+
+    it('say that there is nothing to undo or redo when there is not', () => {
+      actions.undo();
+      expect(TestBed.inject(StatusStore).notice()).toMatchObject({ text: 'Nothing to undo.' });
+
+      actions.redo();
+      expect(TestBed.inject(StatusStore).notice()).toMatchObject({ text: 'Nothing to redo.' });
+    });
+  });
+
+  describe('layout', () => {
+    it('puts the nodes in their places as one step that the toolbar made, and fits the canvas once they are drawn there', () => {
+      const origins: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => origins.push(`${origin}:${command.type}`));
+
+      actions.layout();
+      expect(calls).toEqual([]);
+      TestBed.inject(ApplicationRef).tick();
+
+      expect(origins).toEqual(['toolbar:layout']);
+      expect(calls).toEqual(['fit']);
+      expect(store.undoLabel()).toBe('arranged the canvas');
+    });
+
+    it('leaves the canvas alone, and does not fit it, when the nodes are already in their places', () => {
+      actions.layout();
+      TestBed.inject(ApplicationRef).tick();
+      calls.length = 0;
+
+      actions.layout();
+      TestBed.inject(ApplicationRef).tick();
+
+      expect(calls).toEqual([]);
+    });
+  });
+
+  describe('the view', () => {
+    it('fits the canvas, and says that it shows all of it', () => {
+      actions.fit();
+
+      expect(calls).toEqual(['fit']);
+      expect(announcer.announce).toHaveBeenCalledWith('Showing the whole canvas.');
+    });
+
+    it('zooms in, out, and back to 100%', () => {
+      actions.zoomIn();
+      actions.zoomOut();
+      actions.resetZoom();
+
+      expect(calls).toEqual(['zoomIn', 'zoomOut', 'resetZoom']);
+    });
+  });
+
+  describe('renaming what is selected', () => {
+    it('opens the field on the node when exactly one node is selected, as a key did', () => {
+      selection.select(['Q1']);
+
+      actions.renameSelected();
+
+      expect(surface.startRename).toHaveBeenCalledWith('Q1', 'key');
+    });
+
+    it.each([
+      ['nothing', [], []],
+      ['two nodes', ['Q1', 'Q2'], []],
+      ['an edge', [], ['E1>Q1']],
+    ])('says what to do when %s is selected', (_, nodes, edges) => {
+      selection.select(nodes, edges);
+
+      actions.renameSelected();
+
+      expect(surface.startRename).not.toHaveBeenCalled();
+      expect(announcer.announce).toHaveBeenCalledWith('Select one node first, then press F2 to rename it.');
+    });
+
+    it('does nothing before the editor has a field to open', () => {
+      actions.surface = undefined;
+      selection.select(['Q1']);
+
+      expect(() => actions.renameSelected()).not.toThrow();
+    });
+  });
+
+  describe('editing what is selected', () => {
+    it('takes the focus to the inspector, and says that it did', () => {
+      selection.select(['Q1']);
+
+      expect(actions.editSelected()).toBe(true);
+      expect(surface.focusInspector).toHaveBeenCalledOnce();
+    });
+
+    it('does nothing, and says that it did nothing, when nothing is selected', () => {
+      expect(actions.editSelected()).toBe(false);
+      expect(surface.focusInspector).not.toHaveBeenCalled();
+    });
+
+    it('says that it did nothing when the inspector has nothing to focus', () => {
+      selection.select(['Q1']);
+      vi.mocked(surface.focusInspector).mockReturnValue(false);
+
+      expect(actions.editSelected()).toBe(false);
+    });
+
+    it('says that it did nothing before the editor has an inspector', () => {
+      actions.surface = undefined;
+      selection.select(['Q1']);
+
+      expect(actions.editSelected()).toBe(false);
+    });
+  });
+});

@@ -14,9 +14,12 @@ import type { CommandOrigin } from '../core/state/origin';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
+import { EditorActions, type ActionSurface } from './actions';
 import { ContextMenu, type MenuAction } from './context-menu';
+import { HintBar } from './hint-bar';
 import { Inspector } from './inspector';
 import { IntentHandler, type IntentSurface } from './intents';
+import { KeyboardService } from './keyboard';
 import { RenameField, type RenameBy } from './rename-field';
 import { saveText } from './save-text';
 import { StatusBar } from './status-bar';
@@ -44,10 +47,20 @@ interface Renaming {
  */
 @Component({
   selector: 'rmq-editor',
-  imports: [TopBar, StatusBar, Toolbox, FlowCanvas, Inspector, RenameField, ContextMenu],
-  providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, CanvasSession, FlowViewport, IntentHandler],
+  imports: [TopBar, StatusBar, Toolbox, FlowCanvas, Inspector, RenameField, ContextMenu, HintBar],
+  providers: [
+    DocumentStore,
+    SelectionStore,
+    StatusStore,
+    CommandBus,
+    CanvasSession,
+    FlowViewport,
+    IntentHandler,
+    EditorActions,
+    KeyboardService,
+  ],
   template: `
-    <div class="bg-surface text-fg flex h-dvh flex-col">
+    <div class="bg-surface text-fg flex h-dvh flex-col outline-none" tabindex="-1" (keydown)="keys.handle($event)">
       <rmq-top-bar />
       <div class="flex min-h-0 flex-1">
         <aside class="border-line bg-panel w-52 shrink-0 overflow-y-auto border-r p-3" aria-label="Toolbox">
@@ -79,12 +92,13 @@ interface Renaming {
           <rmq-inspector />
         </aside>
       </div>
+      <rmq-hint-bar />
       <rmq-status-bar />
       <rmq-context-menu (act)="onMenuAction($event)" (dismissed)="viewport.focus()" />
     </div>
   `,
 })
-export class Editor implements IntentSurface {
+export class Editor implements IntentSurface, ActionSurface {
   private readonly session = inject(CanvasSession);
   private readonly announcer = inject(Announcer);
   private readonly store = inject(DocumentStore);
@@ -92,6 +106,9 @@ export class Editor implements IntentSurface {
   protected readonly viewport = inject(FlowViewport);
   protected readonly selection = inject(SelectionStore);
   protected readonly intents = inject(IntentHandler);
+  protected readonly keys = inject(KeyboardService);
+  private readonly actions = inject(EditorActions);
+  private readonly inspector = viewChild.required(Inspector);
 
   protected readonly ready = computed(() => this.session.save().kind !== 'opening');
   private drawn = EMPTY_VM;
@@ -105,6 +122,7 @@ export class Editor implements IntentSurface {
     void this.session.open();
     inject(DestroyRef).onDestroy(() => this.session.close());
     this.intents.surface = this;
+    this.actions.surface = this;
 
     if (RMQ_E2E) {
       const detach = inject(DebugSources).attach({
@@ -159,6 +177,11 @@ export class Editor implements IntentSurface {
       this.selection.select([], [target.key]);
       this.menu().open(target, client, 'Actions for this edge');
     }
+  }
+
+  /** Gives the focus to the first field of the inspector, for the key that edits what is selected. */
+  focusInspector(): boolean {
+    return this.inspector().focusFirst();
   }
 
   /** Opens the field for a name over the node, with the name selected. */
