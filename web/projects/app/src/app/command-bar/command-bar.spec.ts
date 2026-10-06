@@ -3,7 +3,7 @@ import { emptyDocument, type CanvasDocument, type DocumentCommand } from '@rmq/d
 import { documentOf, exchangeRecord, queueRecord } from '@rmq/testing';
 import { render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
 import { CommandBus } from '../core/state/command-bus';
@@ -101,8 +101,8 @@ describe('CommandBar, closed (ADR-0045)', () => {
     expect(screen.queryByText('Each change you make appears here as the command that does the same.')).toBeNull();
   });
 
-  it('opens with its button, with the cursor in the field, and closes with it', async () => {
-    const { user } = await renderBar();
+  it('opens with its button, with the cursor in the field, and closes with it, which leaves the cursor where the pointer put it', async () => {
+    const { user, focused } = await renderBar();
 
     await openBar(user);
     expect(toggle()).toHaveAttribute('aria-expanded', 'true');
@@ -111,6 +111,20 @@ describe('CommandBar, closed (ADR-0045)', () => {
     await user.click(toggle());
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(focused).toEqual([]);
+  });
+
+  it('does not show the list again when it is opened again with what was typed still in the field', async () => {
+    const { user } = await renderBar(SHOP);
+    await openBar(user);
+    await type(user, 'bi');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    await user.click(toggle());
+    await openBar(user);
+
+    expect(field()).toHaveValue('bi');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('opens when it is asked to, as the key that is for it asks, and puts the cursor in the field', async () => {
@@ -173,6 +187,9 @@ describe('CommandBar, the log of equivalent commands (ADR-0046)', () => {
     bus.apply(declareQueue('a'), 'gesture');
     bus.apply({ type: 'add-producer', name: 'sender' }, 'menu');
     bus.apply(declareQueue('b'), 'typed');
+    bus.apply(declareQueue('c'), 'key');
+    bus.apply(declareQueue('d'), 'inspector');
+    bus.apply(declareQueue('e'), 'toolbar');
     await openBar(user);
     fixture.detectChanges();
 
@@ -182,12 +199,37 @@ describe('CommandBar, the log of equivalent commands (ADR-0046)', () => {
       'declare queue a',
       'add producer sender',
       'declare queue b',
+      'declare queue c',
+      'declare queue d',
+      'declare queue e',
     ]);
     expect(rows.map((row) => row.querySelector('[data-testid="origin"]')?.textContent?.trim())).toEqual([
       'gesture',
       'menu',
       'typed',
+      'key',
+      'inspector',
+      'toolbar',
     ]);
+  });
+
+  it('scrolls to its latest line when it opens and when a line is added, because that is the one that was just made', async () => {
+    const height = vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockReturnValue(480);
+    try {
+      const { user, bus, fixture } = await renderBar();
+      bus.apply(declareQueue('a'), 'gesture');
+      await openBar(user);
+      fixture.detectChanges();
+      await waitFor(() => expect(screen.getByTestId('command-log').scrollTop).toBe(480));
+
+      height.mockReturnValue(520);
+      bus.apply(declareQueue('b'), 'gesture');
+      fixture.detectChanges();
+
+      await waitFor(() => expect(screen.getByTestId('command-log').scrollTop).toBe(520));
+    } finally {
+      height.mockRestore();
+    }
   });
 
   it('grows as the learner works, while it is open', async () => {
@@ -226,6 +268,7 @@ describe('CommandBar, the log of equivalent commands (ADR-0046)', () => {
     expect(field()).toHaveValue('declare queue billing');
     expect(field()).toHaveFocus();
     expect(Object.keys(store.document().queues)).toHaveLength(1);
+    expect(screen.queryByRole('listbox'), 'a line that is put there is not being typed').not.toBeInTheDocument();
   });
 });
 
@@ -429,6 +472,52 @@ describe('CommandBar, completion (ADR-0045)', () => {
     expect(optionLabels()).toEqual(['bind']);
   });
 
+  it.each(['ArrowRight', 'Home', 'End'])('shuts the list when %s moves the cursor too', async (key) => {
+    const { user } = await renderBar(SHOP);
+    await openBar(user);
+    await type(user, 'bi');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    await user.keyboard(`{${key}}`);
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps the option that the arrow keys are on in view, in a list that scrolls', async () => {
+    const scrolled: Element[] = [];
+    const scrollIntoView = vi.fn(function (this: Element) {
+      scrolled.push(this);
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const { user } = await renderBar(SHOP);
+      await openBar(user);
+      await type(user, 'un');
+
+      await user.keyboard('{ArrowDown}{ArrowDown}');
+
+      await waitFor(() => expect(scrolled.at(-1)).toBe(screen.getAllByRole('option')[1]));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scrolled[0]).toBe(screen.getAllByRole('option')[0]);
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it('points the parts of the bar at one another by id: its button at its panel, its field at its list and at the option that is chosen', async () => {
+    const { user } = await renderBar(SHOP);
+    await openBar(user);
+    expect(document.getElementById(toggle().getAttribute('aria-controls') as string)).toContainElement(field());
+    await type(user, 'bi');
+
+    await user.keyboard('{ArrowDown}');
+
+    expect(document.getElementById(field().getAttribute('aria-controls') as string)).toBe(screen.getByRole('listbox'));
+    const options = screen.getAllByRole('option');
+    expect(document.getElementById(field().getAttribute('aria-activedescendant') as string)).toBe(options[0]);
+    expect(new Set(options.map((option) => option.id)).size).toBe(options.length);
+  });
+
   it('leaves a key that is pressed with Ctrl, Cmd or Alt to the browser, which has undo of the typing and moving by words', async () => {
     const { user, history } = await renderBar(SHOP);
     history.add('declare queue a');
@@ -544,6 +633,18 @@ describe('CommandBar, running a line (ADR-0045)', () => {
         "There is no command 'bnd'. Did you mean 'bind'?",
       );
       expect(screen.queryByTestId('refusal-reply')).not.toBeInTheDocument();
+    });
+
+    it('leaves the list shut, because the line was run and is not being typed any more', async () => {
+      const { user } = await renderBar(SHOP);
+      await openBar(user);
+      await type(user, 'bind ord');
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+      await type(user, '{Enter}');
+
+      expect(screen.getByTestId('refusal')).toBeVisible();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
 
     it('is spoken once, assertively, as a refusal is, and a line is kept in the history to be mended', async () => {
@@ -666,6 +767,17 @@ describe('CommandBar, help (ADR-0045)', () => {
 
     await user.click(screen.getByRole('button', { name: 'All the commands' }));
     expect(screen.getByRole('region', { name: 'Help: the commands' })).toBeVisible();
+  });
+
+  it('goes when a line is run that the canvas accepts', async () => {
+    const { user } = await renderBar();
+    await openBar(user);
+    await type(user, 'help bind{Enter}');
+    expect(screen.getByRole('region', { name: 'Help: bind' })).toBeVisible();
+
+    await type(user, 'declare queue jobs{Enter}');
+
+    expect(screen.queryByRole('region', { name: 'Help: bind' })).not.toBeInTheDocument();
   });
 
   it('stays while the learner types the command that it is about, and goes when another answer takes its place', async () => {
