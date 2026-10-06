@@ -402,7 +402,11 @@ describe('completeCommand', () => {
     });
 
     it('offers, after help, the first word of each command', () => {
-      expect(inserts(at('help '))).toEqual(inserts(at('')).filter((word) => word !== 'help').concat('help'));
+      expect(inserts(at('help '))).toEqual(
+        inserts(at(''))
+          .filter((word) => word !== 'help')
+          .concat('help'),
+      );
       expect(at('help ').items.every(({ kind }) => kind === 'command')).toBe(true);
       expect(inserts(at('help bi'))).toEqual(['bind']);
       expect(completeCommand('help bi', 7, sample())).toMatchObject({ from: 5, to: 7 });

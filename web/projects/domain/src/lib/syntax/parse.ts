@@ -104,7 +104,9 @@ export function parseCommand(text: string, document: CanvasDocument): Result<Com
     const command = parsed.value;
     if (command.type === 'undo' || command.type === 'redo' || command.type === 'help') {
       const why =
-        command.type === 'help' ? 'answers a question and does not change the canvas' : 'is about the history and not the canvas';
+        command.type === 'help'
+          ? 'answers a question and does not change the canvas'
+          : 'is about the history and not the canvas';
       return fail({
         kind: 'batch',
         message: `${command.type} ${why}, so it cannot be one of several commands. Type it by itself.`,
