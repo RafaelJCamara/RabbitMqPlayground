@@ -110,5 +110,6 @@ export { completeCommand, type Completion, type CompletionItem } from './lib/syn
 export { formatCommand } from './lib/syntax/format';
 export { parseCommand } from './lib/syntax/parse';
 export { SPECS } from './lib/syntax/registry';
+export { wordText } from './lib/syntax/words';
 export type { CommandSpec } from './lib/syntax/spec';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
