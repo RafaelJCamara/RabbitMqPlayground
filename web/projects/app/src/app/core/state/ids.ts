@@ -1,4 +1,4 @@
-import { findId, type CanvasDocument, type ElementKind, type Id, type IdKind } from '@rmq/domain';
+import { recordOf, type CanvasDocument, type ElementKind, type Id, type IdKind } from '@rmq/domain';
 
 /**
  * Where new ids come from (ADR-0031). `applyCommand` takes the id of something new from its caller (ADR-0026), and throws if it
@@ -61,8 +61,10 @@ export function createIdGenerator(document: () => CanvasDocument): IdGenerator {
 
 /** A name for something new: the kind and the smallest number that no element of that kind has, as `queue2`. */
 export function nextName(document: CanvasDocument, kind: ElementKind): string {
+  // The names are read once: asking the canvas for each number in turn is quadratic, which is seconds on a canvas that is full.
+  const taken = new Set(Object.values(recordOf(document, kind)).map(({ name }) => name));
   let number = 1;
-  while (findId(document, kind, `${kind}${number}`) !== undefined) {
+  while (taken.has(`${kind}${number}`)) {
     number += 1;
   }
   return `${kind}${number}`;
