@@ -1,6 +1,6 @@
 # ADR-0043: The default exchange is shown on request, and it is not in the document
 
-- **Status:** Accepted
+- **Status:** Accepted. What the canvas does not do with it (a menu, a rename, a move, a link from it or to it) is held by journeys, [ADR-0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Connection rules" of [ADR-0011](0011-explicit-linking-and-command-layer.md) (a producer linked to a queue is "drawn as going through the default exchange"),
