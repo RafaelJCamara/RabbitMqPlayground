@@ -17,7 +17,12 @@ import { RefusalNotice } from './refusal-notice';
 /** The fields that can be refused, each of which shows what it was refused for. */
 type Field = 'name' | 'x' | 'y' | 'type' | 'durable' | 'autoDelete' | 'internal';
 
-const EDGE_TITLE = { binding: 'Binding', link: 'Link from a producer', subscription: 'Subscription' } as const;
+const EDGE_TITLE = {
+  binding: 'Binding',
+  link: 'Link from a producer',
+  subscription: 'Subscription',
+  implicit: 'Implicit binding',
+} as const;
 const EXCHANGE_TYPE_LABEL: Readonly<Record<ExchangeType, string>> = {
   direct: 'Direct',
   fanout: 'Fanout',

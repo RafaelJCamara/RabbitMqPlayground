@@ -1,6 +1,6 @@
 export { BATCH_DOC, COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
 export { applyCommand } from './lib/commands/apply';
-export { defaultPosition, type ApplyContext, type IdKind } from './lib/commands/helpers';
+export { COLUMN_X, defaultPosition, ROW_HEIGHT, type ApplyContext, type IdKind } from './lib/commands/helpers';
 export type {
   AddConsumer,
   AddProducer,
