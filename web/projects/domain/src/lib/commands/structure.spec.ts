@@ -1,4 +1,5 @@
 import {
+  bindingRecord,
   consumerRecord,
   deepFreeze,
   documentOf,
@@ -37,6 +38,11 @@ describe('rename', () => {
     const result = applyRename(before, rename(kind, from, to));
 
     expect(result.ok && result.value[collection][id]?.name).toBe(to);
+    // The record is what it was with another name, and has nothing that its kind does not have.
+    expect(result.ok && result.value[collection][id]).toEqual({ ...before[collection][id], name: to });
+    expect(result.ok && Object.keys(result.value[collection][id] ?? {})).toEqual(
+      Object.keys(before[collection][id] ?? {}),
+    );
     expect(result.ok && findId(result.value, kind, to)).toBe(id);
     expect(result.ok && findId(result.value, kind, from)).toBeUndefined();
     expect(result.ok && validateDocument(result.value)).toEqual([]);
@@ -226,6 +232,41 @@ describe('delete', () => {
     expect(consumer.ok && consumer.value.layout.labels).toEqual({ 'E1>Q1': { at: 0.5 } });
     expect(producer.ok && validateDocument(producer.value)).toEqual([]);
     expect(consumer.ok && validateDocument(consumer.value)).toEqual([]);
+  });
+
+  it('takes a queue from a consumer that consumes from several, and leaves it the others', () => {
+    const document = deepFreeze(
+      documentOf({
+        queues: { Q: queueRecord('a'), R: queueRecord('b'), S: queueRecord('c') },
+        consumers: { C: consumerRecord('c', ['Q', 'R', 'S']), D: consumerRecord('d', ['R']) },
+      }),
+    );
+    const result = applyDelete(document, remove('queue', 'b'));
+
+    expect(result.ok && result.value.consumers['C']?.queues).toEqual(['Q', 'S']);
+    expect(result.ok && result.value.consumers['D']?.queues).toEqual([]);
+    expect(result.ok && validateDocument(result.value)).toEqual([]);
+  });
+
+  it('keeps the bindings, the producers and the consumers as they were when nothing hangs on what it deletes', () => {
+    const document = deepFreeze(
+      documentOf({
+        exchanges: { E: exchangeRecord('lonely'), F: exchangeRecord('busy') },
+        queues: { Q: queueRecord('lonely'), R: queueRecord('busy') },
+        bindings: { B: bindingRecord('F', { kind: 'queue', id: 'R' }, 'k') },
+        producers: { P: producerRecord('p', { kind: 'exchange', id: 'F' }) },
+        consumers: { C: consumerRecord('c', ['R']) },
+      }),
+    );
+    const exchange = applyDelete(document, remove('exchange', 'lonely'));
+    const queue = applyDelete(document, remove('queue', 'lonely'));
+
+    for (const result of [exchange, queue]) {
+      expect(result.ok && result.value.bindings).toBe(document.bindings);
+      expect(result.ok && result.value.producers).toBe(document.producers);
+      expect(result.ok && result.value.consumers).toBe(document.consumers);
+      expect(result.ok && result.value.layout.labels).toBe(document.layout.labels);
+    }
   });
 
   it('takes the labels of the edges that went, and keeps the ones that did not', () => {

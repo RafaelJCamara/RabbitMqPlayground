@@ -74,6 +74,11 @@ describe('defaultPosition', () => {
     expect(COLUMN_X.queue).toBeLessThan(COLUMN_X.consumer);
   });
 
+  it('has the columns and the rows that it has, so that a change of one is a change that a test shows', () => {
+    expect(COLUMN_X).toEqual({ producer: 0, exchange: 320, queue: 640, consumer: 960 });
+    expect(ROW_HEIGHT).toBe(120);
+  });
+
   it('puts the next node of a kind below the lowest one of that kind, wherever it is, and ignores the other kinds', () => {
     const document = documentOf({
       exchanges: { A: exchangeRecord('a'), B: exchangeRecord('b') },
@@ -286,6 +291,19 @@ describe('sameValue', () => {
     expect(sameValue({ a: 1 }, null)).toBe(false);
     expect(sameValue(null, { a: 1 })).toBe(false);
     expect(sameValue({ a: { b: 1 } }, { a: { b: 2 } })).toBe(false);
+  });
+
+  it('is false for a primitive and a container, whichever comes first, even when the container has no keys to differ by', () => {
+    for (const primitive of [1, 0, 'a', '', true, false, undefined]) {
+      expect(sameValue(primitive, {}), String(primitive)).toBe(false);
+      expect(sameValue({}, primitive), String(primitive)).toBe(false);
+      expect(sameValue(primitive, []), String(primitive)).toBe(false);
+      expect(sameValue([], primitive), String(primitive)).toBe(false);
+    }
+    expect(sameValue(null, {})).toBe(false);
+    expect(sameValue({}, null)).toBe(false);
+    expect(sameValue([], {})).toBe(false);
+    expect(sameValue({}, [])).toBe(false);
   });
 
   it('is true for a value and a copy of it, whatever it is made of, and false when one leaf differs', () => {

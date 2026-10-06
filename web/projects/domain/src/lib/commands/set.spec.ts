@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { LIMITS, type CanvasDocument } from '../document/schema';
 import { validateDocument } from '../document/validate';
 import { applySet, applyUnset } from './set';
-import type { SetCommand, Unset } from './types';
+import type { ConsumerChanges, SetCommand, Unset } from './types';
 
 const sample = (): CanvasDocument => deepFreeze(sampleDocument());
 /** `Omit` of each member of a union, which `Omit` of the union is not. */
@@ -313,7 +313,10 @@ describe('set producer', () => {
       expect(
         applySet(sample(), set({ kind: 'producer', name: target, changes: { key: 'k'.repeat(256) } })),
       ).toMatchObject({
-        error: { kind: 'routing-key' },
+        error: {
+          kind: 'routing-key',
+          message: 'A routing key is at most 255 bytes of UTF-8, and this one is 256.',
+        },
       });
       expect(applySet(sample(), set({ kind: 'producer', name: target, changes: { key: 'k'.repeat(255) } })).ok).toBe(
         true,
@@ -392,6 +395,25 @@ describe('set consumer', () => {
     expect(result.ok && result.value.producers).toBe(before.producers);
     expect(result.ok && result.value.consumers['C1']?.queues).toBe(before.consumers['C1']?.queues);
     expect(result.ok && undoRedoProblems(before, result.value)).toEqual([]);
+  });
+
+  it('sets one value and keeps the others as they were, whatever the value is: a new one, and none', () => {
+    const before = sample();
+    const worker = before.consumers['C1'] as CanvasDocument['consumers'][string];
+    const changed: ConsumerChanges[] = [
+      { ack: 'auto' },
+      { prefetch: 10 },
+      { prefetch: 0 },
+      { processingMs: 250 },
+      { processingMs: 0 },
+    ];
+
+    expect(worker).toMatchObject({ ack: 'manual', prefetch: 3 });
+    for (const changes of changed) {
+      const result = applySet(before, set({ kind: 'consumer', name: 'worker', changes }));
+
+      expect(result.ok && result.value.consumers['C1'], JSON.stringify(changes)).toEqual({ ...worker, ...changes });
+    }
   });
 
   it.each([
@@ -534,6 +556,19 @@ describe('unset', () => {
 
     expect(applyUnset(bare, unset('p', 'x'))).toMatchObject({
       error: { message: "The producer 'p' has no header 'x'. It has no headers." },
+    });
+    const two = deepFreeze(
+      documentOf({
+        producers: {
+          P: producerRecord('p', null, {
+            message: { payload: '', key: '', headers: [entry('a', int(1)), entry('b', int(2))] },
+          }),
+        },
+      }),
+    );
+
+    expect(applyUnset(two, unset('p', 'x'))).toMatchObject({
+      error: { message: "The producer 'p' has no header 'x'. Its headers are 'a', 'b'." },
     });
   });
 
