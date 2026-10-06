@@ -49,7 +49,7 @@ jobs:
         run: npm run test:conformance
       - name: Upload the recorded fixtures, for review
         if: success() && env.CONFORMANCE_MODE == 'record'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: conformance-fixtures
           path: web/fixtures/conformance
@@ -60,7 +60,7 @@ jobs:
         run: npx tsx tools/conformance/dump.ts dump fixtures/conformance/4.3
       - name: Upload the drift report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: conformance-drift
           path: web/conformance-diff
