@@ -62,6 +62,11 @@ describe('TopBar', () => {
       // It is an icon, so what it is is also said when the pointer rests on it, with the key.
       expect(help).toHaveAttribute('title', 'Help: keyboard shortcuts and commands (?)');
       expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveAttribute('title', 'Theme');
+      // The icon in front of the choice of a theme is a picture of what the choice says, which the choice says in words.
+      expect(screen.getByRole('combobox', { name: 'Theme' }).previousElementSibling).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      );
       await userEvent.setup().click(help);
 
       expect(open).toHaveBeenCalledOnce();
