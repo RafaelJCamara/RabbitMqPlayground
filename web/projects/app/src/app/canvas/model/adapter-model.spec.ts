@@ -37,6 +37,14 @@ describe('blocksFoblex (ADR-0017)', () => {
     expect(blocksFoblex(press('l', { ctrlKey: true }), CONNECT_KEYS)).toBe(true);
     expect(blocksFoblex(press('l', { ctrlKey: true }))).toBe(false);
   });
+
+  it('holds back any of the keys that it is given, and not only the first', () => {
+    const both = [...GRAB_KEYS, ...CONNECT_KEYS];
+
+    expect(blocksFoblex(press('m', { ctrlKey: true }), both)).toBe(true);
+    expect(blocksFoblex(press('l', { ctrlKey: true }), both)).toBe(true);
+    expect(blocksFoblex(press('x', { ctrlKey: true }), both)).toBe(false);
+  });
 });
 
 describe('the events of the library as intents', () => {
@@ -51,10 +59,10 @@ describe('the events of the library as intents', () => {
   });
 
   it('makes a delete of the same shape, which the editor turns into commands', () => {
-    expect(deleteIntent({ nodeIds: ['a', 'b'], connectionIds: [] }, 'keyboard')).toEqual({
+    expect(deleteIntent({ nodeIds: ['a', 'b'], connectionIds: ['a>b'] }, 'keyboard')).toEqual({
       type: 'delete',
       nodes: ['a', 'b'],
-      edges: [],
+      edges: ['a>b'],
       by: 'keyboard',
     });
   });
@@ -102,7 +110,7 @@ describe('the events of the library as intents', () => {
 describe('hit testing', () => {
   const page = () => {
     document.body.innerHTML = `
-      <div id="outside"><span id="outside-child"></span></div>
+      <div id="outside" data-node-id="ghost"><span id="outside-child"></span></div>
       <div id="host">
         <div data-node-id="q1" id="node"><span id="label">Queue</span><div id="handle"></div></div>
         <div id="empty"></div>
@@ -140,6 +148,12 @@ describe('hit testing', () => {
     expect(nodeIdAt([outside, label], host)).toBe('q1');
   });
 
+  it('does not take a node of the page that is not on this canvas for one that is', () => {
+    const { host, outside } = page();
+
+    expect(nodeIdAt([outside], host)).toBeNull();
+  });
+
   it('finds the node of the target of an event, and nothing for a target that is not an element', () => {
     const { label, empty } = page();
 
@@ -169,6 +183,27 @@ describe('isInView', () => {
 
   it('takes the margin as an argument', () => {
     expect(isInView({ x: 0, y: 0, zoom: 1 }, size, { x: 10, y: 10, width: 50, height: 50 }, 5)).toBe(true);
+  });
+
+  describe('at the margin, which is 24 pixels unless it is said', () => {
+    const plain = { x: 0, y: 0, zoom: 1 };
+    const host = { width: 400, height: 300 };
+
+    it('is in view when it is exactly the margin from each edge, and not when it is a pixel closer', () => {
+      // The rectangle is 100 by 50, and the host 400 by 300, so it fits between 24 and 376 across, and 24 and 276 down.
+      expect(isInView(plain, host, { x: 24, y: 24, width: 100, height: 50 })).toBe(true);
+      expect(isInView(plain, host, { x: 23, y: 24, width: 100, height: 50 })).toBe(false);
+      expect(isInView(plain, host, { x: 24, y: 23, width: 100, height: 50 })).toBe(false);
+      expect(isInView(plain, host, { x: 276, y: 24, width: 100, height: 50 })).toBe(true);
+      expect(isInView(plain, host, { x: 277, y: 24, width: 100, height: 50 })).toBe(false);
+      expect(isInView(plain, host, { x: 24, y: 226, width: 100, height: 50 })).toBe(true);
+      expect(isInView(plain, host, { x: 24, y: 227, width: 100, height: 50 })).toBe(false);
+    });
+
+    it('is not in view when it is past the edge by less than the margin, which is half hidden', () => {
+      expect(isInView(plain, host, { x: 300, y: 24, width: 100, height: 50 })).toBe(false);
+      expect(isInView(plain, host, { x: 24, y: 250, width: 100, height: 50 })).toBe(false);
+    });
   });
 });
 
@@ -271,8 +306,9 @@ describe('FlowViewport', () => {
     viewport.attach(driver);
 
     viewport.reveal({ id: 'near', x: 20, y: 20, width: 100, height: 50 });
-    viewport.reveal({ id: 'far', x: 5_000, y: 5_000, width: 100, height: 50 });
+    expect(calls).toEqual([]);
 
+    viewport.reveal({ id: 'far', x: 5_000, y: 5_000, width: 100, height: 50 });
     expect(calls).toEqual(['fit']);
   });
 
@@ -498,6 +534,40 @@ describe('watchDrawnEdges (ADR-0016, workaround 3)', () => {
 
     expect(seen.drawn).toEqual([['a>b']]);
     expect(seen.gone).toEqual([]);
+    stop();
+  });
+
+  it('says that an edge is drawn when its path is, in a burst that has a change that is not news as well', async () => {
+    const container = document.createElement('div');
+    const { seen, report } = reports();
+    const stop = watchDrawnEdges(container, report);
+    const { path } = edge(container, 'a>b', null);
+    const stray = document.createElement('path');
+    container.append(stray);
+    await settle();
+
+    path.setAttribute('d', 'M0,0 L1,1');
+    stray.setAttribute('d', 'M5,5');
+    await settle();
+
+    expect(seen.drawn).toEqual([['a>b']]);
+    stop();
+  });
+
+  it('does not look at the container again for a path that is only drawn another way, or for one that is not an edge’s', async () => {
+    const container = document.createElement('div');
+    const { report } = reports();
+    const { path } = edge(container, 'a>b', 'M0,0 L1,1');
+    const stray = document.createElement('path');
+    container.append(stray);
+    const stop = watchDrawnEdges(container, report);
+    const scan = vi.spyOn(container, 'querySelectorAll');
+
+    path.setAttribute('d', 'M0,0 L9,9');
+    stray.setAttribute('d', 'M5,5');
+    await settle();
+
+    expect(scan).not.toHaveBeenCalled();
     stop();
   });
 

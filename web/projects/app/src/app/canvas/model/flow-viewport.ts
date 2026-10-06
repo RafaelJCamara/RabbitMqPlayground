@@ -149,7 +149,8 @@ export class FlowViewport {
   private update(change: (drawn: Set<string>) => void): void {
     const next = new Set(this.drawnKeys());
     change(next);
-    if (next.size !== this.drawnKeys().size || [...next].some((id) => !this.drawnKeys().has(id))) {
+    // A call only adds, or only takes away, so the set is another one exactly when it has another size.
+    if (next.size !== this.drawnKeys().size) {
       this.drawnKeys.set(next);
     }
   }

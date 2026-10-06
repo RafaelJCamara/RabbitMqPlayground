@@ -71,7 +71,8 @@ function nodesOf(document: CanvasDocument, previous: ReadonlyMap<Id, NodeVm>): N
   return elements(document).map(({ kind, id, name }) => {
     const { width, height } = frameOf(kind);
     const { x, y } = lookup(document.layout.nodes, id) ?? defaultPosition(document, kind);
-    const exchangeType = kind === 'exchange' ? lookup(document.exchanges, id)?.type : undefined;
+    // Ids are the same nowhere in a document, whatever the kind, so only an exchange is found here.
+    const exchangeType = lookup(document.exchanges, id)?.type;
     return reuse<NodeVm>(
       {
         id,

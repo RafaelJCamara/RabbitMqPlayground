@@ -25,11 +25,11 @@ const CUT = 14;
 const ROUND = 10;
 
 /**
- * The outline of a node of this kind, a closed path from (0, 0) to (width, height). The handles are at the middle of the left and
- * right sides, so every outline touches both of them there.
+ * The outline of a node of this kind, a closed path from (0, 0) to (width, height), at the size that it is drawn at unless another is
+ * given. The handles are at the middle of the left and right sides, so every outline touches both of them there.
  */
-export function shapePath(kind: ElementKind): string {
-  const { width: w, height: h } = frameOf(kind);
+export function shapePath(kind: ElementKind, frame: Frame = frameOf(kind)): string {
+  const { width: w, height: h } = frame;
   const mid = h / 2;
   switch (kind) {
     case 'producer':

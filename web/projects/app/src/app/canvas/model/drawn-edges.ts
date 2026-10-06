@@ -39,9 +39,7 @@ export function watchDrawnEdges(container: Element, report: DrawnReport): () => 
       const path = element.querySelector('.f-connection-path');
       if (id !== null && path !== null && hasPath(path)) {
         drawn.add(id);
-        if (!element.hasAttribute(DRAWN_ATTRIBUTE)) {
-          element.setAttribute(DRAWN_ATTRIBUTE, id);
-        }
+        element.setAttribute(DRAWN_ATTRIBUTE, id);
       }
     }
     return drawn;

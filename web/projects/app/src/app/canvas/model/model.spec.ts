@@ -34,6 +34,8 @@ describe('connector ids', () => {
   it('has a list for "nothing may be joined" that no connector id is in', () => {
     expect(NOTHING).toHaveLength(1);
     expect(NOTHING[0]).not.toMatch(/^(in|out):/);
+    // The library takes an empty list for "every connector", and an empty text could be taken for "none" in the same way.
+    expect(NOTHING[0]).not.toBe('');
   });
 });
 
@@ -52,6 +54,30 @@ describe('shapes', () => {
       expect(path).toMatch(/^M[\d.,]+/);
       expect(path.endsWith('Z')).toBe(true);
     }
+  });
+
+  describe('the outline of each kind, drawn at 100 by 40', () => {
+    const frame = { width: 100, height: 40 };
+
+    it.each([
+      ['producer', 'M10,0 H80 L100,20 L80,40 H10 Q0,40 0,30 V10 Q0,0 10,0 Z'],
+      ['exchange', 'M14,0 H86 L100,20 L86,40 H14 L0,20 Z'],
+      ['queue', 'M10,0 H90 Q100,0 100,10 V30 Q100,40 90,40 H10 Q0,40 0,30 V10 Q0,0 10,0 Z'],
+      ['consumer', 'M20,0 H80 A20,20 0 0 1 80,40 H20 A20,20 0 0 1 20,0 Z'],
+    ] as const)('is, for a %s, the one that the visual language describes', (kind, path) => {
+      expect(shapePath(kind, frame)).toBe(path);
+    });
+
+    it('rounds every number to two decimals, so that a size that is not whole does not make a long path', () => {
+      expect(shapePath('exchange', { width: 100.126, height: 41 })).toBe(
+        'M14,0 H86.13 L100.13,20.5 L86.13,41 H14 L0,20.5 Z',
+      );
+    });
+
+    it('is drawn at the size of the kind unless another is given', () => {
+      const { width, height } = frameOf('exchange');
+      expect(shapePath('exchange')).toBe(shapePath('exchange', { width, height }));
+    });
   });
 
   it('touches the middle of the sides that have a handle, which is where the handles are', () => {
@@ -145,6 +171,14 @@ describe('buildCanvasVm', () => {
   it('has nothing for an empty canvas', () => {
     expect(buildCanvasVm(documentOf())).toEqual({ nodes: [], edges: [] });
     expect(EMPTY_VM).toEqual({ nodes: [], edges: [] });
+  });
+
+  it('gives an exchange its type, and no other kind of node so much as the key', () => {
+    const { nodes } = buildCanvasVm(sample());
+
+    for (const node of nodes) {
+      expect('exchangeType' in node).toBe(node.kind === 'exchange');
+    }
   });
 
   it('draws every element at its place, at the size of its kind, with an outline, a label and the handles that its kind has', () => {
@@ -407,9 +441,14 @@ describe('the messages of the canvas', () => {
   });
 
   it('say what the keys are, and use the keys that the editor configures: L to link and M to move', () => {
+    expect(m.instructions).toContain('Use the arrow keys to move between nodes and connections');
+    expect(m.instructions).toContain('Shift with an arrow to select more than one');
+    expect(m.instructions).toContain('Control and an arrow follows a connection');
     expect(m.instructions).toContain('M picks up');
     expect(m.instructions).toContain('L links');
+    expect(m.instructions).toContain('Delete removes the selection');
     expect(m.instructions).toContain('F2 renames');
+    expect(m.instructions).toContain('Control and Z undoes the last change');
     expect(m.instructions).not.toContain('Space');
   });
 
@@ -430,6 +469,12 @@ describe('fitViewport', () => {
     expect(fitViewport([], host, 40, 1)).toBeNull();
     expect(fitViewport([box(0, 0)], { width: 0, height: 600 }, 40, 1)).toBeNull();
     expect(fitViewport([box(0, 0)], { width: 800, height: -1 }, 40, 1)).toBeNull();
+    expect(fitViewport([box(0, 0)], { width: 800, height: 0 }, 40, 1)).toBeNull();
+  });
+
+  it('shows something in a host that has any room at all, even a single pixel', () => {
+    expect(fitViewport([box(0, 0)], { width: 1, height: 600 }, 40, 1)).not.toBeNull();
+    expect(fitViewport([box(0, 0)], { width: 800, height: 1 }, 40, 1)).not.toBeNull();
   });
 
   it('puts one box in the middle of the host, at the zoom that it is drawn at, and does not blow it up', () => {
@@ -459,6 +504,18 @@ describe('fitViewport', () => {
     expect(middleOfWhatIsShown.y).toBeCloseTo(300, 6);
   });
 
+  it('keeps the middle of what is shown in the middle when it is far from the origin, and zoomed out', () => {
+    const boxes = [box(1000, 500), box(5000, 2500)];
+
+    const viewport = fitViewport(boxes, host, 40, 1)!;
+
+    // The boxes reach from 1000 to 5100 across and from 500 to 2550 down.
+    expect(viewport.zoom).toBeLessThan(1);
+    const middleOfWhatIsShown = toScreen(viewport, { x: 3050, y: 1525 });
+    expect(middleOfWhatIsShown.x).toBeCloseTo(400, 6);
+    expect(middleOfWhatIsShown.y).toBeCloseTo(300, 6);
+  });
+
   it('is limited by the side that is the tighter: a wide set of boxes by the width, a tall one by the height', () => {
     expect(fitViewport([box(0, 0), box(5000, 0)], host, 40, 1)!.zoom).toBeCloseTo(720 / 5100, 10);
     expect(fitViewport([box(0, 0), box(0, 5000)], host, 40, 1)!.zoom).toBeCloseTo(520 / 5050, 10);
@@ -474,6 +531,20 @@ describe('fitViewport', () => {
 
     expect(viewport.zoom).toBeGreaterThan(0);
     expect(Number.isFinite(viewport.x) && Number.isFinite(viewport.y)).toBe(true);
+  });
+
+  it('takes the room that the padding leaves as one pixel at the least, so the zoom is that over the size of what is shown', () => {
+    const small = { width: 50, height: 50 };
+
+    expect(fitViewport([box(0, 0, 400, 100)], small, 40, 1)!.zoom).toBeCloseTo(1 / 400, 12);
+    expect(fitViewport([box(0, 0, 100, 500)], small, 40, 1)!.zoom).toBeCloseTo(1 / 500, 12);
+  });
+
+  it('does not divide by nothing for boxes that have no size, whatever the limit of the zoom', () => {
+    const viewport = fitViewport([box(10, 10, 0, 0)], host, 40, 1_000_000)!;
+
+    // The room is 720 across and 520 down, for what is at most a pixel: the tighter side is the height.
+    expect(viewport.zoom).toBe(520);
   });
 
   it('is the same viewport whatever the order of the boxes', () => {
