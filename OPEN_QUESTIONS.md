@@ -156,7 +156,7 @@ Foblex adapter is outside the unit specs), and three other ways, because a gener
 and cannot reach the adapter.
 
 - **The code (AST mutants):** 2,178 mutants, of which 897 did not build and 1,110 of the other 1,281 were caught. The 171 survivors led to
-  68 new tests (the app's 553 became 621) and to stronger assertions in the ones that were there, and to about ten pieces of code that no
+  63 new tests (the app's 553 became 616) and to stronger assertions in the ones that were there, and to about ten pieces of code that no
   input could reach being taken out (the kind of a node checked before an id is looked up, though ids are unique across kinds; the
   member-by-member comparison of a set that only grows or only shrinks; a shortcut of the selection that skipped a look at the edges; the
   title and the reset of the context menu). A second run, of the 1,098 mutants that the changes could affect, left 31
@@ -165,7 +165,7 @@ and cannot reach the adapter.
   upper or lower case on both sides, a `kind` that nothing reads, a check that a name exists for an id that has a kind, the first value of a flag that every opening sets, and the classes of
   the buttons.
 - **The inline templates (238 mutants):** each attribute, binding, listener and `@if` condition taken off or turned true and false. 139 were
-  caught at once, 34 did not build, 65 survived. They led to tests of how each field of the inspector is described by its refusal, the steps of
+  caught at once, 34 did not build, 65 survived. They led to five more tests (621), and to stronger assertions, of how each field of the inspector is described by its refusal, the steps of
   the number fields, the names of the groups of the top bar, and what is drawn while a canvas is being opened; to two things that nothing used
   being taken out; and to the linter's `button-has-type`, because 15 mutants that took the type off a button were seen by no test and the
   linter sees all 15 (it applies to inline templates, which was checked). 18 are left: the size of an icon (16) and `type="text"` (2).
