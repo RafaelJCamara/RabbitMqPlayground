@@ -113,6 +113,103 @@ const states: readonly {
       );
     },
   },
+  {
+    name: 'with the command bar open',
+    enter: (_, editor) => editor.openCommandBar(),
+  },
+  {
+    name: 'with the command bar listing what could be typed',
+    enter: async (page, editor) => {
+      await editor.openCommandBar();
+      await page.keyboard.type('bind ');
+      await expect(page.getByRole('listbox', { name: 'Completions' })).toBeVisible();
+    },
+  },
+  {
+    name: 'with a line that the command bar could not read, and what was meant',
+    enter: async (page, editor) => {
+      await editor.openCommandBar();
+      await editor.runCommand('bnd orders -> billing');
+      await expect(page.getByRole('group', { name: 'Did you mean' })).toBeVisible();
+    },
+  },
+  {
+    name: 'with a refusal in the command bar, and the broker answer after it',
+    enter: async (page, editor) => {
+      await editor.openCommandBar();
+      await editor.runCommand('declare exchange amq.mine type=direct');
+      await expect(page.getByTestId('command-answer').getByTestId('refusal-reply')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the help of the command bar shown',
+    enter: async (page, editor) => {
+      await editor.openCommandBar();
+      await editor.runCommand('help bind');
+      await expect(page.getByRole('region', { name: 'Help: bind' })).toBeVisible();
+    },
+  },
+  {
+    name: 'with the cheat-sheet open',
+    enter: async (page, editor) => {
+      await editor.flow.focus();
+      await page.keyboard.press('Shift+?');
+      await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts and commands' })).toBeVisible();
+    },
+  },
+  {
+    name: 'with the picker of "Link to…" open',
+    enter: async (page, editor) => {
+      await editor.select('Exchange orders, topic');
+      await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+      await expect(page.getByRole('dialog', { name: 'Link exchange orders to…' })).toBeVisible();
+    },
+  },
+  {
+    name: 'with the key of a binding being asked',
+    enter: async (page, editor) => {
+      await editor.dragLinkTo('x1', await editor.centre(editor.nodeById('q1')));
+      await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+    },
+  },
+  {
+    name: 'with the key of a binding refused under its field',
+    enter: async (page, editor) => {
+      await editor.dragLinkTo('x1', await editor.centre(editor.nodeById('q1')));
+      await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+      await page.keyboard.type('#.#.#');
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('group', { name: /^Binding key from/ }).getByTestId('refusal-message')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the menu of what a link that was let go on nothing can make',
+    enter: async (page, editor) => {
+      const flow = (await editor.flow.boundingBox())!;
+      await editor.dragLinkTo('x1', { x: flow.x + flow.width / 2, y: flow.y + flow.height - 40 });
+      await expect(page.getByRole('menu', { name: /Create and link from/ })).toBeVisible();
+    },
+  },
+  {
+    name: 'with the card of a label that has more keys than it shows',
+    enter: async (page, editor) => {
+      await editor.openCommandBar();
+      for (const key of ['a', 'b', 'c', 'd']) {
+        await editor.runCommand(`bind orders -> billing key=${key}`);
+      }
+      await page.keyboard.press('Escape');
+      await page.locator('[data-label="x1>q1"]').hover();
+      await expect(page.getByTestId('label-card')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the default exchange shown and selected',
+    enter: async (page, editor) => {
+      await page.getByRole('switch', { name: 'Default exchange' }).click();
+      await editor.select('Default exchange');
+      await expect(page.getByTestId('inspector-title')).toHaveText('Default exchange');
+    },
+  },
 ];
 
 for (const colorScheme of ['light', 'dark'] as const) {
