@@ -18,4 +18,4 @@ export const nodeIdOf = (connectorId: string): Id => connectorId.slice(connector
  * Foblex reads an empty list of the connectors that a connector may be joined to as "no restriction". "Nothing may be joined"
  * has to be a list with one id that no connector has.
  */
-export const NOTHING: readonly string[] = ['rmq:none'];
+export const NOTHING: string[] = ['rmq:none'];

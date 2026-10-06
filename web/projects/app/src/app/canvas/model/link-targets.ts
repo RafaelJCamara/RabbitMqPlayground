@@ -12,7 +12,7 @@ export function armedTargets(
   source: Id | null,
   nodes: readonly NodeVm[],
   rules: Pick<LinkRules, 'allowedTargets'> | undefined,
-): readonly string[] {
+): string[] {
   if (source === null || rules === undefined) {
     return NOTHING;
   }

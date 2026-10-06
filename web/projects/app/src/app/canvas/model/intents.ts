@@ -5,6 +5,9 @@ import type { Point } from './transform';
 /** How a link was made: by dragging a handle, by clicking one source and then a target, or from the keyboard (ADR-0017). */
 export type LinkVia = 'drag' | 'click' | 'keyboard';
 
+/** What the learner used: a pointer, or a key. The command that results says so as its origin. */
+export type InputBy = 'pointer' | 'keyboard';
+
 /** What a context menu was asked for: a node or an edge. */
 export type ContextTarget =
   { readonly kind: 'node'; readonly id: Id } | { readonly kind: 'edge'; readonly key: string };
@@ -16,8 +19,12 @@ export type ContextTarget =
  */
 export type CanvasIntent =
   | { readonly type: 'select'; readonly nodes: readonly Id[]; readonly edges: readonly string[] }
-  | { readonly type: 'move'; readonly moves: readonly { readonly id: Id; readonly x: number; readonly y: number }[] }
-  | { readonly type: 'delete'; readonly nodes: readonly Id[]; readonly edges: readonly string[] }
+  | {
+      readonly type: 'move';
+      readonly moves: readonly { readonly id: Id; readonly x: number; readonly y: number }[];
+      readonly by: InputBy;
+    }
+  | { readonly type: 'delete'; readonly nodes: readonly Id[]; readonly edges: readonly string[]; readonly by: InputBy }
   /** A drop on a node that the link rules allow, or the Enter that ends a keyboard link. */
   | { readonly type: 'link'; readonly source: Id; readonly target: Id; readonly via: LinkVia }
   /** A drop on a node that the rules do not allow. The editor says why. */

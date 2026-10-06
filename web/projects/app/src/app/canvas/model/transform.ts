@@ -9,6 +9,11 @@ export interface Point {
   readonly y: number;
 }
 
+export interface Size {
+  readonly width: number;
+  readonly height: number;
+}
+
 /** The part of Foblex's transform model that the live viewport is made of. */
 export interface TransformModel {
   readonly position: Point;
@@ -42,9 +47,17 @@ export const toCanvas = (viewport: Viewport, point: Point): Point => ({
   y: (point.y - viewport.y) / viewport.zoom,
 });
 
-/** A point of the page, as a mouse reports it, on the canvas. `host` is where the canvas's host is on the page. */
-export const clientToCanvas = (
-  viewport: Viewport,
-  host: { readonly left: number; readonly top: number },
-  client: Point,
-): Point => toCanvas(viewport, { x: client.x - host.left, y: client.y - host.top });
+/**
+ * Whether a rectangle of the canvas is in view: all of it is inside the host of the canvas, which is `size` big, with `margin`
+ * pixels to spare, so that a node at the very edge, half hidden, is not in view.
+ */
+export function isInView(viewport: Viewport, size: Size, rect: Point & Size, margin = 24): boolean {
+  const topLeft = toScreen(viewport, rect);
+  const bottomRight = toScreen(viewport, { x: rect.x + rect.width, y: rect.y + rect.height });
+  return (
+    topLeft.x >= margin &&
+    topLeft.y >= margin &&
+    bottomRight.x <= size.width - margin &&
+    bottomRight.y <= size.height - margin
+  );
+}

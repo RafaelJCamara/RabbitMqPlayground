@@ -21,7 +21,7 @@ import { armedTargets } from './link-targets';
 import { RMQ_A11Y_MESSAGES } from './messages';
 import { EXCHANGE_TYPES, kindOfNew, newNodeKey } from './new-node';
 import { frameOf, shapePath } from './shapes';
-import { clientToCanvas, liveViewport, toCanvas, toScreen } from './transform';
+import { liveViewport, toCanvas, toScreen } from './transform';
 
 describe('connector ids', () => {
   it('make a connector id from a node id, and read the node id back from either', () => {
@@ -126,17 +126,6 @@ describe('the live viewport', () => {
     ]) {
       expect(toCanvas(viewport, toScreen(viewport, point))).toEqual(point);
     }
-  });
-
-  it('takes a point of the page to the canvas, from where the host is on the page', () => {
-    expect(clientToCanvas({ x: 0, y: 0, zoom: 1 }, { left: 300, top: 80 }, { x: 350, y: 100 })).toEqual({
-      x: 50,
-      y: 20,
-    });
-    expect(clientToCanvas({ x: 10, y: 20, zoom: 2 }, { left: 100, top: 100 }, { x: 150, y: 160 })).toEqual({
-      x: 20,
-      y: 20,
-    });
   });
 });
 
