@@ -190,6 +190,25 @@ describe('Editor', () => {
       expect(canvas().selection()).toEqual({ nodes: [queue!.id], edges: [] });
     });
 
+    it('shows what is selected in the inspector, and a change there is drawn', async () => {
+      const { canvas, user, fixture } = await openEditor();
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+
+      const name = screen.getByRole('textbox', { name: 'Name' });
+      expect(name).toHaveValue('queue1');
+      await user.clear(name);
+      await user.type(name, 'payments');
+      await user.tab();
+      fixture.detectChanges();
+
+      expect(
+        canvas()
+          .model()
+          .nodes.map((node) => node.name),
+      ).toEqual(['payments']);
+    });
+
     it('turns what is dropped on it from the toolbox into a node where the preview was', async () => {
       const { canvas, fixture } = await openEditor();
 

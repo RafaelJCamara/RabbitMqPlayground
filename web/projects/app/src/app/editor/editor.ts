@@ -12,6 +12,7 @@ import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
+import { Inspector } from './inspector';
 import { IntentHandler, type IntentSurface } from './intents';
 import { saveText } from './save-text';
 import { StatusBar } from './status-bar';
@@ -28,7 +29,7 @@ const INTENT_LOG_LIMIT = 200;
  */
 @Component({
   selector: 'rmq-editor',
-  imports: [TopBar, StatusBar, Toolbox, FlowCanvas],
+  imports: [TopBar, StatusBar, Toolbox, FlowCanvas, Inspector],
   providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, CanvasSession, FlowViewport, IntentHandler],
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
@@ -49,7 +50,9 @@ const INTENT_LOG_LIMIT = 200;
             <p class="text-muted p-6" data-testid="opening">Opening your canvas…</p>
           }
         </main>
-        <aside class="border-line bg-panel w-72 shrink-0 border-l p-3" aria-label="Inspector"></aside>
+        <aside class="border-line bg-panel w-72 shrink-0 overflow-y-auto border-l p-3" aria-label="Inspector">
+          <rmq-inspector />
+        </aside>
       </div>
       <rmq-status-bar />
     </div>
