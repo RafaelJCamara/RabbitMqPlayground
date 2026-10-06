@@ -1,5 +1,14 @@
 export { arbSeed } from './lib/arbitraries';
 export {
+  bindingRecord,
+  consumerRecord,
+  documentOf,
+  exchangeRecord,
+  producerRecord,
+  queueRecord,
+  type DocumentParts,
+} from './lib/documents';
+export {
   applyEngineCommand,
   applyEngineCommands,
   bindingKey,
