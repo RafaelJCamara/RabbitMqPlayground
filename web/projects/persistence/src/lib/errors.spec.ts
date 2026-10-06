@@ -51,6 +51,7 @@ describe('the errors of a load', () => {
     expect(said(true)).toContain('and this is true or false.');
     expect(said(() => 1)).toContain('and this is a function.');
     expect(said(Symbol('s'))).toContain('and this is a symbol.');
+    expect(said({})).toContain('and this is an object.');
   });
 
   it('says that the text is not JSON, with the parser’s own reason', () => {
@@ -194,6 +195,10 @@ describe('the errors of a load', () => {
       const issues = [issue('one.'), issue('two.')];
 
       expect(invalidError(issues).issues).toEqual(issues);
+    });
+
+    it('says that it could not be read when there is nothing to say', () => {
+      expect(invalidError([]).message).toBe('This canvas is not valid: it could not be read.');
     });
 
     it('can say what it is that is not valid', () => {

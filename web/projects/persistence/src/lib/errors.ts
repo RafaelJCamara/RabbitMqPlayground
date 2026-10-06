@@ -47,6 +47,14 @@ export type CanvasError =
 
 export type RepositoryError = LoadError | StorageError | CanvasError;
 
+/** What a store throws when it can say what the browser refused. The repository turns it back into an answer. */
+export class StorageFailure extends Error {
+  constructor(readonly error: StorageError) {
+    super(error.message);
+    this.name = 'StorageFailure';
+  }
+}
+
 /** What a cap is on (`SIZE_CAPS` has the numbers). */
 export type TooLargeWhat =
   'elements' | 'edges' | 'positions' | 'labels' | 'headers' | 'text' | 'file' | 'canvases' | 'name';
