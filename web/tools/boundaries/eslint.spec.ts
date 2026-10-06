@@ -42,6 +42,7 @@ const APP = 'projects/app/src/app/editor/example.ts';
 const FLOW = 'projects/app/src/app/canvas/flow/example.ts';
 const CORE = 'projects/app/src/app/core/state/example.ts';
 const MODEL = 'projects/app/src/app/canvas/model/example.ts';
+const COMMAND_BAR = 'projects/app/src/app/command-bar/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -94,6 +95,34 @@ describe('imports', () => {
       '../../editor/editor',
       /`canvas\/` may not import from `editor\/`/,
     ],
+    // The command bar sits between the canvas and the editor (ADR-0045): it reads core and the canvas model, and the editor hosts it.
+    [
+      'the command bar importing the editor',
+      COMMAND_BAR,
+      '../editor/editor',
+      /`command-bar\/` may not import from `editor\/` or `canvas\/flow\/`/,
+    ],
+    [
+      'the command bar importing the Foblex adapter',
+      COMMAND_BAR,
+      '../canvas/flow/flow-canvas',
+      /`command-bar\/` may not import from/,
+    ],
+    ['the command bar importing Foblex Flow', COMMAND_BAR, '@foblex/flow', /only be imported inside `canvas\/flow/],
+    ['the command bar importing the testing library', COMMAND_BAR, '@rmq/testing', /only be imported from specs/],
+    ['core importing the command bar', CORE, '../../command-bar/command-bar', /may not import from `command-bar\/`/],
+    [
+      'the canvas model importing the command bar',
+      MODEL,
+      '../../command-bar/command-bar',
+      /may not import from `command-bar\/`/,
+    ],
+    [
+      'the Foblex adapter importing the command bar',
+      FLOW,
+      '../../command-bar/command-bar',
+      /may not import from `command-bar\/`/,
+    ],
   ] as const)('%s', (_description, file, source, message) => {
     it('is refused', async () => {
       const found = await violations(file, importing(source));
@@ -129,6 +158,10 @@ describe('imports', () => {
     ['the canvas model importing its own folder', MODEL, './canvas-vm'],
     ['the Foblex adapter importing the canvas model and core', FLOW, '../model/canvas-vm'],
     ['the Foblex adapter importing core', FLOW, '../../core/announcer'],
+    ['the command bar importing core', COMMAND_BAR, '../core/state/command-bus'],
+    ['the command bar importing the canvas model', COMMAND_BAR, '../canvas/model/flow-viewport'],
+    ['the command bar importing its own folder', COMMAND_BAR, './history'],
+    ['the editor importing the command bar', APP, '../command-bar/command-bar'],
     ['the editor importing the adapter', APP, '../canvas/flow/flow-canvas'],
     ['the editor importing the canvas model and core', APP, '../canvas/model/canvas-vm'],
     ['the Foblex adapter importing Foblex Flow', FLOW, '@foblex/flow'],

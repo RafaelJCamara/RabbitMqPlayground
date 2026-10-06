@@ -63,6 +63,16 @@ const canvasStaysBelowEditor = {
   message:
     '`canvas/` may not import from `editor/`: the folders run core, canvas/model, canvas/flow, editor (ADR-0030).',
 };
+const belowCommandBar = {
+  regex: '^(\\.\\./)+command-bar(/|$)',
+  message:
+    '`core/` and `canvas/` may not import from `command-bar/`: the folders run core, canvas/model, canvas/flow, command-bar, editor (ADR-0045).',
+};
+const commandBarStaysBelowEditor = {
+  regex: '^(\\.\\./)+(editor|canvas/flow)(/|$)',
+  message:
+    '`command-bar/` may not import from `editor/` or `canvas/flow/`: the folders run core, canvas/model, canvas/flow, command-bar, editor (ADR-0045).',
+};
 const modelStaysBelowFlow = {
   regex: '^(\\.\\./)+(canvas/)?flow(/|$)',
   message:
@@ -175,6 +185,7 @@ const APP_SOURCES = ['projects/app/src/**/*.ts'];
 const FLOW_ADAPTER = 'projects/app/src/app/canvas/flow/**';
 const APP_CORE = 'projects/app/src/app/core/**/*.ts';
 const CANVAS_MODEL = 'projects/app/src/app/canvas/model/**/*.ts';
+const COMMAND_BAR = 'projects/app/src/app/command-bar/**/*.ts';
 
 export default defineConfig([
   globalIgnores([
@@ -304,6 +315,7 @@ export default defineConfig([
         reachesIntoAnotherProject('app'),
         noFoblex,
         coreStaysBelow,
+        belowCommandBar,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -318,7 +330,23 @@ export default defineConfig([
         reachesIntoAnotherProject('app'),
         noFoblex,
         canvasStaysBelowEditor,
+        belowCommandBar,
         modelStaysBelowFlow,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // The command bar reads core and the canvas model, and the editor hosts it (ADR-0045).
+    files: [COMMAND_BAR],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        commandBarStaysBelowEditor,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -333,6 +361,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         canvasStaysBelowEditor,
+        belowCommandBar,
       ),
       ...noOptingOutOfOnPush,
     },
