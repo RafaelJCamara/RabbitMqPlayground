@@ -49,6 +49,26 @@ const noFoblex = {
   message: 'Foblex Flow may only be imported inside `canvas/flow/**` (ADR-0016, ADR-0018).',
 };
 
+/**
+ * Which way the folders of the app look (ADR-0030): `core`, then `canvas/model`, then `canvas/flow`, then `editor`. A folder
+ * may import what is before it and nothing after.
+ */
+const coreStaysBelow = {
+  regex: '^(\\.\\./)+(editor|canvas)(/|$)',
+  message:
+    '`core/` may not import from `editor/` or `canvas/`: the folders run core, canvas/model, canvas/flow, editor (ADR-0030).',
+};
+const canvasStaysBelowEditor = {
+  regex: '^(\\.\\./)+editor(/|$)',
+  message:
+    '`canvas/` may not import from `editor/`: the folders run core, canvas/model, canvas/flow, editor (ADR-0030).',
+};
+const modelStaysBelowFlow = {
+  regex: '^(\\.\\./)+(canvas/)?flow(/|$)',
+  message:
+    '`canvas/model/` may not import from `canvas/flow/`: the folders run core, canvas/model, canvas/flow, editor (ADR-0030).',
+};
+
 const restrictImports = (...patterns) => ['error', { patterns }];
 
 /** Browser, Node and clock globals that the engine and the domain take as inputs instead (ADR-0007, ADR-0018). */
@@ -153,6 +173,8 @@ const noOptingOutOfOnPush = {
 const SPECS = ['**/*.spec.ts', '**/*.bench.ts'];
 const APP_SOURCES = ['projects/app/src/**/*.ts'];
 const FLOW_ADAPTER = 'projects/app/src/app/canvas/flow/**';
+const APP_CORE = 'projects/app/src/app/core/**/*.ts';
+const CANVAS_MODEL = 'projects/app/src/app/canvas/model/**/*.ts';
 
 export default defineConfig([
   globalIgnores([
@@ -270,11 +292,46 @@ export default defineConfig([
     },
   },
   {
+    // The folders of the app look one way (ADR-0030). These blocks come after the one above, which they replace for their files.
+    files: [APP_CORE],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        coreStaysBelow,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    files: [CANVAS_MODEL],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        canvasStaysBelowEditor,
+        modelStaysBelowFlow,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
     // The Foblex adapter is the one place that may import Foblex Flow.
     files: [FLOW_ADAPTER],
     ignores: SPECS,
     rules: {
-      'no-restricted-imports': restrictImports(noDeepImports, testingIsForTests, reachesIntoAnotherProject('app')),
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        canvasStaysBelowEditor,
+      ),
       ...noOptingOutOfOnPush,
     },
   },

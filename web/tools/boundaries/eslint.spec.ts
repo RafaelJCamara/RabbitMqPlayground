@@ -40,6 +40,8 @@ const PERSISTENCE = 'projects/persistence/src/lib/example.ts';
 const TESTING = 'projects/testing/src/lib/example.ts';
 const APP = 'projects/app/src/app/editor/example.ts';
 const FLOW = 'projects/app/src/app/canvas/flow/example.ts';
+const CORE = 'projects/app/src/app/core/state/example.ts';
+const MODEL = 'projects/app/src/app/canvas/model/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -67,6 +69,31 @@ describe('imports', () => {
     ['the app importing the testing library', APP, '@rmq/testing', /only be imported from specs/],
     ['the app deep-importing a library', APP, '@rmq/domain/src/lib/command-docs', /entry point/],
     ['the app reaching into a library by relative path', APP, '../../../../engine/src/index', /alias/],
+    // The folders of the app look one way: core, canvas/model, canvas/flow, editor (ADR-0030).
+    ['core importing the editor', CORE, '../../editor/editor', /`core\/` may not import from `editor\/` or `canvas\/`/],
+    ['core importing the canvas model', CORE, '../../canvas/model/canvas-vm', /`core\/` may not import/],
+    ['core importing the Foblex adapter', CORE, '../../canvas/flow/flow-canvas', /`core\/` may not import/],
+    ['core importing Foblex Flow', CORE, '@foblex/flow', /only be imported inside `canvas\/flow/],
+    [
+      'the canvas model importing the editor',
+      MODEL,
+      '../../editor/editor',
+      /`canvas\/` may not import from `editor\/`/,
+    ],
+    ['the canvas model importing the Foblex adapter', MODEL, '../flow/flow-canvas', /`canvas\/model\/` may not import/],
+    [
+      'the canvas model importing the adapter by its path from the app',
+      MODEL,
+      '../../canvas/flow/flow-canvas',
+      /may not import/,
+    ],
+    ['the canvas model importing Foblex Flow', MODEL, '@foblex/flow', /only be imported inside `canvas\/flow/],
+    [
+      'the Foblex adapter importing the editor',
+      FLOW,
+      '../../editor/editor',
+      /`canvas\/` may not import from `editor\/`/,
+    ],
   ] as const)('%s', (_description, file, source, message) => {
     it('is refused', async () => {
       const found = await violations(file, importing(source));
@@ -96,6 +123,14 @@ describe('imports', () => {
     ['the app importing RxJS', APP, 'rxjs'],
     ['the app importing its own code', APP, '../../core/app-info'],
     ['the app importing a folder that happens to be called engine', APP, '../engine/thing'],
+    ['core importing core', CORE, '../announcer'],
+    ['core importing a library and Angular', CORE, '@rmq/domain'],
+    ['the canvas model importing core', MODEL, '../../core/state/selection-store'],
+    ['the canvas model importing its own folder', MODEL, './canvas-vm'],
+    ['the Foblex adapter importing the canvas model and core', FLOW, '../model/canvas-vm'],
+    ['the Foblex adapter importing core', FLOW, '../../core/announcer'],
+    ['the editor importing the adapter', APP, '../canvas/flow/flow-canvas'],
+    ['the editor importing the canvas model and core', APP, '../canvas/model/canvas-vm'],
     ['the Foblex adapter importing Foblex Flow', FLOW, '@foblex/flow'],
     ['the Foblex adapter importing a Foblex helper', 'projects/app/src/app/canvas/flow/deep/more.ts', '@foblex/utils'],
   ] as const)('%s', (_description, file, source) => {
