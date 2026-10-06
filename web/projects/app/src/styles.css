@@ -18,6 +18,14 @@
   --color-warning: var(--rmq-warning);
   --color-warning-bg: var(--rmq-warning-bg);
   --color-success: var(--rmq-success);
+  --color-producer: var(--rmq-producer);
+  --color-producer-fill: var(--rmq-producer-fill);
+  --color-exchange: var(--rmq-exchange);
+  --color-exchange-fill: var(--rmq-exchange-fill);
+  --color-queue: var(--rmq-queue);
+  --color-queue-fill: var(--rmq-queue-fill);
+  --color-consumer: var(--rmq-consumer);
+  --color-consumer-fill: var(--rmq-consumer-fill);
 }
 
 /*

@@ -1,0 +1,202 @@
+/*
+ * The canvas (ADR-0016, ADR-0032). It is a global stylesheet, listed after the Foblex theme in angular.json, because the library
+ * draws its connections itself, outside the templates of the app, and a component's styles cannot reach them. Every rule is
+ * scoped under `rmq-flow-canvas`, so none of it touches the rest of the page, and every colour is a token of styles.css.
+ */
+
+/* The library's tokens, set to ours. The theme above defines them on :root, and this comes later, so it wins. */
+:root {
+  --ff-flow-background-color: var(--rmq-canvas);
+  --ff-flow-text-color: var(--rmq-fg);
+  --ff-flow-font-family: inherit;
+  --ff-canvas-background-color: transparent;
+  --ff-connection-color: var(--rmq-edge);
+  --ff-marker-color: var(--rmq-edge);
+  --ff-connection-selected-color: var(--rmq-accent);
+  --ff-connection-hover-color: color-mix(in srgb, var(--rmq-accent) 30%, transparent);
+  --ff-connection-width: 2px;
+  --ff-connection-hit-width: 16px;
+  --ff-background-dot-color: var(--rmq-line);
+  --ff-background-line-color: var(--rmq-line);
+}
+
+rmq-flow-canvas f-flow {
+  background: var(--rmq-canvas);
+}
+
+/* The canvas is a single tab stop (ADR-0017), so when it has the keyboard it says so. */
+rmq-flow-canvas f-flow:focus-visible {
+  outline: 2px solid var(--rmq-focus);
+  outline-offset: -2px;
+}
+
+rmq-flow-canvas .f-connection.f-selected .f-connection-path {
+  stroke-width: 3px;
+}
+
+/*
+ * A node: its outline is an SVG drawn at its size, and what is in it is ours. The library places it with a transform, and it
+ * rewrites the style of the element, so the size is on the body inside, which the node then takes its box from.
+ */
+rmq-flow-canvas .rmq-node {
+  --kind: var(--rmq-queue);
+  --kind-fill: var(--rmq-queue-fill);
+  box-sizing: border-box;
+  color: var(--rmq-fg);
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1.2;
+  user-select: none;
+}
+
+rmq-flow-canvas .rmq-node[data-kind='producer'] {
+  --kind: var(--rmq-producer);
+  --kind-fill: var(--rmq-producer-fill);
+}
+
+rmq-flow-canvas .rmq-node[data-kind='exchange'] {
+  --kind: var(--rmq-exchange);
+  --kind-fill: var(--rmq-exchange-fill);
+}
+
+rmq-flow-canvas .rmq-node[data-kind='consumer'] {
+  --kind: var(--rmq-consumer);
+  --kind-fill: var(--rmq-consumer-fill);
+}
+
+rmq-flow-canvas .rmq-node.f-dragging {
+  cursor: grabbing;
+}
+
+rmq-flow-canvas .rmq-node-shape {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+rmq-flow-canvas .rmq-node-outline {
+  fill: var(--kind-fill);
+  stroke: var(--kind);
+  stroke-width: 2px;
+  transition: stroke-width 80ms ease-out;
+}
+
+/* Selected: the accent, and thicker, so that a selection is seen without any other sign. */
+rmq-flow-canvas .rmq-node.f-selected .rmq-node-outline {
+  stroke: var(--rmq-accent);
+  stroke-width: 3.5px;
+}
+
+/* While the canvas has the keyboard, the selected item also has a ring, which is its visible focus (WCAG 2.4.7). */
+rmq-flow-canvas .rmq-node-ring {
+  fill: none;
+  stroke: var(--rmq-focus);
+  stroke-width: 0;
+}
+
+rmq-flow-canvas f-flow:focus-visible .rmq-node.f-selected .rmq-node-ring {
+  stroke-width: 10px;
+}
+
+rmq-flow-canvas .rmq-node-body {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 22px 0 18px;
+}
+
+rmq-flow-canvas .rmq-node-body > rmq-icon {
+  color: var(--kind);
+}
+
+rmq-flow-canvas .rmq-node-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+rmq-flow-canvas .rmq-node-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+rmq-flow-canvas .rmq-node-kind {
+  color: var(--rmq-muted);
+  font-size: 11px;
+}
+
+/* The badge of an exchange: its type, in words and with an icon of its own. */
+rmq-flow-canvas .rmq-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid var(--kind);
+  border-radius: 999px;
+  color: var(--rmq-fg);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/*
+ * A handle is a dot of 12 px in a box of 24 by 24, which is the size of the target (WCAG 2.5.8), centred on the border of the
+ * node. The library needs the box itself to have a size (FF1010), and it joins a connection at the middle of the box.
+ */
+rmq-flow-canvas .rmq-handle {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+rmq-flow-canvas .rmq-handle[data-handle='in'] {
+  left: -12px;
+}
+
+rmq-flow-canvas .rmq-handle[data-handle='out'] {
+  right: -12px;
+  cursor: crosshair;
+}
+
+rmq-flow-canvas .rmq-handle-dot {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--kind);
+  border-radius: 50%;
+  background: var(--rmq-surface);
+  pointer-events: none;
+  transition: transform 80ms ease-out;
+}
+
+rmq-flow-canvas .rmq-handle:hover .rmq-handle-dot,
+rmq-flow-canvas .rmq-node.f-selected .rmq-handle-dot {
+  background: var(--kind);
+  transform: scale(1.2);
+}
+
+/* Where a link may end, while one is being dragged: the handles that the rules allow light up. */
+rmq-flow-canvas .rmq-handle.f-connector-connectable .rmq-handle-dot {
+  border-color: var(--rmq-accent);
+  background: var(--rmq-accent);
+  transform: scale(1.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  rmq-flow-canvas .rmq-node-outline,
+  rmq-flow-canvas .rmq-handle-dot {
+    transition: none;
+  }
+}

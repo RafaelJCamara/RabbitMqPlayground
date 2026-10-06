@@ -1,0 +1,109 @@
+<!--
+  The Foblex adapter's template (ADR-0016, ADR-0033). Nodes and connections have to be direct children of <f-canvas>: the library
+  sorts its layers by comparing a node's parent element with its layer containers, and a wrapper component in between makes
+  every pointer-down throw "Unknown container". What goes inside a node is ours.
+-->
+<f-flow
+  class="rmq-flow"
+  fDraggable
+  rmqFlowBridge
+  aria-label="Canvas"
+  (fSelectionChange)="onSelection($event)"
+  (fCreateConnection)="onCreateConnection($event)"
+  (fMoveNodes)="onMoveNodes($event)"
+  (fDeleteSelected)="onDelete($event)"
+  (fDragStarted)="onDragStarted($event)"
+  (fDragEnded)="onDragEnded()"
+  (fCreateNode)="onCreateNode($event)"
+  (contextmenu)="onContextMenu($event)"
+  (dblclick)="onDoubleClick($event)"
+  (fFullRendered)="onFullRendered()"
+>
+  <f-background>
+    <f-circle-pattern />
+  </f-background>
+  <f-canvas
+    fZoom
+    [fZoomMinimum]="0.25"
+    [fZoomMaximum]="2"
+    [fDblClickTrigger]="noDoubleClickZoom"
+    (fCanvasChange)="onCanvasChange($event)"
+  >
+    @for (edge of model().edges; track edge.id) {
+      <f-connection
+        class="rmq-edge"
+        [attr.data-edge]="edge.id"
+        [attr.data-kind]="edge.kind"
+        [attr.aria-label]="edge.label"
+        [fConnectionId]="edge.id"
+        [fSourceId]="outId(edge.source)"
+        [fTargetId]="inId(edge.target)"
+        fType="bezier"
+        fBehavior="fixed"
+        [fReassignDisabled]="true"
+      >
+        <f-connection-marker-arrow />
+      </f-connection>
+    }
+    <f-connection-for-create fType="bezier">
+      <f-connection-marker-arrow />
+    </f-connection-for-create>
+
+    @for (node of model().nodes; track node.id) {
+      <div
+        fNode
+        fDragHandle
+        class="rmq-node"
+        [fNodeId]="node.id"
+        [fNodePosition]="{ x: node.x, y: node.y }"
+        [attr.data-node-id]="node.id"
+        [attr.data-kind]="node.kind"
+        [attr.aria-label]="node.label"
+      >
+        <svg class="rmq-node-shape" [attr.width]="node.width" [attr.height]="node.height" aria-hidden="true">
+          <path class="rmq-node-ring" [attr.d]="node.shape" />
+          <path class="rmq-node-outline" [attr.d]="node.shape" />
+        </svg>
+        <div class="rmq-node-body" [style.width.px]="node.width" [style.height.px]="node.height">
+          <rmq-icon [name]="node.kind" [size]="20" />
+          <span class="rmq-node-text">
+            <span class="rmq-node-name">{{ node.name }}</span>
+            @if (node.exchangeType; as type) {
+              <span class="rmq-badge" [attr.data-exchange-type]="type">
+                <rmq-icon [name]="type" [size]="12" />
+                {{ type }}
+              </span>
+            } @else {
+              <span class="rmq-node-kind">{{ node.kind }}</span>
+            }
+          </span>
+        </div>
+        @if (node.hasInput) {
+          <div
+            fConnector
+            fConnectorType="target"
+            [fConnectorId]="inId(node.id)"
+            fConnectorConnectableSide="left"
+            class="rmq-handle"
+            data-handle="in"
+          >
+            <span class="rmq-handle-dot"></span>
+          </div>
+        }
+        @if (node.hasOutput) {
+          <div
+            fConnector
+            fConnectorType="source"
+            [fConnectorId]="outId(node.id)"
+            fConnectorConnectableSide="right"
+            [fCanBeConnectedTo]="targetsFor(node.id)"
+            class="rmq-handle"
+            data-handle="out"
+          >
+            <span class="rmq-handle-dot"></span>
+          </div>
+        }
+      </div>
+    }
+  </f-canvas>
+</f-flow>
