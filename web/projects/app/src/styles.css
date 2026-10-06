@@ -1,45 +1,95 @@
 @import 'tailwindcss';
 
-/* Design tokens (ADR-0010). Templates use these names and never raw colours. */
+/* Design tokens (ADR-0010, ADR-0032). Templates use these names and never raw colours. */
 @theme inline {
   --color-surface: var(--rmq-surface);
   --color-panel: var(--rmq-panel);
+  --color-canvas: var(--rmq-canvas);
   --color-fg: var(--rmq-fg);
   --color-muted: var(--rmq-muted);
   --color-line: var(--rmq-line);
+  --color-border: var(--rmq-border);
   --color-link: var(--rmq-link);
+  --color-accent: var(--rmq-accent);
+  --color-accent-fg: var(--rmq-accent-fg);
+  --color-focus: var(--rmq-focus);
+  --color-danger: var(--rmq-danger);
+  --color-danger-bg: var(--rmq-danger-bg);
+  --color-warning: var(--rmq-warning);
+  --color-warning-bg: var(--rmq-warning-bg);
+  --color-success: var(--rmq-success);
 }
 
-/* Light is the default. The dark values apply when the OS asks for dark and nothing overrides it,
-   or when the theme is set to dark explicitly (`data-theme`, used by the theme switch in a later slice). */
+/*
+ * Each colour is defined once, as light-dark(light, dark). The page follows the operating system (`color-scheme: light dark`),
+ * and the theme switch pins it to one with `data-theme` on the root. tools/theme/tokens.spec.ts reads this block, resolves each
+ * token in both themes and holds the pairs that the editor uses to the contrast that WCAG 2.2 AA asks for.
+ *
+ * The hues of the nodes are the Okabe-Ito set (blue, vermillion, bluish green, reddish purple), which stays apart for the common
+ * forms of colour blindness. The light theme uses deeper versions of them, so that a stroke reaches 3:1 against the canvas.
+ */
 :root {
-  color-scheme: light;
-  --rmq-surface: #ffffff;
-  --rmq-panel: #f3f4f6;
-  --rmq-fg: #111827;
-  --rmq-muted: #4b5563;
-  --rmq-line: #d1d5db;
-  --rmq-link: #1d4ed8;
+  color-scheme: light dark;
+
+  --rmq-surface: light-dark(#ffffff, #0b1020);
+  --rmq-panel: light-dark(#f3f4f6, #151b2e);
+  --rmq-canvas: light-dark(#f6f7f9, #0f1526);
+  --rmq-fg: light-dark(#111827, #e5e7eb);
+  --rmq-muted: light-dark(#4b5563, #a1a8b8);
+  /* A divider that carries no meaning. The edge of a control that does is --rmq-border, which has 3:1. */
+  --rmq-line: light-dark(#d1d5db, #2f3a55);
+  --rmq-border: light-dark(#6b7280, #7c86a0);
+  --rmq-link: light-dark(#1d4ed8, #93c5fd);
+  --rmq-accent: light-dark(#1d4ed8, #93c5fd);
+  --rmq-accent-fg: light-dark(#ffffff, #0b1020);
+  --rmq-focus: light-dark(#1d4ed8, #93c5fd);
+
+  --rmq-danger: light-dark(#b91c1c, #fca5a5);
+  --rmq-danger-bg: light-dark(#fef2f2, #2a1316);
+  --rmq-warning: light-dark(#92400e, #fcd34d);
+  --rmq-warning-bg: light-dark(#fffbeb, #2b2210);
+  --rmq-success: light-dark(#047857, #6ee7b7);
+
+  --rmq-edge: light-dark(#4b5563, #a1a8b8);
+
+  --rmq-producer: light-dark(#0072b2, #56b4e9);
+  --rmq-producer-fill: light-dark(#e6f1f8, #12304a);
+  --rmq-exchange: light-dark(#c24f00, #e69f00);
+  --rmq-exchange-fill: light-dark(#fbece1, #3a2a08);
+  --rmq-queue: light-dark(#00806a, #00b58a);
+  --rmq-queue-fill: light-dark(#e1f3ef, #0c3a31);
+  --rmq-consumer: light-dark(#a8527f, #d98cb4);
+  --rmq-consumer-fill: light-dark(#f6e6ee, #3b1c2c);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-    --rmq-surface: #0b1020;
-    --rmq-panel: #151b2e;
-    --rmq-fg: #e5e7eb;
-    --rmq-muted: #a1a8b8;
-    --rmq-line: #2f3a55;
-    --rmq-link: #93c5fd;
-  }
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --rmq-surface: #0b1020;
-  --rmq-panel: #151b2e;
-  --rmq-fg: #e5e7eb;
-  --rmq-muted: #a1a8b8;
-  --rmq-line: #2f3a55;
-  --rmq-link: #93c5fd;
+}
+
+html,
+body {
+  background: var(--rmq-surface);
+  color: var(--rmq-fg);
+}
+
+/* Every control that can be reached with a key shows where it is (WCAG 2.4.7). */
+:focus-visible {
+  outline: 2px solid var(--rmq-focus);
+  outline-offset: 2px;
+}
+
+/* Nothing moves for long, and nothing moves at all for a person who asked for less motion. Rendering only (ADR-0010). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
