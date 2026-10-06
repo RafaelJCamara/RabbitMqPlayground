@@ -1,6 +1,9 @@
 import { defaultPosition, kindOf, lookup, nameOf, type CanvasDocument, type ElementKind, type Id } from '@rmq/domain';
 import type { ExchangeType } from '@rmq/engine';
 import { buildCanvasVm, type EdgeKind } from '../canvas/model/canvas-vm';
+import { bindingRows, type BindingRow } from '../core/state/binding-commands';
+import { DEFAULT_EXCHANGE_ID } from '../core/state/default-exchange';
+import { edgeEnds } from '../core/state/refs';
 import type { Selection } from '../core/state/selection-store';
 
 /**
@@ -26,6 +29,10 @@ export interface NodeView {
   readonly queue?: { readonly durable: boolean };
   /** What it is joined to, in sentences. */
   readonly joins: readonly string[];
+  /** What is wrong with it that a broker would accept, in the sentence of each lint (ADR-0044). */
+  readonly warnings: readonly string[];
+  /** Something can be linked from it: every kind but a consumer, which is where a message ends (ADR-0041). */
+  readonly canLink: boolean;
 }
 
 export interface EdgeView {
@@ -34,10 +41,29 @@ export interface EdgeView {
   readonly edge: EdgeKind;
   /** What the canvas says about it: `Binding from exchange orders to queue billing, key order.*`. */
   readonly label: string;
+  /** For a binding, each of the bindings between the two ends, to be changed and taken off (ADR-0044). */
+  readonly bindings: readonly BindingRow[];
+  readonly warnings: readonly string[];
+  /** Where it starts and where it ends, which are the ids that a command about it is made from. */
+  readonly from: Id;
+  readonly to: Id;
+  /** Its label can be put somewhere along it: there is one, and the edge is the document's. */
+  readonly movable: boolean;
+  /** Where the document keeps the label, as a percentage of the way along the edge, or `null` when the app places it. */
+  readonly labelPercent: number | null;
+}
+
+/** The default exchange, which is drawn on request and is not in the document, so there is nothing to change (ADR-0043). */
+export interface DefaultExchangeView {
+  readonly kind: 'default-exchange';
 }
 
 export type InspectorView =
-  { readonly kind: 'nothing' } | { readonly kind: 'several'; readonly count: number } | NodeView | EdgeView;
+  | { readonly kind: 'nothing' }
+  | { readonly kind: 'several'; readonly count: number }
+  | NodeView
+  | EdgeView
+  | DefaultExchangeView;
 
 const NOTHING: InspectorView = { kind: 'nothing' };
 
@@ -89,7 +115,7 @@ function joinsOf(document: CanvasDocument, id: Id, kind: ElementKind): string[] 
   return lines.length > 0 ? lines : ['Not linked to anything yet.'];
 }
 
-function nodeView(document: CanvasDocument, id: Id): NodeView | undefined {
+function nodeView(document: CanvasDocument, id: Id, warnings: readonly string[]): NodeView | undefined {
   const kind = kindOf(document, id);
   const name = kind === undefined ? undefined : nameOf(document, kind, id);
   if (kind === undefined || name === undefined) {
@@ -118,12 +144,17 @@ function nodeView(document: CanvasDocument, id: Id): NodeView | undefined {
         }),
     ...(queue === undefined ? {} : { queue: { durable: queue.durable } }),
     joins: joinsOf(document, id, kind),
+    warnings,
+    canLink: kind !== 'consumer',
   };
 }
 
 /** What the inspector shows for this selection of this document. What is selected and not on the canvas is not shown. */
 export function inspectorView(document: CanvasDocument, selection: Selection): InspectorView {
-  const nodes = selection.nodes.filter((id) => kindOf(document, id) !== undefined);
+  const shown = document.settings.showDefaultExchange;
+  const nodes = selection.nodes.filter(
+    (id) => kindOf(document, id) !== undefined || (shown && id === DEFAULT_EXCHANGE_ID),
+  );
   const edges = selection.edges;
   const [node] = nodes;
   const [key] = edges;
@@ -131,12 +162,32 @@ export function inspectorView(document: CanvasDocument, selection: Selection): I
   if (nodes.length + edges.length > 1) {
     return { kind: 'several', count: nodes.length + edges.length };
   }
+  if (node === DEFAULT_EXCHANGE_ID) {
+    return { kind: 'default-exchange' };
+  }
   if (node !== undefined) {
-    return nodeView(document, node) ?? NOTHING;
+    const vm = buildCanvasVm(document).nodes.find(({ id }) => id === node);
+    return nodeView(document, node, vm?.warnings ?? []) ?? NOTHING;
   }
   if (key !== undefined) {
     const edge = buildCanvasVm(document).edges.find(({ id }) => id === key);
-    return edge === undefined ? NOTHING : { kind: 'edge', key, edge: edge.kind, label: edge.label };
+    const ends = edgeEnds(key);
+    if (edge === undefined || ends === undefined) {
+      return NOTHING;
+    }
+    const movable = edge.kind !== 'implicit' && edge.chips.length > 0;
+    return {
+      kind: 'edge',
+      key,
+      edge: edge.kind,
+      label: edge.label,
+      bindings: edge.kind === 'binding' ? bindingRows(document, key) : [],
+      warnings: edge.warnings,
+      from: ends.from,
+      to: ends.to,
+      movable,
+      labelPercent: movable && edge.labelAt !== undefined ? Math.round(edge.labelAt * 100) : null,
+    };
   }
   return NOTHING;
 }

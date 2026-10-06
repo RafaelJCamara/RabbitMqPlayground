@@ -104,13 +104,129 @@ describe('inspectorView', () => {
   });
 
   describe('an edge', () => {
-    it('says what the canvas says of a binding, with its key', () => {
+    it('says what the canvas says of a binding, with its key, and each of the bindings between the two ends', () => {
       expect(inspectorView(sampleDocument(), select([], ['E1>Q1']))).toEqual({
         kind: 'edge',
         key: 'E1>Q1',
         edge: 'binding',
         label: 'Binding from exchange orders to queue billing, key order.*',
+        bindings: [{ id: 'B1', key: 'order.*', hasArguments: false }],
+        warnings: [],
+        from: 'E1',
+        to: 'Q1',
+        movable: true,
+        labelPercent: 50,
       });
+    });
+
+    it('has no row of bindings for a link or a subscription, which are not bindings', () => {
+      expect(inspectorView(sampleDocument(), select([], ['P1>E1']))).toMatchObject({
+        bindings: [],
+        from: 'P1',
+        to: 'E1',
+      });
+      expect(inspectorView(sampleDocument(), select([], ['Q1>C1']))).toMatchObject({ bindings: [] });
+    });
+
+    it('says where the document keeps the label, as a percentage, and nothing when it keeps none', () => {
+      const moved = { ...sampleDocument(), layout: { ...sampleDocument().layout, labels: { 'E1>Q1': { at: 0.25 } } } };
+
+      expect(inspectorView(moved, select([], ['E1>Q1']))).toMatchObject({ labelPercent: 25 });
+      expect(inspectorView(sampleDocument(), select([], ['E1>E3']))).toMatchObject({
+        movable: true,
+        labelPercent: null,
+      });
+    });
+
+    it('says that the label of an edge that has none cannot be moved: a subscription, and a link to an exchange', () => {
+      expect(inspectorView(sampleDocument(), select([], ['Q1>C1']))).toMatchObject({
+        movable: false,
+        labelPercent: null,
+      });
+      expect(inspectorView(sampleDocument(), select([], ['P1>E1']))).toMatchObject({ movable: false });
+    });
+
+    it('says what is wrong with a binding that matches nothing, in the sentence of the lint', () => {
+      const view = inspectorView(
+        documentOf({
+          exchanges: { x: exchangeRecord('docs', 'headers') },
+          queues: { q: queueRecord('archive') },
+          bindings: {
+            b: { source: 'x', dest: { kind: 'queue', id: 'q' }, key: '', headers: { xMatch: 'any', args: [] } },
+          },
+        }),
+        select([], ['x>q']),
+      );
+
+      expect(view).toMatchObject({ kind: 'edge', warnings: [expect.stringContaining('x-match=any')] });
+    });
+  });
+
+  describe('the default exchange (ADR-0043)', () => {
+    const shown = (flag: boolean) => ({
+      ...sampleDocument(),
+      settings: { ...sampleDocument().settings, showDefaultExchange: flag },
+    });
+
+    it('is shown for itself while it is drawn, and for nothing when it is not', () => {
+      expect(inspectorView(shown(true), select(['~default']))).toEqual({ kind: 'default-exchange' });
+      expect(inspectorView(shown(false), select(['~default']))).toEqual({ kind: 'nothing' });
+    });
+
+    it('is shown for an implicit edge as an edge that has nothing to change, with where it starts and where it ends', () => {
+      expect(inspectorView(shown(true), select([], ['~default>Q1']))).toEqual({
+        kind: 'edge',
+        key: '~default>Q1',
+        edge: 'implicit',
+        label: 'Implicit binding from the default exchange to queue billing, key billing',
+        bindings: [],
+        warnings: [],
+        from: '~default',
+        to: 'Q1',
+        movable: false,
+        labelPercent: null,
+      });
+    });
+
+    it('is counted with what else is selected', () => {
+      expect(inspectorView(shown(true), select(['~default', 'Q1']))).toEqual({ kind: 'several', count: 2 });
+    });
+
+    it('shows the link of a producer to a queue as a link, with the key that it always had', () => {
+      const document = {
+        ...shown(true),
+        producers: { P1: { ...sampleDocument().producers['P1']!, target: { kind: 'queue' as const, id: 'Q1' } } },
+      };
+
+      expect(inspectorView(document, select([], ['P1>Q1']))).toMatchObject({
+        edge: 'link',
+        from: 'P1',
+        to: 'Q1',
+        movable: true,
+      });
+    });
+  });
+
+  describe('what is wrong with a node', () => {
+    it('is the sentence of each lint, for an exchange that nothing is bound from', () => {
+      const document = documentOf({ exchanges: { x: exchangeRecord('lonely') } });
+
+      expect(inspectorView(document, select(['x']))).toMatchObject({
+        kind: 'node',
+        warnings: [expect.stringContaining("Nothing is bound from the exchange 'lonely'")],
+      });
+    });
+
+    it('is nothing for a node that has no lint', () => {
+      expect(node('E1').warnings).toEqual([]);
+      expect(node('Q1').warnings).toEqual([]);
+    });
+
+    it('says that something can be linked from every node that is not a consumer', () => {
+      expect(node('P1').canLink).toBe(true);
+      expect(node('E1').canLink).toBe(true);
+      expect(node('Q1').canLink).toBe(true);
+      expect(node('C1').canLink).toBe(false);
     });
 
     it('says what the canvas says of a link and of a subscription', () => {

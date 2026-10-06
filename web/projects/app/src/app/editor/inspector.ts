@@ -3,8 +3,10 @@ import { KIND_LABEL, type DocumentCommand, type ExchangeChanges, type Issue } fr
 import type { ExchangeType } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXCHANGE_TYPES } from '../canvas/model/new-node';
+import { rebindCommand, unbindCommand, type BindingRow } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
+import { refOf } from '../core/state/refs';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { Help } from '../core/ui/help';
@@ -12,10 +14,11 @@ import { Icon } from '../core/ui/icon';
 import { Switch } from '../core/ui/switch';
 import { IntentHandler } from './intents';
 import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
+import { LinkFlow } from './link-flow';
 import { RefusalNotice } from './refusal-notice';
 
-/** The fields that can be refused, each of which shows what it was refused for. */
-type Field = 'name' | 'x' | 'y' | 'type' | 'durable' | 'autoDelete' | 'internal';
+/** The fields that can be refused, each of which shows what it was refused for: a name such as `name` or `x`, or `binding:` and the id of a binding of an edge, which is a field of its own. */
+type Field = string;
 
 const EDGE_TITLE = {
   binding: 'Binding',
@@ -54,6 +57,34 @@ let nextInspector = 0;
             <li>{{ line }}</li>
           }
         </ul>
+
+        @if (n.warnings.length > 0) {
+          <div
+            class="border-warning bg-warning-bg text-warning rounded-md border px-3 py-2 text-sm"
+            data-testid="inspector-warnings"
+          >
+            <p class="flex items-center gap-2 font-medium"><rmq-icon name="alert" [size]="16" /> Worth a look</p>
+            <ul class="mt-1 flex flex-col gap-1">
+              @for (warning of n.warnings; track warning) {
+                <li>{{ warning }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (n.canLink) {
+          <button
+            type="button"
+            class="border-border bg-surface hover:bg-canvas flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+            data-testid="link-to"
+            aria-keyshortcuts="L"
+            [attr.aria-label]="'Link ' + kindLabel[n.element] + ' ' + n.name + ' to…'"
+            (click)="linkFrom(n)"
+          >
+            <rmq-icon name="link" [size]="18" />
+            Link to…
+          </button>
+        }
 
         <div class="flex flex-col gap-1">
           <label class="text-sm font-medium" [for]="id('name')">Name</label>
@@ -195,22 +226,159 @@ let nextInspector = 0;
           <rmq-icon name="trash" [size]="18" />
           Delete
         </button>
+      } @else if (isDefaultExchange()) {
+        <div class="flex items-center gap-2">
+          <rmq-icon name="exchange" [size]="22" />
+          <h2 class="text-base font-semibold" data-testid="inspector-title">Default exchange</h2>
+        </div>
+        <p class="text-muted text-sm" data-testid="inspector-default">
+          In RabbitMQ every virtual host has an exchange with no name. Every queue is bound to it, with the name of the
+          queue as the key, so a producer that publishes to it with the key billing reaches the queue billing. The
+          broker makes it and its bindings itself, so they cannot be changed or deleted.
+        </p>
+        <button
+          type="button"
+          class="border-border bg-surface hover:bg-canvas flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+          (click)="hideDefaultExchange()"
+        >
+          Hide the default exchange
+        </button>
       } @else if (edge(); as e) {
         <div class="flex items-center gap-2">
           <rmq-icon name="link" [size]="22" />
           <h2 class="text-base font-semibold" data-testid="inspector-title">{{ edgeTitle[e.edge] }}</h2>
         </div>
         <p class="text-sm" data-testid="inspector-edge">{{ e.label }}</p>
-        <button
-          type="button"
-          class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
-          aria-keyshortcuts="Delete"
-          [attr.aria-label]="'Delete this ' + edgeTitle[e.edge].toLowerCase()"
-          (click)="remove()"
-        >
-          <rmq-icon name="trash" [size]="18" />
-          Delete
-        </button>
+
+        @if (e.edge === 'implicit') {
+          <p class="text-muted text-sm" data-testid="inspector-default">
+            RabbitMQ binds every queue to the default exchange, with the name of the queue as its key, so that a
+            producer can publish straight to a queue. The broker makes this binding, so it cannot be changed or deleted.
+          </p>
+        } @else {
+          @if (e.warnings.length > 0) {
+            <div
+              class="border-warning bg-warning-bg text-warning rounded-md border px-3 py-2 text-sm"
+              data-testid="inspector-warnings"
+            >
+              <p class="flex items-center gap-2 font-medium"><rmq-icon name="alert" [size]="16" /> Worth a look</p>
+              <ul class="mt-1 flex flex-col gap-1">
+                @for (warning of e.warnings; track warning) {
+                  <li>{{ warning }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (e.edge === 'binding') {
+            <ul class="flex flex-col gap-3" data-testid="binding-rows">
+              @for (row of e.bindings; track row.id; let index = $index) {
+                <li>
+                  <div
+                    class="flex flex-col gap-1"
+                    role="group"
+                    [attr.aria-label]="'Binding ' + (index + 1) + ' of ' + e.bindings.length"
+                  >
+                    <label class="text-muted text-xs" [for]="id('binding-' + row.id)">Key</label>
+                    <div class="flex gap-2">
+                      <input
+                        type="text"
+                        class="border-border bg-surface min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm"
+                        [id]="id('binding-' + row.id)"
+                        [value]="row.key"
+                        [attr.aria-invalid]="problem('binding:' + row.id) ? 'true' : null"
+                        [attr.aria-describedby]="
+                          problem('binding:' + row.id) ? id('binding-' + row.id + '-problem') : null
+                        "
+                        (change)="rekey($event, row)"
+                      />
+                      <button
+                        type="button"
+                        class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center rounded-md border px-2"
+                        [attr.aria-label]="
+                          row.key === ''
+                            ? 'Delete the binding with an empty key'
+                            : 'Delete the binding with key ' + row.key
+                        "
+                        (click)="unbind(row)"
+                      >
+                        <rmq-icon name="trash" [size]="18" />
+                      </button>
+                    </div>
+                    @if (row.hasArguments) {
+                      <p class="text-muted text-xs" data-testid="binding-headers">
+                        This binding has header arguments, which are written with the command bar for now.
+                      </p>
+                    }
+                    @if (problem('binding:' + row.id); as issue) {
+                      <div [id]="id('binding-' + row.id + '-problem')"><rmq-refusal-notice [issue]="issue" /></div>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+            <button
+              type="button"
+              class="border-border bg-surface hover:bg-canvas flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+              data-testid="add-binding"
+              (click)="addBinding(e)"
+            >
+              <rmq-icon name="plus" [size]="18" />
+              Add another binding
+            </button>
+          }
+
+          @if (e.edge === 'link') {
+            <button
+              type="button"
+              class="border-border bg-surface hover:bg-canvas flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+              data-testid="change-target"
+              (click)="changeTarget(e)"
+            >
+              <rmq-icon name="link" [size]="18" />
+              Change the target of this link…
+            </button>
+          }
+
+          @if (e.movable) {
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-wrap items-center gap-1">
+                <label class="text-sm font-medium" [for]="id('label')">Label position (percent along the edge)</label>
+                <rmq-help topic="Label position">
+                  Where the label of this edge sits, from 0 at the start of the edge, where the message leaves, to 100
+                  at its end. You can also drag the label along the edge. Left empty, the label is placed where it does
+                  not meet another.
+                </rmq-help>
+              </div>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="5"
+                class="border-border bg-surface rounded-md border px-2 py-1.5 text-sm"
+                [id]="id('label')"
+                [value]="e.labelPercent === null ? '' : e.labelPercent"
+                [attr.aria-invalid]="problem('label') ? 'true' : null"
+                [attr.aria-describedby]="problem('label') ? id('label-problem') : null"
+                (change)="moveLabel($event, e)"
+              />
+              @if (problem('label'); as issue) {
+                <div [id]="id('label-problem')"><rmq-refusal-notice [issue]="issue" /></div>
+              }
+            </div>
+          }
+
+          <button
+            type="button"
+            class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+            aria-keyshortcuts="Delete"
+            [attr.aria-label]="'Delete this ' + edgeTitle[e.edge].toLowerCase()"
+            (click)="remove()"
+          >
+            <rmq-icon name="trash" [size]="18" />
+            Delete
+          </button>
+        }
       } @else if (several(); as count) {
         <h2 class="text-base font-semibold" data-testid="inspector-title">{{ count }} items selected</h2>
         <p class="text-muted text-sm">Select one node or one edge to change it here.</p>
@@ -239,6 +407,7 @@ export class Inspector {
   private readonly status = inject(StatusStore);
   private readonly bus = inject(CommandBus);
   private readonly intents = inject(IntentHandler);
+  private readonly links = inject(LinkFlow);
   private readonly viewport = inject(FlowViewport);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly uid = `rmq-inspector-${nextInspector++}`;
@@ -274,6 +443,7 @@ export class Inspector {
     const view = this.view();
     return view.kind === 'edge' ? view : null;
   });
+  protected readonly isDefaultExchange = computed(() => this.view().kind === 'default-exchange');
   protected readonly several = computed(() => {
     const view = this.view();
     return view.kind === 'several' ? view.count : 0;
@@ -303,7 +473,9 @@ export class Inspector {
 
   /** Puts the focus on the first control, for the key that edits the selection (ADR-0035). It answers whether there was one. */
   focusFirst(): boolean {
-    const control = this.host.querySelector<HTMLElement>('input, select, button');
+    // A field first, which is what the key means to edit, and a button when there is none.
+    const control =
+      this.host.querySelector<HTMLElement>('input, select') ?? this.host.querySelector<HTMLElement>('button');
     control?.focus();
     return control !== null;
   }
@@ -361,6 +533,68 @@ export class Inspector {
 
   protected remove(): void {
     this.intents.deleteSelected('inspector');
+  }
+
+  /** Opens the picker for the node that is shown, which is the button that does what `L` does on the canvas (ADR-0041). */
+  protected linkFrom(node: NodeView): void {
+    this.links.openPicker(node.id, 'inspector');
+  }
+
+  /** Another binding between the same two ends: it goes through the one function that makes a link, so it asks for its key as the other ways do. */
+  protected addBinding(edge: EdgeView): void {
+    this.links.request(edge.from, edge.to, 'inspector');
+  }
+
+  /** A producer links again: to another target, through the picker. */
+  protected changeTarget(edge: EdgeView): void {
+    this.links.openPicker(edge.from, 'inspector');
+  }
+
+  /** A binding gets another key, as an unbind and a bind in one step. A key that is refused puts the old one back and says why under the field. */
+  protected rekey(event: Event, row: BindingRow): void {
+    const input = event.target as HTMLInputElement;
+    const command = rebindCommand(this.store.document(), row.id, input.value);
+    if (command === undefined) {
+      this.problems.set({});
+      input.value = row.key;
+      return;
+    }
+    if (!this.apply(`binding:${row.id}`, command)) {
+      input.value = row.key;
+    }
+  }
+
+  protected unbind(row: BindingRow): void {
+    const command = unbindCommand(this.store.document(), row.id);
+    if (command !== undefined) {
+      this.apply(`binding:${row.id}`, command);
+    }
+  }
+
+  /** The label of the edge is put somewhere along it, as a percentage of its length, which is how it is moved without dragging (WCAG 2.5.7). */
+  protected moveLabel(event: Event, edge: EdgeView): void {
+    const input = event.target as HTMLInputElement;
+    const text = input.value.trim();
+    const percent = Number(text);
+    const back = edge.labelPercent === null ? '' : String(edge.labelPercent);
+    if (text === '' || !Number.isFinite(percent)) {
+      this.refuse('label', 'The place of a label has to be a number from 0 to 100. It stays where it is.');
+      input.value = back;
+      return;
+    }
+    const document = this.store.document();
+    const from = refOf(document, edge.from);
+    const to = refOf(document, edge.to);
+    if (from === undefined || to === undefined) {
+      return;
+    }
+    if (!this.apply('label', { type: 'move-label', from, to, at: percent / 100 })) {
+      input.value = back;
+    }
+  }
+
+  protected hideDefaultExchange(): void {
+    this.bus.apply({ type: 'set', kind: 'canvas', changes: { showDefaultExchange: false } }, 'inspector');
   }
 
   /** Escape leaves the inspector for the canvas, and what was typed and not kept is dropped (ADR-0017). */

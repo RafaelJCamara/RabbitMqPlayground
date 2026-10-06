@@ -469,6 +469,66 @@ describe('Inspector', () => {
     });
   });
 
+  describe('linking from a node (ADR-0041)', () => {
+    it('has a button that opens the picker for the selected node, with the inspector as the origin, for a node that can be linked from', async () => {
+      const { user } = await renderInspector({ nodes: ['E1'] });
+      const open = vi.spyOn(TestBed.inject(LinkFlow), 'openPicker');
+
+      await user.click(screen.getByRole('button', { name: 'Link exchange orders to…' }));
+
+      expect(open).toHaveBeenCalledWith('E1', 'inspector');
+    });
+
+    it('has the button for a producer and for a queue, and not for a consumer, where a message ends', async () => {
+      const { choose } = await renderInspector({ nodes: ['P1'] });
+      expect(screen.getByRole('button', { name: 'Link producer sender to…' })).toBeInTheDocument();
+
+      choose(['Q1']);
+      expect(screen.getByRole('button', { name: 'Link queue billing to…' })).toBeInTheDocument();
+
+      choose(['C1']);
+      expect(screen.queryByRole('button', { name: /^Link .* to…$/ })).not.toBeInTheDocument();
+    });
+
+    it('says which key does the same, which is L on the canvas', async () => {
+      await renderInspector({ nodes: ['E1'] });
+
+      expect(screen.getByRole('button', { name: 'Link exchange orders to…' })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'L',
+      );
+    });
+  });
+
+  describe('what is wrong with a node (ADR-0044)', () => {
+    it('is said under its name, in the sentence of the lint, for an exchange that nothing is bound from', async () => {
+      const { store, choose } = await renderInspector();
+      TestBed.inject(CommandBus).apply(
+        {
+          type: 'declare-exchange',
+          name: 'lonely',
+          exchangeType: 'fanout',
+          durable: true,
+          autoDelete: false,
+          internal: false,
+        },
+        'toolbar',
+      );
+      const id = Object.entries(store.document().exchanges).find(([, { name }]) => name === 'lonely')![0];
+
+      choose([id]);
+
+      expect(screen.getByTestId('inspector-warnings')).toHaveTextContent("Nothing is bound from the exchange 'lonely'");
+      expect(within(screen.getByTestId('inspector-warnings')).getAllByRole('listitem')).toHaveLength(1);
+    });
+
+    it('is not said for a node that has no lint', async () => {
+      await renderInspector({ nodes: ['E1'] });
+
+      expect(screen.queryByTestId('inspector-warnings')).not.toBeInTheDocument();
+    });
+  });
+
   describe('delete', () => {
     it('deletes a node, and says which one in the name of the button', async () => {
       const { user, document } = await renderInspector({ nodes: ['Q2'] });
@@ -525,6 +585,288 @@ describe('Inspector', () => {
 
       choose([], ['Q1>C1']);
       expect(screen.getByRole('heading', { name: 'Subscription' })).toBeInTheDocument();
+    });
+  });
+
+  describe('the bindings of an edge (ADR-0044)', () => {
+    const twoKeys = async () => {
+      const view = await renderInspector({ edges: ['E1>Q1'] });
+      TestBed.inject(CommandBus).apply(
+        { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'invoice.#' },
+        'toolbar',
+      );
+      view.choose([], ['E1>Q1']);
+      return view;
+    };
+    const rows = () => screen.getAllByRole('group', { name: /^Binding \d+ of \d+$/ });
+
+    it('has a row for each of the bindings between the two ends, with its key in a field', async () => {
+      await twoKeys();
+
+      expect(rows().map((row) => row.getAttribute('aria-label'))).toEqual(['Binding 1 of 2', 'Binding 2 of 2']);
+      expect(
+        rows().map((row) => (within(row).getByRole('textbox', { name: 'Key' }) as HTMLInputElement).value),
+      ).toEqual(['order.*', 'invoice.#']);
+    });
+
+    it('gives a binding another key when the field is left, as one step of undo that a typed line can say', async () => {
+      const { user, store } = await twoKeys();
+      const seen: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => seen.push(`${origin} ${command.type}`));
+      const field = within(rows()[0]!).getByRole('textbox', { name: 'Key' });
+
+      await user.clear(field);
+      await user.type(field, 'order.new');
+      await user.tab();
+
+      expect(Object.values(store.document().bindings).map(({ key }) => key)).toEqual([
+        '',
+        '#',
+        'invoice.#',
+        'order.new',
+      ]);
+      expect(seen).toEqual(['inspector batch']);
+      TestBed.inject(CommandBus).undo('toolbar');
+      expect(Object.values(store.document().bindings).map(({ key }) => key)).toEqual(['order.*', '', '#', 'invoice.#']);
+    });
+
+    it('says why a key is refused, under the field, and puts back the key that the binding has', async () => {
+      const { user, store } = await twoKeys();
+      const field = within(rows()[0]!).getByRole('textbox', { name: 'Key' }) as HTMLInputElement;
+
+      await user.clear(field);
+      await user.type(field, '#.#.#');
+      await user.tab();
+
+      expect(field).toHaveValue('order.*');
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+      expect(within(rows()[0]!).getByTestId('refusal-message')).toHaveTextContent('#');
+      expect(store.document().bindings['B1']?.key).toBe('order.*');
+    });
+
+    it('does nothing when the key is the one that the binding has, and forgets an earlier refusal', async () => {
+      const { user } = await twoKeys();
+      const seen: string[] = [];
+      const field = within(rows()[0]!).getByRole('textbox', { name: 'Key' });
+      await user.clear(field);
+      await user.type(field, '#.#.#');
+      await user.tab();
+      TestBed.inject(CommandBus).onApplied(({ command }) => seen.push(command.type));
+
+      fireEvent.change(field, { target: { value: 'order.*' } });
+
+      expect(seen).toEqual([]);
+      expect(screen.queryByTestId('refusal')).not.toBeInTheDocument();
+      expect(field).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('takes one binding off with its own button, which says which, and leaves the others', async () => {
+      const { user, store } = await twoKeys();
+      const seen: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => seen.push(`${origin} ${command.type}`));
+
+      await user.click(screen.getByRole('button', { name: 'Delete the binding with key invoice.#' }));
+
+      expect(Object.keys(store.document().bindings)).toEqual(['B1', 'B2', 'B3']);
+      expect(seen).toEqual(['inspector unbind']);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('names the button of a binding that has an empty key by saying so', async () => {
+      const { choose } = await renderInspector();
+      TestBed.inject(CommandBus).apply(
+        { type: 'bind', source: 'hidden', destination: { kind: 'queue', name: 'billing' }, key: '' },
+        'toolbar',
+      );
+
+      choose([], ['E3>Q1']);
+
+      expect(screen.getByRole('button', { name: 'Delete the binding with an empty key' })).toBeInTheDocument();
+    });
+
+    it('opens the popover for another binding between the same two, which asks for its key, with the inspector as the origin', async () => {
+      const { user } = await twoKeys();
+      const request = vi.spyOn(TestBed.inject(LinkFlow), 'request');
+
+      await user.click(screen.getByRole('button', { name: 'Add another binding' }));
+
+      expect(request).toHaveBeenCalledWith('E1', 'Q1', 'inspector');
+    });
+
+    it('says that a binding has header arguments, which are not edited here', async () => {
+      await renderInspector({ edges: ['E2>Q2'] });
+
+      expect(within(rows()[0]!).getByTestId('binding-headers')).toHaveTextContent('header arguments');
+    });
+
+    it('has no rows for a link or a subscription, which are not bindings', async () => {
+      const { choose } = await renderInspector({ edges: ['P1>E1'] });
+      expect(screen.queryByRole('group', { name: /^Binding \d+ of/ })).not.toBeInTheDocument();
+
+      choose([], ['Q1>C1']);
+      expect(screen.queryByRole('group', { name: /^Binding \d+ of/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the label of an edge (ADR-0044)', () => {
+    it('has a field for where it is along the edge, which is how it is moved without dragging, empty while the app places it', async () => {
+      await renderInspector({ edges: ['E1>E3'] });
+
+      const field = screen.getByRole('spinbutton', {
+        name: 'Label position (percent along the edge)',
+      }) as HTMLInputElement;
+      expect(field.value).toBe('');
+      expect(field).toHaveAttribute('min', '0');
+      expect(field).toHaveAttribute('max', '100');
+    });
+
+    it('shows where the document keeps it, as a percentage', async () => {
+      await renderInspector({ edges: ['E1>Q1'] });
+
+      expect(
+        (screen.getByRole('spinbutton', { name: 'Label position (percent along the edge)' }) as HTMLInputElement).value,
+      ).toBe('50');
+    });
+
+    it('moves the label when the field is changed, as one command that says the fraction, and is one step of undo', async () => {
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] });
+      const seen: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => seen.push(`${origin} ${command.type}`));
+      const field = screen.getByRole('spinbutton', { name: 'Label position (percent along the edge)' });
+
+      await user.clear(field);
+      await user.type(field, '25');
+      await user.tab();
+
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.25 });
+      expect(seen).toEqual(['inspector move-label']);
+      TestBed.inject(CommandBus).undo('toolbar');
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.5 });
+    });
+
+    it('says what is wrong with a place that is not between 0 and 100, and puts back the one that the document has', async () => {
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] });
+      const field = screen.getByRole('spinbutton', {
+        name: 'Label position (percent along the edge)',
+      }) as HTMLInputElement;
+
+      await user.clear(field);
+      await user.type(field, '140');
+      await user.tab();
+
+      expect(field).toHaveValue(50);
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('A label sits from 0');
+      expect(store.document().layout.labels['E1>Q1']).toEqual({ at: 0.5 });
+    });
+
+    it('says what is wrong with something that is not a number', async () => {
+      const { user } = await renderInspector({ edges: ['E1>Q1'] });
+      const field = screen.getByRole('spinbutton', {
+        name: 'Label position (percent along the edge)',
+      }) as HTMLInputElement;
+
+      fireEvent.change(field, { target: { value: '' } });
+      await user.tab();
+
+      expect(screen.getByTestId('refusal-message')).toHaveTextContent('The place of a label has to be a number');
+    });
+
+    it('has no field for an edge that has no label, a subscription', async () => {
+      await renderInspector({ edges: ['Q1>C1'] });
+
+      expect(screen.queryByRole('spinbutton', { name: /Label position/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the link of a producer (ADR-0041)', () => {
+    it('can be changed to another target, which opens the picker for the producer with the inspector as the origin', async () => {
+      const { user } = await renderInspector({ edges: ['P1>E1'] });
+      const open = vi.spyOn(TestBed.inject(LinkFlow), 'openPicker');
+
+      await user.click(screen.getByRole('button', { name: 'Change the target of this link…' }));
+
+      expect(open).toHaveBeenCalledWith('P1', 'inspector');
+    });
+
+    it('has no such button for a binding or a subscription', async () => {
+      const { choose } = await renderInspector({ edges: ['E1>Q1'] });
+      expect(screen.queryByRole('button', { name: /Change the target/ })).not.toBeInTheDocument();
+
+      choose([], ['Q1>C1']);
+      expect(screen.queryByRole('button', { name: /Change the target/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('what is wrong with a binding (ADR-0044)', () => {
+    it('is said, in the sentence of the lint, for a headers binding that matches nothing', async () => {
+      const { choose } = await renderInspector();
+      TestBed.inject(CommandBus).apply(
+        {
+          type: 'bind',
+          source: 'docs',
+          destination: { kind: 'queue', name: 'billing' },
+          key: '',
+          headers: { xMatch: 'any', args: [] },
+        },
+        'toolbar',
+      );
+
+      choose([], ['E2>Q1']);
+
+      expect(screen.getByTestId('inspector-warnings')).toHaveTextContent('x-match=any');
+    });
+  });
+
+  describe('the default exchange (ADR-0043)', () => {
+    const show = (flag: boolean) =>
+      TestBed.inject(CommandBus).apply(
+        { type: 'set', kind: 'canvas', changes: { showDefaultExchange: flag } },
+        'toolbar',
+      );
+
+    it('says what it is and that it cannot be changed, with nothing to change, for the node', async () => {
+      const { choose } = await renderInspector();
+      show(true);
+
+      choose(['~default']);
+
+      expect(screen.getByRole('heading', { name: 'Default exchange' })).toBeInTheDocument();
+      expect(screen.getByTestId('inspector-default')).toHaveTextContent(
+        'every virtual host has an exchange with no name',
+      );
+      expect(screen.getByTestId('inspector-default')).toHaveTextContent('cannot be changed or deleted');
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Delete/ })).not.toBeInTheDocument();
+    });
+
+    it('can be hidden from there, which is the same setting as the switch of the top bar, with the inspector as the origin', async () => {
+      const { choose, user, store } = await renderInspector();
+      show(true);
+      choose(['~default']);
+      const seen: string[] = [];
+      TestBed.inject(CommandBus).onApplied(({ origin, command }) => seen.push(`${origin} ${command.type}`));
+
+      await user.click(screen.getByRole('button', { name: 'Hide the default exchange' }));
+
+      expect(store.document().settings.showDefaultExchange).toBe(false);
+      expect(seen).toEqual(['inspector set']);
+      expect(screen.getByTestId('inspector-empty')).toBeInTheDocument();
+    });
+
+    it('says why an implicit binding is there, which key it has, and that it cannot be changed or deleted, with nothing to change', async () => {
+      const { choose } = await renderInspector();
+      show(true);
+
+      choose([], ['~default>Q1']);
+
+      expect(screen.getByRole('heading', { name: 'Implicit binding' })).toBeInTheDocument();
+      expect(screen.getByTestId('inspector-edge')).toHaveTextContent(
+        'Implicit binding from the default exchange to queue billing, key billing',
+      );
+      expect(screen.getByTestId('inspector-default')).toHaveTextContent('with the name of the queue as its key');
+      expect(screen.queryByRole('button', { name: /^Delete/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('spinbutton', { name: /Label position/ })).not.toBeInTheDocument();
     });
   });
 
