@@ -289,6 +289,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected onKey(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.peek() !== null) {
       this.peek.set(null);
+      // A pointer that is on the card never leaves it when the card is gone, so it is not held any more.
+      this.cardHeld = false;
     }
     const target = event.target;
     if (target === this.page.body || (target instanceof Node && this.element.contains(target))) {

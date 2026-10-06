@@ -766,6 +766,30 @@ describe('Editor', () => {
       }
     });
 
+    it('forgets that the pointer was on the card when Escape takes it away, so that the next one goes when the pointer has left the label', async () => {
+      const { canvas, fixture, key } = await openEditorWithManyKeys();
+      vi.useFakeTimers();
+      try {
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+        // The pointer is on the card when Escape takes it away, so it never leaves it: the element is gone.
+        fireEvent.pointerEnter(screen.getByTestId('label-card'));
+        fireEvent.keyDown(document.body, { key: 'Escape' });
+        fixture.detectChanges();
+        expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+
+        canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
+        fixture.detectChanges();
+        canvas().intent.emit({ type: 'peek', key: null });
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+
+        expect(screen.queryByTestId('label-card')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('goes on Escape, wherever the focus is, without the pointer having to move (WCAG 1.4.13)', async () => {
       const { canvas, fixture, key } = await openEditorWithManyKeys();
       canvas().intent.emit({ type: 'peek', key, rect: { x: 100, y: 100, width: 60, height: 80 } });
