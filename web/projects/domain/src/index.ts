@@ -1,4 +1,4 @@
-export { COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
+export { BATCH_DOC, COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
 export { applyCommand } from './lib/commands/apply';
 export { defaultPosition, type ApplyContext, type IdKind } from './lib/commands/helpers';
 export type {
@@ -97,4 +97,9 @@ export {
 export { lint, type Lint, type LintKind } from './lib/lints';
 export { reconcile } from './lib/reconcile';
 export { editDistance, suggest } from './lib/suggest';
+export { completeCommand, type Completion, type CompletionItem } from './lib/syntax/complete';
+export { formatCommand } from './lib/syntax/format';
+export { parseCommand } from './lib/syntax/parse';
+export { SPECS } from './lib/syntax/registry';
+export type { CommandSpec } from './lib/syntax/spec';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
