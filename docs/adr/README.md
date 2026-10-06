@@ -40,6 +40,9 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted (the caps of a canvas are the domain's, by 0029) |
 | [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted |
 | [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
+| [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted |
+| [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted |
+| [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted |
 
 ## Where to start
 
@@ -51,7 +54,9 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0025](0025-the-command-grammar.md), [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md),
   [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md),
   [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md),
-  [0029](0029-the-commands-refuse-at-the-size-caps.md).
+  [0029](0029-the-commands-refuse-at-the-size-caps.md), [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md),
+  [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md),
+  [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),
