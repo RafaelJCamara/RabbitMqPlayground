@@ -2,7 +2,7 @@
 #
 #   conformance  plays the recorded scenarios against a real RabbitMQ and compares what it does with the fixtures.
 #                Any difference fails the job and is investigated. A fixture is never re-recorded to make a failure go away.
-#   fuzz         runs the property-based suites with a random seed and many more runs.
+#   fuzz         runs the property-based suites of the libraries and of the app with a random seed and many more runs.
 #
 # Run it by hand from the Actions tab: mode "record" records new fixtures (see below), "verify" is the nightly check.
 name: Nightly
@@ -90,12 +90,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-web
-      - name: Choose a seed and run the property suites
-        working-directory: web
+      - name: Choose a seed
+        id: seed
         env:
           RUNS: ${{ inputs.fuzz_runs || '5000' }}
         run: |
           seed=$(date +%s)
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
           echo "FC_SEED=$seed FC_NUM_RUNS=$RUNS"
-          echo "Seed $seed, $RUNS runs per property. To reproduce: \`FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:libs\`" >> "$GITHUB_STEP_SUMMARY"
-          FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:libs
+          echo "Seed $seed, $RUNS runs per property. To reproduce: \`FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:libs\` for the libraries, and \`FC_SEED=$seed FC_NUM_RUNS=$RUNS npm run test:app\` for the app, whose replay of a session from its log is one of them (ADR-0046)." >> "$GITHUB_STEP_SUMMARY"
+      - name: The property suites of the libraries
+        working-directory: web
+        env:
+          FC_SEED: ${{ steps.seed.outputs.seed }}
+          FC_NUM_RUNS: ${{ inputs.fuzz_runs || '5000' }}
+        run: npm run test:libs
+      - name: The property suites of the app
+        working-directory: web
+        env:
+          FC_SEED: ${{ steps.seed.outputs.seed }}
+          FC_NUM_RUNS: ${{ inputs.fuzz_runs || '5000' }}
+        run: npm run test:app
