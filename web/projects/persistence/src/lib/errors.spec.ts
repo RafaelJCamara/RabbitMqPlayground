@@ -8,6 +8,7 @@ import {
   notAnObject,
   notFound,
   notJson,
+  reasonOf,
   summarise,
   thousands,
   tooLarge,
@@ -125,6 +126,16 @@ describe('the errors of a load', () => {
         'split it into smaller canvases.',
       ],
       [
+        'positions',
+        'This canvas keeps 5,001 positions, and one canvas can have at most 5,000, one for each element. ',
+        'remove the positions of what is not on the canvas.',
+      ],
+      [
+        'labels',
+        'This canvas keeps 5,001 labels for its edges, and one canvas can have at most 5,000, one for each edge. ',
+        'remove the labels of what is not on the canvas.',
+      ],
+      [
         'headers',
         'A message or a binding in this canvas has 5,001 header entries, and one can have at most 5,000. ',
         'remove some of the headers.',
@@ -206,6 +217,17 @@ describe('the errors of a repository', () => {
       id: 'abc',
       message: 'There is already a canvas with the id "abc", so a new one could not be made with it.',
     });
+  });
+});
+
+describe('reasonOf', () => {
+  it('gives the words of whatever was thrown, and never throws', () => {
+    expect(reasonOf(new Error('x is not a function'))).toBe('x is not a function');
+    expect(reasonOf({ message: 'from another realm' })).toBe('from another realm');
+    expect(reasonOf('just text')).toBe('just text');
+    for (const odd of [undefined, null, 5, { message: 5 }, Object.create(null), Symbol('s')]) {
+      expect(reasonOf(odd)).toBe('something that is not an error was thrown');
+    }
   });
 });
 

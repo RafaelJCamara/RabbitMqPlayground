@@ -48,7 +48,8 @@ export type CanvasError =
 export type RepositoryError = LoadError | StorageError | CanvasError;
 
 /** What a cap is on (`SIZE_CAPS` has the numbers). */
-export type TooLargeWhat = 'elements' | 'edges' | 'headers' | 'text' | 'file' | 'canvases' | 'name';
+export type TooLargeWhat =
+  'elements' | 'edges' | 'positions' | 'labels' | 'headers' | 'text' | 'file' | 'canvases' | 'name';
 
 /** A whole number with a comma between the thousands, the same in every locale. */
 export const thousands = (value: number): string => String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -143,6 +144,10 @@ const TOO_LARGE: Record<TooLargeWhat, (found: string, limit: string) => string> 
     `This canvas has ${found} elements (exchanges, queues, producers and consumers), and one canvas can have at most ${limit}. ${HOSTILE} If the file is genuine, split it into smaller canvases.`,
   edges: (found, limit) =>
     `This canvas has ${found} edges (bindings, producer links and consumer subscriptions), and one canvas can have at most ${limit}. ${HOSTILE} If the file is genuine, split it into smaller canvases.`,
+  positions: (found, limit) =>
+    `This canvas keeps ${found} positions, and one canvas can have at most ${limit}, one for each element. ${HOSTILE} If the file is genuine, remove the positions of what is not on the canvas.`,
+  labels: (found, limit) =>
+    `This canvas keeps ${found} labels for its edges, and one canvas can have at most ${limit}, one for each edge. ${HOSTILE} If the file is genuine, remove the labels of what is not on the canvas.`,
   headers: (found, limit) =>
     `A message or a binding in this canvas has ${found} header entries, and one can have at most ${limit}. ${HOSTILE} If the file is genuine, remove some of the headers.`,
   text: (found, limit) =>
@@ -189,6 +194,17 @@ export const existsError = (id: string): CanvasError => ({
   id,
   message: `There is already a canvas with the id "${id}", so a new one could not be made with it.`,
 });
+
+/** The words of whatever was thrown, which is not always an `Error`. It never throws. */
+export function reasonOf(error: unknown): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'something that is not an error was thrown';
+}
 
 const QUOTA_CODE = 22;
 
