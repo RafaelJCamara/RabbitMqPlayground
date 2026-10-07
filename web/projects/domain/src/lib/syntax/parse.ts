@@ -1,4 +1,5 @@
 import { applyCommand } from '../commands/apply';
+import { isDocumentCommand } from '../commands/kinds';
 import type { Command, DocumentCommand } from '../commands/types';
 import { fail, ok, type Issue, type Result } from '../document/issue';
 import type { CanvasDocument } from '../document/schema';
@@ -53,9 +54,6 @@ function standsAlone(command: Command): string | undefined {
       return undefined;
   }
 }
-
-/** Whether a command changes the document, which is what a batch holds. */
-const isDocumentCommand = (command: Command): command is DocumentCommand => standsAlone(command) === undefined;
 
 /** Reads one command, with no `;` in it. */
 function parseOne(tokens: readonly Atom[], document: CanvasDocument): Result<Command> {

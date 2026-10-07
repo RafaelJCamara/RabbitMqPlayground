@@ -1,5 +1,6 @@
 export { BATCH_DOC, COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
 export { applyCommand } from './lib/commands/apply';
+export { isDocumentCommand, isRuntimeCommand } from './lib/commands/kinds';
 export { runtimeIssue } from './lib/commands/runtime';
 export type {
   ClearMessages,
