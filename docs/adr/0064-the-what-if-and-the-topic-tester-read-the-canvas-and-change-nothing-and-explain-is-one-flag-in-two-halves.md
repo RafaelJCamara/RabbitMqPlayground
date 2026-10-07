@@ -1,6 +1,6 @@
 # ADR-0064: The what-if and the topic tester read the canvas and change nothing, and `explain` is one flag in two halves
 
-- **Status:** Accepted
+- **Status:** Accepted. The row of the key `E` names both flags, `simulation` and `explain`, which is how it is "not offered while the simulation is off": [ADR-0065](0065-what-building-s7-settled-the-key-of-the-log-names-both-flags-a-tester-that-is-open-is-what-is-lit-and-a-tester-follows-the-text-that-is-typed.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** "What-if tester" and "Inline topic tester" of [ADR-0010](0010-explanation-first-editor-ux.md), the key popover of [ADR-0041](0041-the-five-ways-to-link-share-one-path-and-a-binding-asks-for-its-key-first.md), the table of shortcuts of
