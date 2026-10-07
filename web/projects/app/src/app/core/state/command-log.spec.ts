@@ -196,6 +196,19 @@ describe('CommandLog (ADR-0046)', () => {
     expect(log.entries().map(({ id }) => id)).toEqual([1]);
   });
 
+  it('tells whoever listens of each line as it is written, which is how the event log has them in the order that they came, and stops when told to (ADR-0061)', () => {
+    const heard: string[] = [];
+    const stop = log.onLine((line) => heard.push(`${line.id} ${line.origin} ${line.text}`));
+
+    bus.apply(declareQueue('a'), 'gesture');
+    bus.apply(declareQueue('a'), 'key'); // refused, so there is no line
+    stop();
+    bus.apply(declareQueue('b'), 'typed');
+
+    expect(heard).toEqual(['1 gesture declare queue a']);
+    expect(log.entries()).toHaveLength(2);
+  });
+
   it('says which line was written last, for the one line that the panel shows when it is closed', () => {
     expect(log.latest()).toBeUndefined();
 

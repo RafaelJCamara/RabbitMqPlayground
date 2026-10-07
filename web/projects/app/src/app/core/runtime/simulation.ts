@@ -24,7 +24,11 @@ export const STEP_TWEEN_MS = 250;
 /** How much of the clock the readout of the strip shows: a tenth of a second, so that it changes ten times a second at most. */
 const READOUT_MS = 100;
 
-export type SimulationListener = (events: readonly EngineEvent[]) => void;
+/** Is told what the engine said, and the canvas that it is about: the one that the engine holds, and for what a change of the canvas made, the one before the change, which still has the names of what went (ADR-0061). */
+export type SimulationListener = (events: readonly EngineEvent[], about: CanvasDocument, cause: EventsCause) => void;
+
+/** What made the events: the clock, which has no command of its own, or a command, whose line comes after them (ADR-0061). */
+export type EventsCause = 'clock' | 'command';
 
 /** What the simulation says of itself to whoever reads it from outside the page: the end-to-end suite (ADR-0056). */
 export interface SimulationState {
@@ -117,6 +121,11 @@ export class Simulation implements RuntimeHost {
   /** What a queue holds, ready first and then held, at most `limit`. */
   messages(queue: string, limit: number): QueueMessage[] {
     return this.engine.messages(queue, limit);
+  }
+
+  /** The engine's clock in whole virtual milliseconds, which is what a line of the log says when it was (ADR-0061). */
+  now(): number {
+    return this.engine.now();
   }
 
   /** Where the picture is: the clock, or where it is on its way to the clock after a step. */
@@ -263,7 +272,8 @@ export class Simulation implements RuntimeHost {
       this.rebuild(document);
       return;
     }
-    const events = this.feed(reconcile(this.held, document));
+    const before = this.held;
+    const events = this.feed(reconcile(before, document));
     this.held = document;
     for (const event of events) {
       if (event.type === 'queue.deleted') {
@@ -271,7 +281,7 @@ export class Simulation implements RuntimeHost {
       }
     }
     // A node that is new, or has another name, has numbers of its own though nothing was said.
-    this.refresh(events, true);
+    this.refresh(events, true, before);
     this.frames.wake();
   }
 
@@ -314,7 +324,7 @@ export class Simulation implements RuntimeHost {
   private tick(elapsed: number): boolean {
     if (this.playing()) {
       this.real += elapsed * this.rate();
-      this.refresh(this.engine.advanceTo(Math.floor(this.real)));
+      this.refresh(this.engine.advanceTo(Math.floor(this.real)), undefined, undefined, 'clock');
     }
     if (this.tween !== null) {
       this.tween.elapsed += elapsed;
@@ -329,11 +339,16 @@ export class Simulation implements RuntimeHost {
    * Tells the listeners what the engine said, and sets the signals that what it said changed. The numbers of the nodes are worked out when something was said,
    * and when the canvas changed, which is `redraw`.
    */
-  private refresh(events: readonly EngineEvent[], redraw = events.length > 0): void {
+  private refresh(
+    events: readonly EngineEvent[],
+    redraw = events.length > 0,
+    about = this.held,
+    cause: EventsCause = 'command',
+  ): void {
     if (events.length > 0) {
       this.changes.update((count) => count + 1);
       for (const listener of [...this.listeners]) {
-        listener(events);
+        listener(events, about, cause);
       }
     }
     if (redraw) {

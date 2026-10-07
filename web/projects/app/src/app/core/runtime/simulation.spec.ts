@@ -1,6 +1,6 @@
 import { createEnvironmentInjector, EnvironmentInjector, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { emptyDocument, findId, type CanvasDocument, type RuntimeCommand } from '@rmq/domain';
+import { emptyDocument, findId, nameOf, type CanvasDocument, type RuntimeCommand } from '@rmq/domain';
 import type { EngineEvent } from '@rmq/engine';
 import {
   bindingRecord,
@@ -824,6 +824,62 @@ describe('Simulation', () => {
         ['published', 'published'],
         ['routed', 'routed'],
       ]);
+    });
+
+    it('tells the canvas that the events are about with them: the one that the engine routes with, for what a command and the clock make (ADR-0061)', () => {
+      const { run, frames, simulation, store } = setup();
+      const about: CanvasDocument[] = [];
+      simulation.onEvents((_events, document) => about.push(document));
+
+      run(PUBLISH);
+      frames.frame(0);
+      frames.frame(100);
+
+      expect(about).toHaveLength(2);
+      expect(about[0]).toBe(store.document());
+      expect(about[1]).toBe(store.document());
+    });
+
+    it('says whether the clock made the events or a command did, since the line of a command comes after what it made (ADR-0061)', () => {
+      const { run, frames, simulation, bus } = setup();
+      const causes: string[] = [];
+      simulation.onEvents((events, _about, cause) => causes.push(`${cause}:${events[0]?.type}`));
+
+      run(PUBLISH);
+      frames.frame(0);
+      frames.frame(100);
+      run({ type: 'pause' });
+      run({ type: 'step' });
+      bus.apply({ type: 'delete', target: { kind: 'consumer', name: 'worker' } }, 'gesture');
+
+      expect(causes).toEqual(['command:published', 'clock:routed', 'command:enqueued', 'command:channel.closed']);
+    });
+
+    it('tells, for what a change of the canvas did, the canvas as it was before the change, which still has the names of what went', () => {
+      const { simulation, bus } = setup();
+      const heard: { types: string[]; consumers: (string | undefined)[] }[] = [];
+      simulation.onEvents((events, document) =>
+        heard.push({
+          types: types(events),
+          consumers: events.flatMap((event) =>
+            event.type === 'channel.closed' ? [nameOf(document, 'consumer', event.channel)] : [],
+          ),
+        }),
+      );
+
+      bus.apply({ type: 'delete', target: { kind: 'consumer', name: 'worker' } }, 'gesture');
+
+      expect(heard).toEqual([{ types: ['channel.closed'], consumers: ['worker'] }]);
+    });
+
+    it('says the time of the engine in milliseconds, which is what the log puts on a line of a command', () => {
+      const { run, simulation } = setup();
+      run({ type: 'pause' });
+      run(PUBLISH);
+
+      expect(simulation.now()).toBe(0);
+      run({ type: 'step' });
+      expect(simulation.now()).toBe(100);
     });
 
     it('says the same for the same commands and the same advances, which is what makes a lesson of it', () => {

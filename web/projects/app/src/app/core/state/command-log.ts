@@ -24,17 +24,29 @@ export interface LogEntry {
 @Injectable()
 export class CommandLog {
   private readonly list = signal<readonly LogEntry[]>([]);
+  private readonly listeners = new Set<(line: LogEntry) => void>();
   private next = 1;
 
   readonly entries = this.list.asReadonly();
   /** The last line, which the panel shows when it is closed. */
   readonly latest = computed(() => this.list().at(-1));
 
+  /** Is told of each line as it is written, which is how the event log has them in the order that they came (ADR-0061). */
+  onLine(listener: (line: LogEntry) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
   constructor() {
     const stopBus = inject(CommandBus).onApplied(({ command, origin, before }) => {
       const entry: LogEntry = { id: this.next, origin, text: formatCommand(command, before) };
       this.next += 1;
       this.list.update((entries) => [...entries.slice(1 - LOG_LIMIT), entry]);
+      for (const listener of [...this.listeners]) {
+        listener(entry);
+      }
     });
     const stopStore = inject(DocumentStore).subscribe((_document, cause) => {
       if (cause === 'load') {
