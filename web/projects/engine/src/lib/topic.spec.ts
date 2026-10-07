@@ -233,6 +233,19 @@ describe('alignTopic: which key words each pattern word matched (ADR-0059)', () 
       [seg('a', 'a'), seg('#'), missing('b'), seg('#', 'x', 'y'), seg('c', 'c')],
       { kind: 'middle-not-found', patternIndex: 2 },
     ],
+    // A word between two # that finds no place is lost, and is not found in the key words that the end of the pattern has taken: the b is the last word's, and the * has none.
+    [
+      'a.#.*.#.b',
+      'a.b',
+      [seg('a', 'a'), seg('#'), missing('*'), seg('#'), seg('b', 'b')],
+      { kind: 'key-too-short', needs: 3, has: 2 },
+    ],
+    [
+      'a.#.b.*.#.c',
+      'a.b.c',
+      [seg('a', 'a'), seg('#'), missing('b'), missing('*'), seg('#', 'b'), seg('c', 'c')],
+      { kind: 'key-too-short', needs: 4, has: 3 },
+    ],
   ])('says what pattern %j made of key %j', (pattern, key, segments, miss) => {
     expect(alignTopic(pattern, key)).toStrictEqual({ matched: false, segments, miss });
   });

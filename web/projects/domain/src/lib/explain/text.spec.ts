@@ -25,6 +25,8 @@ describe('the alignment of a topic key as text (ADR-0059, ADR-0060)', () => {
     // An empty word is two quotes, so that it is seen.
     ['a.*.b', 'a..b', ['pattern  a   | *    | b', 'key      a ✓ | "" ✓ | b ✓']],
     ['a..b', 'a.x.b', ['pattern  a   | ""  | b', 'key      a ✓ | x ✗ | b ✓']],
+    // A column is as wide as the longer of its two cells, which is the pattern's word when the key's is short.
+    ['lengthy.b', 'x.b', ['pattern  lengthy | b', 'key      x ✗     | b ✓']],
     ['', 'a', ['pattern  -', 'key      a ✗']],
     ['#', '', ['pattern  #', 'key      - ✓']],
     ['', '', ['pattern', 'key']],

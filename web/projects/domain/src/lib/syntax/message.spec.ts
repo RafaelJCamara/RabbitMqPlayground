@@ -61,10 +61,11 @@ describe('parseMessageText (ADR-0060, ADR-0064)', () => {
     expect(result.ok ? '' : result.error.message).toMatch(message);
   });
 
-  it('says where in the text the refusal is', () => {
+  it('says where in the text the refusal is, and that it is of the syntax: a message is one line, which the batch of commands is not', () => {
     const result = parseMessageText('key=a ; key=b');
 
     expect(result.ok ? undefined : result.error.at).toEqual({ start: 6, end: 7 });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'syntax' } });
   });
 
   it('does not swallow an error that is not a refusal: a bug is a bug', () => {
