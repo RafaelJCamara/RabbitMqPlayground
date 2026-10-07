@@ -134,6 +134,19 @@ describe('Simulation', () => {
       expect(simulation.view().queues['billing']).toBeUndefined();
       expect(frames.requested).toBe(0);
     });
+
+    it('says that no time has passed, nothing is on its way, nothing can be stepped, and nothing was lost', () => {
+      const { simulation } = setup({ flag: false });
+
+      expect([
+        simulation.time(),
+        simulation.travelling(),
+        simulation.revision(),
+        simulation.visualTime(),
+        simulation.takeLost(),
+      ]).toEqual([0, 0, 0, 0, 0]);
+      expect(simulation.canStep()).toBe(false);
+    });
   });
 
   describe('a canvas that the engine will not take', () => {
