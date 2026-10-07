@@ -7,6 +7,7 @@
   a browser that promises storage), the time that the tests of the app are given, and a slow processor on request are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md).
   What the adapter does with a label and with what is not the document's is held by journeys in a browser, because the unit tier cannot see it ([ADR-0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md)).
   What the setup of the specs does between two tests, so that the specs of a worker do not find what another left, is settled by [ADR-0058](0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md).
+  What the explanation says is held to the fixtures that the broker recorded, through golden files, by [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0015](0015-testing-strategy-and-definition-of-done.md) (the tiers and the definition of done) and

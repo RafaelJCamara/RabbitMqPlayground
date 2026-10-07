@@ -3,7 +3,7 @@
 - **Status:** Accepted. Where its listener stands (on the document, for what is in the editor or nowhere) is settled by
   [ADR-0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md), how the context menu
   stays open when a pointer opens it by [ADR-0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md), and that a menu
-  on the canvas itself is the key's by [ADR-0040](0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md).
+  on the canvas itself is the key's by [ADR-0040](0040-a-menu-on-the-canvas-itself-is-for-a-key-and-the-last-thing-done-says-whether-it-was-one.md). The row for `E` is [ADR-0064](0064-the-what-if-and-the-topic-tester-read-the-canvas-and-change-nothing-and-explain-is-one-flag-in-two-halves.md)'s.
   The rows for `/`, Ctrl/Cmd+K and `?`, and how a symbol is matched, are settled by [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) and
   [ADR-0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md), and that Ctrl/Cmd+K works in a field of text by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md). The rows for `P`, Space and `.` are [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md)'s.
 - **Date:** 2026-10-06

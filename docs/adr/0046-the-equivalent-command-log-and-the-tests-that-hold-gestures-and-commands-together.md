@@ -1,6 +1,6 @@
 # ADR-0046: The equivalent-command log, and the tests that hold gestures and typed commands together
 
-- **Status:** Accepted. How the contract suite and the replay were built are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md). The runtime verbs are in the log, as [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) says.
+- **Status:** Accepted. How the contract suite and the replay were built are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md). The runtime verbs are in the log, as [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) says. The event log shows its lines beside the events, as [ADR-0061](0061-the-event-log-is-a-ring-of-rows-that-puts-a-command-before-what-it-made-and-a-row-selects-what-it-explains.md) says.
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Learning the commands" of [ADR-0011](0011-explicit-linking-and-command-layer.md) (every action is logged with its equivalent command), the bus of

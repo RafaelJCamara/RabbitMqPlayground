@@ -1,6 +1,6 @@
 # ADR-0007: Deterministic discrete-event simulation engine
 
-- **Status:** Accepted. The engine as built is settled by [ADR-0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), and delivery by [ADR-0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md).
+- **Status:** Accepted. The engine as built is settled by [ADR-0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), and delivery by [ADR-0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md). What it says of a route is settled by [ADR-0059](0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) and [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

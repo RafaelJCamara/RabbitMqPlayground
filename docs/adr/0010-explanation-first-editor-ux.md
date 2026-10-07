@@ -3,6 +3,8 @@
 - **Status:** Accepted. The visual language of the editor (tokens, themes, a colour and a shape for each kind of node) is settled by
   [ADR-0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md), and the chips on edges, the places of the labels and the lints as badges by
   [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md). The animation is settled by [ADR-0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md), and the controls, the counters and the stacks by [ADR-0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md).
+  The explanation is settled by [ADR-0059](0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) and [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md) (what it says), [ADR-0061](0061-the-event-log-is-a-ring-of-rows-that-puts-a-command-before-what-it-made-and-a-row-selects-what-it-explains.md) (the event log),
+  [ADR-0062](0062-why-is-painted-by-the-adapter-with-classes-from-an-emphasis-and-the-reasons-are-words-on-the-labels.md) (Why?), [ADR-0063](0063-the-message-inspector-opens-from-a-row-a-list-or-a-marker-and-says-so-when-its-route-is-gone.md) (the message inspector) and [ADR-0064](0064-the-what-if-and-the-topic-tester-read-the-canvas-and-change-nothing-and-explain-is-one-flag-in-two-halves.md) (the testers).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

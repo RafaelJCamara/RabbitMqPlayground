@@ -1,6 +1,6 @@
 # ADR-0009: Headers exchange support
 
-- **Status:** Accepted. The rule on integers is extended by [ADR-0023](0023-header-integers-are-limited-to-safe-integers.md).
+- **Status:** Accepted. The rule on integers is extended by [ADR-0023](0023-header-integers-are-limited-to-safe-integers.md). How a headers binding is explained, condition by condition, is settled by [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
