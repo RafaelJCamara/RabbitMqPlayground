@@ -208,7 +208,7 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     state.openMessage(2);
     expect(state.message()).toBe(2);
     expect(state.focus()).toEqual({ kind: 'why', message: 2 });
-    expect(state.shown()).toMatchObject({ source: 'why', message: 2, title: 'Why? Message 2' });
+    expect(state.shown()).toMatchObject({ source: 'why', message: 2, title: 'Why? Message 2 (where it would go now)' });
     expect(announcer.last()).toBe('Message 2 is open in the inspector.');
 
     state.closeMessage();
@@ -340,6 +340,164 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     const missed = lit?.edges.find(({ key }) => key === 'E>A');
     expect(missed?.mark).toBe('missed');
     expect(missed?.reason).toEqual(expect.any(String));
+  });
+
+  describe('the message that is open (ADR-0063)', () => {
+    it('is nothing until a message is opened, and nothing again when it is closed', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      expect(state.openedMessage()).toBeNull();
+      stoppedAfterOneRouted();
+
+      state.openMessage(1);
+      expect(state.openedMessage()?.number).toBe(1);
+      state.closeMessage();
+
+      expect(state.openedMessage()).toBeNull();
+    });
+
+    it('is what the log held of the message, explained with the canvas that routed it', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+
+      state.openMessage(1);
+      const opened = state.openedMessage();
+
+      expect(opened).toMatchObject({ number: 1, basis: 'routed' });
+      expect(opened?.info).toMatchObject({ id: 1, exchange: 'orders', key: 'new', payload: 'hi' });
+      expect(opened?.held?.outcome).toBe('routed');
+      expect(opened?.explanation).toMatchObject({ outcome: 'routed', queues: ['billing'], unreached: ['archive'] });
+    });
+
+    it('keeps the route that the broker made when the canvas changes, because the route was decided then', () => {
+      const { state, stoppedAfterOneRouted, bus } = setup();
+      stoppedAfterOneRouted();
+      state.openMessage(1);
+
+      bus.apply(
+        { type: 'unbind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'new' },
+        'gesture',
+      );
+
+      expect(state.openedMessage()).toMatchObject({
+        basis: 'routed',
+        explanation: { outcome: 'routed', queues: ['billing'] },
+      });
+    });
+
+    it('says what would happen now to a message that has not got to the broker, and the route of it when it does', () => {
+      const { state, run } = setup();
+      run({ type: 'pause' });
+      run(PUBLISH);
+
+      state.openMessage(1);
+      expect(state.openedMessage()).toMatchObject({ basis: 'would', explanation: { outcome: 'routed' } });
+      expect(state.openedMessage()?.held?.outcome).toBeNull();
+
+      run({ type: 'step' });
+      expect(state.openedMessage()).toMatchObject({ basis: 'routed' });
+    });
+
+    it('explains a message that the log does not hold from what the list that it was opened from says, with the canvas as it is, and says that it is again', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      const known = { id: 4242, producer: null, exchange: 'orders', key: 'old', headers: [], payload: 'from a list' };
+
+      state.openMessage(4242, { info: known, queue: 'archive' });
+      const opened = state.openedMessage();
+
+      expect(opened).toMatchObject({ number: 4242, basis: 'again', held: undefined, queues: ['archive'] });
+      expect(opened?.info).toBe(known);
+      expect(opened?.explanation).toMatchObject({ outcome: 'routed', queues: ['archive'] });
+    });
+
+    it('is nothing for a message that is not held and that no list said anything of, and for a list that said it of another', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+
+      state.openMessage(4242);
+      expect(state.openedMessage()).toBeNull();
+
+      const other = { id: 4242, producer: null, exchange: 'orders', key: 'old', headers: [], payload: 'x' };
+      state.openMessage(4243, { info: other, queue: 'archive' });
+      expect(state.openedMessage()).toBeNull();
+    });
+
+    it('is nothing without both flags', () => {
+      TestBed.resetTestingModule();
+      const { state } = setup('simulation');
+
+      state.openMessage(1);
+
+      expect(state.openedMessage()).toBeNull();
+    });
+
+    it('says which queues a message went to: the ones that routed it, and the one that a list opened it from when the log does not hold it', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+
+      state.openMessage(1);
+      expect(state.openedMessage()?.queues).toEqual(['billing']);
+
+      const info = { id: 4242, producer: null, exchange: 'orders', key: 'new', headers: [], payload: 'x' };
+      state.openMessage(4242, { info, queue: 'billing' });
+      expect(state.openedMessage()?.queues).toEqual(['billing']);
+    });
+
+    it('lights where a message that is not held would go now, with a title that says so, when its Why? is shown', () => {
+      const { state, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      const info = { id: 4242, producer: 'P', exchange: 'orders', key: 'new', headers: [], payload: 'x' };
+
+      state.openMessage(4242, { info, queue: 'billing' });
+
+      expect(state.shown()).toMatchObject({
+        source: 'why',
+        message: 4242,
+        title: 'Why? Message 4242 (where it would go now)',
+      });
+      expect(state.shown()?.emphasis.nodes.get('Q')).toBe('reached');
+    });
+
+    it('says that it shows the Why? of the message, aloud, when the button for it is pressed', () => {
+      const { state, stoppedAfterOneRouted, announcer } = setup();
+      stoppedAfterOneRouted();
+
+      state.showWhy(1);
+
+      expect(announcer.last()).toBe('Showing why message 1 went where it went on the canvas.');
+    });
+  });
+
+  describe('the queue that is asked about (ADR-0062, ADR-0063)', () => {
+    it('is why the selected queue did not get the message chosen, or how it did, with the name that the canvas had', () => {
+      const { state, selection, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      state.openMessage(1);
+
+      selection.select(['A']);
+      const missed = state.asked();
+      selection.select(['Q']);
+      const got = state.asked();
+
+      expect(missed).toMatchObject({ message: 1, name: 'archive', explanation: { reached: false } });
+      expect(got).toMatchObject({ message: 1, name: 'billing', explanation: { reached: true } });
+    });
+
+    it('is nothing when what is selected is not a queue, when nothing is selected, and without both flags', () => {
+      const { state, selection, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      expect(state.asked()).toBeNull();
+
+      selection.select(['E']);
+      expect(state.asked()).toBeNull();
+      selection.select(['A', 'Q']);
+      expect(state.asked()).toBeNull();
+
+      TestBed.resetTestingModule();
+      const off = setup('explain');
+      off.selection.select(['A']);
+      expect(off.state.asked()).toBeNull();
+    });
   });
 
   it('opens and closes the log, and says which', () => {
