@@ -1,7 +1,8 @@
-import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import { afterNextRender, Component, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import type { Issue } from '@rmq/domain';
 import type { Point } from '../canvas/model/transform';
 import { RefusalNotice } from '../core/ui/refusal-notice';
+import { TopicTester } from '../explain/topic-tester';
 
 let nextPopover = 0;
 
@@ -10,12 +11,13 @@ export type GiveUp = 'escape' | 'button' | 'blur';
 
 /**
  * The popover that asks for the key of a binding (ADR-0041): it opens by the node that the link was made to, with the cursor already in its field, and nothing is
- * made until Enter. It says what it is for, in one sentence for the type of the exchange, and the reason when a key is refused, under the field. Escape gives up, so does
- * the focus leaving it, and so does the button. It decides nothing: the owner applies the command and answers with a refusal, which is kept open.
+ * made until Enter. It says what it is for, in one sentence for the type of the exchange, and the reason when a key is refused, under the field. For a topic key, with
+ * the explanation on, the tester of the key is under the field and follows what is typed (ADR-0064). Escape gives up, so does the focus leaving it, and so does the button. It
+ * decides nothing: the owner applies the command and answers with a refusal, which is kept open.
  */
 @Component({
   selector: 'rmq-binding-key',
-  imports: [RefusalNotice],
+  imports: [RefusalNotice, TopicTester],
   template: `
     <div
       class="border-border bg-panel text-fg absolute z-10 w-72 rounded-md border p-3 text-sm shadow-lg"
@@ -37,9 +39,13 @@ export type GiveUp = 'escape' | 'button' | 'blur';
           [id]="fieldId"
           [attr.aria-describedby]="error() ? helpId + ' ' + errorId : helpId"
           [attr.aria-invalid]="error() ? 'true' : null"
+          (input)="typed.set(field.value)"
           (keydown.escape)="escape($event)"
         />
         <p class="text-muted text-xs" [id]="helpId">{{ help() }}</p>
+        @if (topicTest()) {
+          <rmq-topic-tester [pattern]="typed()" />
+        }
         @if (error(); as issue) {
           <div [id]="errorId"><rmq-refusal-notice [issue]="issue" /></div>
         }
@@ -68,6 +74,10 @@ export class BindingKey {
   readonly position = input.required<Point>();
   /** Why the last key was refused, to show under the field. */
   readonly error = input<Issue | null>(null);
+  /** Whether the tester of a topic key is under the field. */
+  readonly topicTest = input(false);
+  /** What is typed in the field, which the tester follows. */
+  protected readonly typed = signal('');
 
   readonly confirm = output<string>();
   readonly cancelled = output<GiveUp>();

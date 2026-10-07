@@ -796,6 +796,96 @@ describe('Inspector', () => {
     });
   });
 
+  describe('the tester of a topic key, under the field that is typed in (ADR-0064)', () => {
+    const rows = () => screen.getAllByRole('group', { name: /^Binding \d+ of \d+$/ });
+    const keyField = (row = 0) => within(rows()[row]!).getByRole('textbox', { name: 'Key' }) as HTMLInputElement;
+    /** Two bindings from the topic exchange `orders` to `billing`, so that there are two fields for the cursor to go between. */
+    const twoKeys = async (flags: string | null = 'explain') => {
+      const view = await renderInspector({ edges: ['E1>Q1'] }, flags);
+      TestBed.inject(CommandBus).apply(
+        { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'invoice.#' },
+        'toolbar',
+      );
+      view.choose([], ['E1>Q1']);
+      return view;
+    };
+
+    it('is under the field of a binding of a topic exchange while the cursor is in it, with what the key matches, and is gone when the cursor leaves', async () => {
+      const { user } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+
+      await user.click(keyField());
+
+      const tester = within(rows()[0]!).getByTestId('topic-tester');
+      expect(tester).toHaveTextContent('order.x');
+      expect(keyField().compareDocumentPosition(tester) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      await user.tab();
+
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+    });
+
+    it('follows what is typed, while the key that the binding has is the one that it had, which it changes when the field is left', async () => {
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      await user.click(keyField());
+
+      await user.clear(keyField());
+      expect(screen.getByTestId('topic-tester-empty')).toBeVisible();
+      await user.type(keyField(), 'a.#');
+
+      expect(within(screen.getByTestId('topic-matching')).getAllByTestId('topic-sample')[1]).toHaveTextContent('a.y');
+      expect(store.document().bindings['B1']?.key).toBe('order.*');
+
+      await user.type(keyField(), '.#.#');
+      expect(screen.getByTestId('topic-tester-refusal')).toHaveTextContent("has 3 '#' words");
+    });
+
+    it('moves with the cursor, from the field of one binding to the field of the next, so that there is one at a time', async () => {
+      const { user } = await twoKeys();
+
+      await user.click(keyField(0));
+      expect(within(rows()[0]!).getByTestId('topic-tester')).toBeVisible();
+
+      await user.click(keyField(1));
+
+      expect(screen.getAllByTestId('topic-tester')).toHaveLength(1);
+      expect(within(rows()[1]!).getByTestId('topic-tester')).toHaveTextContent('invoice');
+      expect(within(rows()[0]!).queryByTestId('topic-tester')).not.toBeInTheDocument();
+    });
+
+    it('is not there for the bindings of an exchange that is not a topic exchange, which has no wildcards to try', async () => {
+      const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'explain');
+
+      await user.click(keyField());
+
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+    });
+
+    it('is not there without the flag of the explanation, whatever else is on', async () => {
+      for (const flags of [null, 'simulation']) {
+        TestBed.resetTestingModule();
+        document.body.replaceChildren();
+        const { user } = await renderInspector({ edges: ['E1>Q1'] }, flags);
+
+        await user.click(keyField());
+
+        expect(screen.queryByTestId('topic-tester'), String(flags)).not.toBeInTheDocument();
+      }
+    });
+
+    it('does not stop the cursor from reaching the buttons of the row, or the key from being changed with the tester under it', async () => {
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      await user.click(keyField());
+
+      await user.clear(keyField());
+      await user.type(keyField(), 'order.new');
+      await user.tab();
+
+      expect(Object.values(store.document().bindings).map(({ key }) => key)).toContain('order.new');
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+    });
+  });
+
   describe('the label of an edge (ADR-0044)', () => {
     it('has a field for where it is along the edge, which is how it is moved without dragging, empty while the app places it', async () => {
       await renderInspector({ edges: ['E1>E3'] });

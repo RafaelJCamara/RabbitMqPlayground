@@ -31,6 +31,7 @@ import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { isVirtual } from '../core/state/default-exchange';
 import type { CommandOrigin } from '../core/state/origin';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { describeNode, edgeEnds } from '../core/state/refs';
 import { SelectionStore } from '../core/state/selection-store';
@@ -40,6 +41,7 @@ import { CommandLog } from '../core/state/command-log';
 import { EventLogPanel } from '../explain/event-log-panel';
 import { LogToggle } from '../explain/log-toggle';
 import { MessageInspector } from '../explain/message-inspector';
+import { WhatIfTester } from '../explain/what-if-tester';
 import { WhyCard } from '../explain/why-card';
 import { EditorActions, type ActionSurface } from './actions';
 import { BindingKey, type GiveUp } from './binding-key';
@@ -66,6 +68,8 @@ const INTENT_LOG_LIMIT = 200;
 
 /** How big the popover that asks for a key and the picker are, which is what keeps them inside the canvas. */
 const KEY_SIZE: Size = { width: 288, height: 190 };
+/** The popover of a topic key is taller with the tester of the key in it (ADR-0064), which is the keys that it matches and does not, a few of each. */
+const KEY_TOPIC_SIZE: Size = { width: 288, height: 480 };
 const PICKER_SIZE: Size = { width: 320, height: 320 };
 
 /** How long the card of a label waits, when the pointer has left the label, for the pointer to arrive on the card. */
@@ -116,6 +120,7 @@ interface Peek {
     EventLogPanel,
     LogToggle,
     MessageInspector,
+    WhatIfTester,
     WhyCard,
   ],
   providers: [
@@ -166,7 +171,7 @@ interface Peek {
           @if (ready() && simulation.enabled) {
             <rmq-message-overlay [pressable]="markersPressable()" (pressed)="onMarkerPressed($event)" />
           }
-          @if (ready() && explain.enabled) {
+          @if (ready() && explainTools) {
             <rmq-why-card />
           }
           @if (ready() && model().nodes.length === 0) {
@@ -194,6 +199,7 @@ interface Peek {
             <rmq-binding-key
               [title]="open.ask.title"
               [help]="open.ask.help"
+              [topicTest]="open.test"
               [position]="open.at"
               [error]="keyError()"
               (confirm)="onKeyGiven($event)"
@@ -224,6 +230,9 @@ interface Peek {
             <rmq-message-inspector />
           }
           <rmq-inspector />
+          @if (explainTools) {
+            <rmq-what-if />
+          }
         </aside>
       </div>
       @if (explain.enabled && explain.logOpen()) {
@@ -250,6 +259,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly simulation = inject(Simulation);
   /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flags `explain` and `simulation`. */
   protected readonly explain = inject(ExplainState);
+  /** Whether the tools of the explanation that need no events are there: the what-if tester, the topic tester, and the card that says what the tester lights. They need the flag `explain` alone (ADR-0064). */
+  protected readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   private readonly eventLog = inject(EventLog);
   private readonly links = inject(LinkFlow);
   private readonly actions = inject(EditorActions);
@@ -278,7 +289,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly renaming = signal<Renaming | null>(null);
 
   /** The popover that asks for a key, the picker of "Link to…" and the card of a label, whichever is open. */
-  protected readonly keyAsk = signal<{ readonly ask: KeyAsk; readonly at: Point } | null>(null);
+  protected readonly keyAsk = signal<{ readonly ask: KeyAsk; readonly at: Point; readonly test: boolean } | null>(null);
   protected readonly keyError = signal<Issue | null>(null);
   protected readonly picker = signal<{ readonly ask: TargetAsk; readonly at: Point } | null>(null);
   protected readonly peek = signal<Peek | null>(null);
@@ -483,7 +494,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   askKey(ask: KeyAsk): void {
     this.closeAsks();
     this.keyError.set(null);
-    this.keyAsk.set({ ask, at: this.placed(ask.anchor, KEY_SIZE) });
+    // A topic key has wildcards, and the tester of it is under the field (ADR-0064), which makes the popover taller.
+    const test = this.explainTools && ask.exchangeType === 'topic';
+    this.keyAsk.set({ ask, at: this.placed(ask.anchor, test ? KEY_TOPIC_SIZE : KEY_SIZE), test });
   }
 
   /** Opens the picker of "Link to…", by the node that the link starts from. */

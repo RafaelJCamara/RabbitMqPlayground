@@ -1,5 +1,5 @@
 import { Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
-import { KIND_LABEL, type DocumentCommand, type ExchangeChanges, type Issue } from '@rmq/domain';
+import { KIND_LABEL, lookup, type DocumentCommand, type ExchangeChanges, type Issue } from '@rmq/domain';
 import type { ExchangeType } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXCHANGE_TYPES } from '../canvas/model/new-node';
@@ -18,6 +18,7 @@ import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
 import { LinkFlow } from './link-flow';
 import { RefusalNotice } from '../core/ui/refusal-notice';
 import { QueueAsked } from '../explain/queue-asked';
+import { TopicTester } from '../explain/topic-tester';
 import { ConsumerSettings } from '../simulation/consumer-settings';
 import { ProducerComposer } from '../simulation/producer-composer';
 import { QueueMessages } from '../simulation/queue-messages';
@@ -48,7 +49,17 @@ let nextInspector = 0;
  */
 @Component({
   selector: 'rmq-inspector',
-  imports: [Icon, Help, Switch, RefusalNotice, QueueAsked, QueueMessages, ProducerComposer, ConsumerSettings],
+  imports: [
+    Icon,
+    Help,
+    Switch,
+    RefusalNotice,
+    QueueAsked,
+    TopicTester,
+    QueueMessages,
+    ProducerComposer,
+    ConsumerSettings,
+  ],
   template: `
     <div class="flex flex-col gap-4" data-testid="inspector">
       @if (node(); as n) {
@@ -311,6 +322,9 @@ let nextInspector = 0;
                           problem('binding:' + row.id) ? id('binding-' + row.id + '-problem') : null
                         "
                         (change)="rekey($event, row)"
+                        (focus)="typing.set({ id: row.id, text: row.key })"
+                        (input)="typeKey($event, row)"
+                        (blur)="stopTyping(row.id)"
                       />
                       <button
                         type="button"
@@ -332,6 +346,9 @@ let nextInspector = 0;
                     }
                     @if (problem('binding:' + row.id); as issue) {
                       <div [id]="id('binding-' + row.id + '-problem')"><rmq-refusal-notice [issue]="issue" /></div>
+                    }
+                    @if (testsKeys(e) && typing()?.id === row.id) {
+                      <rmq-topic-tester [pattern]="typing()?.text ?? ''" />
                     }
                   </div>
                 </li>
@@ -432,6 +449,10 @@ export class Inspector {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   /** The parts of the inspector that the simulation adds are there only with its flag (ADR-0056). */
   protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
+  /** The tester of a topic key, under the field that is typed in, needs the flag of the explanation alone (ADR-0064). */
+  private readonly explainTools = inject(FeatureFlags).isEnabled('explain');
+  /** The key field of a binding that is being typed in, and what is typed in it, which the tester follows before the key is changed (it is changed when the field is left). */
+  protected readonly typing = signal<{ readonly id: string; readonly text: string } | null>(null);
   private readonly uid = `rmq-inspector-${nextInspector++}`;
 
   protected readonly kindLabel = KIND_LABEL;
@@ -570,6 +591,22 @@ export class Inspector {
   /** A producer links again: to another target, through the picker. */
   protected changeTarget(edge: EdgeView): void {
     this.links.openPicker(edge.from, 'inspector');
+  }
+
+  /** Whether the tester of a topic key is offered for the bindings of this edge: with the flag, and when the edge starts from a topic exchange. */
+  protected testsKeys(edge: EdgeView): boolean {
+    return this.explainTools && lookup(this.store.document().exchanges, edge.from)?.type === 'topic';
+  }
+
+  protected typeKey(event: Event, row: BindingRow): void {
+    this.typing.set({ id: row.id, text: (event.target as HTMLInputElement).value });
+  }
+
+  /** The field is left, so the tester under it goes, unless the learner has already gone to another field, which has its own. */
+  protected stopTyping(id: string): void {
+    if (this.typing()?.id === id) {
+      this.typing.set(null);
+    }
   }
 
   /** A binding gets another key, as an unbind and a bind in one step. A key that is refused puts the old one back and says why under the field. */

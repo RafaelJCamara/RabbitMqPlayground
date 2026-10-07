@@ -25,6 +25,7 @@ import type { CanvasIntent } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
+import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
@@ -39,6 +40,7 @@ import {
   type RepositoryFactories,
 } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
+import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore, type Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
@@ -1970,6 +1972,181 @@ describe('Editor', () => {
       expect(screen.getByTestId('why-card')).toHaveTextContent('Why? Message 1 and archive');
       expect(screen.getByTestId('why-card')).toHaveTextContent('The queue archive did not get the message.');
       expect(canvas().emphasis().nodes.get('A')).toBe('asked');
+    });
+  });
+
+  describe('the testers of the explanation, which need the flag of the explanation alone (ADR-0064)', () => {
+    async function openEditor(flags: string | null, ...items: string[]) {
+      const providers = [
+        ...harness().providers,
+        { provide: FRAME_SOURCE, useValue: manualFrames() },
+        { provide: CANVAS_CONTEXT, useValue: () => null },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+      ];
+      const view = await renderEditor(providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const user = userEvent.setup();
+      for (const item of items) {
+        await user.click(screen.getByRole('button', { name: item }));
+      }
+      view.fixture.detectChanges();
+      const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+      const idOf = (kind: string) =>
+        canvas()
+          .model()
+          .nodes.find((node) => node.kind === kind)!.id;
+      return { ...view, canvas, user, idOf, injector: view.fixture.debugElement.injector };
+    }
+
+    /** What is lit on the canvas that the editor draws. */
+    const lit = (canvas: () => FakeCanvas) => [...canvas().emphasis().nodes.entries()].sort();
+
+    it('has the what-if tester under what is selected, in the region of the inspector, with the flag alone, and none of what needs events', async () => {
+      await openEditor('explain');
+
+      const aside = screen.getByRole('complementary', { name: 'Inspector' });
+      const tester = within(aside).getByRole('region', { name: 'What if…?' });
+      expect(tester).toBeVisible();
+      expect(aside.querySelector('rmq-inspector')?.nextElementSibling?.tagName).toBe('RMQ-WHAT-IF');
+      expect(screen.queryByRole('region', { name: 'Simulation' })).not.toBeInTheDocument();
+      expect(document.querySelector('rmq-message-inspector')).toBeNull();
+      // The key of the log is not offered where there is no log to show, and the page keeps the letter.
+      expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Show or hide the event log');
+    });
+
+    it('has none of it with the simulation alone, or with no flag', async () => {
+      for (const flags of ['simulation', null]) {
+        TestBed.resetTestingModule();
+        document.body.replaceChildren();
+        await openEditor(flags);
+
+        expect(screen.queryByRole('region', { name: 'What if…?' }), String(flags)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('why-card'), String(flags)).not.toBeInTheDocument();
+      }
+    });
+
+    it('has the tester and the log together with both flags, which is what the whole of the explanation is', async () => {
+      await openEditor('explain,simulation');
+
+      expect(screen.getByRole('region', { name: 'What if…?' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Event log' })).toBeVisible();
+    });
+
+    it('lights the canvas that the editor draws, and says it in a card in the canvas, for as long as the tester is open and its message can be read', async () => {
+      const { user, canvas, fixture, injector } = await openEditor('explain', 'Direct exchange', 'Queue');
+      injector
+        .get(CommandBus)
+        .apply(
+          { type: 'bind', source: 'exchange1', destination: { kind: 'queue', name: 'queue1' }, key: 'new' },
+          'typed',
+        );
+      fixture.detectChanges();
+      expect(canvas().emphasis()).toBe(NO_EMPHASIS);
+
+      await user.click(screen.getByRole('button', { name: 'What if…?' }));
+      await user.type(screen.getByRole('textbox', { name: 'Message' }), 'key=new');
+      fixture.detectChanges();
+
+      const card = screen.getByTestId('why-card');
+      expect(screen.getByRole('main', { name: 'Canvas' })).toContainElement(card);
+      expect(card).toHaveTextContent('What if? To exchange1 with the key "new"');
+      expect(card).toHaveTextContent('Would reach queue1.');
+      expect(lit(canvas)).toContainEqual([expect.any(String), 'reached']);
+
+      await user.click(within(card).getByRole('button', { name: 'Close the tester' }));
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('why-card')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'What if…?' })).toHaveAttribute('aria-expanded', 'false');
+      expect(canvas().emphasis()).toBe(NO_EMPHASIS);
+    });
+
+    it('publishes nothing and changes nothing: not the canvas, the selection, the history, the log of commands or the log of events', async () => {
+      const { user, fixture, injector } = await openEditor('explain,simulation', 'Direct exchange', 'Queue');
+      const store = injector.get(DocumentStore);
+      const selection = injector.get(SelectionStore);
+      const commands = injector.get(CommandLog);
+      const events = injector.get(EventLog);
+      const before = {
+        document: store.document(),
+        undoable: store.canUndo(),
+        selection: selection.selection(),
+        commands: commands.entries(),
+        events: events.count(),
+      };
+
+      await user.click(screen.getByRole('button', { name: 'What if…?' }));
+      await user.type(screen.getByRole('textbox', { name: 'Message' }), 'key=new header:n=1');
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Exchange' }), ['']);
+      fixture.detectChanges();
+      await Promise.resolve();
+
+      expect(screen.getByTestId('what-if-answer')).toBeVisible();
+      expect(store.document()).toBe(before.document);
+      expect(store.canUndo()).toBe(before.undoable);
+      expect(selection.selection()).toBe(before.selection);
+      expect(commands.entries()).toBe(before.commands);
+      expect(events.count()).toBe(before.events);
+    });
+
+    it('has the tester of a topic key under the field of the popover that asks for it, which follows what is typed', async () => {
+      const { user, canvas, fixture, idOf } = await openEditor('explain', 'Topic exchange', 'Queue');
+
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      fixture.detectChanges();
+
+      const popover = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
+      const tester = within(popover).getByTestId('topic-tester');
+      expect(tester).toHaveTextContent('Type a key to see which keys it matches.');
+
+      await user.keyboard('order.*');
+
+      expect(within(tester).getAllByTestId('topic-sample')[0]).toHaveTextContent('order.x');
+      await user.keyboard('.#.#.#');
+      expect(within(tester).getByTestId('topic-tester-refusal')).toHaveTextContent("has 3 '#' words");
+    });
+
+    it('is placed higher for a topic key, where the popover is taller for the tester, than for a key that has none', async () => {
+      const tall = await openEditor('explain', 'Topic exchange', 'Queue');
+      tall
+        .canvas()
+        .intent.emit({ type: 'link', source: tall.idOf('exchange'), target: tall.idOf('queue'), via: 'drag' });
+      tall.fixture.detectChanges();
+      const topic = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      const topicTop = parseFloat(topic.style.top);
+
+      TestBed.resetTestingModule();
+      document.body.replaceChildren();
+      const short = await openEditor('simulation', 'Topic exchange', 'Queue');
+      short
+        .canvas()
+        .intent.emit({ type: 'link', source: short.idOf('exchange'), target: short.idOf('queue'), via: 'drag' });
+      short.fixture.detectChanges();
+      const plain = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+
+      // The canvas that the editor has is 800 by 600, and the node is where the nodes of a new canvas are: the taller popover is never lower.
+      expect(topicTop).toBeLessThanOrEqual(parseFloat(plain.style.top));
+    });
+
+    it('has no tester under the field for a direct exchange, which has no wildcards, or without the flag', async () => {
+      const direct = await openEditor('explain', 'Direct exchange', 'Queue');
+      direct
+        .canvas()
+        .intent.emit({ type: 'link', source: direct.idOf('exchange'), target: direct.idOf('queue'), via: 'drag' });
+      direct.fixture.detectChanges();
+      await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+
+      TestBed.resetTestingModule();
+      document.body.replaceChildren();
+      const without = await openEditor('simulation', 'Topic exchange', 'Queue');
+      without
+        .canvas()
+        .intent.emit({ type: 'link', source: without.idOf('exchange'), target: without.idOf('queue'), via: 'drag' });
+      without.fixture.detectChanges();
+      await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
     });
   });
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { transientQueueReply } from '@rmq/engine';
 import type { Issue } from '@rmq/domain';
@@ -10,11 +10,11 @@ const topic = {
   help: 'A topic key is words separated by dots. * matches one word and # matches zero or more words.',
 };
 
-async function renderPopover(error: Issue | null = null) {
+async function renderPopover(error: Issue | null = null, topicTest = false) {
   const confirmed: string[] = [];
   const cancelled: string[] = [];
   const view = await render(BindingKey, {
-    inputs: { title: topic.title, help: topic.help, position: { x: 120, y: 80 }, error },
+    inputs: { title: topic.title, help: topic.help, position: { x: 120, y: 80 }, error, topicTest },
     on: { confirm: (key: string) => confirmed.push(key), cancelled: (how: string) => cancelled.push(how) },
   });
   return { ...view, confirmed, cancelled, user: userEvent.setup() };
@@ -142,5 +142,64 @@ describe('BindingKey (ADR-0041)', () => {
 
     expect(screen.getByRole('textbox', { name: 'Binding key' })).not.toHaveAttribute('aria-invalid');
     expect(screen.queryByTestId('refusal')).not.toBeInTheDocument();
+  });
+
+  describe('the tester of a topic key (ADR-0064)', () => {
+    it('is not under the field unless the owner asks for it, which it does for a topic key with the explanation on', async () => {
+      await renderPopover();
+
+      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
+    });
+
+    it('is under the field, after the sentence that says what the key is for, and invites a key to be typed', async () => {
+      await renderPopover(null, true);
+
+      const tester = screen.getByRole('group', { name: 'What this key matches' });
+      expect(tester).toHaveTextContent('Type a key to see which keys it matches.');
+      expect(
+        screen.getByText(topic.help).compareDocumentPosition(tester) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.getByRole('textbox', { name: 'Binding key' }).compareDocumentPosition(tester)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
+    it('follows what is typed, key by key, and goes back to inviting when the field is emptied', async () => {
+      const { user } = await renderPopover(null, true);
+      const field = screen.getByRole('textbox', { name: 'Binding key' });
+
+      await user.type(field, 'order.*');
+
+      expect(within(screen.getByTestId('topic-matching')).getAllByTestId('topic-sample')[0]).toHaveTextContent(
+        'order.x',
+      );
+
+      await user.type(field, '.#.#.#');
+
+      expect(screen.getByTestId('topic-tester-refusal')).toHaveTextContent("has 3 '#' words");
+
+      await user.clear(field);
+
+      expect(screen.getByTestId('topic-tester-empty')).toBeVisible();
+    });
+
+    it('does not change what the popover gives: the key that is typed, with Enter, as it was', async () => {
+      const { user, confirmed } = await renderPopover(null, true);
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
+
+      await user.keyboard('order.*{Enter}');
+
+      expect(confirmed).toEqual(['order.*']);
+    });
+
+    it('does not give the popover up when the focus goes from the field to the tester, which is part of it', async () => {
+      const { cancelled } = await renderPopover(null, true);
+
+      fireEvent.focusOut(screen.getByRole('textbox', { name: 'Binding key' }), {
+        relatedTarget: screen.getByTestId('topic-tester'),
+      });
+
+      expect(cancelled).toEqual([]);
+    });
   });
 });
