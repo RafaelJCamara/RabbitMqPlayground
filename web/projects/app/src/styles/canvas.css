@@ -16,6 +16,10 @@
   --ff-connection-hover-color: color-mix(in srgb, var(--rmq-accent) 30%, transparent);
   --ff-connection-width: 2px;
   --ff-connection-hit-width: 16px;
+  /* The label of an edge is the chips inside the library's box, which have colours of their own (ADR-0044): the box is not drawn, because its white is a white frame round them in the dark theme. */
+  --ff-connection-content-background-color: transparent;
+  --ff-connection-content-border-color: transparent;
+  --ff-connection-content-border-color-selected: transparent;
   --ff-background-dot-color: var(--rmq-line);
   --ff-background-line-color: var(--rmq-line);
 }
