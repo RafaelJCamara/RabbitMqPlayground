@@ -688,14 +688,44 @@ describe('a press on a shape (ADR-0063)', () => {
     expect(pressed.mock.calls[0]?.[0]).toMatchObject({ count: 3, message: null });
   });
 
-  it('stops listening to the region when it is gone', async () => {
+  it('takes a press by where it is on the overlay and not on the page, which is where the box of its host puts the page’s point', async () => {
+    const { fixture, region, pressed } = await oneShape();
+    fixture.componentRef.setInput('pressable', true);
+    vi.spyOn(fixture.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      top: 40,
+      right: 900,
+      bottom: 640,
+      width: 800,
+      height: 600,
+      x: 100,
+      y: 40,
+      toJSON: () => ({}),
+    });
+
+    press(region, 'pointerdown', 160, 60);
+
+    expect(pressed).toHaveBeenCalledOnce();
+
+    // The point that was the shape's without the box is not on it with the box.
+    press(region, 'pointerdown', 60, 20);
+
+    expect(pressed).toHaveBeenCalledOnce();
+  });
+
+  it('stops listening to the region when it is gone: to the pointer, the mouse and the finger', async () => {
     const { fixture, region, pressed } = await oneShape();
     fixture.componentRef.setInput('pressable', true);
     fixture.destroy();
 
-    press(region, 'pointerdown', 60, 20);
+    const pointer = press(region, 'pointerdown', 60, 20);
+    const mouse = press(region, 'mousedown', 60, 20);
+    const touch = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(touch, 'touches', { value: [{ clientX: 60, clientY: 20 }] });
+    region.dispatchEvent(touch);
 
     expect(pressed).not.toHaveBeenCalled();
+    expect([pointer, mouse, touch].map((event) => event.defaultPrevented)).toEqual([false, false, false]);
   });
 });
 

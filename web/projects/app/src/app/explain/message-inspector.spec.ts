@@ -112,6 +112,7 @@ async function renderInspector() {
   };
   return {
     fixture,
+    frames,
     run,
     focus,
     store: TestBed.inject(DocumentStore),
@@ -161,6 +162,10 @@ describe('MessageInspector (ADR-0063)', () => {
         .getAllByRole('heading', { level: 3 })
         .map((heading) => heading.textContent?.trim()),
     ).toEqual(['Where it is', 'Payload', 'Headers', 'Route', 'Queues that did not get it']);
+    // Each part of it is a region that is named by its heading, so that a screen reader can go from one to the next.
+    for (const name of ['Where it is', 'Payload', 'Headers', 'Route', 'Queues that did not get it']) {
+      expect(within(section).getByRole('region', { name }), name).toBeVisible();
+    }
   });
 
   it('says what the message is: where it was published and with what key, who sent it, and when', async () => {
@@ -186,6 +191,53 @@ describe('MessageInspector (ADR-0063)', () => {
     open(1);
     expect(screen.getByTestId('message-sender')).toHaveTextContent('a command, with no producer');
     expect(screen.getByTestId('message-key')).toHaveTextContent('the empty key');
+    expect(screen.getByTestId('message-exchange')).toHaveTextContent('exchange orders');
+  });
+
+  it('says of a message that was published to the default exchange that it is the default exchange, and the key that it was sent with', async () => {
+    const { run, open, store } = await renderInspector();
+    // A producer that is linked to a queue sends through the default exchange, with the name of the queue as the key.
+    store.load({
+      ...traffic(),
+      producers: {
+        P: producerRecord(
+          'sender',
+          { kind: 'queue', id: 'Q' },
+          { message: { payload: 'hi', key: 'billing', headers: [] } },
+        ),
+      },
+    });
+    run({ type: 'pause' });
+    run(PUBLISH);
+
+    open(1);
+
+    expect(screen.getByTestId('message-exchange')).toHaveTextContent('the default exchange');
+    expect(screen.getByTestId('message-exchange')).not.toHaveTextContent('exchange the default');
+    expect(screen.getByTestId('message-key')).toHaveTextContent('billing');
+  });
+
+  it('says when it was published in seconds, to the thousandth, as the clock of the simulation had it', async () => {
+    const { run, open, frames, store } = await renderInspector();
+    // A leg that takes five seconds keeps the clock going while the first message is on it, so that the second is published late.
+    store.load({
+      ...traffic(),
+      settings: { ...traffic().settings, timing: { publishMs: 5_000, brokerMs: 50, deliverMs: 100 } },
+    });
+    run({ type: 'play' });
+    run(PUBLISH);
+    for (let time = 10; time <= 2500; time += 10) {
+      frames.frame(time);
+    }
+    run({ type: 'pause' });
+    run(PUBLISH);
+
+    open(2);
+
+    const at = TestBed.inject(EventLog).held.get(2)?.publishedAt as number;
+    expect(at).toBeGreaterThanOrEqual(2000);
+    expect(screen.getByTestId('message-time')).toHaveTextContent(`${(at / 1000).toFixed(3)} s`);
+    expect(screen.getByTestId('message-time').textContent).toMatch(/\b2\.\d{3} s\b/);
   });
 
   it('has the payload whole, in a field that can be read and not changed, which scrolls and has a name', async () => {
@@ -233,6 +285,10 @@ describe('MessageInspector (ADR-0063)', () => {
       open(1);
 
       expect(screen.getByTestId('message-places')).toHaveTextContent('On its way from its producer to the exchange.');
+      expect(within(screen.getByTestId('message-places')).getByRole('listitem')).toHaveAttribute(
+        'data-place',
+        'to-the-broker',
+      );
       expect(screen.getByTestId('message-basis')).toHaveTextContent(
         'It has not got to the broker yet. This is where it would go',
       );
@@ -252,6 +308,8 @@ describe('MessageInspector (ADR-0063)', () => {
 
       run({ type: 'step' });
       expect(places()).toBe('On its way from billing to worker.');
+      // A copy that is on its way to a consumer has been given once, so it was not redelivered.
+      expect(screen.getByTestId('message-redelivered')).toHaveTextContent('No');
 
       run({ type: 'step' });
       expect(places()).toBe('Held by worker, which has not acknowledged it: it stays in billing until it does.');
@@ -304,6 +362,27 @@ describe('MessageInspector (ADR-0063)', () => {
 
       expect(screen.getByTestId('message-redelivered')).toHaveTextContent('Yes');
       expect(screen.getByTestId('message-places')).toHaveTextContent('Ready in billing, number 1 of 1');
+    });
+
+    it('says that it was redelivered while it is on its way to a consumer for the second time', async () => {
+      const { run, open, bus, fixture } = await renderInspector();
+      run({ type: 'pause' });
+      run(PUBLISH);
+      for (let step = 0; step < 3; step += 1) {
+        run({ type: 'step' });
+      }
+      open(1);
+      bus.apply({ type: 'delete', target: { kind: 'consumer', name: 'worker' } }, 'gesture');
+      bus.apply({ type: 'add-consumer', name: 'worker' }, 'gesture');
+      bus.apply(
+        { type: 'set', kind: 'consumer', name: 'worker', changes: { ack: 'manual', prefetch: 1, processingMs: 100 } },
+        'gesture',
+      );
+      bus.apply({ type: 'subscribe', consumer: 'worker', queue: 'billing' }, 'gesture');
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('message-places')).toHaveTextContent('On its way from billing to worker.');
+      expect(screen.getByTestId('message-redelivered')).toHaveTextContent('Yes');
     });
 
     it('does not say anything of redelivery when no queue has a copy', async () => {
@@ -368,6 +447,7 @@ describe('MessageInspector (ADR-0063)', () => {
       expect(button).toHaveAttribute('aria-expanded', 'true');
       const reasons = screen.getByTestId('why-not-reasons');
       expect(button).toHaveAttribute('aria-controls', reasons.id);
+      expect(reasons.id).toMatch(/^rmq-message-inspector-\d+-why-archive$/);
       expect(within(reasons).getByTestId('queue-why-text')).toHaveTextContent(
         'The queue archive did not get the message.',
       );
@@ -482,12 +562,14 @@ describe('headerRow', () => {
       headerRow(entry('c', float(1))),
       headerRow(entry('d', float(1.5))),
       headerRow(entry('e', bool(false))),
+      headerRow(entry('f', float(0.25))),
     ]).toEqual([
       { name: 'a', type: 'string', value: '"x y"' },
       { name: 'b', type: 'integer', value: '3' },
       { name: 'c', type: 'float', value: '1.0' },
       { name: 'd', type: 'float', value: '1.5' },
       { name: 'e', type: 'boolean', value: 'false' },
+      { name: 'f', type: 'float', value: '0.25' },
     ]);
   });
 });

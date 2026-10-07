@@ -2032,6 +2032,26 @@ describe('Editor', () => {
       expect(screen.getByRole('button', { name: 'Event log' })).toBeVisible();
     });
 
+    it('answers that there is no log to show with the explanation alone, so that the key is left to the page, and says nothing', async () => {
+      const { fixture, injector } = await openEditor('explain');
+      const announcer = injector.get(Announcer);
+      const before = announcer.last();
+
+      expect(fixture.componentInstance.toggleEventLog()).toBe(false);
+
+      expect(announcer.last()).toBe(before);
+    });
+
+    it('answers that it showed the log, and then that it hid it, with both flags, and says which', async () => {
+      const { fixture, injector } = await openEditor('explain,simulation');
+      const announcer = injector.get(Announcer);
+
+      expect(fixture.componentInstance.toggleEventLog()).toBe(true);
+      expect(announcer.last()).toBe('Event log shown.');
+      expect(fixture.componentInstance.toggleEventLog()).toBe(true);
+      expect(announcer.last()).toBe('Event log hidden.');
+    });
+
     it('lights the canvas that the editor draws, and says it in a card in the canvas, for as long as the tester is open and its message can be read', async () => {
       const { user, canvas, fixture, injector } = await openEditor('explain', 'Direct exchange', 'Queue');
       injector
@@ -2107,26 +2127,34 @@ describe('Editor', () => {
       expect(within(tester).getByTestId('topic-tester-refusal')).toHaveTextContent("has 3 '#' words");
     });
 
-    it('is placed higher for a topic key, where the popover is taller for the tester, than for a key that has none', async () => {
-      const tall = await openEditor('explain', 'Topic exchange', 'Queue');
-      tall
-        .canvas()
-        .intent.emit({ type: 'link', source: tall.idOf('exchange'), target: tall.idOf('queue'), via: 'drag' });
-      tall.fixture.detectChanges();
-      const topic = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
-      const topicTop = parseFloat(topic.style.top);
+    it('is placed above its node when there is room for the popover that has no tester under it and not for the taller one that has, which is a topic key with the explanation on', async () => {
+      /** An exchange of the type, and a queue, with the exchange at the height where 190 pixels fit under it and 480 do not, on the canvas of 800 by 600 that the editor has here. */
+      const lowDocument = (type: 'topic' | 'direct'): CanvasDocument =>
+        documentOf({
+          exchanges: { E: exchangeRecord('logs', type) },
+          queues: { Q: queueRecord('errors') },
+          nodes: { E: { x: 100, y: 250 }, Q: { x: 400, y: 250 } },
+        });
+      const popoverTop = async (flags: string, type: 'topic' | 'direct'): Promise<number> => {
+        TestBed.resetTestingModule();
+        document.body.replaceChildren();
+        const { canvas, fixture, injector } = await openEditor(flags);
+        injector.get(DocumentStore).load(lowDocument(type));
+        fixture.detectChanges();
+        canvas().intent.emit({ type: 'link', source: 'E', target: 'Q', via: 'drag' });
+        fixture.detectChanges();
+        const popover = await screen.findByRole('group', { name: 'Binding key from exchange logs to queue errors' });
+        return parseFloat(popover.style.top);
+      };
 
-      TestBed.resetTestingModule();
-      document.body.replaceChildren();
-      const short = await openEditor('simulation', 'Topic exchange', 'Queue');
-      short
-        .canvas()
-        .intent.emit({ type: 'link', source: short.idOf('exchange'), target: short.idOf('queue'), via: 'drag' });
-      short.fixture.detectChanges();
-      const plain = await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
+      const withTester = await popoverTop('explain', 'topic');
+      const without = await popoverTop('simulation', 'topic');
+      const direct = await popoverTop('explain', 'direct');
 
-      // The canvas that the editor has is 800 by 600, and the node is where the nodes of a new canvas are: the taller popover is never lower.
-      expect(topicTop).toBeLessThanOrEqual(parseFloat(plain.style.top));
+      // The popover with no tester is under the node. The taller one does not fit there, and is put over it, at the top.
+      expect(without).toBeGreaterThan(250);
+      expect(direct).toBe(without);
+      expect(withTester).toBeLessThan(250);
     });
 
     it('has no tester under the field for a direct exchange, which has no wildcards, or without the flag', async () => {

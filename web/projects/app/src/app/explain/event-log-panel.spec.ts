@@ -22,6 +22,7 @@ import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
+import { windowOf } from '../core/explain/window';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
@@ -138,6 +139,7 @@ async function renderPanel(
   };
   return {
     fixture,
+    frames,
     log,
     store,
     settle,
@@ -176,6 +178,9 @@ describe('EventLogPanel (ADR-0061)', () => {
     expect(screen.getByLabelText('Node')).toBeVisible();
     expect(screen.getByLabelText('Message')).toBeVisible();
     expect(screen.getByLabelText('Search')).toBeVisible();
+    // A message is a number and a search is a search, which is what a phone gives the keyboard for.
+    expect(screen.getByLabelText('Message')).toHaveAttribute('type', 'number');
+    expect(screen.getByLabelText('Search')).toHaveAttribute('type', 'search');
   });
 
   it('says that nothing has happened yet when there are no events, and what to do, and has no list', async () => {
@@ -478,6 +483,171 @@ describe('EventLogPanel (ADR-0061)', () => {
     });
   });
 
+  describe('the keyboard, where the list has no row that it is on, and where a page is not a whole number of rows', () => {
+    /** The number of the row that the arrow keys are on, among the rows that are drawn. */
+    const activeSeq = (rows: () => HTMLElement[]) =>
+      Number(
+        rows()
+          .find((row) => row.getAttribute('data-active') === 'true')
+          ?.getAttribute('data-seq'),
+      );
+    const press = (list: HTMLElement, key: string) =>
+      list.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+
+    it('gives each row an id of its own, which the list names as the row that the arrow keys are on', async () => {
+      const { list, rows } = await renderPanel({ publish: 1 });
+
+      const newest = rows().at(-1) as HTMLElement;
+
+      // What holds the rows is not a list or a group of its own, so that the rows are the options of the list.
+      expect(screen.getByTestId('event-log-rows')).toHaveAttribute('role', 'presentation');
+      expect(newest.id).toBe(`rmq-log-row-${newest.getAttribute('data-seq')}`);
+      expect(list().getAttribute('aria-activedescendant')).toBe(newest.id);
+      expect(new Set(rows().map((row) => row.id)).size).toBe(rows().length);
+    });
+
+    it('does not name the row that the learner moved to when the scroll has taken it out of the page, though other rows are drawn', async () => {
+      const { list, settle, user } = await renderPanel({ burst: 100, publish: 1 });
+      list().focus();
+      await user.keyboard('{Home}');
+      expect(list().getAttribute('aria-activedescendant')).toBe('rmq-log-row-1');
+
+      list().scrollTop = 28 * 60;
+      fireEvent.scroll(list());
+      settle();
+
+      expect(list()).not.toHaveAttribute('aria-activedescendant');
+    });
+
+    it('goes to the first row on the arrow down, and to the last on the arrow up, when no row is the one that the keys are on', async () => {
+      const first = await renderPanel({ burst: 100, publish: 1 });
+      first.list().scrollTop = 28 * 30;
+      fireEvent.scroll(first.list());
+      first.settle();
+      expect(first.list()).not.toHaveAttribute('aria-activedescendant');
+
+      press(first.list(), 'ArrowDown');
+      first.settle();
+
+      expect(activeSeq(first.rows)).toBe(1);
+
+      TestBed.resetTestingModule();
+      document.body.replaceChildren();
+      const last = await renderPanel({ burst: 100, publish: 1 });
+      last.list().scrollTop = 28 * 30;
+      fireEvent.scroll(last.list());
+      last.settle();
+
+      press(last.list(), 'ArrowUp');
+      last.settle();
+
+      expect(activeSeq(last.rows)).toBe(101);
+    });
+
+    it('moves one row for an arrow, from where it is', async () => {
+      const { list, rows, user } = await renderPanel({ burst: 40, publish: 1 });
+      list().focus();
+      await user.keyboard('{Home}');
+
+      await user.keyboard('{ArrowDown}');
+      expect(activeSeq(rows)).toBe(2);
+      await user.keyboard('{ArrowDown}');
+      expect(activeSeq(rows)).toBe(3);
+      await user.keyboard('{ArrowUp}');
+      expect(activeSeq(rows)).toBe(2);
+    });
+
+    it('moves a page of the whole rows that show, less one, for Page Down and Page Up, and one row for a list that shows one', async () => {
+      lay(150, 28);
+      const tall = await renderPanel({ layout: false, burst: 40, publish: 1 });
+      tall.list().focus();
+      await tall.user.keyboard('{Home}');
+
+      // 150 pixels show five whole rows and part of a sixth.
+      await tall.user.keyboard('{PageDown}');
+      expect(activeSeq(tall.rows)).toBe(1 + 4);
+      await tall.user.keyboard('{PageUp}');
+      expect(activeSeq(tall.rows)).toBe(1);
+
+      vi.restoreAllMocks();
+      TestBed.resetTestingModule();
+      document.body.replaceChildren();
+      lay(28, 28);
+      const short = await renderPanel({ layout: false, burst: 40, publish: 1 });
+      short.list().focus();
+      await short.user.keyboard('{Home}');
+
+      await short.user.keyboard('{PageDown}');
+      expect(activeSeq(short.rows)).toBe(2);
+    });
+
+    it('starts on the row at the top of what shows, which is the one that the scroll has partly passed, and not the one after it', async () => {
+      const { list, rows, settle } = await renderPanel({ burst: 60, publish: 1 });
+      list().scrollTop = 28 * 20 + 10;
+      fireEvent.scroll(list());
+      settle();
+
+      list().blur();
+      list().focus();
+      settle();
+
+      expect(activeSeq(rows)).toBe(21);
+    });
+
+    it('starts on the chosen row when it is the very first, and goes on from it', async () => {
+      const { list, rows, settle, explain, user } = await renderPanel({ burst: 60, publish: 1 });
+      explain.chooseRow(1);
+      list().scrollTop = 28 * 20;
+      fireEvent.scroll(list());
+      settle();
+
+      list().blur();
+      list().focus();
+      settle();
+      await user.keyboard('{ArrowDown}');
+
+      expect(activeSeq(rows)).toBe(2);
+    });
+  });
+
+  describe('what it measures and says', () => {
+    it('takes the height of a row from the page, and draws and spaces the rows by it', async () => {
+      lay(140, 36);
+      const { rows, spaces, log } = await renderPanel({ layout: false, burst: 100, publish: 1 });
+      const total = log.shown().length;
+      const expected = windowOf(total, 36, total * 36 - 140, 140);
+
+      expect(rows()).toHaveLength(expected.end - expected.start);
+      expect(spaces().style.paddingTop).toBe(`${expected.before}px`);
+      expect(spaces().style.paddingBottom).toBe(`${expected.after}px`);
+    });
+
+    it('says the time of a row in seconds, to the thousandth, as the clock of the simulation had it', async () => {
+      const { frames, rows, settle, log } = await renderPanel({ burst: 20 });
+      frames.frame(0);
+      TestBed.inject(CommandBus).run(PUBLISH, 'toolbar');
+      for (let time = 10; time <= 4000; time += 10) {
+        frames.frame(time);
+      }
+      settle();
+
+      // The newest row is the one that is drawn, and it happened after two seconds of the clock.
+      const row = rows().at(-1) as HTMLElement;
+      const at = log.rowBySeq(Number(row.getAttribute('data-seq')))?.at as number;
+      expect(at).toBeGreaterThanOrEqual(2000);
+      expect(row).toHaveTextContent(`${(at / 1000).toFixed(3)} s`);
+      expect(row.textContent).toMatch(/\b[2-4]\.\d{3} s\b/);
+    });
+
+    it('says one event in the singular', async () => {
+      const { run } = await renderPanel();
+
+      run({ type: 'pause' });
+
+      expect(screen.getByTestId('event-log-count')).toHaveTextContent(/^1 event$/);
+    });
+  });
+
   describe('the mouse', () => {
     it('chooses a row when it is clicked, and lights what it is about, and says so', async () => {
       const { rows, user, explain, announce, list } = await renderPanel({ publish: 1 });
@@ -554,6 +724,11 @@ describe('EventLogPanel (ADR-0061)', () => {
       for (const button of within(group).getAllByRole('button')) {
         expect(button.querySelector('rmq-icon svg')).not.toBeNull();
       }
+      expect(
+        within(group)
+          .getAllByRole('button')
+          .map((button) => button.getAttribute('data-family')),
+      ).toEqual(['commands', 'publishing', 'routing', 'problems', 'queues', 'delivery', 'consumers', 'simulation']);
     });
 
     it('ask for the events of one node, from a list of the nodes of the canvas, and say so when the node has gone', async () => {
@@ -568,11 +743,14 @@ describe('EventLogPanel (ADR-0061)', () => {
         'Consumer worker',
       ]);
 
+      expect(select.value).toBe('');
       await user.selectOptions(select, 'Producer sender');
 
       expect(log.filter().node).toBe('producer:P');
       expect(rows()).toHaveLength(2);
       expect(screen.getByTestId('event-log-count')).toHaveTextContent('Showing 2 of 3 events');
+      // A node that the canvas has is one of the options and not one more.
+      expect((screen.getByLabelText('Node') as HTMLSelectElement).options).toHaveLength(6);
 
       store.load({ ...traffic(), producers: {} });
       settle();
@@ -585,6 +763,24 @@ describe('EventLogPanel (ADR-0061)', () => {
 
       await user.selectOptions(screen.getByLabelText('Node'), 'All nodes');
       expect(log.filter().node).toBeNull();
+      expect((screen.getByLabelText('Node') as HTMLSelectElement).value).toBe('');
+    });
+
+    it('name a node that has gone by its kind, in words, for each kind that there is', async () => {
+      const { log, settle } = await renderPanel({ publish: 1 });
+
+      for (const [node, label] of [
+        ['exchange:gone', 'Exchange gone (not on the canvas now)'],
+        ['queue:gone', 'Queue gone (not on the canvas now)'],
+        ['producer:p9', 'Producer p9 (not on the canvas now)'],
+        ['consumer:c9', 'Consumer c9 (not on the canvas now)'],
+      ] as const) {
+        log.setFilter({ node });
+        settle();
+
+        const options = [...(screen.getByLabelText('Node') as HTMLSelectElement).options];
+        expect(options.at(-1)?.textContent?.trim()).toBe(label);
+      }
     });
 
     it('ask for the events of one message, by its number, and for no message when the field is empty or is not a number', async () => {
@@ -602,6 +798,36 @@ describe('EventLogPanel (ADR-0061)', () => {
       expect(rows()).toHaveLength(3);
       await user.type(field, '0');
       expect(rows()).toHaveLength(3);
+
+      // Message 1 is a message.
+      await user.clear(field);
+      await user.type(field, '1');
+      expect(rows()).toHaveLength(1);
+      expect(rows()[0]).toHaveTextContent('message 1');
+    });
+
+    it('show the filter that the log has in the field of the message, and empty it when the filters are cleared', async () => {
+      const { log, settle, user } = await renderPanel({ publish: 1 });
+
+      log.setFilter({ message: 2 });
+      settle();
+
+      expect(screen.getByLabelText('Message')).toHaveValue(2);
+
+      await user.click(screen.getByTestId('event-log-clear'));
+
+      expect(screen.getByLabelText('Message')).toHaveValue(null);
+    });
+
+    it('read the number of a message in tens, so that twelve is message twelve', async () => {
+      const { user, rows } = await renderPanel({ burst: 20, publish: 1 });
+
+      await user.type(screen.getByLabelText('Message'), '12');
+
+      expect(rows().length).toBeGreaterThan(0);
+      for (const row of rows()) {
+        expect(row).toHaveTextContent('message 12 ');
+      }
     });
 
     it('ask for the events that have some words in their sentence, in any case, and say how many there are when the learner is done typing', async () => {

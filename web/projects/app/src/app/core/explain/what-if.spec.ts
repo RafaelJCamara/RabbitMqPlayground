@@ -211,6 +211,17 @@ describe('WhatIf (ADR-0064)', () => {
       expect(whatIf.answer()?.line).toBe('publish orders');
     });
 
+    it('leaves out the spaces around what was written, so that what is pasted is a line that reads', () => {
+      const { whatIf } = setup('explain,simulation');
+      whatIf.open();
+
+      whatIf.type('   key=new  ');
+      expect(whatIf.answer()?.line).toBe('publish orders key=new');
+
+      whatIf.type('    ');
+      expect(whatIf.answer()?.line).toBe('publish orders');
+    });
+
     it('writes the name of the exchange as the grammar reads it', () => {
       const { whatIf, bus } = setup('explain,simulation');
       bus.apply({ type: 'rename', target: { kind: 'exchange', name: 'orders' }, name: 'big orders' }, 'gesture');

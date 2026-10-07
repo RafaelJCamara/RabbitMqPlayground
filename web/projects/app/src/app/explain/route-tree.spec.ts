@@ -73,6 +73,29 @@ describe('RouteTree (ADR-0060, ADR-0063)', () => {
     ]);
   });
 
+  it('says that a word of the pattern had no word of the key to meet, in the row of results', async () => {
+    await draw(
+      explainRoute(
+        topology({ exchanges: [exchange('t', 'topic')], queues: ['q'], bindings: [toQueue('t', 'q', 'a.b.c')] }),
+        message('t', 'a.b'),
+      ),
+    );
+
+    expect(within(screen.getByRole('table')).getAllByRole('row').map(cellsOf)).toEqual([
+      'Pattern a b c',
+      'Key a b -',
+      'Result matched matched missing',
+    ]);
+  });
+
+  it('names the default exchange as such, and not as an exchange of the canvas that has no name', async () => {
+    await draw(explainRoute(topology({ queues: ['billing'] }), message('', 'billing')));
+
+    const exchange = screen.getByTestId('route-exchange');
+    expect(within(exchange).getAllByText('The default exchange')[0]).toBeVisible();
+    expect(exchange).not.toHaveTextContent('Exchange  (');
+  });
+
   it('has a line for each condition of a headers binding, with the reason, and a mark for those that held, those that did not, and those that are not counted', async () => {
     const headers = topology({
       exchanges: [exchange('h', 'headers')],
@@ -138,6 +161,7 @@ describe('RouteTree (ADR-0060, ADR-0063)', () => {
       'No queue got it: it reached e, which has no bindings.',
     );
     expect(screen.queryAllByTestId('route-binding')).toHaveLength(0);
+    expect(within(screen.getByTestId('route-exchange')).queryByRole('list')).toBeNull();
   });
 
   it('says the cause first of a message that the broker refuses, and then what it replies, with no tree', async () => {
@@ -178,5 +202,29 @@ describe('topicCells', () => {
       { pattern: '*', took: '""', outcome: 'matched' },
       { pattern: '-', took: 'z', outcome: 'extra' },
     ]);
+  });
+
+  it('puts the words that a hash took together with a point between them, and a dash for the hash that took none', () => {
+    const cellsFor = (pattern: string, key: string) => {
+      const explanation = explainRoute(
+        topology({ exchanges: [exchange('t', 'topic')], queues: ['q'], bindings: [toQueue('t', 'q', pattern)] }),
+        message('t', key),
+      );
+      if (explanation.outcome !== 'routed' && explanation.outcome !== 'unroutable') {
+        throw new Error('the message is routed');
+      }
+      const detail = explanation.root.bindings[0]?.detail;
+      if (detail?.kind !== 'topic') {
+        throw new Error('the binding is a topic one');
+      }
+      return topicCells(detail);
+    };
+
+    expect(cellsFor('a.#.z', 'a.x.y.z')).toEqual([
+      { pattern: 'a', took: 'a', outcome: 'matched' },
+      { pattern: '#', took: 'x.y', outcome: 'matched' },
+      { pattern: 'z', took: 'z', outcome: 'matched' },
+    ]);
+    expect(cellsFor('a.#.z', 'a.z')[1]).toEqual({ pattern: '#', took: '-', outcome: 'matched' });
   });
 });

@@ -147,7 +147,14 @@ describe('WhatIfTester (ADR-0064)', () => {
     expect(message()).toHaveAttribute('aria-invalid', 'true');
     const problem = screen.getByTestId('what-if-problem');
     expect(problem).toBeVisible();
-    expect(message().getAttribute('aria-describedby')).toContain(problem.id);
+    // The field is described by the hint and by the refusal, each by an id of its own that names an element.
+    const described = (message().getAttribute('aria-describedby') ?? '').split(' ');
+    expect(described).toHaveLength(2);
+    expect(described[1]).toBe(problem.id);
+    expect(new Set(described).size).toBe(2);
+    for (const id of described) {
+      expect(document.getElementById(id), id).not.toBeNull();
+    }
     expect(screen.queryByTestId('what-if-answer')).toBeNull();
 
     await user.clear(message());

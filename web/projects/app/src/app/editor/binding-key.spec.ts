@@ -10,11 +10,17 @@ const topic = {
   help: 'A topic key is words separated by dots. * matches one word and # matches zero or more words.',
 };
 
-async function renderPopover(error: Issue | null = null, topicTest = false) {
+async function renderPopover(error: Issue | null = null, topicTest?: boolean) {
   const confirmed: string[] = [];
   const cancelled: string[] = [];
   const view = await render(BindingKey, {
-    inputs: { title: topic.title, help: topic.help, position: { x: 120, y: 80 }, error, topicTest },
+    inputs: {
+      title: topic.title,
+      help: topic.help,
+      position: { x: 120, y: 80 },
+      error,
+      ...(topicTest === undefined ? {} : { topicTest }),
+    },
     on: { confirm: (key: string) => confirmed.push(key), cancelled: (how: string) => cancelled.push(how) },
   });
   return { ...view, confirmed, cancelled, user: userEvent.setup() };

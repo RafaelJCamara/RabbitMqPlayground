@@ -195,6 +195,43 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     expect(announcer.last()).toBe('pause. There is nothing of it to show on the canvas.');
   });
 
+  it('asks a queue that is selected about the message that is open, even when the row that was chosen last is a line of a command, which is about no message', () => {
+    const { state, log, selection, stoppedAfterOneRouted } = setup();
+    stoppedAfterOneRouted();
+    state.openMessage(2);
+    state.chooseRow(log.shown().find(({ kind }) => kind === 'command')?.seq as number);
+
+    selection.select(['A']);
+
+    expect(state.shown()).toMatchObject({ source: 'queue', message: 2, title: 'Why? Message 2 and archive' });
+  });
+
+  it('asks a queue that is selected about the message of the row that was chosen when the message was closed, and not about the one that was routed last', () => {
+    const { state, log, selection, stoppedAfterOneRouted, run } = setup();
+    stoppedAfterOneRouted();
+    run({ type: 'step' });
+    expect(log.lastSettled()).toBe(2);
+    state.chooseRow(log.shown().find(({ kind }) => kind === 'routed')?.seq as number);
+    state.closeMessage();
+    expect(state.message()).toBeNull();
+
+    selection.select(['A']);
+
+    expect(state.shown()).toMatchObject({ source: 'queue', message: 1 });
+  });
+
+  it('asks a queue that is selected about the message whose Why? is lit, when none is open, and not about the one that was routed last', () => {
+    const { state, selection, stoppedAfterOneRouted, run } = setup();
+    stoppedAfterOneRouted();
+    run({ type: 'step' });
+    state.showWhy(1);
+    expect(state.message()).toBeNull();
+
+    selection.select(['A']);
+
+    expect(state.shown()).toMatchObject({ source: 'queue', message: 1 });
+  });
+
   it('does nothing for a row that is not kept', () => {
     const { state, stoppedAfterOneRouted } = setup();
     stoppedAfterOneRouted();
@@ -241,7 +278,7 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
 
     state.showWhy(1);
 
-    expect(state.shown()).toMatchObject({ source: 'why', message: 1 });
+    expect(state.shown()).toMatchObject({ source: 'why', message: 1, title: 'Why? Message 1' });
     expect(state.shown()?.emphasis.edges.get('E>A')?.mark).toBe('missed');
     state.letGoOfWhat();
     expect(state.focus()).toBeNull();
@@ -339,7 +376,7 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     });
     expect(lit?.nodes).toContainEqual({ id: 'Q', mark: 'reached' });
     expect(lit?.nodes).toContainEqual({ id: 'A', mark: 'missed' });
-    expect(lit?.edges).toContainEqual({ key: 'E>Q', mark: 'path' });
+    expect(lit?.edges.find(({ key }) => key === 'E>Q')).toStrictEqual({ key: 'E>Q', mark: 'path' });
     const missed = lit?.edges.find(({ key }) => key === 'E>A');
     expect(missed?.mark).toBe('missed');
     expect(missed?.reason).toEqual(expect.any(String));
@@ -432,6 +469,18 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       state.openMessage(1);
 
       expect(state.openedMessage()).toBeNull();
+    });
+
+    it('lights nothing of a message with the explanation alone, though a list that has the message says what it is: that needs the simulation too', () => {
+      TestBed.resetTestingModule();
+      const { state } = setup('explain');
+      const info = { id: 4242, producer: 'P', exchange: 'orders', key: 'new', headers: [], payload: 'x' };
+
+      state.openMessage(4242, { info, queue: 'billing' });
+
+      expect(state.openedMessage()).toBeNull();
+      expect(state.shown()).toBeNull();
+      expect(state.debugState()).toBeNull();
     });
 
     it('says which queues a message went to: the ones that routed it, and the one that a list opened it from when the log does not hold it', () => {

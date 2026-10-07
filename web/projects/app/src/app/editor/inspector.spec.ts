@@ -853,6 +853,17 @@ describe('Inspector', () => {
       expect(within(rows()[0]!).queryByTestId('topic-tester')).not.toBeInTheDocument();
     });
 
+    it('stays under the field that has the cursor when the cursor of another field is said to have left, which a late event can say', async () => {
+      const { user } = await twoKeys();
+      await user.click(keyField(0));
+      await user.click(keyField(1));
+
+      fireEvent.blur(keyField(0));
+
+      expect(screen.getAllByTestId('topic-tester')).toHaveLength(1);
+      expect(within(rows()[1]!).getByTestId('topic-tester')).toBeVisible();
+    });
+
     it('is not there for the bindings of an exchange that is not a topic exchange, which has no wildcards to try', async () => {
       const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'explain');
 
