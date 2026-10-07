@@ -21,7 +21,7 @@ export class ReasonList {
   readonly reasons = input.required<readonly ReasonNode[]>();
 
   protected inner(reason: ReasonNode): readonly ReasonNode[] | null {
-    return reason.kind === 'exchange-not-reached' && reason.because.length > 0 ? reason.because : null;
+    return reason.kind === 'exchange-not-reached' ? reason.because : null;
   }
 }
 
@@ -35,18 +35,12 @@ export class ReasonList {
   template: `
     <p class="text-sm" data-testid="queue-why-text">{{ explanation().text }}</p>
     @if (explanation().reached) {
-      @if (path().length > 0) {
-        <ol
-          class="flex flex-col gap-1 text-xs"
-          data-testid="queue-why-path"
-          aria-label="The bindings that took it there"
-        >
-          @for (step of path(); track $index) {
-            <li>{{ step.text }}</li>
-          }
-        </ol>
-      }
-    } @else if (explanation().because.length > 0) {
+      <ol class="flex flex-col gap-1 text-xs" data-testid="queue-why-path" aria-label="The bindings that took it there">
+        @for (step of path(); track $index) {
+          <li>{{ step.text }}</li>
+        }
+      </ol>
+    } @else {
       <div class="text-xs" data-testid="queue-why-reasons">
         <rmq-reason-list [reasons]="explanation().because" />
       </div>
