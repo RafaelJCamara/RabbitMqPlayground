@@ -107,3 +107,45 @@ describe('HeldMessages (ADR-0061)', () => {
     });
   });
 });
+
+describe('HeldMessages.recent, for the live table of a headers binding (ADR-0070)', () => {
+  const published = emptyDocument();
+
+  const holding = (...exchanges: string[]): HeldMessages => {
+    const held = new HeldMessages();
+    exchanges.forEach((exchange, index) => held.published(info(index + 1, { exchange }), index, published));
+    return held;
+  };
+
+  it('gives the messages that are accepted, newest first, and how many there were', () => {
+    const held = holding('a', 'b', 'a', 'a', 'b');
+
+    const { items, total } = held.recent(({ info: found }) => found.exchange === 'a', 10);
+
+    expect(items.map(({ info: found }) => found.id)).toEqual([4, 3, 1]);
+    expect(total).toBe(3);
+  });
+
+  it('gives no more than the limit, the newest, and still says how many there were', () => {
+    const held = holding('a', 'a', 'a', 'a', 'a');
+
+    const { items, total } = held.recent(() => true, 2);
+
+    expect(items.map(({ info: found }) => found.id)).toEqual([5, 4]);
+    expect(total).toBe(5);
+  });
+
+  it('gives nothing when nothing is accepted, or nothing is held', () => {
+    expect(holding('a').recent(() => false, 3)).toEqual({ items: [], total: 0 });
+    expect(new HeldMessages().recent(() => true, 3)).toEqual({ items: [], total: 0 });
+  });
+
+  it('changes nothing that it holds', () => {
+    const held = holding('a', 'b');
+
+    held.recent(() => true, 1);
+
+    expect(held.size).toBe(2);
+    expect(held.get(1)?.info.id).toBe(1);
+  });
+});

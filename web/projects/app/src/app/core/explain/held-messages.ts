@@ -59,6 +59,28 @@ export class HeldMessages {
     return this.messages.get(id);
   }
 
+  /**
+   * The messages that `accept` takes, newest first and at most `limit` of them, and how many it took in all (ADR-0070): the live table of a headers binding shows the last few that reached it, and says how many
+   * there were. It looks at every message that is held, which is at most `HELD_LIMIT`, once for each turn in which something was said and only while a table is on the screen.
+   */
+  recent(
+    accept: (held: HeldMessage) => boolean,
+    limit: number,
+  ): { readonly items: readonly HeldMessage[]; readonly total: number } {
+    const oldestFirst = [...this.messages.values()];
+    const items: HeldMessage[] = [];
+    let total = 0;
+    for (const held of oldestFirst.reverse()) {
+      if (accept(held)) {
+        total += 1;
+        if (items.length < limit) {
+          items.push(held);
+        }
+      }
+    }
+    return { items, total };
+  }
+
   clear(): void {
     this.messages.clear();
     this.last = null;
