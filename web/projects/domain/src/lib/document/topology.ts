@@ -47,6 +47,31 @@ export function toTopology(document: CanvasDocument): Topology {
  */
 export const bindingIds = (document: CanvasDocument): Id[] => presentBindings(document).map(({ id }) => id);
 
+/**
+ * The exchanges that a message can come to `exchange` from through bindings (ADR-0070): the exchange itself, every exchange that is bound to it, every exchange that is bound to one of those, and so on. A
+ * binding on the way may stop a message, so this is where a message could have come from, and not where it did. It is the set of exchanges that a message published to is worth showing to a binding of `exchange`.
+ */
+export function exchangesLeadingTo(topology: Topology, exchange: string): Set<string> {
+  const sourcesOf = new Map<string, string[]>();
+  for (const { source, destination } of topology.bindings) {
+    if (destination.kind === 'exchange') {
+      sourcesOf.set(destination.name, [...(sourcesOf.get(destination.name) ?? []), source]);
+    }
+  }
+  const leading = new Set<string>([exchange]);
+  // An array that grows while it is walked is walked to its end, which is a breadth-first search.
+  const pending = [exchange];
+  for (const to of pending) {
+    for (const source of sourcesOf.get(to) ?? []) {
+      if (!leading.has(source)) {
+        leading.add(source);
+        pending.push(source);
+      }
+    }
+  }
+  return leading;
+}
+
 /** The key of the edge from one element to another, which is also the key of its label in the layout. */
 export const edgeKey = (from: Id, to: Id): string => `${from}>${to}`;
 

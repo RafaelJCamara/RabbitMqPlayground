@@ -1,10 +1,13 @@
 import { route } from '@rmq/engine';
 import {
+  arbMessageFor,
+  arbTopology,
   bindingRecord,
   consumerRecord,
   deepFreeze,
   documentOf,
   entry,
+  exchange,
   exchangeRecord,
   headerArguments,
   int,
@@ -12,9 +15,13 @@ import {
   producerRecord,
   queueRecord,
   str,
+  toExchange,
+  toQueue,
+  topology,
 } from '@rmq/testing';
+import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { bindingIds, edgeKey, edgeKeys, toTopology } from './topology';
+import { bindingIds, edgeKey, edgeKeys, exchangesLeadingTo, toTopology } from './topology';
 
 describe('toTopology', () => {
   const document = deepFreeze(
@@ -188,5 +195,68 @@ describe('edgeKey and edgeKeys', () => {
 
   it('are none for a canvas with no links', () => {
     expect(edgeKeys(documentOf()).size).toBe(0);
+  });
+});
+
+describe('exchangesLeadingTo (ADR-0070)', () => {
+  const chain = topology({
+    exchanges: [
+      exchange('a', 'direct'),
+      exchange('b', 'fanout'),
+      exchange('c', 'headers'),
+      exchange('d', 'topic'),
+      exchange('lonely', 'direct'),
+    ],
+    queues: ['q'],
+    bindings: [
+      toExchange('a', 'b'),
+      toExchange('b', 'c'),
+      toExchange('d', 'c', 'x.#'),
+      toQueue('c', 'q'),
+      toExchange('c', 'lonely'),
+    ],
+  });
+
+  it('is the exchange itself, and every exchange that is bound to it, through any number of bindings between exchanges', () => {
+    expect([...exchangesLeadingTo(chain, 'c')].sort()).toEqual(['a', 'b', 'c', 'd']);
+    expect([...exchangesLeadingTo(chain, 'b')].sort()).toEqual(['a', 'b']);
+  });
+
+  it('is only the exchange for one that nothing is bound to, and for the default exchange, which no binding names', () => {
+    expect([...exchangesLeadingTo(chain, 'a')]).toEqual(['a']);
+    expect([...exchangesLeadingTo(chain, '')]).toEqual(['']);
+    expect([...exchangesLeadingTo(topology({}), 'x')]).toEqual(['x']);
+  });
+
+  it('follows the bindings towards the exchange and not away from it, and not a binding to a queue', () => {
+    expect([...exchangesLeadingTo(chain, 'lonely')].sort()).toEqual(['a', 'b', 'c', 'd', 'lonely']);
+    expect(exchangesLeadingTo(chain, 'q').has('c')).toBe(false);
+    expect(exchangesLeadingTo(chain, 'a').has('b')).toBe(false);
+  });
+
+  it('ends on a cycle and on an exchange bound to itself', () => {
+    const cycle = topology({
+      exchanges: [exchange('a', 'direct'), exchange('b', 'direct')],
+      bindings: [toExchange('a', 'b'), toExchange('b', 'a'), toExchange('a', 'a')],
+    });
+
+    expect([...exchangesLeadingTo(cycle, 'a')].sort()).toEqual(['a', 'b']);
+    expect([...exchangesLeadingTo(cycle, 'b')].sort()).toEqual(['a', 'b']);
+  });
+
+  it('includes the exchange that a message was published to, whenever the engine takes the message to another exchange', () => {
+    fc.assert(
+      fc.property(
+        arbTopology.chain((found) => fc.tuple(fc.constant(found), arbMessageFor(found))),
+        ([found, sent]) => {
+          const routed = route(found, sent);
+          if (routed.ok) {
+            for (const { exchange: visited } of routed.trace.visits) {
+              expect(exchangesLeadingTo(found, visited).has(sent.exchange)).toBe(true);
+            }
+          }
+        },
+      ),
+    );
   });
 });

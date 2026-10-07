@@ -109,7 +109,7 @@ export {
   type ProducerRecord,
   type QueueRecord,
 } from './lib/document/schema';
-export { bindingIds, edgeKey, edgeKeys, toTopology } from './lib/document/topology';
+export { bindingIds, edgeKey, edgeKeys, exchangesLeadingTo, toTopology } from './lib/document/topology';
 export {
   draftFromMessage,
   draftOf,
@@ -132,6 +132,16 @@ export {
   type RowType,
 } from './lib/headers/draft';
 export { describeHeaders, type ConditionLine } from './lib/explain/headers-words';
+export {
+  headersLine,
+  headersTable,
+  type CellWord,
+  type HeadersTable,
+  type TableCell,
+  type TableColumn,
+  type TableMessage,
+  type TableRow,
+} from './lib/explain/headers-table';
 export { explainQueue } from './lib/explain/queue';
 export { explainRoute, isRouted, messageIssue, outlookOf, refusalText, summaryOf } from './lib/explain/route';
 export { alignmentLines, explanationHeader, explanationText } from './lib/explain/text';
@@ -168,6 +178,7 @@ export { formatCommand } from './lib/syntax/format';
 export { parseMessageText, type MessageText } from './lib/syntax/message';
 export { parseCommand } from './lib/syntax/parse';
 export { SPECS } from './lib/syntax/registry';
+export { BINDING_OPTION_NAMES } from './lib/syntax/specs/bind';
 export {
   formatCondition,
   formatValue,

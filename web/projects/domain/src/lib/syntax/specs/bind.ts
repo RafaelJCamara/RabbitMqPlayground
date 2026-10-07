@@ -20,7 +20,8 @@ const BINDING_OPTIONS: readonly OptionSpec[] = [
     summary: 'how the conditions of a headers binding are combined',
   },
 ];
-const OPTION_NAMES = BINDING_OPTIONS.map(({ name }) => name);
+/** The options of `bind` and `unbind`: a header called one of these is written with its name in quotes (ADR-0025), in a line and in a chip. */
+export const BINDING_OPTION_NAMES: readonly string[] = BINDING_OPTIONS.map(({ name }) => name);
 
 const DESTINATIONS = ['queue', 'exchange'] as const;
 
@@ -53,7 +54,7 @@ function formatBinding(
     refText(document, command.destination, DESTINATIONS),
     ...(command.key === '' ? [] : [`key=${wordText(command.key)}`]),
     ...(headers?.xMatch == null ? [] : [`x-match=${headers.xMatch}`]),
-    ...conditions.map(({ key, value }) => formatCondition(key, value, OPTION_NAMES)),
+    ...conditions.map(({ key, value }) => formatCondition(key, value, BINDING_OPTION_NAMES)),
   ].join(' ');
 }
 
