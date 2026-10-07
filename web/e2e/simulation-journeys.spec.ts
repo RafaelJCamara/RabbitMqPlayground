@@ -1,6 +1,6 @@
 import { SimulationPage } from './pages/simulation-page';
 import { EditorPage } from './pages/editor-page';
-import { DIRECT_TO_QUEUE, ORDERS, TWO_WORKERS } from './support/orders';
+import { DIRECT_TO_QUEUE, LONG_LEG, ORDERS, TWO_WORKERS } from './support/orders';
 import { seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
@@ -92,6 +92,30 @@ test.describe('the controls and the keys (ADR-0054, ADR-0056)', () => {
     expect(stopped).toBeGreaterThanOrEqual(800);
   });
 
+  for (const [factor, least, most] of [
+    [0.25, 225, 250],
+    [1, 900, 1_000],
+    [4, 3_600, 4_000],
+  ] as const) {
+    test(`moves the simulation by ${factor} of what the clock of the page counts, at ${factor}×`, async ({ page }) => {
+      // The clock of the page is the test's from here: a second of it is a second, and the frames come every 16 ms of it, whatever the machine is doing.
+      await page.clock.install();
+      const simulation = await SimulationPage.open(page, LONG_LEG);
+      await simulation.editor.select('Producer sender');
+      await page.keyboard.press('p');
+      await simulation.bar.getByRole('button', { name: `${factor}×` }).click();
+      await page.clock.pauseAt(Date.now() + 1_000);
+      await simulation.play.click();
+
+      await page.clock.runFor(1_000);
+
+      // The first frame after a rest lasts no time, so a second of frames is a little less than a second of the simulation.
+      const { now } = await simulation.view();
+      expect(now).toBeGreaterThanOrEqual(least);
+      expect(now).toBeLessThanOrEqual(most);
+    });
+  }
+
   test('is the same when it is typed: publish, step and speed are commands, and what they do is the same', async ({
     page,
   }) => {
@@ -140,7 +164,11 @@ test.describe('the controls and the keys (ADR-0054, ADR-0056)', () => {
     await expect(editor.hints).not.toContainText('Space');
     await editor.select('Producer sender');
     await page.keyboard.press('p');
+    await page.keyboard.press('.');
+    // Neither key is the simulation's, so neither does anything, and neither is refused for a simulation that is not there. A refusal that did not come is waited for, by two frames of the page.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await expect(page.getByTestId('status-message')).toHaveCount(0);
+    await expect(page.getByTestId('refusal')).toHaveCount(0);
     expect(await page.evaluate(() => window.__rmq?.simulationState())).toBeNull();
     expect(await page.evaluate(() => window.__rmq?.overlayFrame())).toBeNull();
   });

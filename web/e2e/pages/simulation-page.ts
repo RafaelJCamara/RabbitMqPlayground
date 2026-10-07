@@ -166,6 +166,38 @@ export class SimulationPage {
     }, edge);
   }
 
+  /** Whether the canvas of the overlay has anything painted at a place of its host, which a pixel that is not clear says. */
+  paintedAt(place: Place): Promise<boolean> {
+    return this.page.evaluate(({ x, y }) => {
+      const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="message-overlay"]');
+      const context = canvas?.getContext('2d');
+      if (canvas === null || canvas === undefined || context === null || context === undefined) {
+        throw new Error('the overlay has no canvas to read');
+      }
+      const scale = canvas.width / canvas.clientWidth;
+      return context.getImageData(Math.round(x * scale), Math.round(y * scale), 1, 1).data[3] !== 0;
+    }, place);
+  }
+
+  /** How many pixels of the canvas of the overlay are painted. */
+  paintedPixels(): Promise<number> {
+    return this.page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="message-overlay"]');
+      const context = canvas?.getContext('2d');
+      if (canvas === null || canvas === undefined || context === null || context === undefined) {
+        throw new Error('the overlay has no canvas to read');
+      }
+      const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+      let painted = 0;
+      for (let index = 3; index < data.length; index += 4) {
+        if (data[index] !== 0) {
+          painted += 1;
+        }
+      }
+      return painted;
+    });
+  }
+
   /** Steps until nothing is scheduled, as far as a bound says: a canvas with a producer that repeats never stops. */
   async stepThrough(bound = 200): Promise<void> {
     for (let steps = 0; steps < bound && (await this.nextAt()) !== null; steps += 1) {

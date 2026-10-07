@@ -56,6 +56,28 @@ test.describe('a message on its way (ADR-0055)', () => {
   });
 });
 
+test.describe('what is painted (ADR-0055)', () => {
+  test('is a shape on the canvas of the overlay where the frame says it is, and nothing anywhere else, and the canvas is clear when nothing is on its way', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    expect(await simulation.paintedPixels()).toBe(0);
+    await simulation.editor.select('Producer sender');
+    await page.keyboard.press('p');
+    const [marker] = (await simulation.settledFrame()).markers;
+
+    expect(marker).toBeDefined();
+    expect(await simulation.paintedAt({ x: marker?.x ?? 0, y: marker?.y ?? 0 })).toBe(true);
+    expect(await simulation.paintedAt({ x: 3, y: 3 })).toBe(false);
+    expect(await simulation.paintedPixels()).toBeGreaterThan(100);
+
+    await simulation.stepThrough();
+    await simulation.settledFrame();
+
+    expect(await simulation.paintedPixels()).toBe(0);
+  });
+});
+
 test.describe('where a message is drawn (ADR-0055)', () => {
   test('is on the path that the library drew for its edge, at every step, and follows a pan and a zoom while the clock is stopped', async ({
     page,
@@ -90,6 +112,37 @@ test.describe('where a message is drawn (ADR-0055)', () => {
         return marker === undefined ? Number.POSITIVE_INFINITY : simulation.distanceFromEdge(marker.edge, marker);
       })
       .toBeLessThan(2);
+  });
+
+  test('follows a node that is dragged while the clock is stopped, which draws again the edges that it has', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await simulation.editor.select('Producer sender');
+    await page.keyboard.press('p');
+    await simulation.step();
+    const [before] = (await simulation.settledFrame()).markers;
+    expect(before?.edge).toBe('x1>q1');
+    // The message has just been routed, so it is at the start of the edge, which is where the exchange is.
+    const exchange = await page.locator('[data-node-id="x1"]').boundingBox();
+    expect(exchange).not.toBeNull();
+    const [x, y] = [(exchange?.x ?? 0) + (exchange?.width ?? 0) / 2, (exchange?.y ?? 0) + (exchange?.height ?? 0) / 2];
+
+    // The exchange is held and moved a long way, and not let go: the edge is drawn again for every step of the pointer, and the message is where the edge starts.
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 20, y + 20, { steps: 3 });
+    await page.mouse.move(x + 40, y + 240, { steps: 12 });
+
+    await expect
+      .poll(async () => {
+        const [marker] = (await simulation.frame())?.markers ?? [];
+        return marker === undefined || marker.y === before?.y
+          ? Number.POSITIVE_INFINITY
+          : simulation.distanceFromEdge(marker.edge, marker);
+      })
+      .toBeLessThan(2);
+    await page.mouse.up();
   });
 
   test('follows a pan of the canvas while the clock is stopped, and is on its edge again when the pan is over', async ({

@@ -32,6 +32,9 @@ const orders: DocumentCommand[] = [
  */
 export const ORDERS = buildDocument(orders);
 
+/** The same, with a link that takes a minute, so that something is scheduled for as long as a test looks at the clock. The first message gets to the broker at 60,000 ms. */
+export const LONG_LEG = buildDocument([...orders, { type: 'set', kind: 'canvas', changes: { publishMs: 60_000 } }]);
+
 /** The same, and a second consumer, `helper`, which takes from the same queue in the same way: the two take turns. Its id is `c2`, and its edge `q1>c2`. */
 export const TWO_WORKERS = buildDocument([
   ...orders,
