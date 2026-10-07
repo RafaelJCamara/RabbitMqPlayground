@@ -25,9 +25,10 @@ import type { CanvasIntent } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
+import { ExplainState } from '../core/explain/explain-state';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
-import { CANVAS_CONTEXT } from '../canvas/overlay/overlay';
+import { CANVAS_CONTEXT, MessageOverlay } from '../canvas/overlay/overlay';
 import {
   AUTOSAVE_TIMER,
   CanvasSession,
@@ -1859,6 +1860,93 @@ describe('Editor', () => {
       expect(card).toHaveTextContent('Why? Message 1 (the last one routed)');
       expect(card).toHaveTextContent('Reached billing.');
       expect(canvas().emphasis().nodes.get('Q')).toBe('reached');
+    });
+
+    it('opens the message of a row that is chosen in the inspector region, above what is selected, and closes it with its button', async () => {
+      const { routeOne, user, fixture, onCanvas } = await openEditor('simulation,explain');
+      await routeOne();
+      onCanvas({ key: 'e' });
+      fixture.detectChanges();
+
+      await user.click(
+        screen.getAllByTestId('event-log-row').find((row) => row.getAttribute('data-kind') === 'routed') as HTMLElement,
+      );
+      fixture.detectChanges();
+
+      const aside = screen.getByRole('complementary', { name: 'Inspector' });
+      const message = within(aside).getByRole('region', { name: 'Message 1' });
+      expect(message).toBeVisible();
+      expect(within(message).getByTestId('route-summary')).toHaveTextContent('Reached billing.');
+      // It is above what is selected: the part of the inspector that is about the selection comes after it.
+      expect(message.closest('rmq-message-inspector')?.nextElementSibling?.tagName).toBe('RMQ-INSPECTOR');
+
+      await user.click(within(message).getByRole('button', { name: 'Close message 1' }));
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('region', { name: 'Message 1' })).not.toBeInTheDocument();
+    });
+
+    it('keeps a message open while a queue is selected, which is how a learner asks why it did not get there', async () => {
+      const { routeOne, fixture, selection } = await openEditor('simulation,explain');
+      await routeOne();
+      fixture.debugElement.injector.get(ExplainState).openMessage(1);
+
+      selection.select(['A']);
+      fixture.detectChanges();
+
+      expect(screen.getByRole('region', { name: 'Message 1' })).toBeVisible();
+      expect(screen.getByTestId('queue-asked-title')).toHaveTextContent('Message 1 and this queue');
+      expect(screen.getByTestId('inspector-title')).toHaveTextContent('queue');
+    });
+
+    it('takes a press on a message that is drawn on the canvas only while the clock is stopped, and only with the explanation', async () => {
+      const { fixture, onCanvas } = await openEditor('simulation,explain');
+      const overlay = () =>
+        fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
+      expect(overlay().pressable()).toBe(false);
+
+      onCanvas({ key: ' ' });
+      fixture.detectChanges();
+      expect(overlay().pressable()).toBe(true);
+
+      onCanvas({ key: ' ' });
+      fixture.detectChanges();
+      expect(overlay().pressable()).toBe(false);
+    });
+
+    it('does not take a press on a message without the flag of the explanation, though the clock is stopped', async () => {
+      const { fixture, onCanvas } = await openEditor('simulation');
+      onCanvas({ key: ' ' });
+      fixture.detectChanges();
+
+      const overlay = fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
+
+      expect(overlay.pressable()).toBe(false);
+    });
+
+    it('opens the message that a press on a shape took, and says of a shape that stands for a crowd that it does and where to open one', async () => {
+      const { routeOne, fixture, announcer } = await openEditor('simulation,explain');
+      await routeOne();
+      const overlay = fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
+      const shape = { edge: 'P>E', x: 1, y: 1, count: 1, key: 'new', redelivered: false };
+
+      overlay.pressed.emit({ ...shape, message: 1 });
+      fixture.detectChanges();
+
+      expect(screen.getByRole('region', { name: 'Message 1' })).toBeVisible();
+
+      overlay.pressed.emit({ ...shape, count: 20, message: null });
+
+      expect(announcer.last()).toBe(
+        'This shape stands for 20 messages. Open one from the event log or from the list of a queue.',
+      );
+    });
+
+    it('has no message inspector without both flags', async () => {
+      const { routeOne } = await openEditor('simulation');
+      await routeOne();
+
+      expect(document.querySelector('rmq-message-inspector')).toBeNull();
     });
 
     it('lets go of what is lit with the button of the card, and lights nothing on the canvas that the editor draws', async () => {

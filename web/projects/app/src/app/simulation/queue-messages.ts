@@ -1,6 +1,8 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { lookup, nameOf, type Id } from '@rmq/domain';
 import type { QueueMessage } from '@rmq/engine';
+import { ExplainState } from '../core/explain/explain-state';
 import { SimStats } from '../core/runtime/sim-stats';
 import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
@@ -10,7 +12,7 @@ import { Icon } from '../core/ui/icon';
 /** How many messages of a queue the inspector lists (ADR-0056). The count above the list says how many there are. */
 export const LIST_LIMIT = 50;
 
-/** How much of a payload the list shows. The payload is whole in the message inspector of S7. */
+/** How much of a payload the list shows. The payload is whole in the message inspector (ADR-0063). */
 export const PAYLOAD_CUT = 40;
 
 let nextSection = 0;
@@ -18,12 +20,25 @@ let nextSection = 0;
 /**
  * What a queue holds, in the inspector of a queue (ADR-0056): how many messages are ready and how many consumers have and have not acknowledged, the first fifty with
  * their number, key and a cut of the payload, and what to do about them, which is to purge the ones that are ready. The same numbers are on the node, as a picture,
- * and the words here are for a keyboard and a screen reader.
+ * and the words here are for a keyboard and a screen reader. With the flag of the explanation each message is a button that opens it in the message inspector (ADR-0063), with what this list says of it, for the
+ * case that the log has stopped holding it.
  */
 @Component({
   selector: 'rmq-queue-messages',
-  imports: [Icon],
+  imports: [Icon, NgTemplateOutlet],
   template: `
+    <ng-template #summary let-message>
+      <span class="font-mono">#{{ message.id }}</span
+      >&ngsp; <span class="font-mono">{{ message.key === '' ? '(no key)' : message.key }}</span
+      >&ngsp;
+      <span class="text-muted min-w-0 truncate">{{ cut(message.payload) }}</span>
+      @if (message.redelivered) {
+        &ngsp;<span class="border-warning text-warning rounded border px-1">redelivered</span>
+      }
+      @if (holder(message); as who) {
+        &ngsp;<span class="text-muted">held by {{ who }}</span>
+      }
+    </ng-template>
     @if (queue(); as name) {
       <section class="flex flex-col gap-2" [attr.aria-labelledby]="titleId" data-testid="queue-messages">
         <h3 class="text-sm font-semibold" [id]="titleId">Messages</h3>
@@ -35,16 +50,22 @@ let nextSection = 0;
             data-testid="queue-message-list"
           >
             @for (message of messages(); track message.id) {
-              <li class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1" data-testid="queue-message">
-                <span class="font-mono">#{{ message.id }}</span
-                >&ngsp; <span class="font-mono">{{ message.key === '' ? '(no key)' : message.key }}</span
-                >&ngsp;
-                <span class="text-muted min-w-0 truncate">{{ cut(message.payload) }}</span>
-                @if (message.redelivered) {
-                  &ngsp;<span class="border-warning text-warning rounded border px-1">redelivered</span>
-                }
-                @if (holder(message); as who) {
-                  &ngsp;<span class="text-muted">held by {{ who }}</span>
+              <li data-testid="queue-message">
+                @if (explain.enabled) {
+                  <button
+                    type="button"
+                    class="hover:bg-canvas flex min-h-7 w-full flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1 text-left"
+                    data-testid="open-message"
+                    [attr.title]="'Open message ' + message.id + ' in the inspector'"
+                    [attr.aria-current]="explain.message() === message.id ? 'true' : null"
+                    (click)="open(message, name)"
+                  >
+                    <ng-container *ngTemplateOutlet="summary; context: { $implicit: message }" />
+                  </button>
+                } @else {
+                  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1">
+                    <ng-container *ngTemplateOutlet="summary; context: { $implicit: message }" />
+                  </div>
                 }
               </li>
             }
@@ -79,6 +100,7 @@ export class QueueMessages {
   private readonly simulation = inject(Simulation);
   private readonly stats = inject(SimStats);
   private readonly bus = inject(CommandBus);
+  protected readonly explain = inject(ExplainState);
 
   protected readonly titleId = `rmq-queue-messages-${nextSection++}`;
   /** The name of the queue, which the engine knows it by: what the learner calls it now. */
@@ -117,6 +139,12 @@ export class QueueMessages {
     const document = this.store.document();
     // The channel of a consumer is its id.
     return lookup(document.consumers, message.heldBy.channel)?.name ?? message.heldBy.channel;
+  }
+
+  /** Opens the message in the inspector, with what the list says of it and which queue it was in. */
+  protected open(message: QueueMessage, queue: string): void {
+    const { id, producer, exchange, key, headers, payload } = message;
+    this.explain.openMessage(id, { info: { id, producer, exchange, key, headers, payload }, queue });
   }
 
   protected purge(queue: string): void {

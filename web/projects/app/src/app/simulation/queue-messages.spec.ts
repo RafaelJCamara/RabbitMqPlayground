@@ -12,6 +12,8 @@ import {
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ExplainState } from '../core/explain/explain-state';
+import { EXPLAIN_SERVICES } from '../core/explain/services';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -38,7 +40,7 @@ const withWorker = (ack: 'auto' | 'manual' = 'manual') => ({
   C: consumerRecord('worker', ['Q'], { ack, prefetch: 1, processingMs: 1_000 }),
 });
 
-async function renderSection(document: CanvasDocument = canvas(), id = 'Q') {
+async function renderSection(document: CanvasDocument = canvas(), id = 'Q', flags = 'simulation') {
   const view = await render(QueueMessages, {
     inputs: { id },
     providers: [
@@ -48,8 +50,9 @@ async function renderSection(document: CanvasDocument = canvas(), id = 'Q') {
       CommandBus,
       CommandLog,
       ...RUNTIME_SERVICES,
+      ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
   });
   const bus = TestBed.inject(CommandBus);
@@ -70,12 +73,56 @@ async function renderSection(document: CanvasDocument = canvas(), id = 'Q') {
     send,
     step,
     status: TestBed.inject(StatusStore),
+    explain: TestBed.inject(ExplainState),
     log: TestBed.inject(CommandLog),
     user: userEvent.setup(),
     /** Gives the screen what the simulation changed. */
     settle: () => view.fixture.detectChanges(),
   };
 }
+
+describe('QueueMessages and the message inspector (ADR-0063)', () => {
+  it('has no button on a message without the flag of the explanation, and its text is as it was', async () => {
+    const { send, step } = await renderSection(canvas(withWorker()));
+    send();
+    step(2);
+
+    expect(screen.queryByTestId('open-message')).toBeNull();
+    expect(screen.getByTestId('queue-message')).toHaveTextContent('#1 new hello');
+  });
+
+  it('has a button for each message with the flags, which opens it in the inspector with what the list says of it and which queue it is in', async () => {
+    const { send, step, user, explain, settle } = await renderSection(canvas(withWorker()), 'Q', 'simulation,explain');
+    send('new', 'one');
+    send('new', 'two');
+    step(4);
+
+    const buttons = screen.getAllByTestId('open-message');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toHaveAttribute('title', 'Open message 2 in the inspector');
+    await user.click(buttons[0] as HTMLElement);
+    settle();
+
+    expect(explain.message()).toBe(2);
+    expect(explain.openedMessage()).toMatchObject({
+      number: 2,
+      queues: ['billing'],
+      info: { key: 'new', payload: 'two', exchange: 'orders' },
+    });
+    expect(buttons[0]).toHaveAttribute('aria-current', 'true');
+    expect(buttons[1]).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps what the message is a button says of it: its number, its key and a cut of its payload, and that it is redelivered or held', async () => {
+    const { send, step } = await renderSection(canvas(withWorker()), 'Q', 'simulation,explain');
+    send('new', 'one');
+    step(3);
+
+    const button = screen.getByTestId('open-message');
+    expect(button).toHaveTextContent('#1 new one held by worker');
+    expect(within(button).getByText('#1')).toHaveClass('font-mono');
+  });
+});
 
 describe('QueueMessages (ADR-0056)', () => {
   it('says that a queue holds nothing, and has nothing to purge, and says why', async () => {

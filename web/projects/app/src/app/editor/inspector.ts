@@ -17,6 +17,7 @@ import { IntentHandler } from './intents';
 import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
 import { LinkFlow } from './link-flow';
 import { RefusalNotice } from '../core/ui/refusal-notice';
+import { QueueAsked } from '../explain/queue-asked';
 import { ConsumerSettings } from '../simulation/consumer-settings';
 import { ProducerComposer } from '../simulation/producer-composer';
 import { QueueMessages } from '../simulation/queue-messages';
@@ -47,7 +48,7 @@ let nextInspector = 0;
  */
 @Component({
   selector: 'rmq-inspector',
-  imports: [Icon, Help, Switch, RefusalNotice, QueueMessages, ProducerComposer, ConsumerSettings],
+  imports: [Icon, Help, Switch, RefusalNotice, QueueAsked, QueueMessages, ProducerComposer, ConsumerSettings],
   template: `
     <div class="flex flex-col gap-4" data-testid="inspector">
       @if (node(); as n) {
@@ -223,6 +224,7 @@ let nextInspector = 0;
         @if (simulation) {
           @switch (n.element) {
             @case ('queue') {
+              <rmq-queue-asked />
               <rmq-queue-messages [id]="n.id" />
             }
             @case ('producer') {

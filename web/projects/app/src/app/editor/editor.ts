@@ -18,7 +18,7 @@ import { lowerFirst } from '../canvas/model/labels';
 import type { CanvasIntent, ContextTarget } from '../canvas/model/intents';
 import { newNodeKey } from '../canvas/model/new-node';
 import { popoverPosition, type Point, type Size } from '../canvas/model/transform';
-import { MessageOverlay } from '../canvas/overlay/overlay';
+import { MessageOverlay, type DrawnMarker } from '../canvas/overlay/overlay';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
 import { NO_EMPHASIS } from '../core/explain/emphasis';
@@ -39,6 +39,7 @@ import { CommandBar } from '../command-bar/command-bar';
 import { CommandLog } from '../core/state/command-log';
 import { EventLogPanel } from '../explain/event-log-panel';
 import { LogToggle } from '../explain/log-toggle';
+import { MessageInspector } from '../explain/message-inspector';
 import { WhyCard } from '../explain/why-card';
 import { EditorActions, type ActionSurface } from './actions';
 import { BindingKey, type GiveUp } from './binding-key';
@@ -114,6 +115,7 @@ interface Peek {
     HowToLinkCard,
     EventLogPanel,
     LogToggle,
+    MessageInspector,
     WhyCard,
   ],
   providers: [
@@ -162,7 +164,7 @@ interface Peek {
             <p class="text-muted p-6" data-testid="opening">Opening your canvas…</p>
           }
           @if (ready() && simulation.enabled) {
-            <rmq-message-overlay />
+            <rmq-message-overlay [pressable]="markersPressable()" (pressed)="onMarkerPressed($event)" />
           }
           @if (ready() && explain.enabled) {
             <rmq-why-card />
@@ -218,6 +220,9 @@ interface Peek {
           }
         </main>
         <aside class="border-line bg-panel w-80 shrink-0 overflow-y-auto border-l p-3" aria-label="Inspector">
+          @if (explain.enabled) {
+            <rmq-message-inspector />
+          }
           <rmq-inspector />
         </aside>
       </div>
@@ -263,6 +268,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private drawn = EMPTY_VM;
   protected readonly model = computed(() => (this.drawn = buildCanvasVm(this.store.document(), this.drawn)));
   protected readonly rules = computed(() => linkRules(this.store.document()));
+  /** Whether a press on a message that is drawn on the canvas is taken: with the explanation, while the clock is stopped, which is when a message holds still (ADR-0063). */
+  protected readonly markersPressable = computed(() => this.explain.enabled && !this.simulation.running());
   /** What Why? lights, which the canvas draws as a look on the edges and the nodes (ADR-0062). */
   protected readonly emphasis = computed(() => this.explain.shown()?.emphasis ?? NO_EMPHASIS);
   private readonly intentLog: CanvasIntent[] = [];
@@ -343,6 +350,17 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     const target = event.target;
     if (target === this.page.body || (target instanceof Node && this.element.contains(target))) {
       this.keys.handle(event);
+    }
+  }
+
+  /** A press on a message that is drawn on the canvas, while the clock is stopped: it opens that message, and a shape that stands for a crowd says that it does, and where to open one (ADR-0063). */
+  protected onMarkerPressed(marker: DrawnMarker): void {
+    if (marker.message !== null) {
+      this.explain.openMessage(marker.message);
+    } else {
+      this.announcer.announce(
+        `This shape stands for ${marker.count} messages. Open one from the event log or from the list of a queue.`,
+      );
     }
   }
 

@@ -5,11 +5,13 @@ import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
+import { EXPLAIN_SERVICES } from '../core/explain/services';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
+import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
@@ -25,11 +27,13 @@ async function renderInspector(selected: { nodes?: string[]; edges?: string[] } 
       SelectionStore,
       StatusStore,
       CommandBus,
+      CommandLog,
       FlowViewport,
       NewNodeFocus,
       LinkFlow,
       IntentHandler,
       ...RUNTIME_SERVICES,
+      ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
       { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
