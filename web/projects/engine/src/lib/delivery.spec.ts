@@ -215,6 +215,20 @@ describe('who gets the next message', () => {
       expect(engine.view().queues['jobs']?.ready).toBe(1);
       expect(given(run(engine, ack('c1')))).toEqual({ c1: [4] });
     });
+
+    it('gives nothing to a consumer that was cancelled, whatever room it has now, and serves the others', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      join(engine, 'c2', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1', 'm2', 'm3', 'm4');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+
+      expect(given(run(engine, { op: 'channel.set', channel: 'ch-c1', prefetch: 5 }))).toEqual({});
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+        { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 1, cancelled: true },
+      ]);
+      expect(given(run(engine, ack('c2')))).toEqual({ c2: [3] });
+    });
   });
 });
 
@@ -330,6 +344,21 @@ describe('cancel', () => {
     expect(types(run(engine, ack('c1')))).toEqual(['acked']);
     expect(engine.view().channels['ch-c1']?.consumers).toEqual([]);
     expect(engine.view().queues['jobs']).toMatchObject({ ready: 2, unacked: 0, consumers: 0 });
+  });
+
+  it('stays for as long as the consumer holds a message, and is gone with the last one that it acknowledges', () => {
+    const engine = jobs();
+    join(engine, 'c1', { prefetch: 2, ack: 'manual' });
+    send(engine, 'm1', 'm2');
+    run(engine, { op: 'basic.cancel', consumer: 'c1' });
+
+    run(engine, ack('c1'));
+    expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+      { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 1, cancelled: true },
+    ]);
+    run(engine, ack('c1'));
+
+    expect(engine.view().channels['ch-c1']?.consumers).toEqual([]);
   });
 
   it('is accepted for a consumer that is not there, and for one that is cancelled already, and says nothing', () => {

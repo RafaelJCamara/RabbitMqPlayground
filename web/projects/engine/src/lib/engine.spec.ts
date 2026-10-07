@@ -264,6 +264,14 @@ describe('a message on its way', () => {
     expect(published?.message.headers).toEqual(headers);
   });
 
+  it('sends a message with nothing but an exchange: the empty key, no headers and an empty payload', () => {
+    const engine = orders();
+
+    const [published] = only(run(engine, { op: 'basic.publish', exchange: 'e' }), 'published');
+
+    expect(published?.message).toEqual({ id: 1, producer: null, exchange: 'e', key: '', headers: [], payload: '' });
+  });
+
   it('throws for a message that no client could send, as route() does', () => {
     const engine = orders();
 
