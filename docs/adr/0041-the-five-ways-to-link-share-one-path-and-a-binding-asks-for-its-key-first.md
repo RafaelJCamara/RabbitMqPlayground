@@ -1,6 +1,6 @@
 # ADR-0041: The five ways to link share one path to one command, and a binding asks for its key first
 
-- **Status:** Accepted
+- **Status:** Accepted. A link to a headers exchange asks for its conditions in a popover of its own, by [ADR-0066](0066-a-headers-binding-is-made-in-a-popover-and-edited-in-the-inspector-from-one-draft-and-an-edit-is-one-batch.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Five ways to link", "After a drop" and "Connection rules" of [ADR-0011](0011-explicit-linking-and-command-layer.md), and the

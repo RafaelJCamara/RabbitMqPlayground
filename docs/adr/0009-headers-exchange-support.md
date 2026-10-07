@@ -1,6 +1,6 @@
 # ADR-0009: Headers exchange support
 
-- **Status:** Accepted. The rule on integers is extended by [ADR-0023](0023-header-integers-are-limited-to-safe-integers.md). How a headers binding is explained, condition by condition, is settled by [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md).
+- **Status:** Accepted. The rule on integers is extended by [ADR-0023](0023-header-integers-are-limited-to-safe-integers.md). How a headers binding is explained, condition by condition, is settled by [ADR-0060](0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md). The editor, the typing of a value, the rows and their flags, the producer's table, the binding from a message, the live table and the chips are settled by [ADR-0066](0066-a-headers-binding-is-made-in-a-popover-and-edited-in-the-inspector-from-one-draft-and-an-edit-is-one-batch.md) to [ADR-0070](0070-a-binding-is-made-from-a-message-by-ticking-its-headers-the-live-table-is-the-explanation-of-the-draft-and-a-chip-says-the-mode-and-the-first-conditions.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
