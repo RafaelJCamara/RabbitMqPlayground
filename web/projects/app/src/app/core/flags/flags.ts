@@ -16,7 +16,8 @@ export const FLAGS = {
   },
   explain: {
     default: false,
-    description: 'The event log, the message inspector and the "Why?" overlay (slice S7).',
+    description:
+      'The what-if and topic testers, and with the simulation the event log, the message inspector and the "Why?" overlay (slice S7).',
   },
   headers: {
     default: false,
