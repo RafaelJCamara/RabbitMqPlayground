@@ -83,10 +83,7 @@ rmq-flow-canvas .rmq-node-outline {
   fill: var(--kind-fill);
   stroke: var(--kind);
   stroke-width: 2px;
-  transition:
-    stroke-width 80ms ease-out,
-    stroke 100ms ease-out,
-    stroke-opacity 100ms ease-out;
+  transition: stroke-width 80ms ease-out;
 }
 
 /* Selected: the accent, and thicker, so that a selection is seen without any other sign. */
@@ -282,7 +279,8 @@ rmq-flow-canvas .rmq-node-virtual .rmq-node-outline {
  * never the only sign: the way that a message went is thicker, what missed is dimmed and has its reason as words on its label, and what is asked about has a ring. A selected edge or node keeps its accent, and what is
  * dimmed is the stroke and never the words.
  */
-rmq-flow-canvas .f-connection-path {
+rmq-flow-canvas .rmq-edge[data-emphasis] .f-connection-path,
+rmq-flow-canvas .rmq-node[data-emphasis] .rmq-node-outline {
   transition:
     stroke 100ms ease-out,
     stroke-width 100ms ease-out,
@@ -375,7 +373,8 @@ rmq-flow-canvas .rmq-node.f-selected[data-emphasis='reached'] .rmq-node-outline 
 @media (prefers-reduced-motion: reduce) {
   rmq-flow-canvas .rmq-node-outline,
   rmq-flow-canvas .rmq-handle-dot,
-  rmq-flow-canvas .f-connection-path {
+  rmq-flow-canvas .rmq-edge[data-emphasis] .f-connection-path,
+  rmq-flow-canvas .rmq-node[data-emphasis] .rmq-node-outline {
     transition: none;
   }
 }

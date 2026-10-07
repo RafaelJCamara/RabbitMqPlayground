@@ -284,6 +284,40 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     expect(await explain.reasonOn('x1>q2')).toContain('order.cancelled');
   });
 
+  test('has a transition of a tenth of a second on what is lit, only on what is lit, and none for a learner who asked for less motion', async ({
+    page,
+  }) => {
+    const explain = await ExplainPage.open(page, WITH_ARCHIVE);
+    await explain.publish();
+    await explain.simulation.step();
+    await expect.poll(() => explain.edgeMark('x1>q1')).toBe('path');
+    const seconds = (selector: string) =>
+      page.locator(selector).evaluate((element) =>
+        getComputedStyle(element)
+          .transitionDuration.split(',')
+          .map((value) => parseFloat(value)),
+      );
+
+    await expect.poll(() => seconds('[data-edge="x1>q1"] path.f-connection-path')).toEqual([0.1, 0.1, 0.1]);
+    await expect.poll(() => seconds('[data-node-id="q1"] .rmq-node-outline')).toEqual([0.1, 0.1, 0.1]);
+    // What is not lit is drawn as it always was: no transition on its stroke.
+    expect(await explain.nodeMark('c1')).toBeNull();
+    const unlit = await seconds('[data-node-id="c1"] .rmq-node-outline');
+    expect(unlit).toEqual([0.08]);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+
+    await expect
+      .poll(async () => (await seconds('[data-edge="x1>q1"] path.f-connection-path')).every((value) => value < 0.001))
+      .toBe(true);
+    await expect
+      .poll(async () => (await seconds('[data-node-id="q1"] .rmq-node-outline')).every((value) => value < 0.001))
+      .toBe(true);
+    // Reduced motion changes how it is drawn and not what is lit.
+    expect(await explain.edgeMark('x1>q1')).toBe('path');
+    expect(await explain.nodeMark('q1')).toBe('reached');
+  });
+
   test('lights nothing while the clock runs, however many messages are routed, and the Why? of the last one comes back when it is stopped', async ({
     page,
   }) => {
