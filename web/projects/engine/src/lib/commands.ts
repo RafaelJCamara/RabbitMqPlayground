@@ -154,17 +154,18 @@ function bind(core: Core, command: Extract<EngineCommand, { op: 'bind' }>): Brok
   if (source.type === 'topic' && hashWordCount(command.key) > TOPIC_MAX_HASH_WORDS) {
     return topicWildcardsReply(command.key, hashWordCount(command.key));
   }
-  const signature = bindingSignature(command.source, destination.kind, destination.name, command.key, command.headers);
-  if (!state.bindings.has(signature)) {
-    const headers = canonicalHeaders(command.headers);
-    state.bindings.set(signature, {
+  // A binding that is there already is written again as it is, and keeps its place.
+  const headers = canonicalHeaders(command.headers);
+  state.bindings.set(
+    bindingSignature(command.source, destination.kind, destination.name, command.key, command.headers),
+    {
       source: command.source,
       destination,
       key: command.key,
       ...(headers === undefined ? {} : { headers }),
-    });
-    state.topology = null;
-  }
+    },
+  );
+  state.topology = null;
   return null;
 }
 
@@ -245,11 +246,9 @@ function setChannel(core: Core, command: Extract<EngineCommand, { op: 'channel.s
     const queues = new Set<QueueState>();
     for (const name of channel.tags) {
       const tag = state.tags.get(name) as TagState;
-      if (!tag.cancelled) {
-        const queue = state.queues.get(tag.queue) as QueueState;
-        unblock(core, queue, tag);
-        queues.add(queue);
-      }
+      const queue = state.queues.get(tag.queue) as QueueState;
+      unblock(core, queue, tag);
+      queues.add(queue);
     }
     for (const queue of queues) {
       dispatchQueue(core, queue);

@@ -7,11 +7,8 @@ import type { ChannelState, Held, QueueEntry, QueueState, TagState } from './sta
  * changes the state and says what it did.
  */
 
-/** Whether a consumer can be given one more message: it acknowledges by itself, or its channel has no limit, or it holds fewer than the prefetch. */
+/** Whether a consumer can be given one more message: its channel has no limit, or it holds fewer than the prefetch. One that acknowledges by itself holds nothing. */
 export function hasRoom(core: Core, tag: TagState): boolean {
-  if (tag.ack === 'auto') {
-    return true;
-  }
   const { prefetch } = core.state.channels.get(tag.channel) as ChannelState;
   return prefetch === 0 || tag.unacked.length < prefetch;
 }
@@ -188,7 +185,7 @@ export function closeChannel(core: Core, channel: ChannelState, reason: CloseRea
     ({ task }) => (task.kind === 'receive' || task.kind === 'finish') && task.channel === channel.id,
   );
 
-  const touched: QueueState[] = [];
+  const touched = new Set<QueueState>();
   for (const name of channel.tags) {
     leaveTurn(core, state.tags.get(name) as TagState);
   }
@@ -198,9 +195,7 @@ export function closeChannel(core: Core, channel: ChannelState, reason: CloseRea
     entry.redelivered = true;
     queue.ready.insert(entry);
     core.emit({ type: 'requeued', message: entry.message.id, queue: queue.name, consumer: name, channel: channel.id });
-    if (!touched.includes(queue)) {
-      touched.push(queue);
-    }
+    touched.add(queue);
   }
   for (const name of channel.tags) {
     state.tags.delete(name);

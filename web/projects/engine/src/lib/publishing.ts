@@ -145,9 +145,6 @@ function putTick(core: Core, producer: ProducerState, at: number): void {
 }
 
 function removeTick(core: Core, producer: ProducerState): void {
-  if (producer.nextTickAt === null) {
-    return;
-  }
   producer.nextTickAt = null;
   core.state.heap.removeWhere(({ task }) => task.kind === 'tick' && task.producer === producer.id);
 }
@@ -168,27 +165,22 @@ export function onTick(core: Core, producerId: string): void {
 export function setProducer(core: Core, command: ProducerSet): void {
   const { state } = core;
   const before = state.producers.get(command.producer);
-  const producer: ProducerState = before ?? {
-    id: command.producer,
-    target: null,
-    key: '',
-    payload: '',
-    headers: [],
-    burst: 1,
-    everyMs: 1,
-    repeat: false,
+  // What it has counted and when it sends next is kept, and the rest is what the command says.
+  const producer: ProducerState = {
     published: 0,
     lastTickAt: 0,
     nextTickAt: null,
+    ...before,
+    id: command.producer,
+    target: command.target,
+    key: command.key,
+    payload: command.payload,
+    headers: command.headers,
+    burst: command.burst,
+    everyMs: command.everyMs,
+    repeat: command.repeat,
   };
   const everyChanged = before !== undefined && before.everyMs !== command.everyMs;
-  producer.target = command.target;
-  producer.key = command.key;
-  producer.payload = command.payload;
-  producer.headers = command.headers;
-  producer.burst = command.burst;
-  producer.everyMs = command.everyMs;
-  producer.repeat = command.repeat;
   state.producers.set(command.producer, producer);
 
   if (!(producer.repeat && producer.target !== null)) {

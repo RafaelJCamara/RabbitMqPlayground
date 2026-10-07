@@ -27,6 +27,11 @@ export class ReadyList<Message> {
     return this.items.length - this.head;
   }
 
+  /** How many entries the list keeps in memory: those that it holds, and those that were taken from the front and have not been let go of yet. A spec says that it stays bounded. */
+  get retained(): number {
+    return this.items.length;
+  }
+
   /** Puts a copy at the back, which is where a copy that has just come into the queue belongs. */
   push(entry: Entry<Message>): void {
     this.items.push(entry);
