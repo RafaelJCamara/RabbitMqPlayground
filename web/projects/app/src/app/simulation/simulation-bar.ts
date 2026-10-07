@@ -10,10 +10,10 @@ const SPEED_BUTTON =
   'border-border bg-surface hover:bg-canvas aria-pressed:bg-fg aria-pressed:text-surface min-h-8 min-w-10 rounded-md border px-2 py-1 tabular-nums';
 
 /**
- * The strip of the simulation (ADR-0056, ADR-0057): a row under the top bar, a region of the page that has a name and not a toolbar, which promises arrow keys that it does not have, so that the bar that S5 made to fit is left as it is, and so that the canvas has the same
- * height before and after the first message. Each button is a command of the runtime, which it hands to the bus with the origin `toolbar`, as every way of
- * doing it does (ADR-0054). A button says what it does in words, and a key where it has one; the readout at the right is text, and not a live region, because
- * it changes ten times a second.
+ * The strip of the simulation (ADR-0056, ADR-0057): a row under the top bar, so that the bar that S5 made to fit is left as it is and the canvas has the same height
+ * before and after the first message. It is a region of the page with a name, and not a toolbar, which would promise arrow keys that it does not have. Each button is a
+ * command of the runtime, which it hands to the bus with the origin `toolbar`, as every way of doing it does (ADR-0054). A button says what it does in words, and a key
+ * where it has one; the readout at the right is text, and not a live region, because it changes ten times a second.
  */
 @Component({
   selector: 'rmq-simulation-bar',
