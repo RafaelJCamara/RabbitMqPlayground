@@ -40,7 +40,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted (the caps of a canvas are the domain's, by 0029) |
 | [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted (wired into the app by 0031) |
 | [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
-| [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033) |
+| [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033, the folders of the simulation by 0057) |
 | [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted (the zoom is held by `FlowViewport`, 0033; undo and redo told to listeners, ids taken back and the origin `typed`, 0046, the runtime verbs run through the bus, 0054) |
 | [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted (chips on edges settled by 0044) |
 | [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted (the fit is the app's, by 0038, a menu on the canvas itself is the key's, by 0040, labels, the default exchange node and their intents by 0043 and 0044) |
@@ -55,18 +55,19 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0042](0042-a-drop-on-nothing-opens-the-create-menu-and-what-it-makes-is-one-batch.md) | A drop on nothing opens the create menu, and what it makes is one batch | Accepted |
 | [0043](0043-the-default-exchange-is-shown-on-request-and-is-not-in-the-document.md) | The default exchange is shown on request, and it is not in the document | Accepted (what it does not take, held by journeys, 0049) |
 | [0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md) | Edges carry chips, labels are placed greedily and can be dragged, and lints are badges | Accepted (the reader of paths and the journeys of the labels, 0049) |
-| [0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) | The command bar: a panel that types through the same door | Accepted (its draft, its refusals and its list settled by 0048) |
+| [0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) | The command bar: a panel that types through the same door | Accepted (its draft, its refusals and its list settled by 0048, its place among the folders by 0057) |
 | [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md) | The equivalent-command log, and the tests that hold gestures and typed commands together | Accepted (the contract suite and the replay as built, 0048, the runtime verbs are in the log, 0054) |
 | [0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md) | Guidance: the hint bar, the "How to link" card and the cheat-sheet | Accepted (the card as chips, and the top bar that fits, 0048) |
 | [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md) | What building S5 settled: Ctrl+K in a field, a bar that keeps its draft, a top bar that fits, and tests that wait | Accepted |
 | [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md) | The reader of paths knows what the bezier edge draws, and a browser holds where the labels are put | Accepted (the overlay reads the paths with it, 0055) |
 | [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) | The simulator has no connections, a consumer owns a channel, and a refusal is a result | Accepted |
 | [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md) | A declaration that repeats is idempotent, an unbind of nothing changes nothing, and a 406 names the attribute | Accepted |
-| [0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md) | The engine: commands in, events out, one clock, and a view for the screen | Accepted |
+| [0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md) | The engine: commands in, events out, one clock, and a view for the screen | Accepted (the records of its view and the producer of a message in the broker, 0057) |
 | [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md) | Delivery: the consumer at the head, prefetch for each tag, and what cancel and close do | Accepted |
-| [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) | The runtime verbs go through the bus and are in the log, and `reconcile` keeps the engine whole | Accepted |
-| [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) | The overlay draws on a canvas, outside change detection, and follows the real paths | Accepted |
-| [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md) | Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar | Accepted |
+| [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) | The runtime verbs go through the bus and are in the log, and `reconcile` keeps the engine whole | Accepted (what the bar and the bus do with them while the flag is off, 0057) |
+| [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) | The overlay draws on a canvas, outside change detection, and follows the real paths | Accepted (the colours, the wake of the loop and the frame that cannot jump, 0057) |
+| [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md) | Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar | Accepted (the strip is a labelled region and not a toolbar, 0057) |
+| [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md) | What building S6 settled: folders that run one way, a strip that is a region, frames that cannot jump, and colours read through a probe | Accepted |
 
 ## Where to start
 
@@ -95,7 +96,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md),
   [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md),
   [0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md),
-  [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md), [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md).
+  [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md), [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md),
+  [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),
@@ -105,7 +107,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md),
   [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md),
   [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md),
-  [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md), [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md).
+  [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md), [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md),
+  [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
 
 ## Adding or changing a decision
 

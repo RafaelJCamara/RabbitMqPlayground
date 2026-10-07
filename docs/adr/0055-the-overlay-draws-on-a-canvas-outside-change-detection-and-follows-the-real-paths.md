@@ -1,6 +1,6 @@
 # ADR-0055: The overlay draws on a canvas, outside change detection, and follows the real paths
 
-- **Status:** Accepted
+- **Status:** Accepted. How the colours are read, what wakes the loop and the frame that cannot jump are settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Simulation controls" and "Visual language and accessibility" of [ADR-0010](0010-explanation-first-editor-ux.md), "Rendering contract" of [ADR-0007](0007-deterministic-simulation-engine.md) (the UI interpolates the events against the

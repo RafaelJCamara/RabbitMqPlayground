@@ -1,6 +1,6 @@
 # ADR-0054: The runtime verbs go through the bus and are in the log, and `reconcile` keeps the engine whole
 
-- **Status:** Accepted
+- **Status:** Accepted. What the bar and the bus do with them while the flag is off is settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** "The verbs of M1" of [ADR-0025](0025-the-command-grammar.md) (the runtime verbs "have slices of their own"), "One command layer" of [ADR-0011](0011-explicit-linking-and-command-layer.md) and

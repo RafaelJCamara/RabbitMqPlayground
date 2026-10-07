@@ -1,6 +1,6 @@
 # ADR-0056: Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar
 
-- **Status:** Accepted
+- **Status:** Accepted. The strip is a labelled region and not a toolbar, by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Layout" and "Simulation controls" of [ADR-0010](0010-explanation-first-editor-ux.md) (a top bar with the play controls, a per-node set of counters), the nodes of
