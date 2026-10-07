@@ -74,7 +74,7 @@ interface Legend {
             data-testid="why-card-let-go"
             (click)="explain.letGoOfWhat()"
           >
-            {{ shown.source === 'queue' ? 'Stop asking' : 'Let go' }}
+            {{ buttonFor(shown.source) }}
           </button>
         </div>
       </div>
@@ -107,6 +107,11 @@ export class WhyCard {
     }
     return items.length === 0 ? null : items;
   });
+
+  /** What the button says, for what it does: a queue that is asked about is let go of by asking no more, and the tester by shutting it. */
+  protected buttonFor(source: string): string {
+    return source === 'queue' ? 'Stop asking' : source === 'what-if' ? 'Close the tester' : 'Let go';
+  }
 
   protected gone(count: number): string {
     return count === 1

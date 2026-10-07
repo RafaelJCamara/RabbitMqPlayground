@@ -24,6 +24,7 @@ import { SelectionStore } from '../state/selection-store';
 import { StatusStore } from '../state/status-store';
 import { EventLog } from './event-log';
 import { ExplainState } from './explain-state';
+import { WhatIf } from './what-if';
 
 /** A producer `sender` that sends two messages at a time to `orders`, which sends what has the key `new` to `billing`, and nothing else anywhere: `archive` is bound with a key that never matches. */
 const traffic = (): CanvasDocument => ({
@@ -60,6 +61,7 @@ function setup(flags: string | null = 'simulation,explain') {
     SimStats,
     Simulation,
     EventLog,
+    WhatIf,
     ExplainState,
     FeatureFlags,
     { provide: FRAME_SOURCE, useValue: frames },
@@ -89,6 +91,7 @@ function setup(flags: string | null = 'simulation,explain') {
     bus,
     log,
     state,
+    whatIf: TestBed.inject(WhatIf),
     selection: TestBed.inject(SelectionStore),
     announcer: TestBed.inject(Announcer),
     run,
@@ -497,6 +500,65 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       const off = setup('explain');
       off.selection.select(['A']);
       expect(off.state.asked()).toBeNull();
+    });
+  });
+
+  describe('the what-if tester (ADR-0064)', () => {
+    it('is what is lit while it is open and its message can be read, before anything else, with the card that says so', () => {
+      const { state, whatIf, stoppedAfterOneRouted, selection } = setup();
+      stoppedAfterOneRouted();
+      selection.select(['A']);
+      expect(state.shown()?.source).toBe('queue');
+
+      whatIf.open();
+      whatIf.type('key=new');
+
+      expect(state.shown()).toMatchObject({
+        source: 'what-if',
+        message: null,
+        title: 'What if? To orders with the key "new"',
+        text: 'Would reach billing.',
+      });
+      expect(state.shown()?.emphasis.nodes.get('Q')).toBe('reached');
+    });
+
+    it('gives way to what else is lit when it is shut, or when what is typed cannot be read', () => {
+      const { state, whatIf, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      whatIf.open();
+      expect(state.shown()?.source).toBe('what-if');
+
+      whatIf.type('keyy=new');
+      expect(state.shown()?.source).toBe('auto');
+
+      whatIf.type('key=new');
+      whatIf.close();
+      expect(state.shown()?.source).toBe('auto');
+    });
+
+    it('is lit with the flag of the explanation alone, which the rest of what is lit is not, because it needs the simulation', () => {
+      TestBed.resetTestingModule();
+      const { state, whatIf } = setup('explain');
+      expect(state.enabled).toBe(false);
+      expect(state.shown()).toBeNull();
+
+      whatIf.open();
+      whatIf.type('key=new');
+
+      expect(state.shown()?.source).toBe('what-if');
+      expect(state.debugState()).toMatchObject({ source: 'what-if', text: 'Would reach billing.' });
+    });
+
+    it('is let go of by shutting it, which the button of its card does, and what was lit before comes back', () => {
+      const { state, whatIf, stoppedAfterOneRouted } = setup();
+      stoppedAfterOneRouted();
+      whatIf.open();
+      whatIf.type('key=new');
+
+      state.letGoOfWhat();
+
+      expect(whatIf.isOpen()).toBe(false);
+      expect(state.shown()).toMatchObject({ source: 'auto', message: 1 });
     });
   });
 

@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
+import { WhatIf } from '../core/explain/what-if';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
@@ -83,6 +84,7 @@ async function renderCard() {
     bus,
     run,
     explain: TestBed.inject(ExplainState),
+    whatIf: TestBed.inject(WhatIf),
     selection: TestBed.inject(SelectionStore),
     settle: () => view.fixture.detectChanges(),
     user: userEvent.setup(),
@@ -164,6 +166,25 @@ describe('WhyCard (ADR-0062)', () => {
     run({ type: 'step' });
 
     expect(screen.getByTestId('why-card-title')).toHaveTextContent('Why? Message 2 (the last one routed)');
+  });
+
+  it('says what the what-if tester lights, with a button that shuts the tester, and goes with it', async () => {
+    const { whatIf, settle, user } = await renderCard();
+    whatIf.open();
+    whatIf.type('key=new');
+    settle();
+
+    const card = screen.getByTestId('why-card');
+    expect(card).toHaveAttribute('data-source', 'what-if');
+    expect(within(card).getByTestId('why-card-title')).toHaveTextContent('What if? To orders with the key "new"');
+    expect(within(card).getByTestId('why-card-text')).toHaveTextContent('Would reach billing.');
+    expect(within(card).queryByRole('button', { name: 'Let go' })).toBeNull();
+
+    await user.click(within(card).getByRole('button', { name: 'Close the tester' }));
+    settle();
+
+    expect(whatIf.isOpen()).toBe(false);
+    expect(screen.queryByTestId('why-card')).toBeNull();
   });
 
   it('stops asking about a queue by taking the selection away, which is how a queue is asked about', async () => {

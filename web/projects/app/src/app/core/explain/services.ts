@@ -1,9 +1,11 @@
 import type { Provider } from '@angular/core';
 import { EventLog } from './event-log';
 import { ExplainState } from './explain-state';
+import { WhatIf } from './what-if';
 
 /**
- * What the explanation is made of (ADR-0061, ADR-0062): the log, which listens from the moment that the editor opens, and what the learner chose. The editor provides them, and a spec that builds a part of the
- * editor that reads them provides them too. Both need the flags `explain` and `simulation`, and do nothing without them, so a part that has no use for them pays nothing for having them.
+ * What the explanation is made of (ADR-0061, ADR-0062, ADR-0064): the log, which listens from the moment that the editor opens, the what-if tester, and what the learner chose. The editor provides them, and a spec that builds
+ * a part of the editor that reads them provides them too. The log and what the learner chose need the flags `explain` and `simulation`, and the tester `explain` alone, and each does nothing without them, so a part that has no use for
+ * them pays nothing for having them.
  */
-export const EXPLAIN_SERVICES: Provider[] = [EventLog, ExplainState];
+export const EXPLAIN_SERVICES: Provider[] = [EventLog, WhatIf, ExplainState];

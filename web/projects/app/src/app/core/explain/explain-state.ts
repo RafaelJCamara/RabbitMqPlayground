@@ -19,12 +19,13 @@ import { SelectionStore } from '../state/selection-store';
 import { NO_EMPHASIS, type Emphasis } from './emphasis';
 import { EventLog } from './event-log';
 import { emphasisOfQueue, emphasisOfRoute, emphasisOfSubject, explanationOf } from './highlight';
+import { WhatIf } from './what-if';
 import type { HeldMessage } from './held-messages';
 
 /**
  * What the learner is looking at when they ask the canvas why (ADR-0061, ADR-0062, ADR-0063): the row of the log that they chose, the message that is open, and what is lit because of them. One thing is lit at a time, by this
- * order: a queue that is selected while a message is chosen (why it got the message, or did not), the row or the message that the learner chose, and, while the clock is stopped, the Why? of the message that was
- * routed last. The choice stays until another is made or it is let go.
+ * order: the what-if tester that is open and has a message that can be read, a queue that is selected while a message is chosen (why it got the message, or did not), the row or the message that the learner chose, and, while
+ * the clock is stopped, the Why? of the message that was routed last. The choice stays until another is made or it is let go.
  */
 
 /** What the learner chose to see on the canvas: the path of a row of the log, or the Why? of a message. */
@@ -32,8 +33,8 @@ export type Focus = { readonly kind: 'row'; readonly seq: number } | { readonly 
 
 /** What is lit, and why, for the card that says it. */
 export interface Shown {
-  /** `row` for a row of the log, `why` for the Why? of a message that was chosen, `queue` for a queue that is asked about, and `auto` for the message that was routed last. */
-  readonly source: 'row' | 'why' | 'queue' | 'auto';
+  /** `row` for a row of the log, `why` for the Why? of a message that was chosen, `queue` for a queue that is asked about, `auto` for the message that was routed last, and `what-if` for the tester. */
+  readonly source: 'row' | 'why' | 'queue' | 'auto' | 'what-if';
   readonly message: number | null;
   readonly title: string;
   readonly text: string;
@@ -84,6 +85,7 @@ export class ExplainState {
   private readonly selection = inject(SelectionStore);
   private readonly simulation = inject(Simulation);
   private readonly announcer = inject(Announcer);
+  private readonly whatIf = inject(WhatIf);
 
   /** Whether the log, the message and Why? are there: they need both flags. */
   readonly enabled = this.log.enabled;
@@ -160,8 +162,12 @@ export class ExplainState {
     return this.log.lastSettled();
   });
 
-  /** What is lit and why, or `null` when nothing is. */
+  /** What is lit and why, or `null` when nothing is. The tester needs the flag `explain` alone, and the rest needs the simulation too. */
   readonly shown = computed<Shown | null>(() => {
+    const tester = this.whatIf.lit();
+    if (tester !== null) {
+      return { source: 'what-if', message: null, ...tester };
+    }
     if (!this.enabled) {
       return null;
     }
@@ -344,6 +350,11 @@ export class ExplainState {
    * selection away.
    */
   letGoOfWhat(): void {
+    if (this.whatIf.lit() !== null) {
+      // What the tester lights is let go of by shutting the tester.
+      this.whatIf.close();
+      return;
+    }
     if (this.askedQueue() !== null) {
       this.selection.clear();
     }
