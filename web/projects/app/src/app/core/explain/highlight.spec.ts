@@ -60,6 +60,9 @@ describe('Marks (ADR-0062)', () => {
     marks.edge('e4', 'asked');
     marks.edge('e5', 'asked');
     marks.edge('e5', 'path');
+    // Only a binding that missed has a reason, whatever it is given.
+    marks.edge('e6', 'path', 'not a reason');
+    marks.edge('e7', 'matched', 'not a reason');
     marks.node('n1', 'missed');
     marks.node('n1', 'visited');
     marks.node('n1', 'reached');
@@ -69,13 +72,15 @@ describe('Marks (ADR-0062)', () => {
     marks.gone();
     marks.gone(2);
 
-    expect(plain(marks.build())).toEqual({
+    expect(plain(marks.build())).toStrictEqual({
       edges: {
         e1: { mark: 'missed', reason: 'first' },
         e2: { mark: 'missed', reason: 'late' },
         e3: { mark: 'matched' },
         e4: { mark: 'asked' },
         e5: { mark: 'asked' },
+        e6: { mark: 'path' },
+        e7: { mark: 'matched' },
       },
       nodes: { n1: 'reached', n2: 'asked' },
       gone: 3,
@@ -184,6 +189,14 @@ describe('the Why? of a message (ADR-0062)', () => {
     expect(result.edges.has('X>Q3')).toBe(false);
     expect(result.gone).toBe(2);
     expect(result.nodes.get('Q1')).toBe('reached');
+
+    // An exchange that was reached and is not on the canvas any more is not lit, and counts as one part that went.
+    const { X: _exchange, ...exchanges } = document.exchanges;
+    const withoutX = emphasisOfRoute(explanation, 'P', document, { ...document, exchanges });
+
+    expect(withoutX.nodes.has('X')).toBe(false);
+    expect(withoutX.nodes.get('E')).toBe('visited');
+    expect(withoutX.gone).toBe(1);
   });
 
   it('does not light a producer that was deleted, and says so, and does not light its link when it was linked elsewhere since', () => {
@@ -413,9 +426,16 @@ describe('what choosing a row lights (ADR-0062)', () => {
       nodes: { C: 'visited' },
       gone: 1,
     });
+    // Nothing is lit that is not there: the queue and the consumer are both gone, and a consumer that is gone is a part that went and not a node.
+    expect(plain(emphasisOfSubject({ kind: 'delivery', queue: 'billing', channel: 'C' }, held, documentOf()))).toEqual({
+      edges: {},
+      nodes: {},
+      gone: 1,
+    });
+    const { C: _consumer, ...consumers } = document.consumers;
     expect(
-      plain(emphasisOfSubject({ kind: 'delivery', queue: 'billing', channel: 'C' }, held, documentOf())).gone,
-    ).toBe(1);
+      plain(emphasisOfSubject({ kind: 'delivery', queue: 'billing', channel: 'C' }, held, { ...document, consumers })),
+    ).toEqual({ edges: {}, nodes: { Q1: 'reached' }, gone: 1 });
   });
 
   it('lights the queues and the consumers that a row is about, and counts the ones that have gone', () => {

@@ -219,9 +219,8 @@ export function emphasisOfQueue(
       }
       lightExchange(marks, lens, reason.exchange, 'missed');
       stack.push(...reason.because);
-    } else if (reason.kind === 'cycle' || reason.kind === 'already-explained') {
-      lightExchange(marks, lens, reason.exchange, 'missed');
     }
+    // A reason that ends at an exchange that is on a cycle, or was explained before, has nothing to light that was not lit when that exchange was first explained.
   }
   return marks.build();
 }
