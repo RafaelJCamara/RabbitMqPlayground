@@ -80,24 +80,6 @@ export class TesterPage extends LitCanvas {
     return this.page.evaluate(() => window.__rmq?.selection() ?? null);
   }
 
-  /** A point of an edge, at a fraction of its length, on the screen. */
-  private onEdge(key: string, fraction: number): Promise<{ x: number; y: number }> {
-    return this.page
-      .locator(`[data-edge="${key}"] path.f-connection-path`)
-      .evaluate((path: SVGPathElement, at: number) => {
-        const point = path.getPointAtLength(path.getTotalLength() * at);
-        const matrix = path.getScreenCTM()!;
-        return { x: point.x * matrix.a + matrix.e, y: point.y * matrix.d + matrix.f };
-      }, fraction);
-  }
-
-  /** Selects an edge by pressing on its line, near its target, where the edges that start from one exchange are apart, and waits for the inspector to say that it is a binding. */
-  async selectBinding(key: string): Promise<void> {
-    const at = await this.onEdge(key, 0.8);
-    await this.page.mouse.click(at.x, at.y);
-    await expect(this.page.getByTestId('inspector-title')).toHaveText('Binding');
-  }
-
   /** The popover that asks for the key of a binding, from an exchange to a queue, by what a screen reader says of it. */
   keyPopover(from: string, to: string): Locator {
     return this.page.getByRole('group', { name: `Binding key from ${from} to ${to}` });

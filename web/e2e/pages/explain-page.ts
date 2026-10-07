@@ -91,6 +91,24 @@ export class LitCanvas {
     return (await reason.count()) === 0 ? null : ((await reason.textContent()) ?? '').trim();
   }
 
+  /** A point of an edge, at a fraction of its length, on the screen. */
+  private onEdge(key: string, fraction: number): Promise<{ x: number; y: number }> {
+    return this.page
+      .locator(`[data-edge="${key}"] path.f-connection-path`)
+      .evaluate((path: SVGPathElement, at: number) => {
+        const point = path.getPointAtLength(path.getTotalLength() * at);
+        const matrix = path.getScreenCTM()!;
+        return { x: point.x * matrix.a + matrix.e, y: point.y * matrix.d + matrix.f };
+      }, fraction);
+  }
+
+  /** Selects an edge by pressing on its line, near its target, where the edges that start from one exchange are apart, and waits for the inspector to say that it is a binding. */
+  async selectBinding(key: string): Promise<void> {
+    const at = await this.onEdge(key, 0.8);
+    await this.page.mouse.click(at.x, at.y);
+    await expect(this.page.getByTestId('inspector-title')).toHaveText('Binding');
+  }
+
   /** A colour of the stylesheet, as the browser computes it in the theme that is on, read through an element that has it as its colour. */
   tokenColour(token: string): Promise<string> {
     return this.page.evaluate((name) => {
