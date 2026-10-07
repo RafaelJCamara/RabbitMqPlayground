@@ -2,6 +2,19 @@ import { Injectable } from '@angular/core';
 import type { CanvasDocument } from '@rmq/domain';
 import type { SimulationState } from '../runtime/simulation';
 
+/** What the overlay of the messages drew in its last frame: where each shape was on the canvas's host, how many messages it stood for, and whether it was drawn still. */
+export interface DebugOverlayFrame {
+  readonly reducedMotion: boolean;
+  readonly markers: readonly {
+    readonly edge: string;
+    readonly x: number;
+    readonly y: number;
+    readonly count: number;
+    readonly key: string | null;
+    readonly redelivered: boolean;
+  }[];
+}
+
 /** The live transform of the canvas: where its origin is on the screen, and how far it is zoomed. */
 export interface DebugViewport {
   readonly x: number;
@@ -23,6 +36,8 @@ export interface EditorDebugSources {
   readonly viewport: () => DebugViewport | null;
   /** The clock of the simulation, whether it runs, how fast, when the next thing is, and what the engine says of itself (ADR-0056). `null` without the flag. */
   readonly simulationState: () => SimulationState | null;
+  /** What the overlay of the messages drew in its last frame (ADR-0055). `null` without the overlay. */
+  readonly overlayFrame: () => DebugOverlayFrame | null;
 }
 
 /** Where the editor says what it can show. The handle on the window reads from here, and answers nothing until there is an editor. */

@@ -14,6 +14,7 @@ function flagsWith(stored: string | null): FeatureFlags {
 }
 
 const document = documentOf({ queues: { q1: queueRecord('billing') } });
+const frame = { reducedMotion: true, markers: [] };
 const state = {
   now: 300,
   running: false,
@@ -28,6 +29,7 @@ const editor: EditorDebugSources = {
   intents: () => [{ type: 'select' }],
   viewport: () => ({ x: 10, y: 20, zoom: 1.5 }),
   simulationState: () => state,
+  overlayFrame: () => frame,
 };
 
 describe('createDebugHandle', () => {
@@ -55,6 +57,8 @@ describe('createDebugHandle', () => {
     expect(handle.intents()).toEqual([]);
     expect(handle.viewport()).toBeNull();
     expect(handle.simulationState()).toBeNull();
+    expect(handle.overlayFrame()).toBeNull();
+    expect(handle.overlayFrame()).toBeNull();
   });
 
   it('says what the editor shows, while it is open, and nothing once it is gone', () => {
@@ -68,6 +72,8 @@ describe('createDebugHandle', () => {
     expect(handle.intents()).toEqual([{ type: 'select' }]);
     expect(handle.viewport()).toEqual({ x: 10, y: 20, zoom: 1.5 });
     expect(handle.simulationState()).toBe(state);
+    expect(handle.overlayFrame()).toBe(frame);
+    expect(handle.overlayFrame()).toBe(frame);
 
     detach();
     expect(handle.document()).toBeNull();

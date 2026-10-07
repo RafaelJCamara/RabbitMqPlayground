@@ -18,6 +18,7 @@ import { lowerFirst } from '../canvas/model/labels';
 import type { CanvasIntent, ContextTarget } from '../canvas/model/intents';
 import { newNodeKey } from '../canvas/model/new-node';
 import { popoverPosition, type Point, type Size } from '../canvas/model/transform';
+import { MessageOverlay } from '../canvas/overlay/overlay';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -91,6 +92,7 @@ interface Peek {
   imports: [
     TopBar,
     SimulationBar,
+    MessageOverlay,
     StatusBar,
     Toolbox,
     FlowCanvas,
@@ -142,6 +144,9 @@ interface Peek {
             />
           } @else {
             <p class="text-muted p-6" data-testid="opening">Opening your canvas…</p>
+          }
+          @if (ready() && simulation.enabled) {
+            <rmq-message-overlay />
           }
           @if (ready() && model().nodes.length === 0) {
             <p
@@ -221,6 +226,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private readonly cheatSheet = inject(CheatSheetService);
   private readonly inspector = viewChild.required(Inspector);
   private readonly commandBar = viewChild.required(CommandBar);
+  private readonly overlay = viewChild(MessageOverlay);
   /** The keys that open the command bar, as the table of shortcuts says them. */
   protected readonly commandKeys = keysFor(['commands', 'commands-anywhere']);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -263,6 +269,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         intents: () => this.intentLog,
         viewport: () => this.viewport.live(),
         simulationState: () => (this.simulation.enabled ? this.simulation.debugState() : null),
+        overlayFrame: () => this.overlay()?.lastFrame() ?? null,
       });
       inject(DestroyRef).onDestroy(detach);
     }

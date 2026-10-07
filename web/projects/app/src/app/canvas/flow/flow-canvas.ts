@@ -200,6 +200,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
         drawn: (ids) => this.viewport.markDrawn(ids),
         gone: (ids) => this.viewport.markGone(ids),
         geometry: () => this.placeLabelsSoon(),
+      this.watchTransform(canvas.hostElement),
       }),
     );
   }
@@ -208,6 +209,19 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   private placeLabelsSoon(): void {
     clearTimeout(this.placementTimer);
     this.placementTimer = setTimeout(() => {
+  /**
+   * Tells the rest of the app when the canvas moves, while it moves: the library says so only when a gesture ends, and what is laid over the canvas, which
+   * follows the live transform on every frame, has to be drawn again when the canvas is panned or zoomed while the clock is stopped (ADR-0055).
+   */
+  private watchTransform(canvas: HTMLElement): () => void {
+    if (typeof MutationObserver !== 'function') {
+      return () => undefined;
+    }
+    const observer = new MutationObserver(() => this.viewport.noteMoved());
+    observer.observe(canvas, { attributes: true, attributeFilter: ['style', 'transform'] });
+    return () => observer.disconnect();
+  }
+
       const next = labelPlaces(this.model(), (key) => this.viewport.edgePath(key));
       if (!samePlaces(next, this.placed())) {
         this.placed.set(next);

@@ -11,6 +11,18 @@ interface Window {
     readonly drawnEdges: () => readonly string[];
     readonly intents: () => readonly { readonly type: string; readonly [key: string]: unknown }[];
     readonly viewport: () => { readonly x: number; readonly y: number; readonly zoom: number } | null;
+    /** What the overlay of the messages drew in its last frame. `null` without the overlay. */
+    readonly overlayFrame: () => {
+      readonly reducedMotion: boolean;
+      readonly markers: readonly {
+        readonly edge: string;
+        readonly x: number;
+        readonly y: number;
+        readonly count: number;
+        readonly key: string | null;
+        readonly redelivered: boolean;
+      }[];
+    } | null;
     /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` without the flag. */
     readonly simulationState: () => {
       readonly now: number;

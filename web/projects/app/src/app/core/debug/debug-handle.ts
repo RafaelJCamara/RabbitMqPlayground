@@ -4,7 +4,7 @@ import { APP_NAME } from '../app-info';
 import { FeatureFlags } from '../flags/feature-flags';
 import type { FlagName } from '../flags/flags';
 import type { SimulationState } from '../runtime/simulation';
-import { DebugSources, type DebugViewport } from './debug-sources';
+import { DebugSources, type DebugOverlayFrame, type DebugViewport } from './debug-sources';
 
 /**
  * What `window.__rmq` offers to end-to-end tests. It only reads: nothing here changes the app. What the editor knows is
@@ -26,6 +26,8 @@ export interface RmqDebugHandle {
   readonly viewport: () => DebugViewport | null;
   /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` until the editor has started, and without the flag. */
   readonly simulationState: () => SimulationState | null;
+  /** What the overlay of the messages drew in its last frame: where each shape was, how many messages it stood for, and whether it was drawn still. `null` without the overlay. */
+  readonly overlayFrame: () => DebugOverlayFrame | null;
 }
 
 declare global {
@@ -48,6 +50,7 @@ export function createDebugHandle(flags: FeatureFlags, sources: DebugSources = n
     intents: () => [...(sources.current?.intents() ?? [])],
     viewport: () => sources.current?.viewport() ?? null,
     simulationState: () => sources.current?.simulationState() ?? null,
+    overlayFrame: () => sources.current?.overlayFrame() ?? null,
   });
 }
 

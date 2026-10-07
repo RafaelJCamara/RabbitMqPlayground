@@ -358,6 +358,16 @@ describe('FlowViewport', () => {
     expect(viewport.zoom()).toBe(1.5);
   });
 
+  it('counts the times that the canvas moved, from none, so that what is laid over it is drawn again when it is panned or zoomed (ADR-0055)', () => {
+    const viewport = make();
+    expect(viewport.moved()).toBe(0);
+
+    viewport.noteMoved();
+    viewport.noteMoved();
+
+    expect(viewport.moved()).toBe(2);
+  });
+
   it('keeps the set of the edges that are drawn, and changes it only when it changes', () => {
     const viewport = make();
     const seen = [viewport.drawn()];

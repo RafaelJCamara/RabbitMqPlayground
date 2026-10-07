@@ -16,6 +16,7 @@ import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
+import { CANVAS_CONTEXT } from '../canvas/overlay/overlay';
 import {
   AUTOSAVE_TIMER,
   CanvasSession,
@@ -1584,6 +1585,8 @@ describe('Editor', () => {
       const providers = [
         ...harness().providers,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
+        // jsdom cannot draw: the overlay is given no context, which is the page that has none.
+        { provide: CANVAS_CONTEXT, useValue: () => null },
         { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       ];
       const view = await renderEditor(providers);
@@ -1604,7 +1607,7 @@ describe('Editor', () => {
     it('has no controls without its flag, and Space, the full stop and P are the page’s, and the hints do not say them', async () => {
       const { onCanvas, status } = await openEditor(null);
 
-      expect(screen.queryByRole('group', { name: 'Simulation' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Simulation' })).not.toBeInTheDocument();
       expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Space');
       onCanvas({ key: ' ' });
       onCanvas({ key: '.' });
@@ -1613,10 +1616,23 @@ describe('Editor', () => {
       expect(status.notice()).toBeNull();
     });
 
+    it('has the overlay of the messages over the canvas, in the canvas, when the flag is on, and none without it', async () => {
+      await openEditor(null);
+      expect(document.querySelector('rmq-message-overlay')).toBeNull();
+      TestBed.resetTestingModule();
+
+      await openEditor('simulation');
+
+      const overlay = document.querySelector('rmq-message-overlay');
+      expect(overlay).not.toBeNull();
+      expect(screen.getByRole('main', { name: 'Canvas' })).toContainElement(overlay as HTMLElement);
+      expect(overlay).toHaveAttribute('aria-hidden', 'true');
+    });
+
     it('has the controls under the top bar from the first frame, and the hints say the keys', async () => {
       await openEditor('simulation');
 
-      const bar = screen.getByRole('group', { name: 'Simulation' });
+      const bar = screen.getByRole('region', { name: 'Simulation' });
       expect(screen.getByRole('banner').compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(
         screen.getByRole('main', { name: 'Canvas' }).compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_PRECEDING,

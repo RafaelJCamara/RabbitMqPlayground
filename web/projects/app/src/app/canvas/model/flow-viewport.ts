@@ -50,12 +50,15 @@ export interface Placed {
 export class FlowViewport {
   private readonly zoomValue = signal(1);
   private readonly drawnKeys = signal<ReadonlySet<string>>(new Set());
+  private readonly moves = signal(0);
   private driver: ViewportDriver | undefined;
 
   /** How far the canvas is zoomed, as the library last said. 1 is 100%. */
   readonly zoom = this.zoomValue.asReadonly();
   /** The keys of the edges whose paths the library has drawn. It draws them a moment after the elements appear (ADR-0016). */
   readonly drawn = this.drawnKeys.asReadonly();
+  /** How many times the canvas has moved, while a pan or a zoom is going on and not only when it ends, so that what is laid over it can follow (ADR-0055). */
+  readonly moved = this.moves.asReadonly();
 
   /** Steers the canvas with this driver until the function that it returns is called. */
   attach(driver: ViewportDriver): () => void {
@@ -142,6 +145,11 @@ export class FlowViewport {
 
   edgePath(id: string): string | null {
     return this.driver?.edgePath(id) ?? null;
+  }
+
+  /** The adapter says that the canvas moved: it was panned, zoomed or fitted. */
+  noteMoved(): void {
+    this.moves.update((count) => count + 1);
   }
 
   /** The adapter says how far the canvas is zoomed. */
