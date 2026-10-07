@@ -66,90 +66,148 @@ export function topicMatches(pattern: string, key: string): boolean {
   return reach(words, keyWords).get(words.length, keyWords.length);
 }
 
-/** One pattern word, with the key words that it took. A `#` takes any number of them, anything else takes one. */
+/** What one pattern word made of the key (ADR-0059). */
+export type SegmentOutcome =
+  /** It took the key word that fits it. A `#` is always this: it takes what is between its neighbours. */
+  | 'matched'
+  /** A word of the pattern met another word, which is in `words`. */
+  | 'differs'
+  /** The key had no word left for it. */
+  | 'missing';
+
+/** One pattern word, with the key words that it took. A `#` takes any number of them, anything else takes one, or none when the key had no word left. */
 export interface TopicSegment {
   readonly pattern: string;
   readonly words: readonly string[];
+  readonly outcome: SegmentOutcome;
 }
 
-/** Why a pattern stopped short of a key. */
+/** Why a pattern did not match a key: the first problem there is (ADR-0059). */
 export type TopicMiss =
-  /** The pattern word at `patternIndex` has no key word left to match. */
-  | { readonly kind: 'key-ran-out'; readonly patternIndex: number }
-  /** The pattern word at `patternIndex` is a word, and the key word at `keyIndex` is another. */
+  /** A word of the pattern is not the key's word at its place. Before the first `#` it is counted from the start of the key, and after the last from its end. */
   | { readonly kind: 'word-differs'; readonly patternIndex: number; readonly keyIndex: number }
-  /** The pattern is used up, and the key words from `keyIndex` on are left. */
-  | { readonly kind: 'key-has-extra-words'; readonly keyIndex: number };
+  /** The key has fewer words than the pattern has words that are not `#`, which no `#` makes up for. */
+  | { readonly kind: 'key-too-short'; readonly needs: number; readonly has: number }
+  /** The pattern has no `#` and is used up, and the key goes on from `keyIndex`. */
+  | { readonly kind: 'key-has-extra-words'; readonly keyIndex: number }
+  /** The words between two `#` that start at `patternIndex` are nowhere in the key, in order. */
+  | { readonly kind: 'middle-not-found'; readonly patternIndex: number };
 
 /** A pattern laid against a key, word by word, for an explanation to show (ADR-0010). */
 export interface TopicAlignment {
   readonly matched: boolean;
-  /**
-   * For a match, every pattern word with the key words it took, which together are the whole key. For a miss, as many
-   * pattern words as could be matched from the left, which is as far as the pattern got.
-   */
+  /** Every word of the pattern, with the key words that it took. For a match they are the whole key, in order. */
   readonly segments: readonly TopicSegment[];
-  /** Why a miss stopped where it did. Only for a miss. */
+  /** Why a miss is one. Only for a miss. */
   readonly miss?: TopicMiss;
 }
 
-/**
- * Splits `key` between the words of `pattern`, given that the pattern matches it exactly. A `#` takes as few words as it
- * can, so that the words that come after it are matched first.
- */
-function segmentsOf(pattern: readonly string[], key: readonly string[]): TopicSegment[] {
-  // From the end, `rest.get(a, b)` says that the last `a` pattern words match the last `b` key words, which is the
-  // question "do the words that follow match what is left?" asked from the front.
-  const rest = reach([...pattern].reverse(), [...key].reverse());
-  const canFinish = (patternIndex: number, keyIndex: number): boolean =>
-    rest.get(pattern.length - patternIndex, key.length - keyIndex);
+const fits = (word: string, keyWord: string): boolean => word === '*' || word === keyWord;
 
+/** A word of the pattern judged against the key word at its place, which may not be there. */
+function judge(word: string, keyWord: string | undefined): TopicSegment {
+  if (keyWord === undefined) {
+    return { pattern: word, words: [], outcome: 'missing' };
+  }
+  return { pattern: word, words: [keyWord], outcome: fits(word, keyWord) ? 'matched' : 'differs' };
+}
+
+/**
+ * Lays a pattern against a key (ADR-0059). The words before the first `#` are anchored to the start of the key and the words after the last `#` to its end, so a
+ * pattern with no `#` is all anchor; the words between two `#` are looked for from left to right in what is left, each in the first place where it fits, which is
+ * where it leaves the most room for what follows. Each word is judged on its own, and a `#` takes the words between what is anchored or found on either side.
+ */
+function alignWords(
+  words: readonly string[],
+  key: readonly string[],
+): { segments: TopicSegment[]; lost: number | null } {
+  const first = words.indexOf('#');
+  const last = words.lastIndexOf('#');
   const segments: TopicSegment[] = [];
-  let at = 0;
-  pattern.forEach((word, index) => {
-    let taken = 1;
-    if (word === '#') {
-      taken = 0;
-      while (!canFinish(index + 1, at + taken)) {
-        taken += 1;
-      }
+  const front = first === -1 ? words.length : first;
+  for (let index = 0; index < front; index++) {
+    segments[index] = judge(words[index] as string, key[index]);
+  }
+  if (first === -1) {
+    return { segments, lost: null };
+  }
+
+  // The words after the last #, from the end of the key, and never into the key words that the front has used.
+  const used = Math.min(front, key.length);
+  const back = words.length - last - 1;
+  for (let from = 0; from < back; from++) {
+    const place = key.length - 1 - from;
+    segments[words.length - 1 - from] = judge(
+      words[words.length - 1 - from] as string,
+      place >= used ? key[place] : undefined,
+    );
+  }
+  const end = key.length - Math.min(back, key.length - used);
+
+  // Between the first # and the last, the words that follow each # are looked for from where the last one ended.
+  let at = used;
+  let lost: number | null = null;
+  for (let hash = first; hash < last;) {
+    const next = words.indexOf('#', hash + 1);
+    const block = words.slice(hash + 1, next);
+    let place = at;
+    while (place + block.length <= end && block.some((word, offset) => !fits(word, key[place + offset] as string))) {
+      place += 1;
     }
-    segments.push({ pattern: word, words: key.slice(at, at + taken) });
-    at += taken;
-  });
-  return segments;
+    if (place + block.length <= end) {
+      segments[hash] = { pattern: '#', words: key.slice(at, place), outcome: 'matched' };
+      block.forEach((word, offset) => {
+        segments[hash + 1 + offset] = judge(word, key[place + offset]);
+      });
+      at = place + block.length;
+    } else {
+      segments[hash] = { pattern: '#', words: [], outcome: 'matched' };
+      block.forEach((word, offset) => {
+        segments[hash + 1 + offset] = { pattern: word, words: [], outcome: 'missing' };
+      });
+      lost ??= hash + 1;
+    }
+    hash = next;
+  }
+  segments[last] = { pattern: '#', words: key.slice(at, end), outcome: 'matched' };
+  return { segments, lost };
+}
+
+/** The first thing that is wrong with a pattern that does not match, in the order that ADR-0059 gives. */
+function firstMiss(
+  words: readonly string[],
+  key: readonly string[],
+  segments: readonly TopicSegment[],
+  lost: number | null,
+): TopicMiss {
+  const first = words.indexOf('#');
+  const front = first === -1 ? words.length : first;
+  const needs = words.filter((word) => word !== '#').length;
+
+  const wrongFront = segments.findIndex((segment, index) => index < front && segment.outcome === 'differs');
+  if (wrongFront !== -1) {
+    return { kind: 'word-differs', patternIndex: wrongFront, keyIndex: wrongFront };
+  }
+  if (key.length < needs) {
+    return { kind: 'key-too-short', needs, has: key.length };
+  }
+  if (first === -1) {
+    return { kind: 'key-has-extra-words', keyIndex: words.length };
+  }
+  const last = words.lastIndexOf('#');
+  const wrongBack = segments.findIndex((segment, index) => index > last && segment.outcome === 'differs');
+  if (wrongBack !== -1) {
+    return { kind: 'word-differs', patternIndex: wrongBack, keyIndex: key.length - (words.length - wrongBack) };
+  }
+  return { kind: 'middle-not-found', patternIndex: lost as number };
 }
 
 export function alignTopic(pattern: string, key: string): TopicAlignment {
   const words = splitTopic(pattern);
   const keyWords = splitTopic(key);
-  const grid = reach(words, keyWords);
-
-  if (grid.get(words.length, keyWords.length)) {
-    return { matched: true, segments: segmentsOf(words, keyWords) };
-  }
-
-  // The most that the pattern could match: its longest prefix that matches a prefix of the key, and of those prefixes
-  // the longest key one. Every pattern has at least the empty prefix, which matches the empty one.
-  let patternIndex = words.length;
-  let keyIndex = keyWords.length;
-  while (!grid.get(patternIndex, keyIndex)) {
-    if (keyIndex === 0) {
-      patternIndex -= 1;
-      keyIndex = keyWords.length;
-    } else {
-      keyIndex -= 1;
-    }
-  }
-
-  const segments = segmentsOf(words.slice(0, patternIndex), keyWords.slice(0, keyIndex));
-  if (patternIndex === words.length) {
-    return { matched: false, segments, miss: { kind: 'key-has-extra-words', keyIndex } };
-  }
-  if (keyIndex === keyWords.length) {
-    return { matched: false, segments, miss: { kind: 'key-ran-out', patternIndex } };
-  }
-  return { matched: false, segments, miss: { kind: 'word-differs', patternIndex, keyIndex } };
+  const matched = reach(words, keyWords).get(words.length, keyWords.length);
+  const { segments, lost } = alignWords(words, keyWords);
+  return matched ? { matched, segments } : { matched, segments, miss: firstMiss(words, keyWords, segments, lost) };
 }
 
 /** Keys that a pattern matches and keys that it does not, for a person who is writing the pattern to see. */

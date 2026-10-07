@@ -531,8 +531,8 @@ describe('route: the trace (ADR-0007, ADR-0009, ADR-0010)', () => {
       alignment: {
         matched: true,
         segments: [
-          { pattern: 'a', words: ['a'] },
-          { pattern: '*', words: ['b'] },
+          { pattern: 'a', words: ['a'], outcome: 'matched' },
+          { pattern: '*', words: ['b'], outcome: 'matched' },
         ],
       },
     });

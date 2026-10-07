@@ -62,6 +62,7 @@ export {
   TOPIC_MAX_HASH_WORDS,
   topicMatches,
   topicSamples,
+  type SegmentOutcome,
   type TopicAlignment,
   type TopicMiss,
   type TopicSamples,

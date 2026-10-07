@@ -146,8 +146,12 @@ describe('topicMatches (ADR-0008, rule 4)', () => {
   });
 });
 
-describe('alignTopic: which key words each pattern word matched', () => {
-  const seg = (pattern: string, ...words: string[]) => ({ pattern, words });
+describe('alignTopic: which key words each pattern word matched (ADR-0059)', () => {
+  const seg = (pattern: string, ...words: string[]) => ({ pattern, words, outcome: 'matched' });
+  /** A word of the pattern that met another word of the key. */
+  const differs = (pattern: string, word: string) => ({ pattern, words: [word], outcome: 'differs' });
+  /** A word of the pattern that the key had no word left for. */
+  const missing = (pattern: string) => ({ pattern, words: [], outcome: 'missing' });
 
   it.each<[string, string, ReturnType<typeof seg>[]]>([
     ['a.b', 'a.b', [seg('a', 'a'), seg('b', 'b')]],
@@ -164,25 +168,73 @@ describe('alignTopic: which key words each pattern word matched', () => {
     ['#.#', 'a.b', [seg('#'), seg('#', 'a', 'b')]],
     ['#.a.#', 'x.a.a.y', [seg('#', 'x'), seg('a', 'a'), seg('#', 'a', 'y')]],
     ['#.*', 'a.b.c', [seg('#', 'a', 'b'), seg('*', 'c')]],
+    // The words between two # are found in the first place that they fit, which leaves the most room for what follows.
+    ['a.#.b.#.c', 'a.b.b.c', [seg('a', 'a'), seg('#'), seg('b', 'b'), seg('#', 'b'), seg('c', 'c')]],
+    ['#.*.b.#', 'a.x.b.y', [seg('#', 'a'), seg('*', 'x'), seg('b', 'b'), seg('#', 'y')]],
   ])('aligns pattern %j with key %j', (pattern, key, segments) => {
-    expect(alignTopic(pattern, key)).toEqual({ matched: true, segments });
+    expect(alignTopic(pattern, key)).toStrictEqual({ matched: true, segments });
   });
 
   it.each<[string, string, ReturnType<typeof seg>[], unknown]>([
-    ['a.b', 'a.c', [seg('a', 'a')], { kind: 'word-differs', patternIndex: 1, keyIndex: 1 }],
-    ['a.b', 'b.b', [], { kind: 'word-differs', patternIndex: 0, keyIndex: 0 }],
-    ['a.*', 'b', [], { kind: 'word-differs', patternIndex: 0, keyIndex: 0 }],
-    ['a.b', 'a', [seg('a', 'a')], { kind: 'key-ran-out', patternIndex: 1 }],
-    ['*', '', [], { kind: 'key-ran-out', patternIndex: 0 }],
-    ['a.*.b', 'a.b', [seg('a', 'a'), seg('*', 'b')], { kind: 'key-ran-out', patternIndex: 2 }],
+    // Without a #, every word is anchored to the start, each is judged on its own, and the first that is wrong is the miss.
+    ['a.b', 'a.c', [seg('a', 'a'), differs('b', 'c')], { kind: 'word-differs', patternIndex: 1, keyIndex: 1 }],
+    ['a.b', 'b.c', [differs('a', 'b'), differs('b', 'c')], { kind: 'word-differs', patternIndex: 0, keyIndex: 0 }],
+    ['a.b', 'b.b', [differs('a', 'b'), seg('b', 'b')], { kind: 'word-differs', patternIndex: 0, keyIndex: 0 }],
+    ['a.*', 'b', [differs('a', 'b'), missing('*')], { kind: 'word-differs', patternIndex: 0, keyIndex: 0 }],
+    ['a.b', 'a', [seg('a', 'a'), missing('b')], { kind: 'key-too-short', needs: 2, has: 1 }],
+    ['*', '', [missing('*')], { kind: 'key-too-short', needs: 1, has: 0 }],
+    ['a.*.b', 'a.b', [seg('a', 'a'), seg('*', 'b'), missing('b')], { kind: 'key-too-short', needs: 3, has: 2 }],
     ['a', 'a.b', [seg('a', 'a')], { kind: 'key-has-extra-words', keyIndex: 1 }],
     ['', 'a', [], { kind: 'key-has-extra-words', keyIndex: 0 }],
     ['a.*', 'a.b.c', [seg('a', 'a'), seg('*', 'b')], { kind: 'key-has-extra-words', keyIndex: 2 }],
-    // # takes the rest of the key, and then there is nothing left for the word after it.
-    ['a.#.c', 'a.b.d', [seg('a', 'a'), seg('#', 'b', 'd')], { kind: 'key-ran-out', patternIndex: 2 }],
-    ['#.x', 'a.b', [seg('#', 'a', 'b')], { kind: 'key-ran-out', patternIndex: 1 }],
-  ])('says where pattern %j stops on key %j', (pattern, key, segments, miss) => {
-    expect(alignTopic(pattern, key)).toEqual({ matched: false, segments, miss });
+    // With a #, the words before the first are anchored to the start of the key and the words after the last to its end.
+    [
+      'a.#.c',
+      'a.b.d',
+      [seg('a', 'a'), seg('#', 'b'), differs('c', 'd')],
+      { kind: 'word-differs', patternIndex: 2, keyIndex: 2 },
+    ],
+    ['#.x', 'a.b', [seg('#', 'a'), differs('x', 'b')], { kind: 'word-differs', patternIndex: 1, keyIndex: 1 }],
+    // The key goes on after the last word of the pattern, and a # at the front could take it. The key has to end in a.
+    ['#.a', 'a.b', [seg('#', 'a'), differs('a', 'b')], { kind: 'word-differs', patternIndex: 1, keyIndex: 1 }],
+    ['#.a*', 'ba', [seg('#'), differs('a*', 'ba')], { kind: 'word-differs', patternIndex: 1, keyIndex: 0 }],
+    // The part before the first # is looked at first, and then the length of the key, and then the part after the last #.
+    [
+      'x.#.y',
+      'a.b.c',
+      [differs('x', 'a'), seg('#', 'b'), differs('y', 'c')],
+      { kind: 'word-differs', patternIndex: 0, keyIndex: 0 },
+    ],
+    ['a.#.b', 'a', [seg('a', 'a'), seg('#'), missing('b')], { kind: 'key-too-short', needs: 2, has: 1 }],
+    ['b.c.#', '', [missing('b'), missing('c'), seg('#')], { kind: 'key-too-short', needs: 2, has: 0 }],
+    ['*.#.#', '', [missing('*'), seg('#'), seg('#')], { kind: 'key-too-short', needs: 1, has: 0 }],
+    ['#.b.b', 'a', [seg('#'), missing('b'), differs('b', 'a')], { kind: 'key-too-short', needs: 2, has: 1 }],
+    [
+      'a.#.b.c',
+      'a.c',
+      [seg('a', 'a'), seg('#'), missing('b'), seg('c', 'c')],
+      { kind: 'key-too-short', needs: 3, has: 2 },
+    ],
+    [
+      '#.b.#.c.#.d',
+      'a.d',
+      [seg('#'), missing('b'), seg('#'), missing('c'), seg('#', 'a'), seg('d', 'd')],
+      { kind: 'key-too-short', needs: 3, has: 2 },
+    ],
+    [
+      'x.#.b.#.c',
+      'a.b.c',
+      [differs('x', 'a'), seg('#'), seg('b', 'b'), seg('#'), seg('c', 'c')],
+      { kind: 'word-differs', patternIndex: 0, keyIndex: 0 },
+    ],
+    [
+      'a.#.b.#.c',
+      'a.x.y.c',
+      [seg('a', 'a'), seg('#'), missing('b'), seg('#', 'x', 'y'), seg('c', 'c')],
+      { kind: 'middle-not-found', patternIndex: 2 },
+    ],
+  ])('says what pattern %j made of key %j', (pattern, key, segments, miss) => {
+    expect(alignTopic(pattern, key)).toStrictEqual({ matched: false, segments, miss });
   });
 
   it('can be written as JSON and read back as it was, which the trace needs', () => {
@@ -191,6 +243,7 @@ describe('alignTopic: which key words each pattern word matched', () => {
       ['a.b', 'a.c'],
       ['', 'a'],
       ['*', ''],
+      ['a.#.b.#.c', 'a.x.y.c'],
     ] as const) {
       const alignment = alignTopic(pattern, key);
 
@@ -251,6 +304,86 @@ describe('topicMatches, as a property', () => {
   });
 });
 
+/** What an alignment owes to its pattern and its key, whatever the words are. It answers what is wrong, so that an empty list is a good alignment. */
+function problemsOf(pattern: string, key: string): string[] {
+  const alignment = alignTopic(pattern, key);
+  const patternWords = words(pattern);
+  const keyWords = words(key);
+  const { segments } = alignment;
+  const problems: string[] = [];
+  const say = (problem: string) => problems.push(problem);
+
+  if (alignment.matched !== topicMatches(pattern, key)) {
+    say('matched is not what topicMatches says');
+  }
+  if (JSON.stringify(segments.map((segment) => segment.pattern)) !== JSON.stringify(patternWords)) {
+    say('the segments are not the words of the pattern');
+  }
+  segments.forEach(({ pattern: word, words: taken, outcome }, index) => {
+    const at = `segment ${index} (${word})`;
+    if (word === '#') {
+      if (outcome !== 'matched') say(`${at}: a # is always matched`);
+    } else if (outcome === 'missing') {
+      if (taken.length !== 0) say(`${at}: missing, and has words`);
+    } else if (taken.length !== 1) {
+      say(`${at}: a word that is not missing takes one word`);
+    } else if ((word === '*' || word === taken[0]) !== (outcome === 'matched')) {
+      say(`${at}: the outcome is not whether the word fits`);
+    }
+  });
+  const taken = segments.flatMap((segment) => segment.words);
+  if (taken.length > keyWords.length) {
+    say('the segments took more words than the key has');
+  }
+
+  const { miss } = alignment;
+  if (alignment.matched) {
+    if (miss !== undefined) say('a match has a miss');
+    if (segments.some(({ outcome }) => outcome !== 'matched')) say('a match has a segment that is not matched');
+    if (JSON.stringify(taken) !== JSON.stringify(keyWords)) say('a match did not take the whole key, in order');
+    return problems;
+  }
+  if (miss === undefined) {
+    say('a miss has no reason');
+    return problems;
+  }
+  const hashes = patternWords.filter((word) => word === '#').length;
+  const fixed = patternWords.length - hashes;
+  switch (miss.kind) {
+    case 'word-differs': {
+      const segment = segments[miss.patternIndex];
+      if (segment?.outcome !== 'differs') say('word-differs at a segment that does not differ');
+      if (segment?.words[0] !== keyWords[miss.keyIndex]) say('word-differs names another key word than the one it met');
+      break;
+    }
+    case 'key-too-short':
+      if (miss.needs !== fixed || miss.has !== keyWords.length || miss.has >= miss.needs)
+        say('key-too-short counts wrong');
+      if (!segments.some(({ outcome }) => outcome === 'missing')) say('key-too-short with no segment missing');
+      break;
+    case 'key-has-extra-words':
+      if (hashes !== 0) say('a # takes any extra words');
+      if (miss.keyIndex !== patternWords.length || miss.keyIndex >= keyWords.length)
+        say('extra words start in the wrong place');
+      if (segments.some(({ outcome }) => outcome !== 'matched')) say('extra words with a segment that is not matched');
+      break;
+    case 'middle-not-found':
+      if (hashes < 2) say('a middle needs two #');
+      if (segments[miss.patternIndex]?.outcome !== 'missing') say('middle-not-found at a segment that is not missing');
+      if (segments[miss.patternIndex]?.pattern === '#') say('middle-not-found at a #');
+      break;
+  }
+  if (hashes === 0) {
+    // Nothing is looked for: every word is compared with the word of the key at its place.
+    patternWords.forEach((word, index) => {
+      const there = keyWords[index];
+      const expected = there === undefined ? 'missing' : word === '*' || word === there ? 'matched' : 'differs';
+      if (segments[index]?.outcome !== expected) say(`word ${index} of a pattern with no #: ${expected} expected`);
+    });
+  }
+  return problems;
+}
+
 describe('alignTopic, as a property', () => {
   it('says matched when topicMatches does', () => {
     fc.assert(
@@ -260,62 +393,41 @@ describe('alignTopic, as a property', () => {
     );
   });
 
-  it('for a match, gives every pattern word the key words it took, which are the whole key in order', () => {
+  it('gives every pattern word the key words it took, and a reason for a miss that its segments bear out', () => {
     fc.assert(
       fc.property(arbPattern, arbKey, (pattern, key) => {
-        const alignment = alignTopic(pattern, key);
-        fc.pre(alignment.matched);
-
-        expect(alignment.segments.map((segment) => segment.pattern)).toEqual(words(pattern));
-        expect(alignment.segments.flatMap((segment) => segment.words)).toEqual(words(key));
-        for (const { pattern: word, words: taken } of alignment.segments) {
-          if (word === '#') {
-            continue;
-          }
-          expect(taken).toHaveLength(1);
-          if (word !== '*') {
-            expect(taken[0]).toBe(word);
-          }
-        }
-        expect('miss' in alignment).toBe(false);
+        expect(problemsOf(pattern, key)).toEqual([]);
       }),
     );
   });
 
-  it('for a miss, shows how far the pattern got: its segments are a prefix of both, and the miss says why it stopped', () => {
-    fc.assert(
-      fc.property(arbPattern, arbKey, (pattern, key) => {
-        const alignment = alignTopic(pattern, key);
-        fc.pre(!alignment.matched);
-        const patternWords = words(pattern);
-        const keyWords = words(key);
-        const used = alignment.segments.length;
-        const consumed = alignment.segments.flatMap((segment) => segment.words);
-
-        expect(alignment.segments.map((segment) => segment.pattern)).toEqual(patternWords.slice(0, used));
-        expect(consumed).toEqual(keyWords.slice(0, consumed.length));
-        // The part that it did align is a match on its own.
-        expect(reference(patternWords.slice(0, used), consumed)).toBe(true);
-
-        const { miss } = alignment;
-        expect(miss).toBeDefined();
-        if (miss?.kind === 'word-differs') {
-          expect(miss.patternIndex).toBe(used);
-          expect(miss.keyIndex).toBe(consumed.length);
-          expect(patternWords[miss.patternIndex]).not.toBe('*');
-          expect(patternWords[miss.patternIndex]).not.toBe('#');
-          expect(patternWords[miss.patternIndex]).not.toBe(keyWords[miss.keyIndex]);
-        } else if (miss?.kind === 'key-ran-out') {
-          expect(miss.patternIndex).toBe(used);
-          expect(consumed).toHaveLength(keyWords.length);
-          expect(used).toBeLessThan(patternWords.length);
-        } else if (miss?.kind === 'key-has-extra-words') {
-          expect(used).toBe(patternWords.length);
-          expect(miss.keyIndex).toBe(consumed.length);
-          expect(consumed.length).toBeLessThan(keyWords.length);
+  it('holds for every pattern of up to four words and every key of up to four words, over a small alphabet', () => {
+    const lists = (alphabet: readonly string[], most: number): string[] => {
+      let level: string[][] = [[]];
+      const all: string[] = [''];
+      for (let length = 1; length <= most; length++) {
+        level = level.flatMap((list) => alphabet.map((word) => [...list, word]));
+        all.push(...level.map((list) => list.join('.')));
+      }
+      return all;
+    };
+    const patterns = lists(['a', 'b', '*', '#'], 4);
+    const keys = lists(['a', 'b', ''], 4);
+    let checked = 0;
+    for (const pattern of patterns) {
+      for (const key of keys) {
+        const problems = problemsOf(pattern, key);
+        if (problems.length > 0) {
+          throw new Error(
+            `pattern ${JSON.stringify(pattern)} against key ${JSON.stringify(key)}: ${problems.join('; ')}`,
+          );
         }
-      }),
-    );
+        checked += 1;
+      }
+    }
+
+    expect(checked).toBe(patterns.length * keys.length);
+    expect(checked).toBeGreaterThan(40_000);
   });
 
   it('gives the same alignment every time, and one that survives JSON', () => {
