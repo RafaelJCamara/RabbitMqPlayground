@@ -1,12 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { explainQueue, isRouted, lookup, toTopology, type QueueExplanation } from '@rmq/domain';
-import type { HeaderEntry, HeaderValue, QueueMessage } from '@rmq/engine';
+import type { QueueMessage } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { ExplainState } from '../core/explain/explain-state';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { placesOf, placeText, type Place } from '../core/explain/where';
 import { Simulation } from '../core/runtime/simulation';
 import { DocumentStore } from '../core/state/document-store';
 import { Icon } from '../core/ui/icon';
+import { BindFromMessage } from './bind-from-message';
+import { headerRow } from './header-row';
 import { QueueWhy } from './queue-why';
 import { RouteTree } from './route-tree';
 
@@ -14,27 +17,6 @@ let nextInspector = 0;
 
 const BUTTON =
   'border-border bg-surface hover:bg-canvas flex min-h-7 items-center gap-1.5 rounded-md border px-2 py-0.5';
-
-/** A header as it is shown: its name, the name of its type, and its value as a command would write it. */
-export interface HeaderRow {
-  readonly name: string;
-  readonly type: string;
-  readonly value: string;
-}
-
-/** A header value as it is written: a string in quotes, a float with its point, so that `1` and `1.0` are not mistaken, a boolean as a word. */
-export function headerRow({ key, value }: HeaderEntry<HeaderValue>): HeaderRow {
-  switch (value.t) {
-    case 'string':
-      return { name: key, type: 'string', value: JSON.stringify(value.v) };
-    case 'integer':
-      return { name: key, type: 'integer', value: String(value.v) };
-    case 'float':
-      return { name: key, type: 'float', value: Number.isInteger(value.v) ? value.v.toFixed(1) : String(value.v) };
-    case 'boolean':
-      return { name: key, type: 'boolean', value: String(value.v) };
-  }
-}
 
 /**
  * The message inspector (ADR-0063): one message, in the inspector region above what is selected, so that a message can stay open while a queue is selected, which is how a learner asks why it did not get there. It says
@@ -44,7 +26,7 @@ export function headerRow({ key, value }: HeaderEntry<HeaderValue>): HeaderRow {
  */
 @Component({
   selector: 'rmq-message-inspector',
-  imports: [Icon, RouteTree, QueueWhy],
+  imports: [Icon, RouteTree, QueueWhy, BindFromMessage],
   template: `
     @if (explain.message(); as number) {
       <section
@@ -129,6 +111,15 @@ export function headerRow({ key, value }: HeaderEntry<HeaderValue>): HeaderRow {
             }
           </section>
 
+          @if (binds) {
+            <rmq-bind-from-message
+              [number]="number"
+              [headers]="message.info.headers"
+              [exchange]="message.info.exchange"
+              [unreached]="unreached()"
+            />
+          }
+
           <section class="flex flex-col gap-2" [attr.aria-labelledby]="titleId + '-route'">
             <h3 class="font-semibold" [id]="titleId + '-route'">Route</h3>
             @if (basisText(); as why) {
@@ -185,6 +176,8 @@ export function headerRow({ key, value }: HeaderEntry<HeaderValue>): HeaderRow {
 })
 export class MessageInspector {
   protected readonly explain = inject(ExplainState);
+  /** A binding can be made from a message with the flag `headers`, which with this inspector's flags is the half that has messages (ADR-0069). */
+  protected readonly binds = inject(FeatureFlags).isEnabled('headers');
   private readonly simulation = inject(Simulation);
   private readonly store = inject(DocumentStore);
   private readonly viewport = inject(FlowViewport);

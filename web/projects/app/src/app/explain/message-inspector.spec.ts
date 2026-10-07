@@ -32,7 +32,8 @@ import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
-import { headerRow, MessageInspector } from './message-inspector';
+import { headerRow } from './header-row';
+import { MessageInspector } from './message-inspector';
 
 /** A producer `sender` that sends a message with a header to `orders`, which sends what has the key `new` to `billing`, which `worker` takes, and nothing to `archive`. */
 const traffic = (): CanvasDocument => ({
@@ -62,7 +63,7 @@ const traffic = (): CanvasDocument => ({
 const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', name: 'sender' } };
 const BY_COMMAND: RuntimeCommand = { type: 'publish', from: { kind: 'exchange', name: 'orders' }, key: 'new' };
 
-async function renderInspector() {
+async function renderInspector(flags = 'simulation,explain') {
   const frames = manualFrames();
   TestBed.configureTestingModule({
     providers: [
@@ -75,7 +76,7 @@ async function renderInspector() {
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -580,6 +581,47 @@ describe('MessageInspector (ADR-0063)', () => {
       expect(explain.message()).toBeNull();
       expect(focus).toHaveBeenCalledOnce();
     });
+  });
+});
+
+describe('the binding that a message can make (ADR-0070)', () => {
+  it('is not offered without the flag headers, because the half that has messages is not that flag alone', async () => {
+    const { run, open } = await renderInspector();
+    run({ type: 'pause' });
+    run(PUBLISH);
+
+    open(1);
+
+    expect(screen.queryByTestId('bind-from-message')).not.toBeInTheDocument();
+  });
+
+  it('is offered, between the headers of the message and its route, with the flags of the explanation and the simulation', async () => {
+    const { run, open } = await renderInspector('simulation,explain,headers');
+    run({ type: 'pause' });
+    run(PUBLISH);
+
+    open(1);
+
+    const section = screen.getByRole('region', { name: 'Bind from this message…' });
+    expect(section).toBeVisible();
+    const headings = within(screen.getByTestId('message-inspector'))
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent?.trim());
+    expect(headings.indexOf('Bind from this message…')).toBe(headings.indexOf('Headers') + 1);
+    expect(headings.indexOf('Route')).toBe(headings.indexOf('Bind from this message…') + 1);
+  });
+
+  it('says, when it is opened for a canvas that has no headers exchange, that there is none to bind from', async () => {
+    const { run, open, user } = await renderInspector('simulation,explain,headers');
+    run({ type: 'pause' });
+    run(PUBLISH);
+    run({ type: 'step' });
+    open(1);
+
+    await user.click(screen.getByRole('button', { name: 'Bind from this message…' }));
+
+    // The canvas has no headers exchange, so the panel says so, and does not guess.
+    expect(screen.getByTestId('bind-no-exchange')).toBeInTheDocument();
   });
 });
 
