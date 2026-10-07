@@ -170,6 +170,28 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
     ]);
   });
 
+  test('gives the editor of each binding of an edge ids of its own, so that the sentence of a mode and the label of a field are tied to their own editor', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES_TWICE);
+    await headers.selectBinding('x1>q1');
+
+    const described = await Promise.all(
+      [1, 2].map(async (binding) => ({
+        group: await headers.conditions(binding).modes.getAttribute('aria-describedby'),
+        help: await headers.conditions(binding).modeHelp.getAttribute('id'),
+      })),
+    );
+
+    expect(described[0]?.group).toBe(described[0]?.help);
+    expect(described[1]?.group).toBe(described[1]?.help);
+    expect(described[0]?.help).not.toBe(described[1]?.help);
+    const fields = await headers.editor.inspector
+      .locator('[data-testid="header-key"], [data-testid="header-value"]')
+      .evaluateAll((all) => all.map((field) => field.id));
+    expect(new Set(fields).size).toBe(fields.length);
+  });
+
   test('keeps the order of the bindings when one is edited: the edited one is the last of its edge', async ({
     page,
   }) => {

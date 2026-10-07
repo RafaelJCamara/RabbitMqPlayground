@@ -611,6 +611,20 @@ describe('the binding that a message can make (ADR-0070)', () => {
     expect(headings.indexOf('Route')).toBe(headings.indexOf('Bind from this message…') + 1);
   });
 
+  it('starts the binding on the queue that did not get the message, which the inspector knows and the panel is told', async () => {
+    const { run, open, user, store } = await renderInspector('simulation,explain,headers');
+    store.load({ ...traffic(), exchanges: { ...traffic().exchanges, H: exchangeRecord('docs', 'headers') } });
+    run({ type: 'pause' });
+    run(PUBLISH);
+    run({ type: 'step' });
+    open(1);
+
+    await user.click(screen.getByRole('button', { name: 'Bind from this message…' }));
+
+    // The message went to billing, which is the first queue, and not to archive.
+    expect(screen.getByRole('combobox', { name: 'To' })).toHaveValue('queue:archive');
+  });
+
   it('says, when it is opened for a canvas that has no headers exchange, that there is none to bind from', async () => {
     const { run, open, user } = await renderInspector('simulation,explain,headers');
     run({ type: 'pause' });

@@ -1145,6 +1145,17 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
     );
   });
 
+  it('tells the editor the key of the binding, which a headers exchange does not read', async () => {
+    const { choose } = await renderInspector({}, 'headers');
+    bus().apply({ ...SECOND, key: 'legacy' }, 'toolbar');
+    choose([], ['E2>Q2']);
+
+    expect(within(rows()[1]!).getByTestId('conditions-key')).toHaveTextContent(
+      'Its key, legacy, is not read by a headers exchange.',
+    );
+    expect(within(rows()[0]!).queryByTestId('conditions-key')).not.toBeInTheDocument();
+  });
+
   it('is not there without the flag: the key field and the note that the arguments are written with the command bar', async () => {
     await renderInspector({ edges: ['E2>Q2'] });
 

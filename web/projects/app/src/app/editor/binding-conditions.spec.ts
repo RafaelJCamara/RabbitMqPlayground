@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { Issue } from '@rmq/domain';
+import type { Issue, RuntimeCommand } from '@rmq/domain';
 import type { HeaderArguments } from '@rmq/engine';
 import {
   bool,
@@ -10,6 +10,7 @@ import {
   float,
   headerArguments,
   int,
+  manualFrames,
   queueRecord,
   str,
 } from '@rmq/testing';
@@ -17,8 +18,18 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/ang
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
+import { EventLog } from '../core/explain/event-log';
+import { EXPLAIN_SERVICES } from '../core/explain/services';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE } from '../core/runtime/frame-loop';
+import { MOTION_QUERY } from '../core/runtime/motion';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
+import { Simulation } from '../core/runtime/simulation';
+import { CommandBus } from '../core/state/command-bus';
+import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
+import { SelectionStore } from '../core/state/selection-store';
+import { StatusStore } from '../core/state/status-store';
 import { BindingConditions } from './binding-conditions';
 
 /** The canvas that the binding is on: the exchange and the queue it goes to are there, so that the line names them as a learner would. */
@@ -623,5 +634,68 @@ describe('BindingConditions, for a binding that is there (ADR-0066)', () => {
     set('error', { kind: 'canvas-full', message: 'Full.' } satisfies Issue);
 
     expect(within(screen.getByTestId('conditions-refusal')).getByText('Full.')).toBeInTheDocument();
+  });
+});
+
+describe('BindingConditions with the table of recent messages (ADR-0069, ADR-0070)', () => {
+  /** The editor with the log behind it, which the table needs: the simulation and the explanation, and a message that was published to the exchange. */
+  function renderWithLog() {
+    const frames = manualFrames();
+    TestBed.configureTestingModule({
+      providers: [
+        DocumentStore,
+        SelectionStore,
+        StatusStore,
+        CommandBus,
+        CommandLog,
+        ...RUNTIME_SERVICES,
+        ...EXPLAIN_SERVICES,
+        { provide: FRAME_SOURCE, useValue: frames },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
+        {
+          provide: MOTION_QUERY,
+          useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
+        },
+      ],
+    });
+    const bus = TestBed.inject(CommandBus);
+    const log = TestBed.inject(EventLog);
+    TestBed.inject(CommandLog);
+    TestBed.inject(Simulation);
+    TestBed.inject(DocumentStore).load(CANVAS);
+    frames.frame(0);
+    bus.run({ type: 'pause' }, 'toolbar');
+    const fixture = TestBed.createComponent(BindingConditions);
+    fixture.componentRef.setInput('title', TITLE);
+    fixture.componentRef.setInput('exchange', 'docs');
+    fixture.componentRef.setInput('destination', { kind: 'queue', name: 'pdf' });
+    fixture.detectChanges();
+    const publish = (): void => {
+      const command: RuntimeCommand = {
+        type: 'publish',
+        from: { kind: 'exchange', name: 'docs' },
+        key: '',
+        headers: [entry('format', str('pdf'))],
+      };
+      bus.run(command, 'toolbar');
+      log.flush();
+      fixture.detectChanges();
+    };
+    return { fixture, publish, user: userEvent.setup() };
+  }
+
+  it('has the table of the messages that were published to its exchange, which is of the conditions that are typed and not of the binding', async () => {
+    const { publish, user } = renderWithLog();
+    expect(screen.getByTestId('headers-live-empty')).toBeInTheDocument();
+    publish();
+
+    await user.type(name(1), 'format');
+    await user.type(value(1), 'pdf');
+
+    expect(screen.getByRole('columnheader', { name: 'format=pdf' })).toBeInTheDocument();
+    expect(screen.getByTestId('headers-live-result')).toHaveTextContent('Matches');
+    await user.clear(value(1));
+    await user.type(value(1), 'doc');
+    expect(screen.getByTestId('headers-live-result')).toHaveTextContent('Does not match');
   });
 });

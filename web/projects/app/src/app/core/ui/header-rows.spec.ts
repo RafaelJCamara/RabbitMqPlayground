@@ -74,6 +74,17 @@ describe('HeaderRows (ADR-0066, ADR-0067, ADR-0068)', () => {
       expect(screen.getByRole('group', { name: 'condition 2 of 2' })).toBeInTheDocument();
     });
 
+    it('puts the cursor in the field of a label that is pressed, as a label does', async () => {
+      const { user } = await renderRows([row('format', 'pdf')]);
+
+      await user.click(screen.getByText('Name'));
+      expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus();
+      await user.click(screen.getByText('Type'));
+      expect(screen.getByRole('combobox', { name: 'Type of condition 1' })).toHaveFocus();
+      await user.click(screen.getByText('Value'));
+      expect(screen.getByRole('textbox', { name: 'Value of condition 1' })).toHaveFocus();
+    });
+
     it('has a name, a type and a value for a row, each with a label that says whose it is', async () => {
       await renderRows([row('format', 'pdf'), row('n', '1')]);
 

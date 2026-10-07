@@ -197,6 +197,17 @@ describe('HeadersLive, the table of recent messages (ADR-0070)', () => {
     );
   });
 
+  it('is a section that its heading names, and each cell says what it came to for a tool that reads it', async () => {
+    const { publish } = renderLive(headerArguments('all', entry('format', str('pdf')), entry('x-trace', str('1'))));
+    publish('docs', entry('format', str('doc')));
+
+    expect(screen.getByTestId('headers-live')).toHaveAccessibleName('Recent messages');
+    expect(screen.getAllByTestId('headers-live-cell').map((cell) => cell.getAttribute('data-outcome'))).toEqual([
+      'fail',
+      'ignored',
+    ]);
+  });
+
   it('draws what held in the colour of a hit, what did not in the colour of a miss, and what is not counted in the muted one, with an icon each', async () => {
     const { publish } = renderLive(headerArguments('all', entry('format', str('pdf')), entry('x-trace', str('1'))));
     publish('docs', entry('format', str('doc')));
