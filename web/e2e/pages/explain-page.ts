@@ -10,102 +10,20 @@ export type EventLogState = NonNullable<Awaited<ReturnType<ExplainPage['eventLog
 export type EmphasisState = NonNullable<Awaited<ReturnType<ExplainPage['emphasis']>>>;
 
 /**
- * The explanation in a real browser (ADR-0059 to ADR-0064), behind the flags `editor`, `simulation` and `explain`: the event log, what is lit on the canvas and the card that says why,
- * and what a message is in the inspector. Everything that a test needs to know of what is lit it reads from the page itself, from the attribute and the style that a person sees it by, and
- * from the debug handle for what the page does not show (the rows that the scroll does not draw). The clock moves when the test steps it, as it does for the simulation.
+ * What is lit on the canvas and said in the card (ADR-0062), as a person sees it and as the debug handle says it, whichever of the tools of the explanation lit it: a row of the log, the Why? of a message, a queue that is asked
+ * about, or the what-if tester. Everything that a test needs to know of what is lit it reads from the page itself, from the attribute and the style that a person sees it by.
  */
-export class ExplainPage {
-  readonly toggle: Locator;
-  readonly log: Locator;
-  readonly list: Locator;
-  readonly rows: Locator;
+export class LitCanvas {
+  /** The card in the canvas that says what is lit and why. */
   readonly card: Locator;
-  /** The message that is open, in the region of the inspector. */
-  readonly message: Locator;
 
-  constructor(readonly simulation: SimulationPage) {
-    const page = simulation.page;
-    this.toggle = simulation.bar.getByRole('button', { name: 'Event log' });
-    this.log = page.getByRole('region', { name: 'Event log' });
-    this.list = this.log.getByRole('listbox', { name: 'Events' });
-    this.rows = this.log.getByTestId('event-log-row');
+  constructor(readonly page: Page) {
     this.card = page.getByTestId('why-card');
-    this.message = page.getByTestId('message-inspector');
-  }
-
-  get page(): Page {
-    return this.simulation.page;
-  }
-
-  get editor(): EditorPage {
-    return this.simulation.editor;
-  }
-
-  /** Opens the editor with the simulation and the explanation on, on this canvas, with the clock stopped. */
-  static async open(
-    page: Page,
-    document: CanvasDocument,
-    options: { readonly reducedMotion?: boolean; readonly theme?: 'light' | 'dark'; readonly stop?: boolean } = {},
-  ): Promise<ExplainPage> {
-    const simulation = await SimulationPage.open(page, document, { ...options, flags: 'editor,simulation,explain' });
-    return new ExplainPage(simulation);
-  }
-
-  /** What the event log holds: how many rows, how many went, and each row as it was said. */
-  eventLog() {
-    return this.page.evaluate(() => window.__rmq?.explainEventLog() ?? null);
-  }
-
-  /** The sentences of the rows of the log, oldest first, which are what a learner reads. */
-  async texts(): Promise<string[]> {
-    return ((await this.eventLog())?.rows ?? []).map(({ text }) => text);
   }
 
   /** What is lit on the canvas, and what the card says of it, or `null` when nothing is. */
   emphasis() {
     return this.page.evaluate(() => window.__rmq?.explainEmphasis() ?? null);
-  }
-
-  /** Opens the log with the key that is for it, from the canvas, and waits for the list to have the keyboard. */
-  async openByKey(): Promise<void> {
-    await this.editor.flow.focus();
-    await this.page.keyboard.press('e');
-    await expect(this.log).toBeVisible();
-  }
-
-  /** Publishes from the producer with the key that is for it. */
-  async publish(producer = 'Producer sender'): Promise<void> {
-    await this.editor.select(producer);
-    await this.page.keyboard.press('p');
-  }
-
-  /** The row of the log with this number, as a locator. */
-  row(seq: number): Locator {
-    return this.rows.and(this.page.locator(`[data-seq="${seq}"]`));
-  }
-
-  /** The rows of the log that are of this kind of event, as they are drawn. */
-  rowsOfKind(kind: string): Locator {
-    return this.log.locator(`[data-testid="event-log-row"][data-kind="${kind}"]`);
-  }
-
-  /** Chooses the row of the log that is about this kind of event, which opens its message. */
-  async openFromRow(kind: string): Promise<void> {
-    await this.rowsOfKind(kind).first().click();
-  }
-
-  /**
-   * The middle of the shape that the overlay drew for a message, on the page, once it has stopped moving, or the first shape when there is no message given. A press there is a press on the message that it
-   * stands for.
-   */
-  async shapeOf(message?: number): Promise<{ x: number; y: number; count: number }> {
-    const frame = await this.simulation.settledFrame();
-    const marker = frame.markers.find((shape) => message === undefined || shape.message === message);
-    if (marker === undefined) {
-      throw new Error('no shape is drawn for that message');
-    }
-    const host = await this.simulation.host();
-    return { x: host.x + marker.x, y: host.y + marker.y, count: marker.count };
   }
 
   /**
@@ -183,5 +101,94 @@ export class ExplainPage {
       probe.remove();
       return colour;
     }, token);
+  }
+}
+
+/**
+ * The explanation in a real browser (ADR-0059 to ADR-0064), behind the flags `editor`, `simulation` and `explain`: the event log, what is lit on the canvas and the card that says why,
+ * and what a message is in the inspector. The clock moves when the test steps it, as it does for the simulation, and what the page does not show (the rows that the scroll does not draw)
+ * is read from the debug handle.
+ */
+export class ExplainPage extends LitCanvas {
+  readonly toggle: Locator;
+  readonly log: Locator;
+  readonly list: Locator;
+  readonly rows: Locator;
+  /** The message that is open, in the region of the inspector. */
+  readonly message: Locator;
+
+  constructor(readonly simulation: SimulationPage) {
+    super(simulation.page);
+    this.toggle = simulation.bar.getByRole('button', { name: 'Event log' });
+    this.log = this.page.getByRole('region', { name: 'Event log' });
+    this.list = this.log.getByRole('listbox', { name: 'Events' });
+    this.rows = this.log.getByTestId('event-log-row');
+    this.message = this.page.getByTestId('message-inspector');
+  }
+
+  get editor(): EditorPage {
+    return this.simulation.editor;
+  }
+
+  /** Opens the editor with the simulation and the explanation on, on this canvas, with the clock stopped. */
+  static async open(
+    page: Page,
+    document: CanvasDocument,
+    options: { readonly reducedMotion?: boolean; readonly theme?: 'light' | 'dark'; readonly stop?: boolean } = {},
+  ): Promise<ExplainPage> {
+    const simulation = await SimulationPage.open(page, document, { ...options, flags: 'editor,simulation,explain' });
+    return new ExplainPage(simulation);
+  }
+
+  /** What the event log holds: how many rows, how many went, and each row as it was said. */
+  eventLog() {
+    return this.page.evaluate(() => window.__rmq?.explainEventLog() ?? null);
+  }
+
+  /** The sentences of the rows of the log, oldest first, which are what a learner reads. */
+  async texts(): Promise<string[]> {
+    return ((await this.eventLog())?.rows ?? []).map(({ text }) => text);
+  }
+
+  /** Opens the log with the key that is for it, from the canvas, and waits for the list to have the keyboard. */
+  async openByKey(): Promise<void> {
+    await this.editor.flow.focus();
+    await this.page.keyboard.press('e');
+    await expect(this.log).toBeVisible();
+  }
+
+  /** Publishes from the producer with the key that is for it. */
+  async publish(producer = 'Producer sender'): Promise<void> {
+    await this.editor.select(producer);
+    await this.page.keyboard.press('p');
+  }
+
+  /** The row of the log with this number, as a locator. */
+  row(seq: number): Locator {
+    return this.rows.and(this.page.locator(`[data-seq="${seq}"]`));
+  }
+
+  /** The rows of the log that are of this kind of event, as they are drawn. */
+  rowsOfKind(kind: string): Locator {
+    return this.log.locator(`[data-testid="event-log-row"][data-kind="${kind}"]`);
+  }
+
+  /** Chooses the row of the log that is about this kind of event, which opens its message. */
+  async openFromRow(kind: string): Promise<void> {
+    await this.rowsOfKind(kind).first().click();
+  }
+
+  /**
+   * The middle of the shape that the overlay drew for a message, on the page, once it has stopped moving, or the first shape when there is no message given. A press there is a press on the message that it
+   * stands for.
+   */
+  async shapeOf(message?: number): Promise<{ x: number; y: number; count: number }> {
+    const frame = await this.simulation.settledFrame();
+    const marker = frame.markers.find((shape) => message === undefined || shape.message === message);
+    if (marker === undefined) {
+      throw new Error('no shape is drawn for that message');
+    }
+    const host = await this.simulation.host();
+    return { x: host.x + marker.x, y: host.y + marker.y, count: marker.count };
   }
 }

@@ -89,6 +89,29 @@ export const TOPICS = buildDocument([
 ]);
 
 /**
+ * A topic exchange `logs`, a direct exchange `jobs` and a queue `errors`, with nothing joined, for the tests that make a binding and are asked for its key. The ids are `x1`, `x2` and `q1`.
+ */
+export const UNLINKED = buildDocument([
+  {
+    type: 'declare-exchange',
+    name: 'logs',
+    exchangeType: 'topic',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  {
+    type: 'declare-exchange',
+    name: 'jobs',
+    exchangeType: 'direct',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'errors', durable: true },
+]);
+
+/**
  * `sender` sends a message with the headers `format` = "pdf" and `big` = false to the headers exchange `files`, which has two queues: `pdfs`, bound with `x-match` all, `format` = "pdf" and `big` = true, which a
  * message that is not big does not match, and `documents`, bound with `x-match` any and the same two, which it does. The ids are `p1`, `x1`, `q1` and `q2`.
  */
