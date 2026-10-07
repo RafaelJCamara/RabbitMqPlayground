@@ -1,6 +1,6 @@
 # ADR-0007: Deterministic discrete-event simulation engine
 
-- **Status:** Accepted
+- **Status:** Accepted. The engine as built is settled by [ADR-0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), and delivery by [ADR-0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

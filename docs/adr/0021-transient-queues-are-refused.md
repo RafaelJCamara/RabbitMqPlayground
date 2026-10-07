@@ -1,7 +1,7 @@
 # ADR-0021: RabbitMQ 4.3 refuses transient queues, and the refusals the simulator reproduces
 
 - **Status:** Accepted. What the `durable` flag of a queue means in the M1 model is settled by
-  [ADR-0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md).
+  [ADR-0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md). What a refusal closes is settled by [ADR-0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** rule 28 ("Deprecations") of [ADR-0008](0008-rabbitmq-fidelity-baseline.md).

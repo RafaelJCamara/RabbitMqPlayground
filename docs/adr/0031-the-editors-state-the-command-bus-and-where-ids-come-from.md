@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The zoom is held by `FlowViewport`, which [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md)
   describes, and not by a `ViewportStore` of its own. The bus also tells its listeners of `undo` and `redo`, takes back the ids of a command that is refused, and has a sixth origin, `typed`
-  ([ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md)).
+  ([ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md)). The bus also runs the runtime verbs, as [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) says.
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0011](0011-explicit-linking-and-command-layer.md), [ADR-0019](0019-undo-through-immutable-document-snapshots.md),

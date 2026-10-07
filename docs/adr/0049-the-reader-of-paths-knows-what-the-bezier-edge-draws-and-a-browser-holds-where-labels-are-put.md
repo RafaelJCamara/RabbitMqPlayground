@@ -1,6 +1,6 @@
 # ADR-0049: The reader of paths knows what the bezier edge draws, and a browser holds where the labels are put
 
-- **Status:** Accepted
+- **Status:** Accepted. The overlay reads the paths with it, as [ADR-0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) says.
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md) (the path that the library drew is read, and the labels are placed from it and dragged along it),

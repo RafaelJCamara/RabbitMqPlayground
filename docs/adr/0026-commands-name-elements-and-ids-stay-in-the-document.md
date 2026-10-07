@@ -1,7 +1,7 @@
 # ADR-0026: Commands name elements, ids stay in the document, and a refusal says whose rule it is
 
 - **Status:** Accepted. The sentence that a document that a command made always loads again is made true by [ADR-0029](0029-the-commands-refuse-at-the-size-caps.md).
-  The bus that applies the commands in the app is [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md).
+  The bus that applies the commands in the app is [ADR-0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md). What it left unmodelled is settled by [ADR-0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), what a refusal closes by [ADR-0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md), and `reconcile` for producers and consumers by [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "One command layer" of [ADR-0011](0011-explicit-linking-and-command-layer.md) and the document model of

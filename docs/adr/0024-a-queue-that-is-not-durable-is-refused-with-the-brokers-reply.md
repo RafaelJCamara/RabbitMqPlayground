@@ -1,6 +1,6 @@
 # ADR-0024: A queue that is not durable is refused, with the root cause first and the broker's reply after it
 
-- **Status:** Accepted
+- **Status:** Accepted. The order of its checks for a name that is there is settled by [ADR-0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0021](0021-transient-queues-are-refused.md). It settles what the M1 model's `durable` flag on a queue

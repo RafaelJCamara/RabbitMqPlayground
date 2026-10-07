@@ -10,7 +10,7 @@
   a drop on nothing by [ADR-0042](0042-a-drop-on-nothing-opens-the-create-menu-and-what-it-makes-is-one-batch.md), the default exchange by
   [ADR-0043](0043-the-default-exchange-is-shown-on-request-and-is-not-in-the-document.md), the command bar by [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md),
   the log of equivalent commands by [ADR-0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md), and the hint bar, the card and the cheat-sheet by
-  [ADR-0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md).
+  [ADR-0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md). The runtime verbs and their keys are settled by [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

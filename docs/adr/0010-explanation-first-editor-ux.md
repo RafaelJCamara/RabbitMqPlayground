@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The visual language of the editor (tokens, themes, a colour and a shape for each kind of node) is settled by
   [ADR-0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md), and the chips on edges, the places of the labels and the lints as badges by
-  [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md).
+  [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md). The animation is settled by [ADR-0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md), and the controls, the counters and the stacks by [ADR-0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

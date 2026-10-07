@@ -17,11 +17,11 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0004](0004-trunk-based-development-on-main.md) | Trunk-based development directly on `main` | Accepted |
 | [0005](0005-frontend-angular.md) | Frontend framework: Angular | Accepted |
 | [0006](0006-client-only-app-dotnet-api-when-needed.md) | Client-only app; a .NET API only when needed | Accepted |
-| [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted |
-| [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted (rule 28 superseded by 0021, rule 4 extended by 0022) |
+| [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted (the engine as built by 0052, delivery by 0053) |
+| [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted (rule 28 superseded by 0021, rule 4 extended by 0022, rule 27 extended by 0051, rules 13 to 16 settled by 0053) |
 | [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted (integers extended by 0023) |
-| [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted (visual language settled by 0032, chips, labels and lints by 0044) |
-| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019, vocabulary extended by 0025, command layer by 0026, state and bus by 0031, hint bar by 0035, the five ways to link by 0041, a drop on nothing by 0042, the default exchange by 0043, the command bar by 0045, the log by 0046, guidance by 0047) |
+| [0010](0010-explanation-first-editor-ux.md) | Explanation-first editor UX | Accepted (visual language settled by 0032, chips, labels and lints by 0044, the animation settled by 0055, the controls, counters and stacks by 0056) |
+| [0011](0011-explicit-linking-and-command-layer.md) | Explicit linking and a single command layer | Accepted (keyboard parts superseded by 0017, patches clause by 0019, vocabulary extended by 0025, command layer by 0026, state and bus by 0031, hint bar by 0035, the five ways to link by 0041, a drop on nothing by 0042, the default exchange by 0043, the command bar by 0045, the log by 0046, guidance by 0047, the runtime verbs by 0054) |
 | [0012](0012-multiple-canvases-and-local-persistence.md) | Multiple canvases and local persistence | Accepted (record, files and loader settled by 0027, repository and autosave by 0028) |
 | [0013](0013-self-contained-share-links.md) | Self-contained share links | Accepted (the validator is the loader of 0027) |
 | [0014](0014-broker-interop-via-definitions-json.md) | Broker interoperability via `definitions.json` only | Accepted |
@@ -31,21 +31,21 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0018](0018-workspace-layout-and-dependency-rules.md) | Workspace layout and dependency rules | Accepted (the editor's folders settled by 0030, what is tested where by 0036) |
 | [0019](0019-undo-through-immutable-document-snapshots.md) | Undo through immutable document snapshots | Accepted (choices extended by 0026, the store by 0031) |
 | [0020](0020-mit-licence.md) | MIT licence | Accepted |
-| [0021](0021-transient-queues-are-refused.md) | RabbitMQ 4.3 refuses transient queues, and the refusals the simulator reproduces | Accepted (the `durable` flag settled by 0024) |
+| [0021](0021-transient-queues-are-refused.md) | RabbitMQ 4.3 refuses transient queues, and the refusals the simulator reproduces | Accepted (the `durable` flag settled by 0024, what a refusal closes, 0050) |
 | [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md) | A topic binding key may have at most two `#` wildcards | Accepted |
 | [0023](0023-header-integers-are-limited-to-safe-integers.md) | Header integers are limited to the safe-integer range | Accepted |
-| [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) | A queue that is not durable is refused, with the root cause first and the broker's reply after it | Accepted |
-| [0025](0025-the-command-grammar.md) | The grammar of the typed command | Accepted (`help` joins the registry by 0045) |
-| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted (a document that a command made always loads, made true by 0029, the bus by 0031) |
+| [0024](0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) | A queue that is not durable is refused, with the root cause first and the broker's reply after it | Accepted (the order of its checks for a name that is there, 0051) |
+| [0025](0025-the-command-grammar.md) | The grammar of the typed command | Accepted (`help` joins the registry by 0045, the runtime verbs join it by 0054) |
+| [0026](0026-commands-name-elements-and-ids-stay-in-the-document.md) | Commands name elements, ids stay in the document, and a refusal says whose rule it is | Accepted (a document that a command made always loads, made true by 0029, the bus by 0031, what it left unmodelled settled by 0051, what a refusal closes by 0050, reconcile for producers and consumers by 0054) |
 | [0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) | A canvas is a record, a file and a bundle, and one function loads all of them | Accepted (the caps of a canvas are the domain's, by 0029) |
 | [0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md) | The canvas repository, autosave, and what the browser may do to the storage | Accepted (wired into the app by 0031) |
 | [0029](0029-the-commands-refuse-at-the-size-caps.md) | The commands refuse at the size caps, so that a canvas that commands made always loads | Accepted |
 | [0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) | The editor's folders, and how it is loaded behind its flag | Accepted (the adapter settled by 0033) |
-| [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted (the zoom is held by `FlowViewport`, 0033; undo and redo told to listeners, ids taken back and the origin `typed`, 0046) |
+| [0031](0031-the-editors-state-the-command-bus-and-where-ids-come-from.md) | The editor's state: signal stores, one command bus, and where ids come from | Accepted (the zoom is held by `FlowViewport`, 0033; undo and redo told to listeners, ids taken back and the origin `typed`, 0046, the runtime verbs run through the bus, 0054) |
 | [0032](0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md) | The editor's visual language: tokens, themes, a colour and a shape for each kind of node, and forms that explain | Accepted (chips on edges settled by 0044) |
 | [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted (the fit is the app's, by 0038, a menu on the canvas itself is the key's, by 0040, labels, the default exchange node and their intents by 0043 and 0044) |
 | [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md) | The Foblex contract suite, and how an upgrade fails loudly | Accepted |
-| [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted (its listener moved to the document by 0037, the menu held open by 0039, a menu on the canvas itself made the key's by 0040, the rows for `/`, Ctrl/Cmd+K and `?` by 0045 and 0047, and Ctrl/Cmd+K in a field of text by 0048) |
+| [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted (its listener moved to the document by 0037, the menu held open by 0039, a menu on the canvas itself made the key's by 0040, the rows for `/`, Ctrl/Cmd+K and `?` by 0045 and 0047, and Ctrl/Cmd+K in a field of text by 0048, the rows for P, Space and . by 0054) |
 | [0036](0036-the-test-strategy-of-the-editor.md) | The test strategy of the editor | Accepted (the quota test changed by 0037, the pointer tests by 0039, touch and the replay test by 0046, what the tests wait for by 0048, the journeys of the adapter by 0049) |
 | [0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md) | The editor's keys are heard on the document, and the browser's refusal is made at its API | Accepted |
 | [0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md) | The app fits the canvas, and does not ask the library to | Accepted |
@@ -56,10 +56,17 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0043](0043-the-default-exchange-is-shown-on-request-and-is-not-in-the-document.md) | The default exchange is shown on request, and it is not in the document | Accepted (what it does not take, held by journeys, 0049) |
 | [0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md) | Edges carry chips, labels are placed greedily and can be dragged, and lints are badges | Accepted (the reader of paths and the journeys of the labels, 0049) |
 | [0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) | The command bar: a panel that types through the same door | Accepted (its draft, its refusals and its list settled by 0048) |
-| [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md) | The equivalent-command log, and the tests that hold gestures and typed commands together | Accepted (the contract suite and the replay as built, 0048) |
+| [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md) | The equivalent-command log, and the tests that hold gestures and typed commands together | Accepted (the contract suite and the replay as built, 0048, the runtime verbs are in the log, 0054) |
 | [0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md) | Guidance: the hint bar, the "How to link" card and the cheat-sheet | Accepted (the card as chips, and the top bar that fits, 0048) |
 | [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md) | What building S5 settled: Ctrl+K in a field, a bar that keeps its draft, a top bar that fits, and tests that wait | Accepted |
-| [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md) | The reader of paths knows what the bezier edge draws, and a browser holds where the labels are put | Accepted |
+| [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md) | The reader of paths knows what the bezier edge draws, and a browser holds where the labels are put | Accepted (the overlay reads the paths with it, 0055) |
+| [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) | The simulator has no connections, a consumer owns a channel, and a refusal is a result | Accepted |
+| [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md) | A declaration that repeats is idempotent, an unbind of nothing changes nothing, and a 406 names the attribute | Accepted |
+| [0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md) | The engine: commands in, events out, one clock, and a view for the screen | Accepted |
+| [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md) | Delivery: the consumer at the head, prefetch for each tag, and what cancel and close do | Accepted |
+| [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) | The runtime verbs go through the bus and are in the log, and `reconcile` keeps the engine whole | Accepted |
+| [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) | The overlay draws on a canvas, outside change detection, and follows the real paths | Accepted |
+| [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md) | Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar | Accepted |
 
 ## Where to start
 
@@ -86,7 +93,9 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md),
   [0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md),
   [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md),
-  [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md).
+  [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md),
+  [0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md),
+  [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md), [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md).
 - **What "correct" means:** [0008](0008-rabbitmq-fidelity-baseline.md), [0009](0009-headers-exchange-support.md),
   [0021](0021-transient-queues-are-refused.md), [0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md),
   [0023](0023-header-integers-are-limited-to-safe-integers.md),
@@ -95,7 +104,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0036](0036-the-test-strategy-of-the-editor.md),
   [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md),
   [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md),
-  [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md).
+  [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md),
+  [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md), [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md).
 
 ## Adding or changing a decision
 

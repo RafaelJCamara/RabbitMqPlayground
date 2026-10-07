@@ -1,6 +1,6 @@
 # ADR-0025: The grammar of the typed command
 
-- **Status:** Accepted. `help` joins the registry as [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) says.
+- **Status:** Accepted. `help` joins the registry as [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) says. The runtime verbs join the registry as [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) says.
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Command bar (M1)" of [ADR-0011](0011-explicit-linking-and-command-layer.md). That ADR lists the vocabulary of

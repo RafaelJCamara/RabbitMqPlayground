@@ -1,7 +1,7 @@
 # ADR-0008: RabbitMQ fidelity baseline (4.3.x)
 
 - **Status:** Accepted. Rule 28 is superseded by [ADR-0021](0021-transient-queues-are-refused.md), and rule 4 is extended
-  by [ADR-0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md).
+  by [ADR-0022](0022-topic-binding-keys-have-at-most-two-hash-wildcards.md). Rule 27 is extended by [ADR-0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), and rules 13 to 16 are settled by [ADR-0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

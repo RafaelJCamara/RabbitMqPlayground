@@ -7,37 +7,20 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) and S5
 ([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
-[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1 and 9 are missing:
-they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md) and
-[ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md).
+[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 8 and 9 are missing:
+they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
+[ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md),
+[ADR-0050](docs/adr/0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) and
+[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md).
 
 | # | Question | Settled by |
 |---|---|---|
-| 2 | How does the engine report a refusal that closes the connection? | S6 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)) |
 | 3 | How are values that the scenario vocabulary cannot write recorded: an invalid `x-match`, an integer beyond 2^53? | S10 ([#12](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/12)) |
 | 4 | How should a new scenario reach the Nightly record run, when the offline fixture spec refuses scenarios that have no fixture? | the repo owner |
 | 5 | Should the repository pin its line endings with a `.gitattributes`? | the repo owner |
 | 6 | Is the shape of the trace and of `explainMiss` right for the Why? overlay? | S7 ([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)) |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
-| 8 | What does a second declaration of a name that is taken do, and what does an unbind of nothing do? | S6 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)) |
 | 10 | What do the home screen, the backup and "delete all" do with a canvas that cannot be read? | S9 ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) |
-
-## 2. How does the engine report a refusal that closes the connection?
-
-The plan's dispatch sketch returns `{ ok: false; code: 403 | 404 | 406; text }`, and its events include `channel.closed`
-([plan, section 2.2](docs/plans/m1.md)). The transient queue refusal is `541`, and the broker closes the connection, with
-every channel and exclusive queue on it, and not only the channel. S1 reproduces only the publish refusals (403 and 404),
-which close a channel.
-
-Open: does the simulator have connections at all, or does each producer and consumer simply own a channel? If it does, the
-code type widens to include 541 and says what was closed. If it does not, a transient queue is refused like any other
-declaration, and the difference is dropped. Every recorded refusal keeps its level (`channel` or `connection`), so either
-answer can be checked against the fixtures.
-
-Where S2 left it: the type of a refusal code in `@rmq/engine` is `403 | 404 | 406 | 541`, so it already fits, and the
-domain's refusal of a queue that is not durable carries the recorded `541` reply
-([ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md)). Nothing in the domain says
-what a refusal closes, because nothing there has a channel or a connection yet.
 
 ## 3. Values that the scenario vocabulary cannot write
 
@@ -220,25 +203,6 @@ the 3,344 mutants of the 47 files of `core/`, `canvas/model/`, `command-bar/` an
 The scripts are the same ones, plus a generator for templates, a runner for the hand changes, a picker of what to run again and, since S5, the keeper of the lines that changed. They are
 still outside the repository. The question of whether a tool should live in it is still open, and S5 makes the case for it a little stronger again: the hand changes found the one gap that the
 other sweeps could not (a thing that only a browser sees), and the three runs of S5 each needed the copies to be brought up to date with a command that is easy to forget.
-
-## 8. Declaring a name twice, and unbinding what is not bound
-
-By RabbitMQ's documentation, a broker accepts a second declaration of an exchange or a queue with the same attributes, and
-refuses one with other attributes with `406 PRECONDITION_FAILED` and a text that says which argument differs. No fixture
-has either. The simulator refuses both with its own rule, that a canvas has each name once, and carries no reply of the
-broker's ([ADR-0026](docs/adr/0026-commands-name-elements-and-ids-stay-in-the-document.md)). The recorded scenarios cannot
-show the difference, because `validateScenario` refuses a step that declares a name twice and the vocabulary has no
-`unbind` step. A refused step with other attributes can be recorded today, but the accepted repeat cannot.
-
-Options:
-
-- Keep the simulator's rule, and record the refused repeat so that the broker's `406` text is in a fixture.
-- Make a repeat with the same attributes change nothing, and answer one with other attributes with the `406` text. That
-  needs the vocabulary to allow a repeated declaration and an `unbind` step, and a scenario for each.
-- Leave the rule as it is, and say in the messages that a broker would accept the repeat, once a fixture backs the claim.
-
-S6 gives the engine its `dispatch` for `exchange.declare` and `queue.declare`, and has to say what the engine does with a
-name that is there, so it is the slice that settles it. The domain's `declare` and `unbind` would follow.
 
 ## 10. Canvases that cannot be read
 
