@@ -342,6 +342,22 @@ describe('MessageOverlay (ADR-0055)', () => {
     expect(frames.pending).toBe(1);
   });
 
+  it('draws a step as a move of a quarter of a second, from where the picture was to where the clock is', async () => {
+    const { send, simulation, frame, last } = await renderOverlay();
+    send();
+    // The first of the two messages gets to the broker at 100, and the clock goes there. The second is still on its way to it, at the end of its link in the clock and at the start of it in the picture.
+    simulation.execute({ type: 'step' });
+    frame(1_000);
+    const onTheLink = () => last().markers.find(({ edge }) => edge === 'P>E')?.x;
+
+    expect(onTheLink()).toBe(10);
+
+    for (const time of [1_100, 1_200, 1_250]) {
+      frame(time);
+    }
+    expect(onTheLink()).toBe(110);
+  });
+
   it('asks for a frame when the theme or the preference for motion changes, and reads the colours again', async () => {
     const { send, play, paletteRead, frames, frame } = await renderOverlay();
     send();

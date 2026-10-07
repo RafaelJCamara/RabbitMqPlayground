@@ -204,7 +204,11 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
       watchDrawnEdges(canvas.fConnectionsContainer().nativeElement, {
         drawn: (ids) => this.viewport.markDrawn(ids),
         gone: (ids) => this.viewport.markGone(ids),
-        geometry: () => this.placeLabelsSoon(),
+        // A path that is drawn another way, as when a node is dragged, moves what is laid over it, which is drawn again even if the clock is stopped (ADR-0055).
+        geometry: () => {
+          this.viewport.noteMoved();
+          this.placeLabelsSoon();
+        },
       }),
     );
   }
@@ -218,7 +222,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
       return () => undefined;
     }
     const observer = new MutationObserver(() => this.viewport.noteMoved());
-    observer.observe(canvas, { attributes: true, attributeFilter: ['style', 'transform'] });
+    observer.observe(canvas, { attributes: true, attributeFilter: ['style'] });
     return () => observer.disconnect();
   }
 

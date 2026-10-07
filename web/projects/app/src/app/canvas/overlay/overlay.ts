@@ -116,12 +116,11 @@ export class MessageOverlay implements AfterViewInit {
   constructor() {
     const stop = this.frames.add(() => this.draw());
     this.destroyRef.onDestroy(stop);
-    // What can move something on the screen without the clock moving: the canvas, the nodes, the theme and the preference for motion. A frame is asked for, and it draws once.
+    // What can move something on the screen without the clock moving: the canvas (a pan, a zoom, a node that is dragged, which move paths), an edge that is drawn, the theme and
+    // the preference for motion. A frame is asked for, and it draws once. A change of the document wakes the loop by itself, as the simulation follows it.
     effect(() => {
       this.viewport.moved();
       this.viewport.drawn();
-      this.viewport.zoom();
-      this.store.document();
       this.motion.reduced();
       this.theme.preference();
       untracked(() => {
