@@ -83,13 +83,14 @@ describe('hintsFor', () => {
     expect(ids({ nodes: 1, edges: 1, kind: 'producer' }, ['simulation'])).not.toContain('publish');
   });
 
-  it('says the key of the event log when the flag of the explanation is on, and not otherwise', () => {
+  it('says the key of the event log when the flags of the explanation and of the simulation are on, and not otherwise, since there is no log without events', () => {
     const ids = (enabled: Parameters<typeof hintsFor>[2]) =>
       hintsFor({ nodes: 0, edges: 0 }, false, enabled).map((hint) => hint.id);
 
     expect(ids([])).not.toContain('event-log');
     expect(ids(['simulation'])).not.toContain('event-log');
-    expect(ids(['explain'])).toContain('event-log');
+    expect(ids(['explain'])).not.toContain('event-log');
+    expect(ids(['simulation', 'explain'])).toContain('event-log');
   });
 
   it('writes the modifier that the platform has', () => {

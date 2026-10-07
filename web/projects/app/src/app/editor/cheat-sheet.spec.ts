@@ -42,9 +42,16 @@ describe('keyRows (ADR-0047)', () => {
     expect(without).not.toContain('publish');
     expect(withFlag).toEqual(expect.arrayContaining(['play', 'step', 'publish']));
     expect(without).not.toContain('event-log');
-    expect(keyRows(false, ['explain']).map((row) => row.id)).toEqual(
-      SHORTCUTS.filter((row) => row.flag === undefined || row.flag === 'explain').map((row) => row.id),
-    );
+  });
+
+  it('says the key of the event log only when both of its flags are on, since the explanation alone has no events to log', () => {
+    const rows = (enabled: Parameters<typeof keyRows>[1]) => keyRows(false, enabled).map((row) => row.id);
+
+    expect(rows(['explain'])).not.toContain('event-log');
+    expect(rows(['simulation'])).not.toContain('event-log');
+    expect(rows(['simulation', 'explain'])).toContain('event-log');
+    // Nothing else of the table is for the explanation alone, so it adds no row to what a page without flags says.
+    expect(rows(['explain'])).toEqual(rows([]));
   });
 
   it('writes Space as a word, and the other keys of the simulation as they are', () => {
@@ -56,7 +63,7 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('writes the key of the event log as the letter that it is', () => {
-    const rows = Object.fromEntries(keyRows(false, ['explain']).map((row) => [row.id, row.keys]));
+    const rows = Object.fromEntries(keyRows(false, ['simulation', 'explain']).map((row) => [row.id, row.keys]));
 
     expect(rows['event-log']).toBe('E');
   });

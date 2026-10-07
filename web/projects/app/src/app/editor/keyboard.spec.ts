@@ -498,10 +498,30 @@ describe('KeyboardService', () => {
       expect(actions.toggleEventLog).not.toHaveBeenCalled();
     });
 
-    describe('with the flag', () => {
+    it.each(['explain', 'simulation'])(
+      'is left to the page with the flag %s alone, because the log is made of what the simulation does and the key is for both',
+      (alone) => {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [
+            KeyboardService,
+            { provide: EditorActions, useValue: actions },
+            { provide: FLAG_SOURCES, useValue: { stored: null, query: alone } },
+          ],
+        });
+        service = TestBed.inject(KeyboardService);
+        mount();
+
+        expect(send('flow', { key: 'e' }).prevented).toBe(false);
+
+        expect(actions.toggleEventLog).not.toHaveBeenCalled();
+      },
+    );
+
+    describe('with the flags', () => {
       beforeEach(() => {
         TestBed.resetTestingModule();
-        flags = 'explain';
+        flags = 'explain,simulation';
         TestBed.configureTestingModule({
           providers: [
             KeyboardService,
