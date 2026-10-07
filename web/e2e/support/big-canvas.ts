@@ -13,6 +13,8 @@ const EXCHANGES = 30;
 const QUEUES = 100;
 const CONSUMERS = 50;
 const TYPES = ['direct', 'fanout', 'topic'] as const;
+/** The exchanges of the canvas of the headers exchange (S8): every fourth one reads headers. */
+const HEADERS_TYPES = [...TYPES, 'headers'] as const;
 
 export const BIG_NODES = PRODUCERS + EXCHANGES + QUEUES + CONSUMERS;
 
@@ -45,7 +47,21 @@ function queuesOf(consumer: number): number[] {
 const exchange = (index: number): string => `x${index}`;
 const queue = (index: number): string => `q${index}`;
 
-export function bigCommands(): DocumentCommand[] {
+/** The conditions of a binding from a headers exchange: three, of three types, in a mode that changes from one binding to the next, so that the chips are of every length. */
+function conditionsOf(index: number) {
+  const modes = ['all', 'any', 'all-with-x', 'any-with-x'] as const;
+  return {
+    xMatch: modes[index % modes.length]!,
+    args: [
+      { key: 'format', value: { t: 'string', v: index % 2 === 0 ? 'pdf' : 'tiff' } },
+      { key: 'size', value: { t: 'integer', v: index } },
+      { key: 'x-region', value: { t: 'string', v: 'eu' } },
+    ],
+  } as const;
+}
+
+export function bigCommands(readsHeaders = false): DocumentCommand[] {
+  const types = readsHeaders ? HEADERS_TYPES : TYPES;
   const commands: DocumentCommand[] = [];
   for (let index = 0; index < PRODUCERS; index += 1) {
     commands.push({ type: 'add-producer', name: `p${index}` });
@@ -54,7 +70,7 @@ export function bigCommands(): DocumentCommand[] {
     commands.push({
       type: 'declare-exchange',
       name: exchange(index),
-      exchangeType: TYPES[index % TYPES.length]!,
+      exchangeType: types[index % types.length]!,
       durable: true,
       autoDelete: false,
       internal: false,
@@ -75,7 +91,9 @@ export function bigCommands(): DocumentCommand[] {
         type: 'bind',
         source: exchange(source),
         destination: { kind: 'queue', name: queue(index) },
-        key: TYPES[source % TYPES.length] === 'fanout' ? '' : `key.${index}`,
+        key:
+          types[source % types.length] === 'fanout' || types[source % types.length] === 'headers' ? '' : `key.${index}`,
+        ...(types[source % types.length] === 'headers' ? { headers: conditionsOf(index) } : {}),
       });
     }
   }
@@ -89,13 +107,52 @@ export function bigCommands(): DocumentCommand[] {
       type: 'bind',
       source: exchange(index),
       destination: { kind: 'exchange', name: exchange((index + 1) % EXCHANGES) },
-      key: TYPES[index % TYPES.length] === 'fanout' ? '' : 'next',
+      key: types[index % types.length] === 'fanout' || types[index % types.length] === 'headers' ? '' : 'next',
+      ...(types[index % types.length] === 'headers' ? { headers: conditionsOf(index) } : {}),
     });
+  }
+  if (readsHeaders) {
+    commands.push(
+      ...gridOf(
+        ['producer', PRODUCERS, 'p'],
+        ['exchange', EXCHANGES, 'x'],
+        ['queue', QUEUES, 'q'],
+        ['consumer', CONSUMERS, 'c'],
+      ),
+    );
   }
   return commands;
 }
 
+/**
+ * Where the nodes of the canvas of the headers exchange are: twenty to a row, in the order that they were made, a node of 160 and a gap of 160 across and 84 of room down. The nodes that a canvas
+ * makes for itself are in a long line, which the canvas fits at three percent, where a node is a speck that a press does not find.
+ */
+function gridOf(
+  ...groups: readonly (readonly ['producer' | 'exchange' | 'queue' | 'consumer', number, string])[]
+): DocumentCommand[] {
+  const moves: DocumentCommand[] = [];
+  let at = 0;
+  for (const [kind, count, prefix] of groups) {
+    for (let index = 0; index < count; index += 1, at += 1) {
+      moves.push({
+        type: 'move',
+        target: { kind, name: `${prefix}${index}` },
+        x: (at % 20) * 320,
+        y: Math.floor(at / 20) * 140,
+      });
+    }
+  }
+  return moves;
+}
+
 export const BIG_CANVAS = buildDocument(bigCommands());
+
+/**
+ * The same canvas, with every fourth exchange a headers exchange, whose bindings have conditions: the labels of a hundred edges are chips of a mode and three conditions, and the editor of a binding has
+ * a table of recent messages to draw. The producer `p3` publishes to the headers exchange `x3`.
+ */
+export const BIG_HEADERS_CANVAS = buildDocument(bigCommands(true));
 
 /** How many edges that is: producer links, bindings, subscriptions. */
 export const BIG_EDGES = 500;

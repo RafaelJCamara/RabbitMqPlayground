@@ -1,7 +1,10 @@
+import type { Page } from '@playwright/test';
 import { edgeKeys } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
+import { Conditions, HeadersPage } from './pages/headers-page';
+import { SimulationPage } from './pages/simulation-page';
 import { TesterPage } from './pages/tester-page';
-import { BIG_CANVAS, BIG_EDGES, BIG_NODES } from './support/big-canvas';
+import { BIG_CANVAS, BIG_EDGES, BIG_HEADERS_CANVAS, BIG_NODES } from './support/big-canvas';
 import { seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
@@ -213,6 +216,69 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     expect((await page.evaluate(() => window.__rmq?.simulationState()))?.view.travelling).toBe(1_000);
   });
 
+  test(`is drawn within ${BUDGET_MS} ms with the headers exchange on too, where every fourth exchange reads headers and the labels of its edges are chips of conditions`, async ({
+    page,
+  }) => {
+    await seedCanvas(page, BIG_HEADERS_CANVAS, 'Big canvas');
+    const editor = new EditorPage(page);
+
+    await page.goto('?ff=editor,simulation,explain,headers');
+    await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
+      polling: 'raf',
+      timeout: 30_000,
+    });
+    const drawnAt = Math.round(await page.evaluate(() => performance.now()));
+
+    test.info().annotations.push({
+      type: 'drawn',
+      description: `${drawnAt} ms for ${BIG_NODES} nodes and ${BIG_EDGES} edges, with the headers exchange on`,
+    });
+    expect(drawnAt, `200 nodes and 500 edges with chips of conditions took ${drawnAt} ms`).toBeLessThan(BUDGET_MS);
+    await expect(page.locator('[data-node-id]')).toHaveCount(BIG_NODES);
+    await expect(editor.saveState).toHaveText('All changes saved');
+    // The labels are the chips of what each binding asks, and they wrap and are placed like the rest.
+    expect(await page.locator('.rmq-chip-conditions').count()).toBeGreaterThan(50);
+  });
+
+  test('opens the popover that asks for the conditions of a binding, with its table of recent messages, after a burst of a thousand messages was published to its exchange, within the budget', async ({
+    page,
+  }) => {
+    await seedCanvas(page, BIG_HEADERS_CANVAS, 'Big canvas');
+    const headers = await openBigHeaders(page);
+    await headers.editor.openCommandBar();
+    await headers.editor.runCommand('set p3 burst=1000');
+    await headers.editor.runCommand('publish p3');
+    await expect(page.getByTestId('status-message')).toHaveText('Published 1000 messages from p3.');
+    await page.keyboard.press('Escape');
+    await headers.editor.select('Exchange x3, headers');
+    await page.getByRole('button', { name: 'Link exchange x3 to…' }).click();
+    const search = page.getByRole('combobox', { name: 'Search the targets' });
+    await expect(search).toBeFocused();
+    await page.keyboard.type('q1');
+    const started = await page.evaluate(() => performance.now());
+
+    await page.keyboard.press('Enter');
+    const popover = new Conditions(
+      page.getByRole('group', { name: /^Conditions for the binding from exchange x3 to / }),
+    );
+    await expect(popover.live.rows).toHaveCount(10);
+    const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
+
+    test.info().annotations.push({
+      type: 'table',
+      description: `${elapsed} ms for the popover of the conditions of a binding and its table of ten messages, of a thousand, on a big canvas`,
+    });
+    expect(elapsed, `the table of recent messages took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
+    await expect(popover.live.caption).toContainText('The last 10 of 1000 messages published to x3');
+    // Typing a condition works the table out again for the ten messages, and it is as fast.
+    await popover.fill(1, 'format', 'pdf');
+    const typed = await page.evaluate(() => performance.now());
+    await popover.value(1).fill('tiff');
+    await expect(popover.live.rows.first()).toHaveAttribute('data-matched', 'false');
+    const retyped = Math.round((await page.evaluate(() => performance.now())) - typed);
+    expect(retyped, `typing into a condition took ${retyped} ms`).toBeLessThan(BUDGET_MS);
+  });
+
   test('can still be worked on once it is drawn: a node is selected and its inspector is shown', async ({ page }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
@@ -229,3 +295,15 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     expect(await page.evaluate(() => window.__rmq?.selection().nodes.length)).toBe(BIG_NODES);
   });
 });
+
+/** Opens the editor with every flag of the headers exchange on the canvas that is seeded, and stops the clock of the simulation. */
+async function openBigHeaders(page: Page): Promise<HeadersPage> {
+  const editor = new EditorPage(page);
+  await editor.goto('?ff=editor,simulation,explain,headers');
+  await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
+    timeout: 30_000,
+  });
+  await editor.settled();
+  await page.getByRole('region', { name: 'Simulation' }).getByRole('button', { name: 'Pause' }).click();
+  return new HeadersPage(new SimulationPage(editor));
+}
