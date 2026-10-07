@@ -47,6 +47,53 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await expect(editor.saveState).toHaveText('All changes saved');
   });
 
+  test(`is drawn within ${BUDGET_MS} ms with the simulation on too, which has the numbers of every node and the overlay of the messages in it`, async ({
+    page,
+  }) => {
+    await seedCanvas(page, BIG_CANVAS, 'Big canvas');
+    const editor = new EditorPage(page);
+
+    await page.goto('?ff=editor,simulation');
+    await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
+      polling: 'raf',
+      timeout: 30_000,
+    });
+    const drawnAt = Math.round(await page.evaluate(() => performance.now()));
+
+    test.info().annotations.push({
+      type: 'drawn',
+      description: `${drawnAt} ms for ${BIG_NODES} nodes and ${BIG_EDGES} edges, with the simulation on`,
+    });
+    expect(drawnAt, `200 nodes and 500 edges with the simulation on took ${drawnAt} ms`).toBeLessThan(BUDGET_MS);
+    await expect(page.locator('[data-node-id]')).toHaveCount(BIG_NODES);
+    await expect(page.locator('rmq-node-stats')).toHaveCount(BIG_NODES);
+    await expect(page.locator('rmq-message-overlay')).toHaveCount(1);
+    await expect(editor.saveState).toHaveText('All changes saved');
+  });
+
+  test('keeps a burst on a big canvas to a few shapes: a thousand messages are grouped, and the page goes on', async ({
+    page,
+  }) => {
+    await seedCanvas(page, BIG_CANVAS, 'Big canvas');
+    const editor = new EditorPage(page);
+    await editor.goto('?ff=editor,simulation');
+    await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
+      timeout: 30_000,
+    });
+    await editor.settled();
+    await page.getByRole('region', { name: 'Simulation' }).getByRole('button', { name: 'Pause' }).click();
+
+    await editor.openCommandBar();
+    await editor.runCommand('set p1 burst=1000');
+    await editor.runCommand('publish p1');
+    await expect(page.getByTestId('status-message')).toHaveText('Published 1000 messages from p1.');
+
+    const frame = await page.evaluate(() => window.__rmq?.overlayFrame());
+    expect(frame?.markers.length).toBeLessThanOrEqual(5);
+    expect(frame?.markers.reduce((sum, { count }) => sum + count, 0)).toBe(1_000);
+    expect((await page.evaluate(() => window.__rmq?.simulationState()))?.view.travelling).toBe(1_000);
+  });
+
   test('can still be worked on once it is drawn: a node is selected and its inspector is shown', async ({ page }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
