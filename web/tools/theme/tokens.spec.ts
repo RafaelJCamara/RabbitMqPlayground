@@ -47,6 +47,10 @@ const KINDS = ['producer', 'exchange', 'queue', 'consumer'] as const;
  */
 const MESSAGE_COLORS = ['blue', 'orange', 'green', 'pink', 'gold', 'gray', 'violet', 'cyan'] as const;
 const MESSAGES = [...MESSAGE_COLORS, 'mixed'] as const;
+/** What Why? lights (ADR-0062): where a message went, where it did not, and what the learner asks about. */
+const EXPLAIN = ['hit', 'miss', 'asked'] as const;
+/** The marks of the families of the event log (ADR-0061), which are drawn in the colour of what the family is about, on the panel that holds the log and on the list of its rows. */
+const FAMILY_MARKS = ['accent', 'producer', 'exchange', 'danger', 'queue', 'consumer', 'warning'] as const;
 
 /** [what, foreground, background, the contrast that it needs] */
 const PAIRS: readonly (readonly [string, string, string, number])[] = [
@@ -79,6 +83,26 @@ const PAIRS: readonly (readonly [string, string, string, number])[] = [
     ] as const,
   ]),
   ['the ring of a message that is redelivered, on the canvas', 'warning', 'canvas', GRAPHIC],
+  ...EXPLAIN.flatMap((name) => [
+    [`what Why? lights as ${name}, on the canvas`, `explain-${name}`, 'canvas', GRAPHIC] as const,
+    [
+      `what Why? lights as ${name}, on the chip of a label and on the card`,
+      `explain-${name}`,
+      'surface',
+      GRAPHIC,
+    ] as const,
+    [`what Why? lights as ${name}, on a panel`, `explain-${name}`, 'panel', GRAPHIC] as const,
+    ...KINDS.map(
+      (kind) =>
+        [`what Why? lights as ${name}, on the fill of a ${kind}`, `explain-${name}`, `${kind}-fill`, GRAPHIC] as const,
+    ),
+  ]),
+  ...FAMILY_MARKS.flatMap((name) =>
+    (['panel', 'surface'] as const).map(
+      (background) =>
+        [`the mark of the family ${name} in the event log, on ${background}`, name, background, GRAPHIC] as const,
+    ),
+  ),
   ...KINDS.flatMap((kind) => [
     [`the outline of a ${kind} on the canvas`, kind, 'canvas', GRAPHIC] as const,
     [`the outline of a ${kind} on its fill`, kind, `${kind}-fill`, GRAPHIC] as const,
@@ -131,6 +155,18 @@ describe('the colour tokens of styles.css', () => {
       expect(new Set(MESSAGE_COLORS.map((name) => colour(`message-${name}`, theme))).size, theme).toBe(
         MESSAGE_COLORS.length,
       );
+    }
+  });
+
+  it('have a colour for each of what Why? lights, tell them apart in each theme, and have none that Why? does not use', () => {
+    const defined = Object.keys(tokens)
+      .filter((name) => name.startsWith('explain-'))
+      .map((name) => name.slice('explain-'.length))
+      .sort();
+
+    expect(defined).toEqual([...EXPLAIN].sort());
+    for (const theme of ['light', 'dark'] as const) {
+      expect(new Set(EXPLAIN.map((name) => colour(`explain-${name}`, theme))).size, theme).toBe(EXPLAIN.length);
     }
   });
 

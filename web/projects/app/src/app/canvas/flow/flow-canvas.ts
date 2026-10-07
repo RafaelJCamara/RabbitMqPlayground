@@ -32,6 +32,7 @@ import {
   withConnectionFlow,
 } from '@foblex/flow';
 import type { Id, LinkRules } from '@rmq/domain';
+import { NO_EMPHASIS, type EdgeMark, type Emphasis, type NodeMark } from '../../core/explain/emphasis';
 import { FeatureFlags } from '../../core/flags/feature-flags';
 import { NodeStatsView } from '../overlay/node-stats';
 import { isVirtual } from '../../core/state/default-exchange';
@@ -103,6 +104,8 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   readonly model = input.required<CanvasVm>();
   readonly selection = input<Selection>(NOTHING_SELECTED);
   readonly rules = input<LinkRules>();
+  /** What Why? lights (ADR-0062): a mark for the edges and for the nodes, which is a class on the element that the library draws, and a short reason for an edge that missed, which is a chip on its label. */
+  readonly emphasis = input<Emphasis>(NO_EMPHASIS);
   readonly intent = output<CanvasIntent>();
 
   private readonly page = inject(DOCUMENT);
@@ -241,6 +244,21 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   protected labelAt(edge: EdgeVm): number {
     const drag = this.labelDrag();
     return drag?.key === edge.id ? drag.at : (edge.labelAt ?? this.placed().get(edge.id) ?? 0.5);
+  }
+
+  /** How an edge is lit, for its `data-emphasis`: the stylesheet draws it (ADR-0062). */
+  protected edgeMark(id: string): EdgeMark | null {
+    return this.emphasis().edges.get(id)?.mark ?? null;
+  }
+
+  /** The short reason that a binding that missed gives, for its label. */
+  protected reasonOf(id: string): string | null {
+    return this.emphasis().edges.get(id)?.reason ?? null;
+  }
+
+  /** How a node is lit, for its `data-emphasis`. */
+  protected nodeMark(id: string): NodeMark | null {
+    return this.emphasis().nodes.get(id) ?? null;
   }
 
   /** An edge that is not a binding of the document is drawn with a dashed line: the link to a queue, and the implicit bindings (ADR-0043). */

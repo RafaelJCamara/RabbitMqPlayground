@@ -28,6 +28,9 @@
   --color-queue-fill: var(--rmq-queue-fill);
   --color-consumer: var(--rmq-consumer);
   --color-consumer-fill: var(--rmq-consumer-fill);
+  --color-explain-hit: var(--rmq-explain-hit);
+  --color-explain-miss: var(--rmq-explain-miss);
+  --color-explain-asked: var(--rmq-explain-asked);
 }
 
 /*
@@ -70,6 +73,14 @@
   --rmq-queue-fill: light-dark(#e1f3ef, #0c3a31);
   --rmq-consumer: light-dark(#a8527f, #d98cb4);
   --rmq-consumer-fill: light-dark(#f6e6ee, #3b1c2c);
+
+  /*
+   * What Why? lights (ADR-0062): where a message went, where it did not, and what the learner asks about. Each is held to 3:1 against the canvas, and none is the only sign: a hit is
+   * thicker, a miss is dimmed and has its reason as words, and what is asked about has a ring.
+   */
+  --rmq-explain-hit: light-dark(#047857, #6ee7b7);
+  --rmq-explain-miss: light-dark(#b91c1c, #fca5a5);
+  --rmq-explain-asked: light-dark(#6d28d9, #a78bfa);
 
   /*
    * The colours of a message on its way (ADR-0055): the colour of its routing key, one of eight, and the one of a crowd with no key in common. Each is held to 3:1 against the

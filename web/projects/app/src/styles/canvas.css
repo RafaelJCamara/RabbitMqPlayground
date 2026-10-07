@@ -79,7 +79,10 @@ rmq-flow-canvas .rmq-node-outline {
   fill: var(--kind-fill);
   stroke: var(--kind);
   stroke-width: 2px;
-  transition: stroke-width 80ms ease-out;
+  transition:
+    stroke-width 80ms ease-out,
+    stroke 100ms ease-out,
+    stroke-opacity 100ms ease-out;
 }
 
 /* Selected: the accent, and thicker, so that a selection is seen without any other sign. */
@@ -270,9 +273,105 @@ rmq-flow-canvas .rmq-node-virtual .rmq-node-outline {
   stroke-dasharray: 5 4;
 }
 
+/*
+ * Why? (ADR-0062): what is lit is another look on the same element, chosen by the `data-emphasis` that the adapter sets from the marks of core/explain. The colour is a pair of tokens for the two themes, and it is
+ * never the only sign: the way that a message went is thicker, what missed is dimmed and has its reason as words on its label, and what is asked about has a ring. A selected edge or node keeps its accent, and what is
+ * dimmed is the stroke and never the words.
+ */
+rmq-flow-canvas .f-connection-path {
+  transition:
+    stroke 100ms ease-out,
+    stroke-width 100ms ease-out,
+    stroke-opacity 100ms ease-out;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='path'] {
+  --ff-connection-color: var(--rmq-explain-hit);
+  --ff-marker-color: var(--rmq-explain-hit);
+  --ff-connection-width: 4px;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='matched'] {
+  --ff-connection-color: var(--rmq-explain-hit);
+  --ff-marker-color: var(--rmq-explain-hit);
+  --ff-connection-width: 3px;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='missed'] {
+  --ff-connection-color: var(--rmq-explain-miss);
+  --ff-marker-color: var(--rmq-explain-miss);
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='missed'] .f-connection-path {
+  stroke-opacity: 0.5;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='missed'] :is(.f-marker, .connection-marker) {
+  opacity: 0.5;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='asked'] {
+  --ff-connection-color: var(--rmq-explain-asked);
+  --ff-marker-color: var(--rmq-explain-asked);
+  --ff-connection-width: 4px;
+}
+
+rmq-flow-canvas .rmq-edge[data-emphasis='asked'] .f-connection-path {
+  stroke-dasharray: 1 7;
+  stroke-linecap: round;
+}
+
+/* The way that a message went is the thickest line, and stays thicker when it is selected, whose accent it keeps. */
+rmq-flow-canvas .rmq-edge[data-emphasis='path'].f-selected .f-connection-path {
+  stroke-width: 4.5px;
+}
+
+/* The reason that a binding gave for a miss: a chip like the others, dashed and with the colour of a miss, that says it in words. */
+rmq-flow-canvas .rmq-reason {
+  max-width: 300px;
+  border-style: dashed;
+  border-color: var(--rmq-explain-miss);
+}
+
+rmq-flow-canvas .rmq-node[data-emphasis='visited'] .rmq-node-outline,
+rmq-flow-canvas .rmq-node[data-emphasis='reached'] .rmq-node-outline {
+  stroke: var(--rmq-explain-hit);
+  stroke-width: 4px;
+}
+
+rmq-flow-canvas .rmq-node[data-emphasis='reached'] .rmq-node-shape {
+  filter: drop-shadow(0 0 6px var(--rmq-explain-hit));
+}
+
+rmq-flow-canvas .rmq-node[data-emphasis='missed'] .rmq-node-outline {
+  stroke: var(--rmq-explain-miss);
+  stroke-dasharray: 2 3;
+  stroke-opacity: 0.7;
+}
+
+rmq-flow-canvas .rmq-node[data-emphasis='asked'] .rmq-node-ring {
+  stroke: var(--rmq-explain-asked);
+  stroke-width: 8px;
+}
+
+rmq-flow-canvas .rmq-node[data-emphasis='asked'] .rmq-node-shape {
+  filter: drop-shadow(0 0 6px var(--rmq-explain-asked));
+}
+
+/* The ring of a node that is asked about gives way to the focus ring, which is the colour of the focus (WCAG 2.4.7). */
+rmq-flow-canvas f-flow:focus-visible .rmq-node.f-selected[data-emphasis='asked'] .rmq-node-ring {
+  stroke: var(--rmq-focus);
+}
+
+rmq-flow-canvas .rmq-node.f-selected[data-emphasis='visited'] .rmq-node-outline,
+rmq-flow-canvas .rmq-node.f-selected[data-emphasis='reached'] .rmq-node-outline {
+  stroke: var(--rmq-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   rmq-flow-canvas .rmq-node-outline,
-  rmq-flow-canvas .rmq-handle-dot {
+  rmq-flow-canvas .rmq-handle-dot,
+  rmq-flow-canvas .f-connection-path {
     transition: none;
   }
 }
