@@ -75,10 +75,10 @@ async function renderBar() {
 }
 
 describe('SimulationBar (ADR-0056)', () => {
-  it('is a group with a name, and has its controls in the order that a learner reaches for them, each with a name in words', async () => {
+  it('is a region of the page, with a name, and has its controls in the order that a learner reaches for them, each with a name in words', async () => {
     await renderBar();
 
-    const bar = screen.getByRole('group', { name: 'Simulation' });
+    const bar = screen.getByRole('region', { name: 'Simulation' });
     const names = [...bar.querySelectorAll('button')].map((button) => button.textContent?.replace(/\s+/g, ' ').trim());
 
     expect(names).toEqual(['Pause', 'Step', '0.25×', '0.5×', '1×', '2×', '4×', 'Clear messages', 'Reset counters']);

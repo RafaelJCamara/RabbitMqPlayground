@@ -107,7 +107,7 @@ const helpSpoken = (output: HelpOutput): string =>
                     <code class="min-w-0 flex-1 break-words">{{ entry.text }}</code>
                     <button
                       type="button"
-                      class="border-border hover:bg-canvas shrink-0 rounded border px-1.5 font-sans"
+                      class="border-border hover:bg-canvas min-h-6 min-w-6 shrink-0 rounded border px-1.5 font-sans"
                       [attr.aria-label]="'Use again: ' + entry.text"
                       (click)="reuse(entry.text)"
                     >
