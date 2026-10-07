@@ -11,5 +11,47 @@ interface Window {
     readonly drawnEdges: () => readonly string[];
     readonly intents: () => readonly { readonly type: string; readonly [key: string]: unknown }[];
     readonly viewport: () => { readonly x: number; readonly y: number; readonly zoom: number } | null;
+    /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` without the flag. */
+    readonly simulationState: () => {
+      readonly now: number;
+      readonly running: boolean;
+      readonly speed: number;
+      readonly nextAt: number | null;
+      readonly view: {
+        readonly now: number;
+        readonly published: number;
+        readonly travelling: number;
+        readonly queues: Readonly<
+          Record<
+            string,
+            {
+              readonly ready: number;
+              readonly unacked: number;
+              readonly enqueued: number;
+              readonly delivered: number;
+              readonly consumers: number;
+            }
+          >
+        >;
+        readonly exchanges: Readonly<
+          Record<string, { readonly routed: number; readonly unroutable: number; readonly refused: number }>
+        >;
+        readonly producers: Readonly<
+          Record<string, { readonly published: number; readonly repeating: boolean; readonly nextAt: number | null }>
+        >;
+        readonly channels: Readonly<
+          Record<
+            string,
+            {
+              readonly received: number;
+              readonly consumed: number;
+              readonly waiting: number;
+              readonly working: boolean;
+              readonly prefetch: number;
+            }
+          >
+        >;
+      };
+    } | null;
   };
 }

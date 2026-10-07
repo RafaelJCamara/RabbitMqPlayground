@@ -3,6 +3,7 @@ import type { CanvasDocument } from '@rmq/domain';
 import { APP_NAME } from '../app-info';
 import { FeatureFlags } from '../flags/feature-flags';
 import type { FlagName } from '../flags/flags';
+import type { SimulationState } from '../runtime/simulation';
 import { DebugSources, type DebugViewport } from './debug-sources';
 
 /**
@@ -23,6 +24,8 @@ export interface RmqDebugHandle {
   readonly intents: () => readonly unknown[];
   /** The live transform of the canvas, or `null`. */
   readonly viewport: () => DebugViewport | null;
+  /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` until the editor has started, and without the flag. */
+  readonly simulationState: () => SimulationState | null;
 }
 
 declare global {
@@ -44,6 +47,7 @@ export function createDebugHandle(flags: FeatureFlags, sources: DebugSources = n
     drawnEdges: () => [...(sources.current?.drawnEdges() ?? [])],
     intents: () => [...(sources.current?.intents() ?? [])],
     viewport: () => sources.current?.viewport() ?? null,
+    simulationState: () => sources.current?.simulationState() ?? null,
   });
 }
 

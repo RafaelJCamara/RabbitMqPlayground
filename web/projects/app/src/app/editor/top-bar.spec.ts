@@ -10,6 +10,7 @@ import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { EditorActions } from './actions';
 import { TopBar } from './top-bar';
 
@@ -24,6 +25,7 @@ async function renderBar() {
       CommandBus,
       FlowViewport,
       EditorActions,
+      ...RUNTIME_SERVICES,
       { provide: CanvasSession, useValue: { save } },
     ],
   });

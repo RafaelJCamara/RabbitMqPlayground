@@ -136,6 +136,17 @@ describe('Simulation', () => {
     });
   });
 
+  describe('a canvas that the engine will not take', () => {
+    it('is not followed in silence: what reconcile gave the engine and it refused is a bug, and is thrown', () => {
+      const { store } = setup();
+
+      // A queue that is not durable is what a broker refuses, and what no command makes: a file could say it.
+      expect(() => store.load(documentOf({ queues: { Q: queueRecord('q', { durable: false }) } }))).toThrow(
+        /The simulation could not follow the canvas: queue.declare was refused with 541/,
+      );
+    });
+  });
+
   describe('at rest', () => {
     it('starts running, at 1×, and goes to sleep when there is nothing scheduled, so that a canvas that has nothing to do costs no frames', () => {
       const { simulation, frames } = setup();

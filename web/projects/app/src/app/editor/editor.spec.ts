@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { transientQueueReply } from '@rmq/engine';
 import { createMemoryRepository, type CanvasRepository } from '@rmq/persistence';
-import { manualClock, manualTimer } from '@rmq/testing';
+import { manualClock, manualFrames, manualTimer } from '@rmq/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LinkRules } from '@rmq/domain';
 import { FlowCanvas } from '../canvas/flow/flow-canvas';
@@ -14,6 +14,8 @@ import type { CanvasVm } from '../canvas/model/canvas-vm';
 import type { CanvasIntent } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import {
   AUTOSAVE_TIMER,
   CanvasSession,
@@ -61,7 +63,7 @@ class FakeCanvas {
   }
 }
 
-function renderEditor(providers: ReturnType<typeof harness>['providers']) {
+function renderEditor(providers: Provider[]) {
   TestBed.overrideComponent(Editor, { remove: { imports: [FlowCanvas] }, add: { imports: [FakeCanvas] } });
   return render(Editor, { providers });
 }
@@ -1574,6 +1576,100 @@ describe('Editor', () => {
       await user.click(screen.getByRole('button', { name: 'Fit' }));
 
       expect(canvas().calls).toEqual(['zoomIn', 'zoomOut', 'resetZoom', 'fit']);
+    });
+  });
+
+  describe('the simulation (ADR-0054, ADR-0056)', () => {
+    async function openEditor(flags: string | null) {
+      const providers = [
+        ...harness().providers,
+        { provide: FRAME_SOURCE, useValue: manualFrames() },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+      ];
+      const view = await renderEditor(providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const fake = () => view.fixture.debugElement.query(By.directive(FakeCanvas));
+      const onCanvas = (init: KeyboardEventInit & { key: string }) => {
+        fireEvent.keyDown(fake().nativeElement as HTMLElement, init);
+        view.fixture.detectChanges();
+      };
+      return {
+        ...view,
+        onCanvas,
+        user: userEvent.setup(),
+        status: view.fixture.debugElement.injector.get(StatusStore),
+      };
+    }
+
+    it('has no controls without its flag, and Space, the full stop and P are the page’s, and the hints do not say them', async () => {
+      const { onCanvas, status } = await openEditor(null);
+
+      expect(screen.queryByRole('group', { name: 'Simulation' })).not.toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Space');
+      onCanvas({ key: ' ' });
+      onCanvas({ key: '.' });
+      onCanvas({ key: 'p' });
+
+      expect(status.notice()).toBeNull();
+    });
+
+    it('has the controls under the top bar from the first frame, and the hints say the keys', async () => {
+      await openEditor('simulation');
+
+      const bar = screen.getByRole('group', { name: 'Simulation' });
+      expect(screen.getByRole('banner').compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        screen.getByRole('main', { name: 'Canvas' }).compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_PRECEDING,
+      ).toBeTruthy();
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Space Play or pause the simulation');
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('. Step to the next event');
+    });
+
+    it('plays and pauses on Space, from the canvas, and says so', async () => {
+      const { onCanvas, status } = await openEditor('simulation');
+      expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
+
+      onCanvas({ key: ' ' });
+
+      expect(screen.getByRole('button', { name: 'Play' })).toBeVisible();
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Paused.' });
+      onCanvas({ key: ' ' });
+      expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Playing at 1×.' });
+    });
+
+    it('says that there is nothing to step to when the full stop is pressed and nothing is scheduled', async () => {
+      const { onCanvas, status } = await openEditor('simulation');
+
+      onCanvas({ key: '.' });
+
+      expect(status.notice()).toEqual({
+        kind: 'message',
+        text: 'Nothing is scheduled, so there is nothing to step.',
+      });
+    });
+
+    it('publishes from the producer that is selected on P, and says why a producer that is linked to nothing cannot', async () => {
+      const { onCanvas, user, fixture, status } = await openEditor('simulation');
+      await user.click(screen.getByRole('button', { name: 'Producer' }));
+      fixture.detectChanges();
+
+      onCanvas({ key: 'p' });
+
+      expect(status.refusal()).toMatchObject({ origin: 'key', issue: { kind: 'not-linked' } });
+    });
+
+    it('has the fields of the simulation in the inspector of a producer, and not in that of a queue that has none', async () => {
+      const { user, fixture } = await openEditor('simulation');
+
+      await user.click(screen.getByRole('button', { name: 'Producer' }));
+      fixture.detectChanges();
+      expect(screen.getByTestId('producer-composer')).toBeVisible();
+
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      fixture.detectChanges();
+      expect(screen.queryByTestId('producer-composer')).not.toBeInTheDocument();
+      expect(screen.getByTestId('queue-messages')).toBeVisible();
     });
   });
 

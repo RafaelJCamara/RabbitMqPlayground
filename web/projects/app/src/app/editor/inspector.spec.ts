@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { transientQueueReply } from '@rmq/engine';
-import { sampleDocument } from '@rmq/testing';
+import { manualFrames, sampleDocument } from '@rmq/testing';
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE } from '../core/runtime/frame-loop';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
+import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
@@ -14,7 +18,7 @@ import { IntentHandler } from './intents';
 import { LinkFlow } from './link-flow';
 import { NewNodeFocus } from './new-node-focus';
 
-async function renderInspector(selected: { nodes?: string[]; edges?: string[] } = {}) {
+async function renderInspector(selected: { nodes?: string[]; edges?: string[] } = {}, flags: string | null = null) {
   const view = await render(Inspector, {
     providers: [
       DocumentStore,
@@ -25,8 +29,13 @@ async function renderInspector(selected: { nodes?: string[]; edges?: string[] } 
       NewNodeFocus,
       LinkFlow,
       IntentHandler,
+      ...RUNTIME_SERVICES,
+      { provide: FRAME_SOURCE, useValue: manualFrames() },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
   });
+  // The editor has the simulation from the start, and with the flag it is what the parts of the inspector that are about it read.
+  TestBed.inject(Simulation);
   const store = TestBed.inject(DocumentStore);
   const selection = TestBed.inject(SelectionStore);
   store.load(sampleDocument());
@@ -321,6 +330,71 @@ describe('Inspector', () => {
       await user.tab();
 
       expect(store.canUndo()).toBe(false);
+    });
+  });
+
+  describe('what the simulation adds (ADR-0056)', () => {
+    const sections = ['queue-messages', 'producer-composer', 'consumer-settings'];
+    const shown = () => sections.filter((id) => screen.queryByTestId(id) !== null);
+
+    it('is not there without the flag: a queue, a producer and a consumer have the fields that they had', async () => {
+      const { choose } = await renderInspector();
+
+      for (const node of ['Q1', 'P1', 'C1']) {
+        choose([node]);
+        expect(shown()).toEqual([]);
+      }
+    });
+
+    it('has the messages of a queue, the composer of a producer and the settings of a consumer, each for its own kind and for no other', async () => {
+      const { choose } = await renderInspector({}, 'simulation');
+
+      choose(['Q1']);
+      expect(shown()).toEqual(['queue-messages']);
+      choose(['P1']);
+      expect(shown()).toEqual(['producer-composer']);
+      choose(['C1']);
+      expect(shown()).toEqual(['consumer-settings']);
+      choose(['E1']);
+      expect(shown()).toEqual([]);
+    });
+
+    it('has them before the button that deletes, so that the button stays the last thing of a node', async () => {
+      const { choose } = await renderInspector({}, 'simulation');
+
+      for (const [node, section] of [
+        ['Q1', 'queue-messages'],
+        ['P1', 'producer-composer'],
+        ['C1', 'consumer-settings'],
+      ] as const) {
+        choose([node]);
+        const position = screen
+          .getByTestId(section)
+          .compareDocumentPosition(screen.getByRole('button', { name: /^Delete/ }));
+        expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    });
+
+    it('is not there for an edge, or for several things', async () => {
+      const { choose } = await renderInspector({}, 'simulation');
+
+      choose([], ['E1>Q1']);
+      expect(shown()).toEqual([]);
+      choose(['Q1', 'P1']);
+      expect(shown()).toEqual([]);
+    });
+
+    it('forgets what a field was refused for when another node is selected', async () => {
+      const { choose } = await renderInspector({ nodes: ['P1'] }, 'simulation');
+      const burst = screen.getByRole('spinbutton', { name: 'Messages at a time' }) as HTMLInputElement;
+      burst.value = '0';
+      fireEvent.change(burst);
+      expect(screen.getByTestId('refusal')).toBeVisible();
+
+      choose(['C1']);
+      choose(['P1']);
+
+      expect(screen.queryByTestId('refusal')).toBeNull();
     });
   });
 

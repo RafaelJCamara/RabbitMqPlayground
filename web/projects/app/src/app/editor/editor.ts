@@ -20,6 +20,8 @@ import { newNodeKey } from '../canvas/model/new-node';
 import { popoverPosition, type Point, type Size } from '../canvas/model/transform';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
+import { Simulation } from '../core/runtime/simulation';
 import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { isVirtual } from '../core/state/default-exchange';
@@ -45,6 +47,7 @@ import { LinkPicker } from './link-picker';
 import { NewNodeFocus } from './new-node-focus';
 import { RenameField, type RenameBy } from './rename-field';
 import { saveText } from './save-text';
+import { SimulationBar } from '../simulation/simulation-bar';
 import { StatusBar } from './status-bar';
 import { Toolbox, TOOLBOX } from './toolbox';
 import { TopBar } from './top-bar';
@@ -87,6 +90,7 @@ interface Peek {
   selector: 'rmq-editor',
   imports: [
     TopBar,
+    SimulationBar,
     StatusBar,
     Toolbox,
     FlowCanvas,
@@ -115,10 +119,14 @@ interface Peek {
     EditorActions,
     KeyboardService,
     CheatSheetService,
+    ...RUNTIME_SERVICES,
   ],
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
       <rmq-top-bar />
+      @if (simulation.enabled) {
+        <rmq-simulation-bar />
+      }
       <rmq-how-to-link />
       <div class="flex min-h-0 flex-1">
         <aside class="border-line bg-panel w-52 shrink-0 overflow-y-auto border-r p-3" aria-label="Toolbox">
@@ -207,6 +215,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly selection = inject(SelectionStore);
   protected readonly intents = inject(IntentHandler);
   protected readonly keys = inject(KeyboardService);
+  protected readonly simulation = inject(Simulation);
   private readonly links = inject(LinkFlow);
   private readonly actions = inject(EditorActions);
   private readonly cheatSheet = inject(CheatSheetService);
@@ -253,6 +262,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         drawnEdges: () => [...this.viewport.drawn()],
         intents: () => this.intentLog,
         viewport: () => this.viewport.live(),
+        simulationState: () => (this.simulation.enabled ? this.simulation.debugState() : null),
       });
       inject(DestroyRef).onDestroy(detach);
     }

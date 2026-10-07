@@ -145,11 +145,12 @@ export class CommandBus {
   run(command: RuntimeCommand, origin: CommandOrigin, options: ApplyOptions = {}): Result<RuntimeOutcome> {
     const document = this.store.document();
     const host = this.host;
-    const issue = host === null ? SIMULATION_OFF : runtimeIssue(document, command);
-    if (host === null || issue !== null) {
-      const refused = issue ?? SIMULATION_OFF;
-      this.refuse(refused, origin);
-      return fail(refused);
+    if (host === null) {
+      return this.refused(SIMULATION_OFF, origin);
+    }
+    const issue = runtimeIssue(document, command);
+    if (issue !== null) {
+      return this.refused(issue, origin);
     }
     const outcome = host.execute(command);
     if (options.say !== false) {
@@ -161,6 +162,11 @@ export class CommandBus {
       this.notify({ command, origin, before: document, after: document });
     }
     return ok(outcome);
+  }
+
+  private refused(issue: Issue, origin: CommandOrigin): Result<never> {
+    this.refuse(issue, origin);
+    return fail(issue);
   }
 
   /** The simulation says that it is the one that runs the commands of the runtime, until the function that it gets is called. */

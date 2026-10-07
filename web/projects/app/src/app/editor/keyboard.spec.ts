@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONNECT_KEYS, GRAB_KEYS } from '../canvas/model/guard';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { EditorActions } from './actions';
 import {
   formatChord,
@@ -287,12 +288,35 @@ describe('isInCanvas', () => {
 });
 
 describe('KeyboardService', () => {
+  /** The feature flags that are on, as the address says them. */
+  let flags: string | null = null;
   let actions: Record<
-    'undo' | 'redo' | 'fit' | 'renameSelected' | 'editSelected' | 'openCommandBar' | 'openCheatSheet',
+    | 'undo'
+    | 'redo'
+    | 'fit'
+    | 'renameSelected'
+    | 'editSelected'
+    | 'openCommandBar'
+    | 'openCheatSheet'
+    | 'togglePlay'
+    | 'step'
+    | 'publishSelected',
     ReturnType<typeof vi.fn>
   >;
   let service: KeyboardService;
   let root: HTMLElement;
+
+  /** The page that a key is pressed in, with a listener on the root of the editor as the editor has. */
+  const mount = (): void => {
+    document.body.innerHTML = `
+      <div id="root" tabindex="-1">
+        <aside><button id="toolbox-button">Queue</button></aside>
+        <rmq-flow-canvas><f-flow id="flow" tabindex="0"><div id="node"></div></f-flow></rmq-flow-canvas>
+        <aside><input id="name" type="text"><input id="box" type="checkbox"><select id="type"></select></aside>
+      </div>`;
+    root = document.getElementById('root')!;
+    root.addEventListener('keydown', (event) => service.handle(event));
+  };
 
   beforeEach(() => {
     actions = {
@@ -303,19 +327,19 @@ describe('KeyboardService', () => {
       editSelected: vi.fn(() => true),
       openCommandBar: vi.fn(),
       openCheatSheet: vi.fn(),
+      togglePlay: vi.fn(),
+      step: vi.fn(),
+      publishSelected: vi.fn(() => true),
     };
     TestBed.configureTestingModule({
-      providers: [KeyboardService, { provide: EditorActions, useValue: actions }],
+      providers: [
+        KeyboardService,
+        { provide: EditorActions, useValue: actions },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+      ],
     });
     service = TestBed.inject(KeyboardService);
-    document.body.innerHTML = `
-      <div id="root" tabindex="-1">
-        <aside><button id="toolbox-button">Queue</button></aside>
-        <rmq-flow-canvas><f-flow id="flow" tabindex="0"><div id="node"></div></f-flow></rmq-flow-canvas>
-        <aside><input id="name" type="text"><input id="box" type="checkbox"><select id="type"></select></aside>
-      </div>`;
-    root = document.getElementById('root')!;
-    root.addEventListener('keydown', (event) => service.handle(event));
+    mount();
   });
 
   /** Sends a key to an element, as the browser does, and answers whether the page was left to act on it. */
@@ -381,6 +405,82 @@ describe('KeyboardService', () => {
 
       expect(actions.fit).not.toHaveBeenCalled();
       expect(actions.renameSelected).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the keys of the simulation (ADR-0054)', () => {
+    it('are left to the page without the flag: Space, the full stop and P are not taken, and nothing is run', () => {
+      expect(send('flow', { key: ' ' }).prevented).toBe(false);
+      expect(send('flow', { key: '.' }).prevented).toBe(false);
+      expect(send('flow', { key: 'p' }).prevented).toBe(false);
+
+      expect(actions.togglePlay).not.toHaveBeenCalled();
+      expect(actions.step).not.toHaveBeenCalled();
+      expect(actions.publishSelected).not.toHaveBeenCalled();
+    });
+
+    describe('with the flag', () => {
+      beforeEach(() => {
+        TestBed.resetTestingModule();
+        flags = 'simulation';
+        TestBed.configureTestingModule({
+          providers: [
+            KeyboardService,
+            { provide: EditorActions, useValue: actions },
+            { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+          ],
+        });
+        service = TestBed.inject(KeyboardService);
+        mount();
+      });
+
+      afterEach(() => {
+        flags = null;
+      });
+
+      it('play or pause on Space, with the key that asked, and keep the page from scrolling', () => {
+        const { prevented } = send('flow', { key: ' ' });
+
+        expect(prevented).toBe(true);
+        expect(actions.togglePlay).toHaveBeenCalledWith('key');
+      });
+
+      it('step on the full stop', () => {
+        const { prevented } = send('node', { key: '.' });
+
+        expect(prevented).toBe(true);
+        expect(actions.step).toHaveBeenCalledWith('key');
+      });
+
+      it('publish on P, in either case, and leave the key to the page when what is selected is not a producer', () => {
+        expect(send('flow', { key: 'p' }).prevented).toBe(true);
+        expect(send('flow', { key: 'P', shiftKey: true }).prevented).toBe(false);
+        actions.publishSelected.mockReturnValue(false);
+
+        expect(send('flow', { key: 'p' }).prevented).toBe(false);
+        expect(actions.publishSelected).toHaveBeenCalledWith('key');
+      });
+
+      it('do nothing outside the canvas, where a single key is not a shortcut, and in a text field, where it is typed', () => {
+        send('toolbox-button', { key: ' ' });
+        send('name', { key: ' ' });
+        send('name', { key: '.' });
+        send('name', { key: 'p' });
+
+        expect(actions.togglePlay).not.toHaveBeenCalled();
+        expect(actions.step).not.toHaveBeenCalled();
+        expect(actions.publishSelected).not.toHaveBeenCalled();
+      });
+
+      it('do nothing with a modifier held, because that is another key', () => {
+        send('flow', { key: ' ', ctrlKey: true });
+        send('flow', { key: '.', altKey: true });
+        send('flow', { key: 'p', metaKey: true });
+
+        expect(actions.togglePlay).not.toHaveBeenCalled();
+        expect(actions.step).not.toHaveBeenCalled();
+        expect(actions.publishSelected).not.toHaveBeenCalled();
+      });
     });
   });
 

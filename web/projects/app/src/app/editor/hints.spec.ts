@@ -61,10 +61,24 @@ describe('hintsFor', () => {
   });
 
   it('is made from the table, in its order, so that a row that is added shows up', () => {
-    const everything = hintsFor({ nodes: 1, edges: 0, kind: 'queue' }, false).map((hint) => hint.id);
+    const everything = hintsFor({ nodes: 1, edges: 0, kind: 'queue' }, false, ['simulation']).map((hint) => hint.id);
     const table = SHORTCUTS.filter((row) => row.shows({ nodes: 1, edges: 0, kind: 'queue' })).map((row) => row.id);
 
     expect(everything).toEqual(table);
+  });
+
+  it('says the keys of the simulation when the flag is on, and not otherwise, and P only for a producer', () => {
+    const ids = (selection: Parameters<typeof hintsFor>[0], enabled: Parameters<typeof hintsFor>[2]) =>
+      hintsFor(selection, false, enabled).map((hint) => hint.id);
+
+    expect(ids({ nodes: 0, edges: 0 }, [])).not.toEqual(expect.arrayContaining(['play']));
+    expect(ids({ nodes: 0, edges: 0 }, ['simulation'])).toEqual(expect.arrayContaining(['play', 'step']));
+    expect(ids({ nodes: 0, edges: 0 }, ['simulation'])).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 0, kind: 'queue' }, ['simulation'])).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 0, kind: 'producer' }, ['simulation'])).toContain('publish');
+    expect(ids({ nodes: 1, edges: 0, kind: 'producer' }, [])).not.toContain('publish');
+    expect(ids({ nodes: 2, edges: 0 }, ['simulation'])).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 1, kind: 'producer' }, ['simulation'])).not.toContain('publish');
   });
 
   it('writes the modifier that the platform has', () => {

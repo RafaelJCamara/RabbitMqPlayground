@@ -1,5 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import type { ElementKind } from '@rmq/domain';
+import { FeatureFlags } from '../core/flags/feature-flags';
+import type { FlagName } from '../core/flags/flags';
 import { EditorActions } from './actions';
 
 /**
@@ -44,6 +46,8 @@ export interface Shortcut {
    */
   readonly inFields?: boolean;
   readonly owner: 'app' | 'library';
+  /** The feature flag that the row is for (ADR-0004). Without it the key is the page's, and the hint bar and the cheat-sheet do not say it. */
+  readonly flag?: FlagName;
   /** Whether it is worth showing for this selection. */
   readonly shows: (selection: SelectionFacts) => boolean;
   /** What the app does. It answers `false` when it had nothing to do, so that the key is left for the page. */
@@ -53,6 +57,7 @@ export interface Shortcut {
 const always = (): boolean => true;
 const something = (selection: SelectionFacts): boolean => selection.nodes + selection.edges > 0;
 const oneNode = (selection: SelectionFacts): boolean => selection.nodes === 1 && selection.edges === 0;
+const oneProducer = (selection: SelectionFacts): boolean => oneNode(selection) && selection.kind === 'producer';
 
 export const SHORTCUTS: readonly Shortcut[] = [
   {
@@ -118,6 +123,37 @@ export const SHORTCUTS: readonly Shortcut[] = [
     run: (actions) => actions.fit(),
   },
   {
+    id: 'play',
+    label: 'Play or pause the simulation',
+    chords: [{ key: ' ' }],
+    keys: 'Space',
+    scope: 'canvas',
+    owner: 'app',
+    flag: 'simulation',
+    shows: always,
+    run: (actions) => actions.togglePlay('key'),
+  },
+  {
+    id: 'step',
+    label: 'Step to the next event',
+    chords: [{ key: '.' }],
+    scope: 'canvas',
+    owner: 'app',
+    flag: 'simulation',
+    shows: always,
+    run: (actions) => actions.step('key'),
+  },
+  {
+    id: 'publish',
+    label: 'Publish from the producer',
+    chords: [{ key: 'p' }],
+    scope: 'canvas',
+    owner: 'app',
+    flag: 'simulation',
+    shows: oneProducer,
+    run: (actions) => actions.publishSelected('key'),
+  },
+  {
     id: 'zoom',
     label: 'Zoom',
     chords: [{ key: '+' }, { key: '-' }, { key: '0' }],
@@ -178,6 +214,10 @@ export const SHORTCUTS: readonly Shortcut[] = [
   },
 ];
 
+/** Whether a row is for the page that this is: it has no flag, or its flag is on. */
+export const available = (row: Shortcut, enabled: readonly FlagName[]): boolean =>
+  row.flag === undefined || enabled.includes(row.flag);
+
 const isMac = (): boolean => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 /** A chord as it is written for a person: `Ctrl+Shift+Z`, `F2`, `M`. */
@@ -186,7 +226,7 @@ export function formatChord(chord: Chord, mac: boolean = isMac()): string {
     ...(chord.mod === true ? [mac ? 'Cmd' : 'Ctrl'] : []),
     ...(chord.alt === true ? [mac ? 'Option' : 'Alt'] : []),
     ...(chord.shift === true ? ['Shift'] : []),
-    chord.key.length === 1 ? chord.key.toUpperCase() : chord.key,
+    chord.key === ' ' ? 'Space' : chord.key.length === 1 ? chord.key.toUpperCase() : chord.key,
   ];
   return parts.join('+');
 }
@@ -249,6 +289,7 @@ export function isInCanvas(target: EventTarget | null): boolean {
 @Injectable()
 export class KeyboardService {
   private readonly actions = inject(EditorActions);
+  private readonly flags = inject(FeatureFlags);
 
   handle(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.isComposing || event.repeat) {
@@ -259,6 +300,7 @@ export class KeyboardService {
     const shortcut = SHORTCUTS.find(
       (row) =>
         row.run !== undefined &&
+        available(row, this.flags.enabled) &&
         (!inField || row.inFields === true) &&
         (row.scope === 'app' || inCanvas) &&
         row.chords.some((chord) => matches(chord, event)),

@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { createEngine } from '@rmq/engine';
 import { documentOf, queueRecord } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { APP_NAME } from '../app-info';
@@ -13,12 +14,20 @@ function flagsWith(stored: string | null): FeatureFlags {
 }
 
 const document = documentOf({ queues: { q1: queueRecord('billing') } });
+const state = {
+  now: 300,
+  running: false,
+  speed: 2,
+  nextAt: 450,
+  view: createEngine({ seed: 1, timing: { publishMs: 0, brokerMs: 0, deliverMs: 0 } }).view(),
+};
 const editor: EditorDebugSources = {
   document: () => document,
   selection: () => ({ nodes: ['q1'], edges: ['x1>q1'] }),
   drawnEdges: () => ['x1>q1'],
   intents: () => [{ type: 'select' }],
   viewport: () => ({ x: 10, y: 20, zoom: 1.5 }),
+  simulationState: () => state,
 };
 
 describe('createDebugHandle', () => {
@@ -45,6 +54,7 @@ describe('createDebugHandle', () => {
     expect(handle.drawnEdges()).toEqual([]);
     expect(handle.intents()).toEqual([]);
     expect(handle.viewport()).toBeNull();
+    expect(handle.simulationState()).toBeNull();
   });
 
   it('says what the editor shows, while it is open, and nothing once it is gone', () => {
@@ -57,6 +67,7 @@ describe('createDebugHandle', () => {
     expect(handle.drawnEdges()).toEqual(['x1>q1']);
     expect(handle.intents()).toEqual([{ type: 'select' }]);
     expect(handle.viewport()).toEqual({ x: 10, y: 20, zoom: 1.5 });
+    expect(handle.simulationState()).toBe(state);
 
     detach();
     expect(handle.document()).toBeNull();

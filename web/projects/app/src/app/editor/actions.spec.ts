@@ -1,12 +1,17 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { sampleDocument } from '@rmq/testing';
+import { manualFrames, sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE } from '../core/runtime/frame-loop';
+import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
+import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { StatusStore } from '../core/state/status-store';
 import { EditorActions, type ActionSurface } from './actions';
 
@@ -20,7 +25,18 @@ describe('EditorActions', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, FlowViewport, EditorActions],
+      providers: [
+        DocumentStore,
+        SelectionStore,
+        StatusStore,
+        CommandBus,
+        FlowViewport,
+        EditorActions,
+        CommandLog,
+        ...RUNTIME_SERVICES,
+        { provide: FRAME_SOURCE, useValue: manualFrames() },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
+      ],
     });
     actions = TestBed.inject(EditorActions);
     store = TestBed.inject(DocumentStore);
@@ -178,6 +194,74 @@ describe('EditorActions', () => {
       selection.select(['Q1']);
 
       expect(() => actions.renameSelected()).not.toThrow();
+    });
+  });
+
+  describe('the simulation (ADR-0054)', () => {
+    beforeEach(() => {
+      // The log listens from the moment that it is made, so it is made before anything is done.
+      TestBed.inject(CommandLog);
+    });
+
+    const lines = () =>
+      TestBed.inject(CommandLog)
+        .entries()
+        .map(({ origin, text }) => `${origin}: ${text}`);
+
+    it('plays what is paused and pauses what plays, as the command that it was, with the origin of what asked', () => {
+      actions.togglePlay('key');
+      expect(TestBed.inject(Simulation).running()).toBe(false);
+      actions.togglePlay('toolbar');
+      expect(TestBed.inject(Simulation).running()).toBe(true);
+
+      expect(lines()).toEqual(['key: pause', 'toolbar: play']);
+      expect(TestBed.inject(StatusStore).notice()).toEqual({ kind: 'message', text: 'Playing at 1×.' });
+    });
+
+    it('steps, as a command, and says what the step did', () => {
+      actions.step('key');
+
+      expect(lines()).toEqual(['key: step']);
+      expect(TestBed.inject(StatusStore).notice()).toMatchObject({
+        kind: 'message',
+        text: expect.stringMatching(/^Stepped: /),
+      });
+    });
+
+    it('publishes from the producer that is selected, and answers true, so that the key is taken', () => {
+      selection.select(['P1']);
+
+      expect(actions.publishSelected('key')).toBe(true);
+
+      expect(lines()).toEqual(['key: publish sender']);
+      expect(TestBed.inject(StatusStore).notice()).toEqual({
+        kind: 'message',
+        text: 'Published 2 messages from sender.',
+      });
+    });
+
+    it('answers false, and does nothing, when what is selected is not one producer, so that the key is left for the page', () => {
+      expect(actions.publishSelected('key')).toBe(false);
+      selection.select(['Q1']);
+      expect(actions.publishSelected('key')).toBe(false);
+      selection.select(['P1', 'Q1']);
+      expect(actions.publishSelected('key')).toBe(false);
+      selection.select([], ['E1>Q1']);
+      expect(actions.publishSelected('key')).toBe(false);
+      selection.select(['gone']);
+      expect(actions.publishSelected('key')).toBe(false);
+
+      expect(lines()).toEqual([]);
+    });
+
+    it('says why, and publishes nothing, for a producer that is linked to nothing', () => {
+      TestBed.inject(CommandBus).apply({ type: 'unlink', producer: 'sender' }, 'gesture');
+      selection.select(['P1']);
+
+      expect(actions.publishSelected('key')).toBe(true);
+
+      expect(TestBed.inject(StatusStore).refusal()).toMatchObject({ origin: 'key', issue: { kind: 'not-linked' } });
+      expect(lines()).toEqual(['gesture: unlink sender']);
     });
   });
 

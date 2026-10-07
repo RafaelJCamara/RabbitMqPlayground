@@ -9,10 +9,11 @@ export interface FrameSource {
 export const FRAME_SOURCE = new InjectionToken<FrameSource>('FRAME_SOURCE', {
   providedIn: 'root',
   factory: () => {
-    const win = inject(DOCUMENT).defaultView;
+    // A page that runs the app has a window: the app is never made where there is none.
+    const win = inject(DOCUMENT).defaultView as Window;
     return {
-      request: (callback) => win?.requestAnimationFrame(callback) ?? 0,
-      cancel: (handle) => win?.cancelAnimationFrame(handle),
+      request: (callback) => win.requestAnimationFrame(callback),
+      cancel: (handle) => win.cancelAnimationFrame(handle),
     };
   },
 });

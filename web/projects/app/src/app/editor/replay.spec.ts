@@ -6,7 +6,8 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { allowedTargets, edgeKeys, elements, type CanvasDocument, type Id } from '@rmq/domain';
-import { configureFastCheck } from '@rmq/testing';
+import type { EngineEvent } from '@rmq/engine';
+import { configureFastCheck, manualFrames } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { CommandRunner } from '../command-bar/runner';
@@ -14,6 +15,10 @@ import { nextSteps } from '../command-bar/suggestions';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { CanvasIntent, LinkVia } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
+import { FeatureFlags, FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE } from '../core/runtime/frame-loop';
+import { RUNTIME_SERVICES } from '../core/runtime/services';
+import { Simulation } from '../core/runtime/simulation';
 import { rebindCommand, unbindCommand } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
@@ -31,6 +36,9 @@ import { TOOLBOX } from './toolbox';
  * property that holds it for whatever the app can do: a sequence of what a learner does, played through the services that the editor is made of (the intents of the canvas, the
  * one function that links, the commands of the inspector, the actions of the top bar and the lines of the command bar), is logged, and the log is run through the function that
  * the bar uses in an editor that begins empty. The two documents are equal, ids and places included, and the replayed lines are the logged lines, which is what makes a log copyable.
+ *
+ * It holds the simulation too (ADR-0054): what is done to it, with a key, a button, the inspector or a line, is in the log, and a log that is typed again makes the same simulation,
+ * which is that the same seed and the same commands say the same events, in the same order, and the engine ends with the same view. The clock only moves by `step`, which a line can say.
  *
  * It runs in the hook and in CI with the seed and the number of runs of the libraries (FC_SEED, FC_NUM_RUNS: 100), and in the nightly job at 5,000 with a seed of its own.
  */
@@ -78,6 +86,14 @@ type Action =
   | { readonly kind: 'default-exchange'; readonly on: boolean }
   | { readonly kind: 'set'; readonly node: number; readonly value: number }
   | { readonly kind: 'layout' }
+  | { readonly kind: 'publish'; readonly producer: number; readonly origin: 'key' | 'toolbar' | 'inspector' }
+  | { readonly kind: 'publish-to'; readonly exchange: number; readonly key: number }
+  | { readonly kind: 'purge'; readonly queue: number }
+  | { readonly kind: 'step'; readonly origin: 'key' | 'toolbar' }
+  | { readonly kind: 'toggle'; readonly origin: 'key' | 'toolbar' }
+  | { readonly kind: 'speed'; readonly choice: number }
+  | { readonly kind: 'clear-messages' }
+  | { readonly kind: 'reset-counters' }
   | { readonly kind: 'undo' }
   | { readonly kind: 'redo' }
   | { readonly kind: 'typed'; readonly step: number };
@@ -134,6 +150,33 @@ const arbAction: fc.Arbitrary<Action> = fc.oneof(
     arbitrary: fc.record({ kind: fc.constant('set' as const), node: index, value: fc.nat({ max: 5_000 }) }),
   },
   { weight: 1, arbitrary: fc.constant({ kind: 'layout' as const }) },
+  {
+    weight: 4,
+    arbitrary: fc.record({
+      kind: fc.constant('publish' as const),
+      producer: index,
+      origin: fc.constantFrom<'key' | 'toolbar' | 'inspector'>('key', 'toolbar', 'inspector'),
+    }),
+  },
+  { weight: 3, arbitrary: fc.record({ kind: fc.constant('publish-to' as const), exchange: index, key: index }) },
+  { weight: 1, arbitrary: fc.record({ kind: fc.constant('purge' as const), queue: index }) },
+  {
+    weight: 10,
+    arbitrary: fc.record({
+      kind: fc.constant('step' as const),
+      origin: fc.constantFrom<'key' | 'toolbar'>('key', 'toolbar'),
+    }),
+  },
+  {
+    weight: 2,
+    arbitrary: fc.record({
+      kind: fc.constant('toggle' as const),
+      origin: fc.constantFrom<'key' | 'toolbar'>('key', 'toolbar'),
+    }),
+  },
+  { weight: 1, arbitrary: fc.record({ kind: fc.constant('speed' as const), choice: index }) },
+  { weight: 1, arbitrary: fc.constant({ kind: 'clear-messages' as const }) },
+  { weight: 1, arbitrary: fc.constant({ kind: 'reset-counters' as const }) },
   { weight: 3, arbitrary: fc.constant({ kind: 'undo' as const }) },
   { weight: 2, arbitrary: fc.constant({ kind: 'redo' as const }) },
   { weight: 3, arbitrary: fc.record({ kind: fc.constant('typed' as const), step: index }) },
@@ -155,8 +198,18 @@ const SERVICES: (Provider | EnvironmentProviders)[] = [
   IntentHandler,
   EditorActions,
   CommandRunner,
+  ...RUNTIME_SERVICES,
+  // The flags are the root's unless an injector has its own, and the editor that is made here is one that has the simulation.
+  FeatureFlags,
+  { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
+  // No frame ever runs, so that the clock moves only by `step`, which a line can say.
+  { provide: FRAME_SOURCE, useValue: manualFrames() },
   { provide: Announcer, useValue: QUIET },
 ];
+
+/** The keys that a message to an exchange is given: one that a direct exchange may match, and one that nothing does. */
+const MESSAGE_KEYS = ['', 'a', 'order.created', 'x'];
+const SPEEDS = [0.25, 0.5, 1, 2, 4];
 
 /** The editor, without a canvas to draw: the services that make it, and a surface that answers what the learner would be asked from the numbers of the action. */
 function editor() {
@@ -189,7 +242,12 @@ function editor() {
   };
   const intents = injector.get(IntentHandler);
   intents.surface = { openMenu: () => undefined, startRename: () => undefined, showPeek: () => undefined };
+  const simulation = injector.get(Simulation);
+  const heard: EngineEvent[] = [];
+  simulation.onEvents((events) => heard.push(...events));
   return {
+    simulation,
+    heard,
     injector,
     answers,
     links,
@@ -338,6 +396,58 @@ function play(e: Editor, action: Action): void {
     case 'layout':
       e.actions.layout();
       return;
+    case 'publish': {
+      const found = pick(
+        elements(document).filter(({ kind }) => kind === 'producer'),
+        action.producer,
+      );
+      if (found !== undefined) {
+        e.bus.run({ type: 'publish', from: { kind: 'producer', name: found.name } }, action.origin);
+      }
+      return;
+    }
+    case 'publish-to': {
+      const found = pick(
+        elements(document).filter(({ kind }) => kind === 'exchange'),
+        action.exchange,
+      );
+      if (found !== undefined) {
+        e.bus.run(
+          {
+            type: 'publish',
+            from: { kind: 'exchange', name: found.name },
+            key: MESSAGE_KEYS[action.key % MESSAGE_KEYS.length] as string,
+          },
+          'inspector',
+        );
+      }
+      return;
+    }
+    case 'purge': {
+      const found = pick(
+        elements(document).filter(({ kind }) => kind === 'queue'),
+        action.queue,
+      );
+      if (found !== undefined) {
+        e.bus.run({ type: 'purge', queue: found.name }, 'inspector');
+      }
+      return;
+    }
+    case 'step':
+      e.actions.step(action.origin);
+      return;
+    case 'toggle':
+      e.actions.togglePlay(action.origin);
+      return;
+    case 'speed':
+      e.bus.run({ type: 'speed', factor: SPEEDS[action.choice % SPEEDS.length] as number }, 'toolbar');
+      return;
+    case 'clear-messages':
+      e.bus.run({ type: 'clear-messages' }, 'toolbar');
+      return;
+    case 'reset-counters':
+      e.bus.run({ type: 'reset-counters' }, 'toolbar');
+      return;
     case 'undo':
       e.actions.undo('toolbar');
       return;
@@ -352,6 +462,15 @@ function play(e: Editor, action: Action): void {
         'layout',
         'set canvas default-exchange=true',
         'set canvas seed=7',
+        'step',
+        'pause',
+        'play',
+        'speed 2',
+        'clear messages',
+        'reset counters',
+        ...elements(document)
+          .filter(({ kind }) => kind === 'producer')
+          .map(({ name }) => `publish ${name.includes(' ') ? `"${name}"` : name}`),
       ];
       e.runner.run(pick(lines, action.step) as string);
       return;
@@ -384,6 +503,11 @@ describe('a session replayed from its log (ADR-0046)', () => {
 
           expect(second.store.document()).toEqual(made);
           expect(second.log.entries().map(({ text }) => text)).toEqual(lines);
+          // The simulation too: the same commands say the same events, in the same order, and leave the same engine.
+          expect(second.heard).toEqual(first.heard);
+          expect(second.simulation.view()).toEqual(first.simulation.view());
+          expect(second.simulation.running()).toBe(first.simulation.running());
+          expect(second.simulation.speed()).toBe(first.simulation.speed());
         } finally {
           first.injector.destroy();
           second.injector.destroy();
@@ -391,6 +515,63 @@ describe('a session replayed from its log (ADR-0046)', () => {
       }),
     );
   }, 600_000);
+
+  it('has sessions in which the simulation has something to do: messages are sent, routed and kept, and the commands that did it are in the log', () => {
+    const said = new Set<string>();
+    const logged = new Set<string>();
+    for (const session of fc.sample(arbSession, { numRuns: 300, seed: 11 })) {
+      const e = editor();
+      try {
+        for (const action of session) {
+          play(e, action);
+        }
+        e.heard.forEach(({ type }) => said.add(type));
+        e.log.entries().forEach(({ text }) => logged.add(text.split(' ')[0] as string));
+      } finally {
+        e.injector.destroy();
+      }
+    }
+
+    expect([...said]).toEqual(expect.arrayContaining(['published', 'routed', 'enqueued']));
+    expect([...logged]).toEqual(expect.arrayContaining(['publish', 'step', 'pause', 'play', 'speed', 'reset']));
+  });
+
+  it('replays a purge, which a random session seldom gets to: a queue that has messages ready, and a line that takes them', () => {
+    const first = editor();
+    const second = editor();
+    try {
+      for (const line of [
+        'declare exchange orders type=direct',
+        'declare queue billing',
+        'bind orders -> billing key=new',
+        'pause',
+        'publish orders key=new payload=one',
+        'publish orders key=new payload=two',
+        'step',
+        'step',
+        'step',
+        'step',
+      ]) {
+        expect(first.runner.run(line), line).toEqual({ kind: 'applied' });
+      }
+      expect(first.simulation.view().queues['billing']).toMatchObject({ ready: 2 });
+      play(first, { kind: 'purge', queue: 0 });
+      expect(first.simulation.view().queues['billing']).toMatchObject({ ready: 0 });
+
+      const lines = first.log.entries().map(({ text }) => text);
+      for (const line of lines) {
+        expect(second.runner.run(line), line).toEqual({ kind: 'applied' });
+      }
+
+      expect(lines.at(-1)).toBe('purge billing');
+      expect(second.heard).toEqual(first.heard);
+      expect(second.heard.some(({ type }) => type === 'queue.purged')).toBe(true);
+      expect(second.simulation.view()).toEqual(first.simulation.view());
+    } finally {
+      first.injector.destroy();
+      second.injector.destroy();
+    }
+  });
 
   it('logs nothing for a session that changed nothing, and leaves the canvas that it began with', () => {
     const e = editor();

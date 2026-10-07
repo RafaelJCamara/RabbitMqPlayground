@@ -29,6 +29,11 @@ export const ICONS = {
   rename: 'M4 20l4-1 11-11-3-3L5 16z M14 6l3 3',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   close: 'M6 6l12 12 M18 6L6 18',
+  play: 'M7 4l13 8-13 8z',
+  pause: 'M8 5v14 M16 5v14',
+  step: 'M5 5l10 7-10 7z M19 5v14',
+  send: 'M21 3L3 10l7 3 3 7z M10 13l11-10',
+  reset: 'M4 4v6h6 M4.5 14a8 8 0 1 0 1-6',
 } as const;
 
 export type IconName = keyof typeof ICONS;

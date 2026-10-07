@@ -3,6 +3,7 @@ import { KIND_LABEL, type DocumentCommand, type ExchangeChanges, type Issue } fr
 import type { ExchangeType } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXCHANGE_TYPES } from '../canvas/model/new-node';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { rebindCommand, unbindCommand, type BindingRow } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
@@ -16,6 +17,9 @@ import { IntentHandler } from './intents';
 import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
 import { LinkFlow } from './link-flow';
 import { RefusalNotice } from '../core/ui/refusal-notice';
+import { ConsumerSettings } from '../simulation/consumer-settings';
+import { ProducerComposer } from '../simulation/producer-composer';
+import { QueueMessages } from '../simulation/queue-messages';
 
 /** The fields that can be refused, each of which shows what it was refused for: a name such as `name` or `x`, or `binding:` and the id of a binding of an edge, which is a field of its own. */
 type Field = string;
@@ -43,7 +47,7 @@ let nextInspector = 0;
  */
 @Component({
   selector: 'rmq-inspector',
-  imports: [Icon, Help, Switch, RefusalNotice],
+  imports: [Icon, Help, Switch, RefusalNotice, QueueMessages, ProducerComposer, ConsumerSettings],
   template: `
     <div class="flex flex-col gap-4" data-testid="inspector">
       @if (node(); as n) {
@@ -214,6 +218,20 @@ let nextInspector = 0;
               </div>
             }
           </div>
+        }
+
+        @if (simulation) {
+          @switch (n.element) {
+            @case ('queue') {
+              <rmq-queue-messages [id]="n.id" />
+            }
+            @case ('producer') {
+              <rmq-producer-composer [id]="n.id" />
+            }
+            @case ('consumer') {
+              <rmq-consumer-settings [id]="n.id" />
+            }
+          }
         }
 
         <button
@@ -410,6 +428,8 @@ export class Inspector {
   private readonly links = inject(LinkFlow);
   private readonly viewport = inject(FlowViewport);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  /** The parts of the inspector that the simulation adds are there only with its flag (ADR-0056). */
+  protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   private readonly uid = `rmq-inspector-${nextInspector++}`;
 
   protected readonly kindLabel = KIND_LABEL;

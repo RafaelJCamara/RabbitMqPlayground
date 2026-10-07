@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import type { CanvasDocument } from '@rmq/domain';
+import type { SimulationState } from '../runtime/simulation';
 
 /** The live transform of the canvas: where its origin is on the screen, and how far it is zoomed. */
 export interface DebugViewport {
@@ -20,6 +21,8 @@ export interface EditorDebugSources {
   /** What the canvas reported, oldest first: the contract suite reads it to tell a drop on a node from a drop on nothing. */
   readonly intents: () => readonly unknown[];
   readonly viewport: () => DebugViewport | null;
+  /** The clock of the simulation, whether it runs, how fast, when the next thing is, and what the engine says of itself (ADR-0056). `null` without the flag. */
+  readonly simulationState: () => SimulationState | null;
 }
 
 /** Where the editor says what it can show. The handle on the window reads from here, and answers nothing until there is an editor. */

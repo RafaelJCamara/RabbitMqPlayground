@@ -1,7 +1,8 @@
 import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
-import type { Id } from '@rmq/domain';
+import { kindOf, nameOf, type Id } from '@rmq/domain';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import type { CommandOrigin } from '../core/state/origin';
@@ -31,6 +32,7 @@ export class EditorActions {
   private readonly viewport = inject(FlowViewport);
   private readonly announcer = inject(Announcer);
   private readonly injector = inject(Injector);
+  private readonly simulation = inject(Simulation);
 
   /** Set by the editor, which owns the field for a name and the inspector. */
   surface: ActionSurface | undefined;
@@ -83,6 +85,30 @@ export class EditorActions {
     } else {
       this.announcer.announce('Select one node first, then press F2 to rename it.');
     }
+  }
+
+  /** Plays what is paused and pauses what plays, which are two commands, and the log has the one that it was (ADR-0054). */
+  togglePlay(origin: CommandOrigin): void {
+    this.bus.run({ type: this.simulation.running() ? 'pause' : 'play' }, origin);
+  }
+
+  step(origin: CommandOrigin): void {
+    this.bus.run({ type: 'step' }, origin);
+  }
+
+  /** Publishes from the producer that is selected. It answers `false` when what is selected is not one, so that the key is left for the page. */
+  publishSelected(origin: CommandOrigin): boolean {
+    const only = this.selection.only();
+    const document = this.store.document();
+    const name =
+      only?.kind === 'node' && kindOf(document, only.id) === 'producer'
+        ? nameOf(document, 'producer', only.id)
+        : undefined;
+    if (name === undefined) {
+      return false;
+    }
+    this.bus.run({ type: 'publish', from: { kind: 'producer', name } }, origin);
+    return true;
   }
 
   openCommandBar(): void {
