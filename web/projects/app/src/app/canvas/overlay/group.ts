@@ -16,6 +16,8 @@ export interface Sprite {
   readonly key: string | null;
   /** Whether any of its messages is one that went back to its queue. */
   readonly redelivered: boolean;
+  /** The number of its message when it stands for one, and `null` for a crowd, which no one message is the shape of (ADR-0063). */
+  readonly message: number | null;
 }
 
 /** How many shapes a canvas is drawn with before a crowd is grouped by place. */
@@ -30,18 +32,26 @@ const SAME_PLACE = 1_000;
 function collect(markers: readonly Marker[], keyOf: (marker: Marker) => string): Sprite[] {
   const groups = new Map<
     string,
-    { edge: string; at: number; count: number; key: string | null; redelivered: boolean }
+    { edge: string; at: number; count: number; key: string | null; redelivered: boolean; message: number | null }
   >();
   for (const marker of markers) {
     const key = keyOf(marker);
     const group = groups.get(key);
     if (group === undefined) {
-      groups.set(key, { edge: marker.edge, at: marker.at, count: 1, key: marker.key, redelivered: marker.redelivered });
+      groups.set(key, {
+        edge: marker.edge,
+        at: marker.at,
+        count: 1,
+        key: marker.key,
+        redelivered: marker.redelivered,
+        message: marker.message,
+      });
     } else {
       group.at = (group.at * group.count + marker.at) / (group.count + 1);
       group.count += 1;
       group.key = group.key === marker.key ? group.key : null;
       group.redelivered ||= marker.redelivered;
+      group.message = null;
     }
   }
   return [...groups.values()];

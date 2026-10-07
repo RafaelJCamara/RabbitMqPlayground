@@ -53,6 +53,7 @@ const sprite = (over: Partial<PlacedSprite> = {}): PlacedSprite => ({
   count: 1,
   key: 'order.created',
   redelivered: false,
+  message: 1,
   x: 100,
   y: 50,
   ...over,

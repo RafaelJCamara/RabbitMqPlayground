@@ -18,14 +18,16 @@ describe('groupMarkers (ADR-0055)', () => {
 
   it('is one shape for one message, with its key and its place', () => {
     expect(groupMarkers([marker({ at: 0.25 })])).toEqual([
-      { edge: 'P>E', at: 0.25, count: 1, key: 'k', redelivered: false },
+      { edge: 'P>E', at: 0.25, count: 1, key: 'k', redelivered: false, message: 1 },
     ]);
   });
 
   it('is one shape for a burst, which is the messages that are on the same edge in the same place, with how many they are', () => {
     const burst = Array.from({ length: 20 }, (_, index) => marker({ message: index + 1 }));
 
-    expect(groupMarkers(burst)).toEqual([{ edge: 'P>E', at: 0.5, count: 20, key: 'k', redelivered: false }]);
+    expect(groupMarkers(burst)).toEqual([
+      { edge: 'P>E', at: 0.5, count: 20, key: 'k', redelivered: false, message: null },
+    ]);
   });
 
   it('keeps apart messages that are on the same edge in other places, and messages in the same place on other edges', () => {
@@ -62,6 +64,17 @@ describe('groupMarkers (ADR-0055)', () => {
 
   it('keeps the key that the messages share, even when it is no key at all', () => {
     expect(groupMarkers([marker({ key: '' }), marker({ key: '' })])[0]?.key).toBe('');
+  });
+
+  it('is the number of its message when it stands for one, and no message when it stands for a crowd, which no one message is the shape of', () => {
+    const [alone, crowd] = groupMarkers([
+      marker({ message: 7, at: 0.1 }),
+      marker({ message: 8, at: 0.9 }),
+      marker({ message: 9, at: 0.9 }),
+    ]);
+
+    expect(alone?.message).toBe(7);
+    expect(crowd?.message).toBeNull();
   });
 
   it('is redelivered when any of its messages is, so that the ring is not lost in a crowd', () => {

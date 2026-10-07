@@ -12,6 +12,7 @@ export interface DebugOverlayFrame {
     readonly count: number;
     readonly key: string | null;
     readonly redelivered: boolean;
+    readonly message: number | null;
   }[];
 }
 

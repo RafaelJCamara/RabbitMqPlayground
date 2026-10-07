@@ -125,7 +125,8 @@ async function renderOverlay(
   const frames = manualFrames();
   const { context, seen } = recordingContext();
   const paletteRead = vi.fn((_host: HTMLElement) => paletteFrom((token) => `<${token}>`));
-  const paths: Record<string, string | null> = options.paths ?? PATHS;
+  // Each test has paths of its own, because one of them draws an edge another way, and that must not be what the next one finds.
+  const paths: Record<string, string | null> = { ...(options.paths ?? PATHS) };
   const live = { x: 10, y: 20, zoom: 1, ...options.viewport?.() };
   const state = { transform: live, host: { width: 800, height: 600 } };
   const view = await render(MessageOverlay, {
@@ -235,7 +236,9 @@ describe('MessageOverlay (ADR-0055)', () => {
     play(50);
 
     // Two messages, 50 ms into a leg of 100, on a line from (0, 0) to (100, 0), with the canvas at (10, 20).
-    expect(last().markers).toEqual([{ edge: 'P>E', x: 60, y: 20, count: 2, key: 'new', redelivered: false }]);
+    expect(last().markers).toEqual([
+      { edge: 'P>E', x: 60, y: 20, count: 2, key: 'new', redelivered: false, message: null },
+    ]);
     expect(last().reducedMotion).toBe(false);
     expect(seen.arcs.at(-1)).toBe('60,20,7');
   });
@@ -565,6 +568,134 @@ describe('MessageOverlay (ADR-0055)', () => {
     frame(1_010);
 
     expect(seen.clears).toBe(wiped);
+  });
+});
+
+describe('a press on a shape (ADR-0063)', () => {
+  /** A press at a point of the host, in the capture phase on the region that the overlay is in, as the browser sends it: before anything under the region has it. */
+  const press = (target: HTMLElement, type: string, x: number, y: number, init: MouseEventInit = {}) => {
+    const event = new MouseEvent(type, { clientX: x, clientY: y, button: 0, bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  /** One message on its way to the broker, 50 ms into a leg of 100, at (60, 20) on the page, which is where a press is a press on it. */
+  async function oneShape(burst = 1) {
+    const view = await renderOverlay({
+      document: {
+        ...traffic(),
+        producers: {
+          P: producerRecord(
+            'sender',
+            { kind: 'exchange', id: 'E' },
+            { message: { payload: 'hi', key: 'new', headers: [] }, burst },
+          ),
+        },
+      },
+    });
+    view.send();
+    view.play(50);
+    const pressed = vi.fn();
+    view.overlay.pressed.subscribe(pressed);
+    const region = (view.fixture.nativeElement as HTMLElement).parentElement as HTMLElement;
+    return { ...view, pressed, region };
+  }
+
+  it('says which shape is at a point of the host, or the nearest that is within reach, and none when there is no shape within reach', async () => {
+    const { overlay } = await oneShape();
+
+    expect(overlay.shapeAt(60, 20)).toMatchObject({ edge: 'P>E', message: 1, count: 1 });
+    expect(overlay.shapeAt(60 + 12, 20)).toMatchObject({ message: 1 });
+    expect(overlay.shapeAt(60 + 12.1, 20)).toBeNull();
+    expect(overlay.shapeAt(60, 20 - 13)).toBeNull();
+    expect(overlay.shapeAt(400, 300)).toBeNull();
+  });
+
+  it('takes a press on a shape when its owner says that a press is to be taken, tells which shape, and keeps the library from having it', async () => {
+    const { fixture, region, pressed } = await oneShape();
+    fixture.componentRef.setInput('pressable', true);
+    const library = vi.fn();
+    const child = region.ownerDocument.createElement('div');
+    region.append(child);
+    child.addEventListener('pointerdown', library);
+
+    const event = press(child, 'pointerdown', 62, 22);
+
+    expect(pressed).toHaveBeenCalledOnce();
+    expect(pressed.mock.calls[0]?.[0]).toMatchObject({ message: 1, count: 1 });
+    expect(library).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('also takes the mouse down and the touch start that a press makes, so that the library does not begin a gesture of its own', async () => {
+    const { fixture, region, pressed } = await oneShape();
+    fixture.componentRef.setInput('pressable', true);
+    const library = vi.fn();
+    const child = region.ownerDocument.createElement('div');
+    region.append(child);
+    child.addEventListener('mousedown', library);
+    child.addEventListener('touchstart', library);
+
+    const mouse = press(child, 'mousedown', 60, 20);
+    const touch = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(touch, 'touches', { value: [{ clientX: 60, clientY: 20 }] });
+    child.dispatchEvent(touch);
+
+    expect(library).not.toHaveBeenCalled();
+    expect(mouse.defaultPrevented).toBe(true);
+    expect(touch.defaultPrevented).toBe(true);
+    // Only the press itself tells the owner: the events that follow it do not make it open twice.
+    expect(pressed).not.toHaveBeenCalled();
+  });
+
+  it('leaves the press to the library when its owner has not said that it is to be taken', async () => {
+    const { region, pressed } = await oneShape();
+    const library = vi.fn();
+    const child = region.ownerDocument.createElement('div');
+    region.append(child);
+    child.addEventListener('pointerdown', library);
+
+    const event = press(child, 'pointerdown', 60, 20);
+
+    expect(library).toHaveBeenCalledOnce();
+    expect(pressed).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('leaves a press that is not on a shape, and one with another button than the main one, and one that is a touch with nothing touched, to the library', async () => {
+    const { fixture, region, pressed } = await oneShape();
+    fixture.componentRef.setInput('pressable', true);
+    const library = vi.fn();
+    const child = region.ownerDocument.createElement('div');
+    region.append(child);
+    child.addEventListener('pointerdown', library);
+    child.addEventListener('touchstart', library);
+
+    press(child, 'pointerdown', 400, 300);
+    press(child, 'pointerdown', 60, 20, { button: 2 });
+    child.dispatchEvent(new Event('touchstart', { bubbles: true, cancelable: true }));
+
+    expect(library).toHaveBeenCalledTimes(3);
+    expect(pressed).not.toHaveBeenCalled();
+  });
+
+  it('says that a crowd is a crowd, with no message, so that its owner can say that it stands for several', async () => {
+    const { fixture, region, pressed } = await oneShape(3);
+    fixture.componentRef.setInput('pressable', true);
+
+    press(region, 'pointerdown', 60, 20);
+
+    expect(pressed.mock.calls[0]?.[0]).toMatchObject({ count: 3, message: null });
+  });
+
+  it('stops listening to the region when it is gone', async () => {
+    const { fixture, region, pressed } = await oneShape();
+    fixture.componentRef.setInput('pressable', true);
+    fixture.destroy();
+
+    press(region, 'pointerdown', 60, 20);
+
+    expect(pressed).not.toHaveBeenCalled();
   });
 });
 

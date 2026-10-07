@@ -6,6 +6,8 @@ import {
   ElementRef,
   inject,
   InjectionToken,
+  input,
+  output,
   untracked,
   viewChild,
   type AfterViewInit,
@@ -61,7 +63,12 @@ export interface DrawnMarker {
   readonly count: number;
   readonly key: string | null;
   readonly redelivered: boolean;
+  /** The number of the message that it stands for, or `null` for a crowd. */
+  readonly message: number | null;
 }
+
+/** How far from the middle of a shape a press still is on it, in pixels: the dot is 14 across, and a target of the pointer is at least 24 (WCAG 2.5.8). */
+export const HIT_RADIUS = 12;
 
 /** What the last frame drew. */
 export interface OverlayFrame {
@@ -76,7 +83,8 @@ const NOTHING: OverlayFrame = { reducedMotion: false, markers: [] };
  * is hidden from a screen reader, because it is a picture of what the engine says and the counts are text elsewhere. A message is drawn on the edge that it is on, and the edge
  * is the one that the library drew: the overlay asks for its path, finds the point at a fraction of its length and puts it on the screen with the transform that the canvas has
  * now, on every frame, so that a pan, a zoom and a dragged node are followed with no copy of the geometry. It draws in the frames of the page, outside change detection, and the
- * loop stops when nothing moves: a canvas at rest costs no frames.
+ * loop stops when nothing moves: a canvas at rest costs no frames. It takes no pointer, and it can be asked what shape is under a point of its host, and for as long as its owner says that a press is
+ * to be taken it takes a press that is on a shape, in the capture phase on the region that it is in, before the library, and says which shape (ADR-0063).
  */
 @Component({
   selector: 'rmq-message-overlay',
@@ -99,6 +107,10 @@ export class MessageOverlay implements AfterViewInit {
   private readonly page = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  /** Whether a press on a shape is taken: the owner says so, and the library has it as it always did while it does not. */
+  readonly pressable = input(false);
+  /** A press on a shape was taken. */
+  readonly pressed = output<DrawnMarker>();
   private readonly surface = viewChild.required<ElementRef<HTMLCanvasElement>>('surface');
 
   /** What the engine's names are on the canvas, worked out again when the document is another one: asked for in the frame, so that a frame never draws by a canvas that has gone. */
@@ -131,6 +143,7 @@ export class MessageOverlay implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    this.listenForPresses();
     this.context = this.contextOf(this.surface().nativeElement);
     if (typeof ResizeObserver === 'function') {
       const observer = new ResizeObserver(() => this.frames.wake());
@@ -143,6 +156,58 @@ export class MessageOverlay implements AfterViewInit {
   /** What the last frame drew: where each shape was, and whether it was drawn still. */
   lastFrame(): OverlayFrame {
     return this.last;
+  }
+
+  /** The shape that the last frame drew at a point of the host, or the nearest within reach of it, or `null` when there is none. */
+  shapeAt(x: number, y: number): DrawnMarker | null {
+    let nearest: DrawnMarker | null = null;
+    let best = HIT_RADIUS;
+    for (const marker of this.last.markers) {
+      const distance = Math.hypot(marker.x - x, marker.y - y);
+      if (distance <= best) {
+        best = distance;
+        nearest = marker;
+      }
+    }
+    return nearest;
+  }
+
+  /**
+   * Takes a press on a shape, before the library, in the capture phase on the region that the overlay is in: the press is not the canvas's then, so the edge under the shape is not selected, and the mouse and the
+   * finger have a way to a message. The events that a press makes after the pointer, a mouse down and a touch start, are taken too, so that the library does not start a gesture of its own from them.
+   */
+  private listenForPresses(): void {
+    const region = this.host.parentElement;
+    if (region === null) {
+      return;
+    }
+    const take = (event: Event, point: { readonly clientX: number; readonly clientY: number } | undefined): void => {
+      if (!this.pressable() || point === undefined || ('button' in event && (event as MouseEvent).button !== 0)) {
+        return;
+      }
+      const box = this.host.getBoundingClientRect();
+      const shape = this.shapeAt(point.clientX - box.left, point.clientY - box.top);
+      if (shape === null) {
+        return;
+      }
+      event.stopPropagation();
+      event.preventDefault();
+      if (event.type === 'pointerdown') {
+        this.pressed.emit(shape);
+      }
+    };
+    const onPointer = (event: Event) => take(event, event as PointerEvent);
+    const onMouse = (event: Event) => take(event, event as MouseEvent);
+    const onTouch = (event: Event) => take(event, (event as TouchEvent).touches?.[0]);
+    region.addEventListener('pointerdown', onPointer, true);
+    region.addEventListener('mousedown', onMouse, true);
+    // A listener of a touch is passive by default on some targets, and a passive one cannot take a press.
+    region.addEventListener('touchstart', onTouch, { capture: true, passive: false });
+    this.destroyRef.onDestroy(() => {
+      region.removeEventListener('pointerdown', onPointer, true);
+      region.removeEventListener('mousedown', onMouse, true);
+      region.removeEventListener('touchstart', onTouch, true);
+    });
   }
 
   /** One frame: what is on the move, put where it is on the screen. It answers whether the frames go on, which they do for as long as something moves. */
@@ -192,7 +257,15 @@ export class MessageOverlay implements AfterViewInit {
     this.painted = placed.length > 0;
     this.last = {
       reducedMotion: reduced,
-      markers: placed.map(({ edge, x, y, count, key, redelivered }) => ({ edge, x, y, count, key, redelivered })),
+      markers: placed.map(({ edge, x, y, count, key, redelivered, message }) => ({
+        edge,
+        x,
+        y,
+        count,
+        key,
+        redelivered,
+        message,
+      })),
     };
   }
 
