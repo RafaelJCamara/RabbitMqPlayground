@@ -63,8 +63,21 @@ export interface ChipText {
   readonly full: string;
 }
 
-/** Whether a chip is the conditions of a headers binding, which is wider than a key (ADR-0070). */
-export const isConditionsChip = (chip: string): boolean => chip.includes(CHIP_SEPARATOR);
+/** Whether a chip is the conditions of a headers binding: it begins with its mode and a separator, which is not how a key begins, and it goes on to more lines where a key is cut (ADR-0071). */
+export const isConditionsChip = (chip: string): boolean =>
+  ['all', 'any', 'all-with-x', 'any-with-x'].some((mode) => chip.startsWith(`${mode}${CHIP_SEPARATOR}`));
+
+/** A space that does not let a line end after it: what goes before a dot in a chip, so that the dot stays with the word that it follows. */
+const NO_BREAK_SPACE = String.fromCodePoint(0xa0);
+
+/**
+ * What a chip says as it is drawn: the text of a headers binding goes on to the next line after a separator and not before it, so that no line begins with a dot, and the count of what is left out
+ * is not broken in two (ADR-0071).
+ */
+export const chipDisplay = (chip: string): string =>
+  isConditionsChip(chip)
+    ? chip.replaceAll(CHIP_SEPARATOR, `${NO_BREAK_SPACE}· `).replace(/ more$/, `${NO_BREAK_SPACE}more`)
+    : chip;
 
 /** The conditions of a binding as a chip writes them: as the grammar writes them (`n=1`, `s="1"`, `exists(f)`), and `(ignored)` after one that the mode does not count. */
 function conditionTexts(headers: HeaderArguments | undefined): string[] {

@@ -230,9 +230,21 @@ rmq-flow-canvas .rmq-chip {
   white-space: nowrap;
 }
 
-/* The chip of a headers binding names a mode and its conditions, and is wider than a key (ADR-0070). */
-rmq-flow-canvas .rmq-chip-wide {
-  max-width: 300px;
+/*
+ * The chip of a headers binding names a mode and its conditions (ADR-0070). Nodes that are 160 apart, as they are laid out, have a line of 136 between them, and the library keeps the label of an edge
+ * inside its line, with 18 of room of its own round the chip: a chip of 118 is the widest that is not pushed over a node, so it goes on to the next line where its text is longer, and is never cut
+ * where it is read (ADR-0071).
+ */
+rmq-flow-canvas .rmq-chip-conditions {
+  max-width: 118px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  line-height: 16px;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 rmq-flow-canvas .rmq-more {

@@ -1,4 +1,4 @@
-import { isConditionsChip } from './labels';
+import { chipDisplay, isConditionsChip } from './labels';
 import { pointAtFraction, type Polyline } from './path';
 import type { Point, Size } from './transform';
 
@@ -29,19 +29,63 @@ export type Rect = Point & Size;
 const CHARACTER = 6.6;
 const PADDING = 16;
 const MAX_CHIP_WIDTH = 160;
-/** The chip of a headers binding is wider than a key (ADR-0070): the same number as the stylesheet. */
-const MAX_CONDITIONS_CHIP_WIDTH = 300;
 const ROW = 20;
 const GAP = 2;
+/**
+ * The chip of a headers binding is 118 wide at most, which is what fits in the line between two nodes that are laid out 160 apart, and goes on to more lines where its text is longer (ADR-0071): a
+ * character is about 4.8 wide at the size of a chip, the sides take 14 and a line is 16 high with 4 of room above and below, so that a chip of one line is as high as a row.
+ */
+const MAX_CONDITIONS_WIDTH = 118;
+const CONDITIONS_CHARACTER = 4.8;
+const CONDITIONS_SIDES = 14;
+const CONDITIONS_LINE = 16;
+const CONDITIONS_ROOM = 4;
 
-/** How big a label of these chips is, from its text: it is worked out, and not measured, so that it can be done before anything is drawn. */
+/**
+ * How many lines a text takes in a room, filled as a browser does: a word at a time, a word on a line of its own when it does not fit after the others, and a word that is wider than a line broken
+ * where the line ends. The words are those that the chip is drawn with, so that the dots and the count stay with the words they follow.
+ */
+function linesOf(text: string, room: number): number {
+  let lines = 1;
+  let used = 0;
+  for (const word of chipDisplay(text).split(' ')) {
+    const width = word.length * CONDITIONS_CHARACTER;
+    if (used > 0 && used + CONDITIONS_CHARACTER + width <= room) {
+      used += CONDITIONS_CHARACTER + width;
+    } else {
+      const taken = Math.max(1, Math.ceil(width / room));
+      lines += (used > 0 ? 1 : 0) + taken - 1;
+      used = width - (taken - 1) * room;
+    }
+  }
+  return lines;
+}
+
+/** How big a chip is, from its text. */
+function chipSize(text: string): Size {
+  if (!isConditionsChip(text)) {
+    return { width: Math.min(MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING), height: ROW };
+  }
+  const lines = linesOf(text, MAX_CONDITIONS_WIDTH - CONDITIONS_SIDES);
+  return {
+    width:
+      lines > 1
+        ? MAX_CONDITIONS_WIDTH
+        : Math.min(MAX_CONDITIONS_WIDTH, text.length * CONDITIONS_CHARACTER + CONDITIONS_SIDES),
+    height: lines * CONDITIONS_LINE + CONDITIONS_ROOM,
+  };
+}
+
+/** How big a label of these chips is, from their text: it is worked out, and not measured, so that it can be done before anything is drawn. */
 export function estimateLabelSize(chips: readonly string[], more: number): Size {
-  const texts = more > 0 ? [...chips, `+${more} more`] : chips;
-  const rows = Math.max(1, texts.length);
-  const widths = texts.map((text) =>
-    Math.min(isConditionsChip(text) ? MAX_CONDITIONS_CHIP_WIDTH : MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING),
-  );
-  return { width: Math.max(PADDING, ...widths), height: rows * ROW + (rows - 1) * GAP };
+  const sizes = (more > 0 ? [...chips, `+${more} more`] : chips).map(chipSize);
+  if (sizes.length === 0) {
+    return { width: PADDING, height: ROW };
+  }
+  return {
+    width: Math.max(PADDING, ...sizes.map(({ width }) => width)),
+    height: sizes.reduce((sum, { height }) => sum + height, 0) + (sizes.length - 1) * GAP,
+  };
 }
 
 /** How much of `a` is on `b`, as an area: nothing when they only touch, or are apart. */

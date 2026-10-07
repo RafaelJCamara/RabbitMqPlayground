@@ -161,13 +161,40 @@ describe('estimateLabelSize', () => {
     expect(estimateLabelSize(['x'.repeat(200)], 0).width).toBeLessThanOrEqual(180);
   });
 
-  it('lets the chip of a headers binding grow to 300, which the stylesheet does, and a chip of a key to 160 (ADR-0070)', () => {
-    const conditions = 'all · ' + 'x'.repeat(100);
+  it('makes the chip of a headers binding 118 wide at most, and as many lines high as its words need (ADR-0071)', () => {
+    // One line: 4.8 for each of the nine characters and 14 for the sides, and a line is 16 high with 4 of room, so it is as high as a row of a key.
+    expect(estimateLabelSize(['all · a=1'], 0).width).toBeCloseTo(9 * 4.8 + 14, 5);
+    expect(estimateLabelSize(['all · a=1'], 0).height).toBe(20);
+    // The room for text is 104. "all ·", "format=pdf ·" and "type=report ·" are 24, 57.6 and 62.4 with a space between, which is 153.6, so the third goes on to a second line.
+    expect(estimateLabelSize(['all · format=pdf · type=report · size=10'], 0)).toEqual({
+      width: 118,
+      height: 2 * 16 + 4,
+    });
+    // A key is cut where it was, at 160, in one row, and a text that has the separator in it, but does not begin as a mode does, is a key.
+    expect(estimateLabelSize(['x'.repeat(100)], 0)).toEqual({ width: 160, height: 20 });
+    expect(estimateLabelSize(['not · conditions'], 0).height).toBe(20);
+  });
 
-    expect(estimateLabelSize([conditions], 0).width).toBe(300);
-    expect(estimateLabelSize([conditions.repeat(2)], 0).width).toBe(300);
-    expect(estimateLabelSize(['x'.repeat(100)], 0).width).toBe(160);
-    expect(estimateLabelSize(['all · a=1'], 0).width).toBeCloseTo('all · a=1'.length * 6.6 + 16, 5);
+  it('keeps "+N more" and the dots with the words they follow, which is the last line here and not a line of its own', () => {
+    // Each of "all-with-x ·", "format=pdf ·" and "type=report ·" is a line, since two of them are more than 104. "size=10 ·" and "+3 more" are 43.2 and 33.6, which are one line.
+    expect(estimateLabelSize(['all-with-x · format=pdf · type=report · size=10 · +3 more'], 0)).toEqual({
+      width: 118,
+      height: 4 * 16 + 4,
+    });
+  });
+
+  it('breaks a word that is wider than a line where the line ends, after the line that the words before it are on', () => {
+    // "all ·" and then one word of a hundred characters, 480, which is four lines of 104 and a part, on lines of its own: six in all.
+    expect(estimateLabelSize(['all · ' + 'x'.repeat(100)], 0)).toEqual({ width: 118, height: 6 * 16 + 4 });
+    // A word that is wider than a line begins a line of its own after the words before it, and ends in a part of a line that the next word is put after.
+    expect(estimateLabelSize(['all · a=' + 'x'.repeat(30) + ' b'], 0).height).toBe(3 * 16 + 4);
+  });
+
+  it('stacks chips of one line and of more with 2 between them, and the chip of "+N more" is a row of a key', () => {
+    const long = 'any-with-x · ' + 'x'.repeat(20);
+
+    expect(estimateLabelSize([long, 'all · a=1'], 0).height).toBe(2 * 16 + 4 + 2 + 20);
+    expect(estimateLabelSize([long], 3).height).toBe(2 * 16 + 4 + 2 + 20);
   });
 
   it('is a little for a label with no chip', () => {

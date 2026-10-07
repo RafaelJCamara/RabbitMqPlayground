@@ -48,7 +48,7 @@ import { blocksFoblex, CONNECT_KEYS, GRAB_KEYS } from '../model/guard';
 import { nodeIdAt, nodeIdOfTarget } from '../model/hit-test';
 import type { CanvasIntent, LinkVia } from '../model/intents';
 import { labelPlaces, samePlaces } from '../model/label-layout';
-import { isConditionsChip } from '../model/labels';
+import { chipDisplay, isConditionsChip } from '../model/labels';
 import { armedTargets } from '../model/link-targets';
 import { RMQ_A11Y_MESSAGES } from '../model/messages';
 import { closestFraction, polylineOf } from '../model/path';
@@ -330,9 +330,14 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     return edge.more.length > 0 || edge.cut;
   }
 
-  /** The chip of a headers binding is wider than a key, because it names a mode and conditions (ADR-0070). */
+  /** The chip of a headers binding names a mode and conditions, and goes on to more lines where a key is cut (ADR-0070, ADR-0071). */
   protected isConditions(chip: string): boolean {
     return isConditionsChip(chip);
+  }
+
+  /** What a chip says as it is drawn. */
+  protected display(chip: string): string {
+    return chipDisplay(chip);
   }
 
   /**

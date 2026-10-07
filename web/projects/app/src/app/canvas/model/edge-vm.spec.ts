@@ -27,6 +27,7 @@ import {
 import {
   CHIP_SEPARATOR,
   chipsOf,
+  chipDisplay,
   isConditionsChip,
   MAX_CHIPS,
   MAX_CONDITIONS,
@@ -482,11 +483,32 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
     );
   });
 
-  it('is told from a chip of a key by its separator, which a conditions chip has and is wider for', () => {
-    expect(isConditionsChip('all · a=1')).toBe(true);
+  it('is told from a chip of a key by how it begins: the mode and a separator, which a key does not have', () => {
+    for (const mode of ['all', 'any', 'all-with-x', 'any-with-x']) {
+      expect(isConditionsChip(`${mode} · a=1`), mode).toBe(true);
+    }
+    expect(isConditionsChip('all · no conditions')).toBe(true);
     expect(isConditionsChip('order.*')).toBe(false);
     expect(isConditionsChip('(empty key)')).toBe(false);
+    // A key that has the separator in it, or begins as a mode does, is still a key.
+    expect(isConditionsChip('a · b')).toBe(false);
+    expect(isConditionsChip('all')).toBe(false);
+    expect(isConditionsChip('all-in · one')).toBe(false);
+    expect(isConditionsChip('x all · a=1')).toBe(false);
     expect(CHIP_SEPARATOR).toBe(' · ');
+  });
+
+  it('draws a chip of conditions so that a line is never begun by a dot, and a key as it is', () => {
+    const drawn = chipDisplay('all · format=pdf · type=report');
+
+    // The space before each dot does not let a line end there, and the one after it does.
+    expect(drawn).toBe('all · format=pdf · type=report');
+    expect(drawn.replaceAll(' ', ' ')).toBe('all · format=pdf · type=report');
+    // The count of what is left out is not broken in two either, and a key that ends in the same words is a key.
+    expect(chipDisplay('any-with-x · +3 more')).toBe('any-with-x · +3 more');
+    expect(chipDisplay('a more')).toBe('a more');
+    expect(chipDisplay('a · b')).toBe('a · b');
+    expect(chipDisplay('order.*')).toBe('order.*');
   });
 
   it('keeps the same object for an edge that did not change, as the other edges do', () => {
