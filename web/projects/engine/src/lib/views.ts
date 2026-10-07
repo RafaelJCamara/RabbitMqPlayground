@@ -4,6 +4,9 @@ import type { Topology } from './topology';
 
 /** What the screen reads, worked out from the state (ADR-0052). Nothing here changes it. */
 
+/** A record that is keyed by what a learner typed, so that a queue called `__proto__` or `constructor` is a queue and not a property of every record. */
+const byName = <T>(): Record<string, T> => Object.create(null) as Record<string, T>;
+
 export function buildView(state: State, topology: Topology): RuntimeView {
   let travelling = 0;
   for (const { task } of state.heap.values()) {
@@ -23,7 +26,7 @@ export function buildView(state: State, topology: Topology): RuntimeView {
     }
   }
 
-  const queues: Record<string, QueueView> = {};
+  const queues = byName<QueueView>();
   for (const queue of state.queues.values()) {
     queues[queue.name] = {
       ready: queue.ready.length,
@@ -34,12 +37,12 @@ export function buildView(state: State, topology: Topology): RuntimeView {
     };
   }
 
-  const exchanges: Record<string, ExchangeView> = {};
+  const exchanges = byName<ExchangeView>();
   for (const [name, counters] of state.exchangeCounters) {
     exchanges[name] = { ...counters };
   }
 
-  const producers: Record<string, ProducerView> = {};
+  const producers = byName<ProducerView>();
   for (const producer of state.producers.values()) {
     producers[producer.id] = {
       published: producer.published,
@@ -48,7 +51,7 @@ export function buildView(state: State, topology: Topology): RuntimeView {
     };
   }
 
-  const channels: Record<string, ChannelView> = {};
+  const channels = byName<ChannelView>();
   for (const channel of state.channels.values()) {
     channels[channel.id] = {
       prefetch: channel.prefetch,

@@ -358,6 +358,28 @@ describe('the view', () => {
     expect(engine.view()).toMatchObject({ now: 10_000_000 + 0, seed: 1, vhost: '/', published: 1, travelling: 0 });
   });
 
+  it('keeps what is named by a learner apart from what every object has: a queue called __proto__ or constructor is a queue, and one that is not there is not', () => {
+    const engine = newEngine(ZERO_TIMING);
+    runAll(
+      engine,
+      declareExchange('__proto__'),
+      declareQueue('__proto__'),
+      declareQueue('constructor'),
+      openChannel('toString', 0, null),
+      producer('hasOwnProperty'),
+    );
+
+    const view = engine.view();
+
+    expect(Object.keys(view.queues)).toEqual(['__proto__', 'constructor']);
+    expect(Object.keys(view.exchanges)).toEqual(['', '__proto__']);
+    expect(Object.keys(view.channels)).toEqual(['toString']);
+    expect(Object.keys(view.producers)).toEqual(['hasOwnProperty']);
+    expect(view.queues['valueOf']).toBeUndefined();
+    expect(view.exchanges['toString']).toBeUndefined();
+    expect(view.queues['constructor']).toMatchObject({ ready: 0 });
+  });
+
   it('holds the topology that the engine has, in the form that route() reads', () => {
     const engine = orders();
 
