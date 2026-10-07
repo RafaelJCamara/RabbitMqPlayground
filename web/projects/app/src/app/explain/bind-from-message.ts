@@ -104,7 +104,7 @@ interface Target {
                       <td class="pr-2">
                         <input
                           type="checkbox"
-                          class="size-4"
+                          class="size-6"
                           data-testid="bind-tick"
                           [id]="tickId(header.name)"
                           [checked]="isTicked(header.name)"

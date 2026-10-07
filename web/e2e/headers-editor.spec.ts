@@ -344,6 +344,24 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
       .toEqual([{ from: 'files', to: 'pdfs', xMatch: 'all', args: [{ key: 'author', value: { t: 'exists' } }] }]);
   });
 
+  test('keeps the mode that is chosen readable while the pointer is still on it, which a hover must not take the fill from', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    const popover = await askForConditions(headers);
+
+    await popover.choose('any');
+
+    const chosen = popover.modes.locator('input:checked + span');
+    await expect(chosen).toHaveText('any');
+    await expect(chosen).toHaveCSS('background-color', await headers.tokenColour('--rmq-accent'));
+    await expect(chosen).toHaveCSS('color', await headers.tokenColour('--rmq-accent-fg'));
+    // A segment that is not chosen is lit by the pointer, and is the surface of the page otherwise.
+    const other = popover.modes.locator('label').filter({ hasText: /^all$/ }).locator('span');
+    await other.hover();
+    await expect(other).toHaveCSS('background-color', await headers.tokenColour('--rmq-canvas'));
+  });
+
   test('chooses the mode with the arrow keys as a group of radio buttons does, and a mode that is chosen is written out', async ({
     page,
   }) => {

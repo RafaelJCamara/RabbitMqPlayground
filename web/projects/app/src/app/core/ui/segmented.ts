@@ -30,7 +30,7 @@ export interface Segment {
               (change)="chosen.emit(option.value)"
             />
             <span
-              class="border-border bg-surface hover:bg-canvas peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-focus flex min-h-8 cursor-pointer items-center rounded-md border px-3 text-sm font-medium peer-checked:border-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"
+              class="border-border bg-surface hover:bg-canvas peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-checked:hover:bg-accent peer-focus-visible:outline-focus flex min-h-8 cursor-pointer items-center rounded-md border px-3 text-sm font-medium peer-checked:border-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"
               >{{ option.label }}</span
             >
           </label>
