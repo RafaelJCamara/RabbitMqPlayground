@@ -495,6 +495,19 @@ describe('BindFromMessage (ADR-0070)', () => {
     expect(screen.getByRole('combobox', { name: 'To' })).toHaveValue('queue:pdfs');
   });
 
+  it('forgets what was ticked when another message is open that has the very same headers, as a producer that sends one message twice makes', async () => {
+    const { open, user, set } = renderPanel();
+    await open();
+    await user.click(screen.getByRole('checkbox', { name: 'Use the header n as a condition' }));
+    expect(ticks().map((tick) => tick.checked)).toEqual([true, false, true, true, true]);
+
+    // The headers are the same array, which the engine keeps for every message that a producer sends while its message is not changed.
+    set('number', 2);
+
+    await open();
+    expect(ticks().map((tick) => tick.checked)).toEqual([true, true, true, true, true]);
+  });
+
   it('gives each panel ids of its own, so that two on a page are not tied to one another', () => {
     const { fixture } = renderPanel();
     const second = TestBed.createComponent(BindFromMessage);

@@ -218,9 +218,13 @@ export class BindFromMessage {
 
   /** Everything the learner chose is for the message that is open, and is forgotten for another. */
   protected readonly open = linkedSignal<number, boolean>({ source: this.number, computation: () => false });
-  private readonly ticked = linkedSignal<readonly HeaderEntry<HeaderValue>[], ReadonlySet<string>>({
-    source: this.headers,
-    computation: (headers) => new Set(headers.map(({ key }) => key).filter((key) => key !== X_MATCH)),
+  /** The headers are the same array for every message that a producer sends while its message is not changed, so the ticks start again with the number of the message as well as with the headers. */
+  private readonly ticked = linkedSignal<
+    { readonly number: number; readonly headers: readonly HeaderEntry<HeaderValue>[] },
+    ReadonlySet<string>
+  >({
+    source: () => ({ number: this.number(), headers: this.headers() }),
+    computation: ({ headers }) => new Set(headers.map(({ key }) => key).filter((key) => key !== X_MATCH)),
   });
   private readonly chosenFrom = linkedSignal<number, string | null>({ source: this.number, computation: () => null });
   private readonly chosenTo = linkedSignal<number, string | null>({ source: this.number, computation: () => null });
