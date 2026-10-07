@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { COMMAND_DOCS } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
 import { seedCanvas } from './support/seed';
 import { TOPOLOGY } from './support/topology';
@@ -103,7 +104,12 @@ test.describe('the cheat-sheet (ADR-0047)', () => {
     await expect(keys.getByRole('row')).toHaveCount(14);
     await expect(keys).toContainText('Ctrl+K');
     await expect(keys).toContainText('Anywhere in the editor, even in a field of text');
-    await expect(dialog(page).getByRole('table', { name: 'Commands' }).getByRole('row')).toHaveCount(23);
+    // A row of headings, and a row for every command of the registry and for the batch, which the simulation's verbs are in too: they are listed whether or not the flag is on.
+    const commands = dialog(page).getByRole('table', { name: 'Commands' });
+    await expect(commands.getByRole('row')).toHaveCount(COMMAND_DOCS.length + 1);
+    await expect(commands).toContainText(
+      'publish <producer|exchange> [key=<text>] [payload=<text>] [header:<name>=<value>...]',
+    );
     await expect(dialog(page)).toContainText('Type help in the command bar to say more about a command.');
   });
 
