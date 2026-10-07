@@ -5,8 +5,9 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)), S3
 ([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)), S4
 ([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) S5
-([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)) and S6
-([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)). Each one says what is open, why, what the options
+([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)), S6
+([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)) and S7
+([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
 [M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 6, 8 and 9 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
@@ -237,6 +238,44 @@ still outside the repository. The question of whether a tool should live in it i
 kept a refusal, and a node that was dragged and did not take its messages), it took about four hours of a machine with 32 threads, and each of its commands, the copies, the keeper of the lines, the picker and the
 runner with its own filters, is easy to get wrong without the one that wrote them.
 
+Where S7 left it: S7 used the same scripts on the lines that it added or changed in the engine (the alignment of a topic key), the domain (the explanation of a route, the sample keys of a pattern, the reader of a message), the tool of
+the golden explanations and the app (the log, the state of what is lit, the marks, the press on a message, the panels and the testers), and added 58 changes by hand of the browser tier. Three things were new. The report reads the lines of a
+file as they were in the commit that the mutants were made from (`report.mjs --rev`), because a production file that is changed after the sweep has read it moves them. The picker of what to run again takes the changed files as one
+argument, comma separated, and says "261 mutants" where there are 638 when it is given them as several. And the second run of the libraries runs every spec of the engine, the domain and the tool, which killed what the specs next to the code did not.
+
+- **The engine (163 mutants** in the alignment of a topic key, with the properties at 1,000 runs), **the domain (863)** and **the tool of the golden explanations (215)**: 150, 848 and 215 were caught at once, and the engine's 8 that
+  looped are catches too. 5 of the engine and 15 of the domain were not. The engine's 5 were read and change nothing: a pass of a loop whose result is written over, a sum in a place where `key-too-short` answers first, the bound of a
+  loop that cannot change what it finds, and two comparisons at a place whose segment is always a matched `#`. The domain's 15 were all killed by the whole suite once two tests were written: the width of a column of the topic table when the
+  word of the pattern is longer than the key's, and the kind of the refusal of a message with a semicolon. A third test, of a star between two `#` in a key that is too short, was written for a mutant that was equivalent, and stays because no test
+  held that alignment.
+- **The code of the app (1,869 mutants** in the changed lines): 828 did not build, 842 were caught and 12 looped, and 187 were not. They led to 41 tests in 13 specs and to what they showed to be unneeded: the slack of 256 rows that the
+  log kept over its cap and the ring arithmetic of every reader (the log is trimmed to its cap when a turn ends); a branch that lit again what a cycle or an exchange explained before had lit, and that counted a deleted exchange once more;
+  the flights of the clock that the message inspector read to say that a copy was redelivered, which the lists of the queues already said; two guards of the reasons of a queue that no explanation reaches (a queue that got a copy has a path, one that did not
+  has a reason, whatever the cause); and the legend of the card, which became a function of the marks so that every combination can be held. What nothing had read: the place of a press by the box of the host and the three listeners that go
+  with the overlay; that only a binding that missed has a reason (`toEqual` ignores a property that is `undefined`); the subject of a queue that is asked about when a message is open and the row chosen last is a command; the explanation alone lighting
+  nothing of a message; the id that `aria-activedescendant` names (a test that compares an id with an attribute passes when both are empty); a keyboard with no row that it is on and a page that is not a whole number of rows; the height of a row
+  from the page; the time of a row after two seconds and not at zero; a number read in tens (`12` against radix 11); the kinds of a node that has gone; the regions of the message inspector, its time, its default exchange and a message that any of its copies
+  redelivered; the words for a missing word of a pattern; the popover that does not fit a tester; and the answer of the key of the log with and without a log. The second run (638 mutants: everything in the files that changed, and the survivors of the
+  others) and the third (the message inspector again, 124) left 81 that were read: classes, selectors and the counters of ids, the first value of what `load` sets again (the log), comparisons at a tie that return the same value (`<` against `<=`
+  at an equal sequence number, `>` against `>=` at an equal strength), the order of a stack whose marks do not depend on it (the walks of the explanation, 4), a cache that only saves work, an optimisation that cannot be seen (a guard that keeps a queue's
+  explanation from waking on a message that is routed), the options of `focus()` that jsdom does not have, the clamps of a keyboard that the scroll of a browser makes unreachable, and the debug handle (`RMQ_E2E`, which only the end-to-end build has).
+- **The inline templates (270 mutants)**: 59 did not build, 157 were caught and 54 were not. The names of the regions of the message inspector and the ids that name them, the `data-` attributes that a journey reads, the type of the fields (`number`,
+  `search`), the `role` of what holds the rows of the log and the ids that the what-if field is described by led to tests. 26 are left, each read: 11 take the type off a button, which the linter's `button-has-type` catches, 1 is `type="text"`, and
+  14 are the size of an icon or the option of a list that is selected by default.
+- **The browser (58 changes by hand)**: the two halves of the flag, the wiring of the testers, the marks on the canvas and how they look, the press on a message and the window of the log. 39 were caught at once and 19 were not. Of the 19, ten had no
+  journey and have one now: the hint of the key of the log with the simulation alone, a field of the inspector that is left with nothing changed (the tester must go with the cursor and not only with a new key), a binding that matched and was not
+  followed (thinner than the way that the message went, with the queue that it reached glowing), the way that a message went when its edge is selected, the dotted way to a queue that nothing the message reached leads to and its ring, the dashed
+  border of a reason, a press with the right button on a shape, and the room that the log keeps under the rows that are not drawn (a scrollbar that is the size of the list). Two are caught by the unit specs, one was dead code and went (the label
+  of an edge that has no chip), and six change nothing that a browser or a spec can see: a card that is hosted without its flag (it shows what is lit, and nothing is), a mark that an edge borrows from a node of its own name (the ids never meet),
+  the transition of what is lit under reduced motion (the page takes every transition away, which is why that block was taken out), the press taken in the bubble phase and the mouse down that is not taken (Chromium sends the pointer first and the
+  mouse after, and the capture of the pointer is enough there; the others are for browsers that are not tested), and `overflow-anchor: none` on the list, which no journey of Chromium needs and which is there for a browser that anchors the scroll
+  to a row when the rows that are drawn change.
+- **The properties** of the domain's explanation ran at 5,000 runs with seven seeds (11, 222, 3333, 44444, 555555, 20261005 and 98765) before the first push of the tester of a topic key, and once more with the rest of the libraries before the last.
+
+The scripts are the ones of S6, plus `hand-list-s7.mjs`, the chains that ran the libraries and the app, and the changes to `report.mjs` and to the filters of `run-ng.mjs` (the folders `core/explain/` and `explain/`). They are still outside the repository. S7 makes the
+case for keeping them stronger once more: the sweep found one thing that a learner could have met (a deleted exchange that a cycle in the reasons of a queue counted as gone twice), the journeys of the two halves of the flag found another before it (a hint for a key that
+did nothing, with the explanation alone), and the sweeps took about four and a half hours of a machine with 32 threads, which is long enough that the second and third runs, and the notes of what to do with the survivors, are worth a tool and not a memory.
+
 ## 10. Canvases that cannot be read
 
 `list()` answers the canvases that it can read, and, apart from them, the ones that it cannot: their id, their name if the
@@ -414,6 +453,46 @@ are, in a line of the status strip, with the reason that nothing was changed, an
 - **The specs of the app are not isolated, and the body of their shared document is emptied after each test** ([ADR-0058](docs/adr/0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md)). The Nightly of the random seed found a spec that found
   another's `id="label"`, in a way that no push and no run at the same seed on one machine could repeat. The head, the attributes of the `html` element and the window are not emptied: the specs that change them put them
   back, and if a leak is ever found there, the answer is to isolate the files, which costs a document for each of the 74.
+
+## Decisions taken in S7 that are easy to revisit
+
+- **The explanation is one flag in two halves** ([ADR-0064](docs/adr/0064-the-what-if-and-the-topic-tester-read-the-canvas-and-change-nothing-and-explain-is-one-flag-in-two-halves.md), [ADR-0065](docs/adr/0065-what-building-s7-settled-the-key-of-the-log-names-both-flags-a-tester-that-is-open-is-what-is-lit-and-a-tester-follows-the-text-that-is-typed.md)):
+  `explain` alone has the two testers and the card that says what the what-if tester lights, and `explain` with `simulation` has the log, the message inspector, Why?, "why didn't it get here?" and the press on a message. The key `E`
+  needs both, and so does the button of the log. `?ff=editor,simulation,explain` is the whole of it, and the flag stays off by default until S12. Two flags (`explain` and one for the testers) would let a half be shipped alone, at the cost of
+  one more name to remember.
+- **The log keeps the last 5,000 events and says how many it dropped** (`LOG_CAP`, [ADR-0061](docs/adr/0061-the-event-log-is-a-ring-of-rows-that-puts-a-command-before-what-it-made-and-a-row-selects-what-it-explains.md)), and the
+  inspector keeps the route of the last 2,000 messages (`HELD_LIMIT`), and says that a message's route is not kept when it is older ([ADR-0063](docs/adr/0063-the-message-inspector-opens-from-a-row-a-list-or-a-marker-and-says-so-when-its-route-is-gone.md)).
+  A burst of thousands takes the first message's row and route with it. Both are constants, and neither has been tried on a slow machine; S12 measures on hardware.
+- **While the clock is stopped, the canvas lights the Why? of the message that was routed last, without being asked.** A learner who steps sees the answer at once. One who wants to look at the canvas lets go of it with the button of the card, and it comes back
+  with the next message. If that is too much it can wait until the log is open or a row is chosen, which is a condition in `ExplainState.shown`.
+- **A queue that is selected while a message is open is the question "why didn't it get here?"**, answered in the card, on the canvas and in the inspector of the queue, and the message inspector lists the queues that did not get it with a button each. Two doors to one answer.
+  A learner who selects a queue and does not know that this asks something sees a card that they did not ask for; the card has its button, which says that it stops asking.
+- **A click on a message that is drawn opens it only while the clock is stopped**, within 12 pixels of where the last frame drew it (`HIT_RADIUS`), and a shape that stands for a crowd says that it does and where to open one, since the overlay groups more than 500 messages in flight.
+  While the clock runs a press is the canvas's, as it was. A tap does what a click does, since a finger has no hover.
+- **The what-if tester takes the message in the text form of `publish`** (`key=order.new header:format=pdf`), read by the one reader that the command uses ([ADR-0060](docs/adr/0060-the-explanation-of-a-route-is-one-function-in-the-domain-and-its-text-is-what-the-golden-files-hold.md)),
+  so that `1` is an integer and `"1"` a string here as it is there. It asks one exchange at a time, from the exchanges of the canvas and the default exchange, and says which queues would get the message, and not what a consumer would do with it. It does not start
+  from a producer's message, which a learner may expect. What it says and lights is what is shown until it is shut, whatever else was chosen.
+- **The topic tester shows a few keys and not all**: the keys that match, one for each way that a `*` or a `#` can go, with the empty word where a `*` can take one, and the keys that miss, by length, by a word and by the last word (`MOST_MATCHING_SAMPLES` 4 and
+  `MOST_NON_MATCHING_SAMPLES` 5 in the engine). A learner who wants to try a key of their own has the what-if tester, which answers for the bindings that there are. It says that a text cannot be a binding key in the words of the binding's own check.
+- **The popover for a topic key is 480 pixels tall with its tester**, and is placed higher when there is not room below it. A window shorter than that has it over the node that it is for. The lists could be folded, or the tester could be under the popover and not in it.
+- **A tester in the inspector follows the text of the field that has the cursor, and the key is changed when the field is left** ([ADR-0044](docs/adr/0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md), [ADR-0065](docs/adr/0065-what-building-s7-settled-the-key-of-the-log-names-both-flags-a-tester-that-is-open-is-what-is-lit-and-a-tester-follows-the-text-that-is-typed.md)):
+  a learner who types and does not leave the field has not changed the binding, and the tester says what the text matches, not what the binding does.
+- **What is lit is a line that is thicker for the way a message went (4 px), 3 px for a binding that matched and was not followed, a dimmed line and a dashed outline for what missed, a dotted line and a ring for what is asked about**, and the reason of a miss is a chip on
+  the label that begins with a cross ([ADR-0062](docs/adr/0062-why-is-painted-by-the-adapter-with-classes-from-an-emphasis-and-the-reasons-are-words-on-the-labels.md)). The colours are a pair of tokens for the two themes, and are never the only sign. The words of the reasons are first drafts,
+  as ADR-0025 says of every wording, and the golden files hold them: a change of a sentence is a change of the files that say it.
+- **The golden explanations are one text file for each of the 90 routing fixtures** (`fixtures/explain/4.3/routing/`), made by `npm run explain:generate` from what the broker did and checked by `npm run explain:check`, which CI and the gates run. A learner never sees them. They hold the wording of the
+  explanation against what the broker did, so a sentence that says the opposite of a recorded case cannot be written.
+- **The log is a listbox that is read where it is, and not a live region.** A screen reader hears nothing of it until the learner goes to it, because a burst of a thousand events would say a thousand sentences; a chosen row says what it shows, and the steps of the clock say what they did on the status line,
+  as they did in S6. A learner who wants every event read aloud has no way to.
+- **There is no typed verb for the explanation** ([ADR-0064](docs/adr/0064-the-what-if-and-the-topic-tester-read-the-canvas-and-change-nothing-and-explain-is-one-flag-in-two-halves.md)): the log, the card and the testers are views, and the what-if's text is the tail of `publish`. If a lesson of S11 wants "explain this route" as a command,
+  it is a verb with scope `app`, which goes through the registry, `npm run docs:generate`, the completion and the help.
+- **A few guards are there twice, on purpose, and no test can tell one from the other**: the editor and the what-if component both look at `explain`, the card is hosted for `explain` and shows only what is lit (which is nothing without the flag), and the key of the
+  log is held by the table of shortcuts and by the action, which answers `false` when there is no log. A component that is used on its own has its own check. Take one of each pair out if the duplicates are a nuisance.
+- **Two names on the debug handle, `explainEventLog` and `explainEmphasis`**, behind `RMQ_E2E`, are in the list that `check-bundle` refuses in CI and in the gates. A journey reads what the page says through them and not the pixels, and only the end-to-end build has them.
+
+What S8 inherits ([#10](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/10)): the message inspector already says each condition of a headers binding, held or not, with the reason, and the headers of the message with their types, in sentences that live in the domain (`headers-words.ts`, which says
+the mode of `x-match` and how many of the conditions held, and that an `x-` argument is ignored unless the mode counts it). The table that edits them can show the same sentences beside each row. The what-if tester takes headers in the text form, `header:name=value`, with the type inferred; the table of S8 can
+write the same line, with the type chosen and not guessed, and the composer of S6 still says only how many headers a message has.
 
 ## Follow-ups that are already owned
 
