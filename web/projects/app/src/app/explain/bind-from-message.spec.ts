@@ -136,7 +136,43 @@ describe('BindFromMessage (ADR-0070)', () => {
 
     expect(button).toHaveAttribute('aria-expanded', 'true');
     expect(button.getAttribute('aria-controls')).toBe(screen.getByTestId('bind-body').id);
+    expect(screen.getByTestId('bind-body').id).toMatch(/^rmq-bind-\d+-body$/u);
     expect(screen.getByRole('region', { name: 'Bind from this message…' })).toBeInTheDocument();
+  });
+
+  it('offers the four modes, as the editor of a binding does, with all chosen', async () => {
+    const { open } = renderPanel();
+    await open();
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual([
+      'all',
+      'any',
+      'all-with-x',
+      'any-with-x',
+    ]);
+    expect(screen.getByRole('radio', { name: 'any-with-x' })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: 'all' })).toBeChecked();
+  });
+
+  it('has no note of x-match and no list of notes for a message that has nothing to note', async () => {
+    const { open } = renderPanel();
+    await open();
+
+    expect(screen.queryByTestId('bind-reserved')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bind-notes')).not.toBeInTheDocument();
+  });
+
+  it('ticks a header again that was unticked, and makes it a condition again', async () => {
+    const { open, user } = renderPanel();
+    await open();
+    const mark = screen.getByRole('checkbox', { name: 'Use the header n as a condition' });
+
+    await user.click(mark);
+    expect(line().textContent).not.toContain(' n=1');
+    await user.click(mark);
+
+    expect(mark).toBeChecked();
+    expect(line()).toHaveTextContent('bind docs -> pdfs x-match=all format=pdf n=1 s="1" f=1.0 ok=true');
   });
 
   it('lists the headers of the message with a tick for each, all ticked, with their types and values exactly', async () => {
@@ -333,6 +369,9 @@ describe('BindFromMessage (ADR-0070)', () => {
       expect(mark).toBeDisabled();
       expect(mark).not.toBeChecked();
       expect(mark).toHaveAccessibleDescription(/^'x-match' is the mode of a headers binding/u);
+      expect(screen.getByTestId('bind-reserved')).toHaveTextContent(
+        "'x-match' is the mode of a headers binding (all, any, all-with-x or any-with-x), and not a condition. Choose the mode with the control below.",
+      );
       expect(line()).toHaveTextContent('bind docs -> pdfs x-match=all format=pdf');
       expect(line().textContent).not.toContain('x-match=any');
     });

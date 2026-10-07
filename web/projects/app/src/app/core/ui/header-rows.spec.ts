@@ -180,6 +180,23 @@ describe('HeaderRows (ADR-0066, ADR-0067, ADR-0068)', () => {
       expect(screen.getAllByTestId('header-key-problem')).toHaveLength(2);
     });
 
+    it('describes the name of a row that is fine by nothing: it has no attribute that names a sentence that is not there', async () => {
+      await renderRows([row('format', 'pdf'), row('', '')]);
+
+      for (const field of screen.getAllByTestId('header-key')) {
+        expect(field).not.toHaveAttribute('aria-describedby');
+      }
+    });
+
+    it('describes the name of a row by the sentence that there is, and by nothing that there is not', async () => {
+      await renderRows([row('', '1'), row('x-trace', '1')]);
+
+      const [first, second] = screen.getAllByTestId('header-key');
+      // The first has a problem and no note, and the second a note and no problem.
+      expect(first?.getAttribute('aria-describedby')).toBe(screen.getByTestId('header-key-problem').getAttribute('id'));
+      expect(second?.getAttribute('aria-describedby')).toBe(screen.getByTestId('header-notes').getAttribute('id'));
+    });
+
     it('has no mark and no sentence for a row that is fine, and none for an empty row', async () => {
       await renderRows([row('format', 'pdf'), row('', '')]);
 
@@ -427,7 +444,7 @@ describe('HeaderRows (ADR-0066, ADR-0067, ADR-0068)', () => {
 
   it('is described by an id of its own for each row, so that two lists on a page are not tied to one another', async () => {
     await render(
-      `<rmq-header-rows [rows]="rows" [reports]="reports" label="One" /><rmq-header-rows [rows]="rows" [reports]="reports" label="Two" />`,
+      `<rmq-header-rows [rows]="rows" [reports]="reports" noun="condition" label="One" /><rmq-header-rows [rows]="rows" [reports]="reports" noun="condition" label="Two" />`,
       {
         imports: [HeaderRows],
         componentProperties: {

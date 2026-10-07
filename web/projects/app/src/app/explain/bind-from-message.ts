@@ -106,7 +106,6 @@ interface Target {
                           type="checkbox"
                           class="size-6"
                           data-testid="bind-tick"
-                          [id]="tickId(header.name)"
                           [checked]="isTicked(header.name)"
                           [disabled]="header.name === reserved"
                           [attr.aria-label]="'Use the header ' + header.name + ' as a condition'"
@@ -317,10 +316,6 @@ export class BindFromMessage {
     const command = this.command();
     return command === null ? null : headersLint(command.source, command.destination.name, command.headers);
   });
-
-  protected tickId(name: string): string {
-    return `${this.uid}-tick-${name}`;
-  }
 
   protected isTicked(name: string): boolean {
     return this.ticked().has(name);

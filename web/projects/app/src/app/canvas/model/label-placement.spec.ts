@@ -190,6 +190,14 @@ describe('estimateLabelSize', () => {
     expect(estimateLabelSize(['all · a=' + 'x'.repeat(30) + ' b'], 0).height).toBe(3 * 16 + 4);
   });
 
+  it('puts a word on the line that it fits on, to the last character, and the next word on a line of its own', () => {
+    // A line has 104 of room, and a character is 4.8, so 21 characters fit and 22 do not: "all ·" is five, then a space, and a word of fifteen is 21, and a word of sixteen is 22.
+    expect(estimateLabelSize(['all · ' + 'x'.repeat(15)], 0).height).toBe(20);
+    expect(estimateLabelSize(['all · ' + 'x'.repeat(16)], 0).height).toBe(2 * 16 + 4);
+    // A word that follows a line that is full begins the next one.
+    expect(estimateLabelSize(['all · ' + 'x'.repeat(15) + ' y'], 0).height).toBe(2 * 16 + 4);
+  });
+
   it('stacks chips of one line and of more with 2 between them, and the chip of "+N more" is a row of a key', () => {
     const long = 'any-with-x · ' + 'x'.repeat(20);
 

@@ -132,6 +132,10 @@ describe('the chips of an edge (ADR-0044)', () => {
     it('take the keys of the bindings between two ends, and the type of the exchange that they leave from', () => {
       expect(shorts(chipsOf('direct', [{ key: 'a', hasArguments: false }]))).toEqual(['a']);
       expect(shorts(chipsOf('direct', [{ key: '', hasArguments: false }]))).toEqual(['(empty key)']);
+      // What the card lists is the same words, so that a learner who reads the card finds what the label said.
+      expect(chipsOf('direct', [{ key: '', hasArguments: false }])).toEqual([
+        { short: '(empty key)', full: '(empty key)' },
+      ]);
       expect(shorts(chipsOf('headers', [{ key: '', hasArguments: true }]))).toEqual(['headers']);
       expect(chipsOf('topic', [])).toEqual([]);
     });
@@ -377,6 +381,16 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
     expect(edge?.chips).toEqual(['all · a=1 · b=2 · c=3 · +2 more']);
     expect(edge?.more).toEqual([]);
     expect(edge?.cards).toEqual(['all · a=1 · b=2 · c=3 · d=4 · e=5']);
+    expect(edge?.cut).toBe(true);
+  });
+
+  it('says that there is one more when there are four conditions, and not that there are none', () => {
+    const edge = edgeWith(
+      headerArguments('all', ...['a', 'b', 'c', 'd'].map((key, index) => entry(key, int(index + 1)))),
+    );
+
+    expect(edge?.chips).toEqual(['all · a=1 · b=2 · c=3 · +1 more']);
+    expect(edge?.cards).toEqual(['all · a=1 · b=2 · c=3 · d=4']);
     expect(edge?.cut).toBe(true);
   });
 

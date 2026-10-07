@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { emptyDocument, LIMITS, type CanvasDocument } from '@rmq/domain';
 import { bindingRecord, documentOf, exchangeRecord, manualFrames, producerRecord, queueRecord } from '@rmq/testing';
-import { fireEvent, render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -562,6 +562,25 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
       expect(screen.getByTestId('header-value-problem')).toHaveTextContent('An integer header must be a whole number');
     });
 
+    it('says what is wrong with a row under the row, and not again under the table', async () => {
+      const { user } = await renderTable();
+      await user.click(screen.getByRole('button', { name: 'Add header' }));
+      await user.type(name(2), 'n');
+      await user.type(value(2), '2');
+
+      expect(screen.getAllByTestId('header-key-problem')).toHaveLength(2);
+      expect(screen.queryByTestId('composer-headers-count')).not.toBeInTheDocument();
+    });
+
+    it('says what the bus refused when it applied the table, under the table', async () => {
+      const { user, bus } = await renderTable();
+      vi.spyOn(bus, 'apply').mockReturnValueOnce({ ok: false, error: { kind: 'canvas-full', message: 'Full.' } });
+
+      await user.click(screen.getByRole('button', { name: 'Remove header 1, n' }));
+
+      expect(within(screen.getByTestId('composer-headers-problem')).getByText('Full.')).toBeInTheDocument();
+    });
+
     it('says that there are too many headers, under the table, when no row has the problem', async () => {
       const { store, settle } = await renderTable();
       const many = Array.from({ length: 101 }, (_, index) => ({ key: `h${index}`, value: { t: 'integer', v: index } }));
@@ -688,6 +707,29 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
     it('says nothing for an exchange that reads the key, or a producer that publishes to a queue, or with no target', async () => {
       await renderTable();
       expect(screen.queryByTestId('composer-key-note')).not.toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Routing key' })).not.toHaveAttribute('aria-describedby');
+    });
+
+    it('is described by its refusal alone when the exchange reads the key, and the note is not named', async () => {
+      await renderTable();
+      const field = screen.getByRole('textbox', { name: 'Routing key' });
+      field.focus();
+      (field as HTMLInputElement).value = 'k'.repeat(256);
+      fireEvent.change(field);
+
+      await waitForRefusal();
+      const ids = (field.getAttribute('aria-describedby') ?? '').split(' ');
+      expect(ids).toHaveLength(1);
+      expect(document.getElementById(ids[0] as string)).toContainElement(screen.getByTestId('refusal'));
+    });
+
+    it('is described by the note alone when the key is fine, and the refusal is not named', async () => {
+      await publishingToHeaders();
+
+      const field = screen.getByRole('textbox', { name: 'Routing key' });
+      const ids = (field.getAttribute('aria-describedby') ?? '').split(' ');
+      expect(ids).toHaveLength(1);
+      expect(document.getElementById(ids[0] as string)).toBe(screen.getByTestId('composer-key-note'));
     });
 
     it('says nothing without the flag, even for a headers exchange', async () => {

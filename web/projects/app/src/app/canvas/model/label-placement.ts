@@ -66,12 +66,10 @@ function chipSize(text: string): Size {
   if (!isConditionsChip(text)) {
     return { width: Math.min(MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING), height: ROW };
   }
+  // A text of more than one line is longer than a line, so it is as wide as a chip can be.
   const lines = linesOf(text, MAX_CONDITIONS_WIDTH - CONDITIONS_SIDES);
   return {
-    width:
-      lines > 1
-        ? MAX_CONDITIONS_WIDTH
-        : Math.min(MAX_CONDITIONS_WIDTH, text.length * CONDITIONS_CHARACTER + CONDITIONS_SIDES),
+    width: Math.min(MAX_CONDITIONS_WIDTH, text.length * CONDITIONS_CHARACTER + CONDITIONS_SIDES),
     height: lines * CONDITIONS_LINE + CONDITIONS_ROOM,
   };
 }

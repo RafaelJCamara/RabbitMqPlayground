@@ -665,6 +665,41 @@ describe('LinkFlow with the flag headers (ADR-0066)', () => {
     );
   });
 
+  it('puts the popover of the conditions where the new node will be, with its middle at the point, as the popover of a key is', () => {
+    TestBed.inject(FlowViewport).attach({
+      transform: () => ({ position: { x: 0, y: 0 }, scaledPosition: { x: 0, y: 0 }, scale: 2 }),
+      host: () => ({ x: 10, y: 20, width: 800, height: 600 }),
+      fit: () => undefined,
+      zoomIn: () => undefined,
+      zoomOut: () => undefined,
+      resetZoom: () => undefined,
+      select: () => undefined,
+      focus: () => undefined,
+      edgePath: () => null,
+    });
+    const { width, height } = NODE_SIZE.queue;
+
+    flow.dropOnNothing('E2', { x: 100, y: 100 }, { x: 10, y: 10 }, 'gesture');
+    surface.create?.choose({ kind: 'queue' });
+
+    // The canvas is at 200%, so the box of the node is twice as big, and its corner twice as far from the corner of the host.
+    expect(surface.conditions?.anchor).toEqual({
+      x: (100 - width / 2) * 2,
+      y: (100 - height / 2) * 2,
+      width: width * 2,
+      height: height * 2,
+    });
+  });
+
+  it('still asks for a key, and not for conditions, of a link that was let go on nothing from a topic exchange', () => {
+    flow.dropOnNothing('E1', { x: 400, y: 300 }, { x: 640, y: 480 }, 'gesture');
+
+    surface.create?.choose({ kind: 'queue' });
+
+    expect(surface.key).toBeDefined();
+    expect(surface.conditions).toBeUndefined();
+  });
+
   it('makes nothing of a link let go on nothing when the conditions are given up', () => {
     flow.dropOnNothing('E2', { x: 400, y: 300 }, { x: 640, y: 480 }, 'gesture');
     surface.create?.choose({ kind: 'queue' });

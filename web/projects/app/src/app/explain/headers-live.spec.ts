@@ -170,17 +170,44 @@ describe('HeadersLive, the table of recent messages (ADR-0070)', () => {
     expect(within(bare).getByTestId('headers-live-result')).toHaveTextContent('Does not match');
   });
 
-  it('shows the last messages first, and not more than the limit, and says how many there were', async () => {
+  it('shows the last ten messages first, and not more, and says how many there were', async () => {
     const { publish } = renderLive();
-    for (let index = 0; index < RECENT_LIMIT + 2; index += 1) {
+    for (let index = 0; index < 12; index += 1) {
       publish('docs', entry('format', str('pdf')), entry('n', int(index)));
     }
 
-    expect(rows()).toHaveLength(RECENT_LIMIT);
-    expect(within(rows()[0] as HTMLElement).getByRole('rowheader')).toHaveTextContent(`#${RECENT_LIMIT + 2} `);
+    expect(rows()).toHaveLength(10);
+    expect(RECENT_LIMIT).toBe(10);
+    expect(within(rows()[0] as HTMLElement).getByRole('rowheader')).toHaveTextContent('#12 ');
+    expect(within(rows()[9] as HTMLElement).getByRole('rowheader')).toHaveTextContent('#3 ');
     expect(screen.getByTestId('headers-live-caption')).toHaveTextContent(
-      `The last ${RECENT_LIMIT} of ${RECENT_LIMIT + 2} messages published to docs or to an exchange that leads to it, newest first.`,
+      'The last 10 of 12 messages published to docs or to an exchange that leads to it, newest first.',
     );
+  });
+
+  it('says that there were exactly ten messages without saying that there were more', async () => {
+    const { publish } = renderLive();
+    for (let index = 0; index < 10; index += 1) {
+      publish('docs', entry('format', str('pdf')), entry('n', int(index)));
+    }
+
+    expect(rows()).toHaveLength(10);
+    expect(screen.getByTestId('headers-live-caption')).toHaveTextContent(
+      'The 10 messages published to docs or to an exchange that leads to it, newest first.',
+    );
+  });
+
+  it('draws what held in the colour of a hit, what did not in the colour of a miss, and what is not counted in the muted one, with an icon each', async () => {
+    const { publish } = renderLive(headerArguments('all', entry('format', str('pdf')), entry('x-trace', str('1'))));
+    publish('docs', entry('format', str('doc')));
+    publish('docs', entry('format', str('pdf')));
+
+    const [held, missed] = rows() as [HTMLElement, HTMLElement];
+    const colours = (row: HTMLElement) =>
+      [...row.querySelectorAll<HTMLElement>('rmq-icon')].map((icon) => icon.style.color);
+    // A cell for each condition, and then the verdict of the binding.
+    expect(colours(held)).toEqual(['var(--rmq-explain-hit)', 'var(--rmq-muted)', 'var(--rmq-explain-hit)']);
+    expect(colours(missed)).toEqual(['var(--rmq-explain-miss)', 'var(--rmq-muted)', 'var(--rmq-explain-miss)']);
   });
 
   it('shows the messages published to the exchange and to one that leads to it, and none that were published elsewhere', async () => {

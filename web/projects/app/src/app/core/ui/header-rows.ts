@@ -187,9 +187,9 @@ export class HeaderRows {
   /** Whether a row may be an *exists* condition: the conditions of a binding may, and the headers of a message may not. */
   readonly allowExists = input(false);
   /** What a row is, in the singular, for the names of the controls: `condition`, `header`. */
-  readonly noun = input('condition');
+  readonly noun = input.required<string>();
   /** What the list is, for its name. */
-  readonly label = input('Conditions');
+  readonly label = input.required<string>();
 
   /** The rows that the learner made: a name or a value typed, a type chosen, a row added or taken off. */
   readonly rowsChange = output<readonly DraftRow[]>();

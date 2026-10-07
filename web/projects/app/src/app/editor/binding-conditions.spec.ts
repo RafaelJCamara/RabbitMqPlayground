@@ -17,6 +17,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/ang
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { BindingConditions } from './binding-conditions';
 
@@ -30,6 +31,8 @@ interface Options {
   readonly error?: Issue | null;
   readonly popover?: boolean;
   readonly key?: string;
+  /** The flags that are on, as `?ff=` says them. */
+  readonly flags?: string;
 }
 
 async function renderEditor(options: Options = {}) {
@@ -38,6 +41,9 @@ async function renderEditor(options: Options = {}) {
   const popover = options.popover ?? (options.purpose ?? 'new') === 'new';
   const view = await render(BindingConditions, {
     providers: [
+      ...(options.flags === undefined
+        ? []
+        : [{ provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags } }]),
       {
         provide: DocumentStore,
         useFactory: () => {
@@ -116,6 +122,29 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.getByTestId('conditions-mode')).toHaveTextContent(
         'At least one condition has to hold, and the arguments that start with x- count too.',
       );
+    });
+
+    it.each([
+      ['all', 'Every condition has to hold. Arguments that start with x- are not counted.'],
+      ['any', 'At least one condition has to hold. Arguments that start with x- are not counted.'],
+      ['all-with-x', 'Every condition has to hold, and the arguments that start with x- count too.'],
+      ['any-with-x', 'At least one condition has to hold, and the arguments that start with x- count too.'],
+    ])('says what the mode %s does, when it is chosen', async (mode, sentenceOfMode) => {
+      const { user } = await renderEditor();
+
+      await user.click(screen.getByRole('radio', { name: mode }));
+
+      expect(screen.getByTestId('conditions-mode').textContent?.trim()).toBe(sentenceOfMode);
+    });
+
+    it('says what is wrong with a row under the row only, and keeps the place of the whole draft for what no row owns', async () => {
+      const { user } = await renderEditor();
+      await user.type(name(1), 'format');
+
+      await user.click(screen.getByRole('button', { name: 'Bind' }));
+
+      expect(screen.getByTestId('header-value-problem')).toBeInTheDocument();
+      expect(screen.queryByTestId('conditions-problem')).not.toBeInTheDocument();
     });
 
     it('gives the arguments that were typed, with the mode, when Bind is pressed', async () => {
@@ -444,6 +473,15 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.queryByTestId('conditions-key')).not.toBeInTheDocument();
     });
 
+    it.each(['simulation', 'explain', 'editor,headers'])(
+      'has no table of recent messages with the flags %s, because the log needs the simulation and the explanation',
+      async (flags) => {
+        await renderEditor({ flags });
+
+        expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
+      },
+    );
+
     it('has no table of recent messages without the log, which needs the flags', async () => {
       await renderEditor();
 
@@ -483,6 +521,16 @@ describe('BindingConditions, for a binding that is there (ADR-0066)', () => {
     await renderEditor({ purpose: 'edit', headers: BOUND });
 
     expect(name(1)).not.toHaveFocus();
+  });
+
+  it('is a block of the page, with nothing of a popover about it', async () => {
+    await renderEditor({ purpose: 'edit', headers: BOUND });
+
+    const host = screen.getByTestId('binding-conditions');
+    expect(host.className).toBe('block');
+    expect(host).not.toHaveAttribute('role');
+    expect(host).not.toHaveAttribute('tabindex');
+    expect(host.style.left).toBe('');
   });
 
   it('gives the arguments that were changed with Apply', async () => {
