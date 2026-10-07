@@ -112,6 +112,65 @@ export const UNLINKED = buildDocument([
 ]);
 
 /**
+ * `ORDERS`, and a fanout exchange `audit` that nothing leads to, bound to a queue `archive`: a message that `sender` sends does not get to `archive`, and the way to it stops at `audit`, which it never reached. The ids are
+ * `x2` and `q2`, and the edge `x2>q2`.
+ */
+export const NOT_REACHED = buildDocument([
+  ...orders,
+  {
+    type: 'declare-exchange',
+    name: 'audit',
+    exchangeType: 'fanout',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'archive', durable: true },
+  { type: 'bind', source: 'audit', destination: { kind: 'queue', name: 'archive' }, key: '' },
+]);
+
+/**
+ * A diamond: the fanout exchange `top` is bound to the fanout exchange `left` and to the queue `shared`, and `left` is bound to `shared` too, so that a message that goes to `top` gets to `shared` by the
+ * binding of `top` and meets the binding of `left`, which matches and is not followed. The ids are `x1` (`top`), `x2` (`left`) and `q1`, and the edges `x1>x2`, `x1>q1` and `x2>q1`.
+ */
+export const DIAMOND = buildDocument([
+  {
+    type: 'declare-exchange',
+    name: 'top',
+    exchangeType: 'fanout',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  {
+    type: 'declare-exchange',
+    name: 'left',
+    exchangeType: 'fanout',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'shared', durable: true },
+  { type: 'bind', source: 'top', destination: { kind: 'exchange', name: 'left' }, key: '' },
+  { type: 'bind', source: 'top', destination: { kind: 'queue', name: 'shared' }, key: '' },
+  { type: 'bind', source: 'left', destination: { kind: 'queue', name: 'shared' }, key: '' },
+]);
+
+/** A direct exchange `orders` that is bound to the queue `billing` with the empty key, which a message with another key does not match: a binding with nothing to say as a chip, and a reason to say. The ids are `x1` and `q1`. */
+export const EMPTY_KEY = buildDocument([
+  {
+    type: 'declare-exchange',
+    name: 'orders',
+    exchangeType: 'direct',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'billing', durable: true },
+  { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: '' },
+]);
+
+/**
  * `sender` sends a message with the headers `format` = "pdf" and `big` = false to the headers exchange `files`, which has two queues: `pdfs`, bound with `x-match` all, `format` = "pdf" and `big` = true, which a
  * message that is not big does not match, and `documents`, bound with `x-match` any and the same two, which it does. The ids are `p1`, `x1`, `q1` and `q2`.
  */

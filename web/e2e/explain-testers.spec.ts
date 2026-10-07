@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { ExplainPage } from './pages/explain-page';
 import { TesterPage } from './pages/tester-page';
-import { HEADERS, TOPICS, UNLINKED, WITH_ARCHIVE } from './support/orders';
+import { DIAMOND, EMPTY_KEY, HEADERS, TOPICS, UNLINKED, WITH_ARCHIVE } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
@@ -40,8 +40,12 @@ test.describe('the what-if tester (ADR-0064)', () => {
     await expect(page.getByRole('region', { name: 'Simulation' })).toBeVisible();
     await expect(alone.section).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Event log' })).toHaveCount(0);
+    // The key of the log is the page's: it is not said, and the simulation has keys of its own that are.
+    await expect(alone.editor.hints).toContainText('Play or pause the simulation');
+    await expect(alone.editor.hints).not.toContainText('event log');
 
     const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor,simulation,explain' });
+    await expect(both.editor.hints).toContainText('Show or hide the event log');
     await expect(both.section).toBeVisible();
     await expect(page.getByRole('button', { name: 'Event log' })).toBeVisible();
   });
@@ -185,6 +189,43 @@ test.describe('the what-if tester (ADR-0064)', () => {
     await expect(tester.route).toContainText('big');
   });
 
+  test('says the reason of a binding that has nothing to say as a chip, on a label of its own', async ({ page }) => {
+    const tester = await TesterPage.open(page, EMPTY_KEY);
+
+    await tester.ask('key=other', 'orders (direct)');
+
+    await expect(tester.answer).toHaveText('No queue would get it.');
+    await tester.expectEdgeMark('x1>q1', 'missed');
+    await expect.poll(() => tester.reasonOn('x1>q1')).toMatch(/^✗ .+/);
+    // The reason is a chip of a dashed border, in the colour of a miss, which says it in words.
+    await expect(page.locator('[data-edge="x1>q1"] [data-testid="edge-reason"]')).toHaveCSS(
+      'border-top-style',
+      'dashed',
+    );
+  });
+
+  test('lights a binding that matched and was not followed as matched, thinner than the way that the message went, and a queue that it reached with a glow', async ({
+    page,
+  }) => {
+    const tester = await TesterPage.open(page, DIAMOND);
+
+    await tester.ask('key=any', 'top (fanout)');
+
+    await expect(tester.answer).toHaveText('Would reach shared.');
+    await tester.expectEdgeMark('x1>x2', 'path');
+    await tester.expectEdgeMark('x1>q1', 'path');
+    await tester.expectEdgeMark('x2>q1', 'matched');
+    const hit = await tester.tokenColour('--rmq-explain-hit');
+    await expect.poll(() => tester.edgeLook('x2>q1')).toMatchObject({ stroke: hit, width: '3px', opacity: '1' });
+    await expect.poll(async () => (await tester.edgeLook('x1>q1')).width).toBe('4px');
+    await tester.expectNodeMark('q1', 'reached');
+    await expect
+      .poll(() =>
+        page.locator('[data-node-id="q1"] .rmq-node-shape').evaluate((shape) => getComputedStyle(shape).filter),
+      )
+      .toContain('drop-shadow');
+  });
+
   test('follows the canvas while it is open, and answers again when a binding is taken away', async ({ page }) => {
     const explain = await ExplainPage.open(page, WITH_ARCHIVE);
     const tester = new TesterPage(explain.editor);
@@ -322,6 +363,13 @@ test.describe('the topic tester (ADR-0064)', () => {
 
     await expect(tester.topicTester).toHaveCount(0);
     await expect.poll(() => tester.editor.edges()).toContain('logs -> errors key=*.error.#');
+
+    // A field that is left with nothing changed gives up its tester too: there is no new key to draw the row again.
+    const again = page.getByRole('group', { name: 'Binding 1 of 1' }).getByRole('textbox', { name: 'Key' });
+    await again.click();
+    await expect(tester.topicTester).toBeVisible();
+    await again.press('Tab');
+    await expect(tester.topicTester).toHaveCount(0);
   });
 
   test('is not offered for a direct exchange, which has no wildcards, or without the flag of the explanation', async ({

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { ExplainPage } from './pages/explain-page';
-import { DIRECT_TO_QUEUE, ORDERS, WITH_ARCHIVE } from './support/orders';
+import { TesterPage } from './pages/tester-page';
+import { DIRECT_TO_QUEUE, NOT_REACHED, ORDERS, WITH_ARCHIVE } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
@@ -217,6 +218,23 @@ test.describe('the event log (ADR-0061)', () => {
     expect(await explain.rows.count()).toBeLessThan(30);
     await expect(explain.rows.last()).toContainText('published message');
     await expect(explain.list).toHaveAttribute('aria-activedescendant', /^rmq-log-row-\d+$/);
+
+    // The scrollbar is the size of the whole list, with the room of the rows that are not drawn kept over the ones that are and under them.
+    const rowHeight = (await explain.rows.first().boundingBox())?.height ?? 0;
+    expect(rowHeight).toBeGreaterThan(20);
+    await explain.list.evaluate((list) => {
+      list.scrollTop = 0;
+    });
+    await expect(explain.rows.first()).toHaveAttribute('aria-posinset', '1');
+    await expect
+      .poll(() => explain.list.evaluate((list) => list.scrollHeight))
+      .toBeGreaterThanOrEqual(5000 * rowHeight - 2);
+    await explain.list.evaluate((list, to) => {
+      list.scrollTop = to;
+    }, 2500 * rowHeight);
+    await expect
+      .poll(async () => Number(await explain.rows.first().getAttribute('aria-posinset')))
+      .toBeGreaterThan(2000);
   });
 
   test('follows the newest event while it is scrolled to the end, and stays where it was scrolled to, and goes back with its button', async ({
@@ -381,6 +399,45 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     expect(accent).not.toBe(hit);
     // What is not selected stays in the colour of a hit.
     await expect.poll(() => explain.nodeLook('q1')).toMatchObject({ stroke: hit });
+  });
+
+  test('keeps the thickness of the way that a message went when its edge is selected, and the accent of the selection', async ({
+    page,
+  }) => {
+    const explain = await ExplainPage.open(page, ORDERS);
+    await explain.publish();
+    await explain.simulation.step();
+    await expect.poll(() => explain.edgeMark('x1>q1')).toBe('path');
+
+    await new TesterPage(explain.editor).selectBinding('x1>q1');
+
+    const accent = await explain.tokenColour('--rmq-accent');
+    await expect.poll(() => explain.edgeLook('x1>q1')).toMatchObject({ stroke: accent, width: '4.5px' });
+  });
+
+  test('asks about a queue that nothing that the message reached leads to: the way is dotted and stops at the exchange that was not reached', async ({
+    page,
+  }) => {
+    const explain = await ExplainPage.open(page, NOT_REACHED);
+    await explain.publish();
+    await explain.simulation.step();
+
+    await explain.editor.select('Queue archive');
+
+    await expect(explain.card).toHaveAttribute('data-source', 'queue');
+    await explain.expectNodeMark('q2', 'asked');
+    await explain.expectNodeMark('x2', 'missed');
+    await explain.expectEdgeMark('x2>q2', 'asked');
+    // What is asked about is drawn with a shape that colour does not carry: a dotted line, and a ring that is thick.
+    const asked = await explain.tokenColour('--rmq-explain-asked');
+    await expect
+      .poll(() => explain.edgeLook('x2>q2'))
+      .toMatchObject({ stroke: asked, width: '4px', dasharray: '1px, 7px' });
+    await expect
+      .poll(() =>
+        page.locator('[data-node-id="q2"] .rmq-node-ring').evaluate((ring) => getComputedStyle(ring).strokeWidth),
+      )
+      .toBe('8px');
   });
 
   test('does not light the implicit bindings of the default exchange with words, because there is one for every queue', async ({

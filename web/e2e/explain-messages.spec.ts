@@ -281,6 +281,21 @@ test.describe('the message inspector, opened from a message on the canvas, while
     expect((await page.evaluate(() => window.__rmq?.selection()))?.edges).toEqual([]);
   });
 
+  test('leaves a press with another button than the main one to the canvas, which is not a press that opens a message', async ({
+    page,
+  }) => {
+    const explain = await ExplainPage.open(page, TOPICS);
+    await explain.publish();
+    await expect.poll(() => explain.simulation.nextAt()).not.toBeNull();
+    const at = await explain.shapeOf(1);
+
+    await page.mouse.click(at.x, at.y, { button: 'right' });
+    await twoFrames(page);
+    await twoFrames(page);
+
+    await expect(explain.message).toHaveCount(0);
+  });
+
   test('says of a shape that stands for several messages that it does, and where to open one, and opens none', async ({
     page,
   }) => {
