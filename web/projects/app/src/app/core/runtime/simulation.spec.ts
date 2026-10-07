@@ -227,6 +227,22 @@ describe('Simulation', () => {
       expect(simulation.view().now).toBe(4);
     });
 
+    it('runs what is scheduled for a millisecond when that millisecond has come, and not when a part of it has', () => {
+      const { run, frames, said } = setup();
+      run({ type: 'speed', factor: 0.25 });
+      run(PUBLISH);
+      said.length = 0;
+
+      // Two milliseconds of frames at a quarter of the speed are half a millisecond of the simulation: 199 of them are 99.5, and the messages arrive at 100.
+      for (let frame = 0; frame < 200; frame += 1) {
+        frames.frame(frame * 2);
+      }
+      expect(types(said)).not.toContain('routed');
+
+      frames.frame(400);
+      expect(types(said)).toContain('routed');
+    });
+
     it('does not move the clock while it is paused, and goes to sleep', () => {
       const { run, frames, simulation } = setup();
       run(PUBLISH);
@@ -361,7 +377,7 @@ describe('Simulation', () => {
       const { simulation } = setup();
 
       expect(() => simulation.execute({ type: 'publish', from: { kind: 'producer', name: 'nobody' } })).toThrow(
-        RangeError,
+        new RangeError('There is no producer named "nobody" on the canvas'),
       );
     });
   });
@@ -451,6 +467,27 @@ describe('Simulation', () => {
       expect(simulation.animating()).toBe(false);
       frames.frame(2_000);
       expect(frames.pending).toBe(0);
+    });
+
+    it('moves the picture from where the last step left it to where this one puts it', () => {
+      const { run, frames, simulation } = setup();
+      run({ type: 'pause' });
+      run(PUBLISH);
+      // Both messages arrive at 100, and a step takes one of them.
+      run({ type: 'step' });
+      run({ type: 'step' });
+      for (const time of [1_000, 1_100, 1_200, 1_250]) {
+        frames.frame(time);
+      }
+      expect(simulation.visualTime()).toBe(100);
+
+      run({ type: 'step' });
+      expect(simulation.view().now).toBe(150);
+      for (const time of [2_000, 2_100, 2_125]) {
+        frames.frame(time);
+      }
+
+      expect(simulation.visualTime()).toBe(125);
     });
 
     it('moves the picture from where it is when a step is taken before the last has finished', () => {
@@ -678,6 +715,19 @@ describe('Simulation', () => {
       expect(Object.keys(simulation.view().queues)).toEqual(['other']);
       expect(stats.of('E')()).toBeNull();
       expect(stats.of('Q')()).toMatchObject({ kind: 'queue' });
+    });
+
+    it('counts the messages that a queue held and the ones that its consumers held, as lost, when the queue is deleted', () => {
+      const { run, bus, status } = setup();
+      run({ type: 'pause' });
+      run(PUBLISH);
+      for (let steps = 0; steps < 4; steps += 1) {
+        run({ type: 'step' });
+      }
+
+      bus.apply({ type: 'delete', target: { kind: 'queue', name: 'billing' } }, 'key');
+
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Deleted queue billing. 2 messages were lost.' });
     });
 
     it('tells how many messages a change took with it, after what it did, and once', () => {

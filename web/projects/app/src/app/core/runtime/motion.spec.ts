@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { MOTION_QUERY, MotionPreference, type MotionQuery } from './motion';
@@ -56,6 +57,21 @@ describe('MotionPreference', () => {
     TestBed.configureTestingModule({ providers: [{ provide: MOTION_QUERY, useValue: null }] });
 
     expect(TestBed.inject(MotionPreference).reduced()).toBe(false);
+  });
+
+  it('asks the window for the preference to reduce motion, by that name', () => {
+    const asked: string[] = [];
+    const page = fakeQuery(true);
+    const defaultView = {
+      matchMedia: (text: string) => {
+        asked.push(text);
+        return page.query;
+      },
+    };
+    TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView } }] });
+
+    expect(TestBed.inject(MotionPreference).reduced()).toBe(true);
+    expect(asked).toEqual(['(prefers-reduced-motion: reduce)']);
   });
 
   it('asks the window by default, which says nothing where there is no way to ask', () => {

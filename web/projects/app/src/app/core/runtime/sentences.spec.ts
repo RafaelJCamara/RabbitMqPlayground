@@ -184,6 +184,12 @@ describe('describeStep', () => {
     );
   });
 
+  it('counts one more, when a step said four', () => {
+    expect(describeStep([published, routed, enqueued, enqueued], names)).toBe(
+      'Stepped: sender published message 3; message 3 was routed to billing; message 3 is in billing; and 1 more.',
+    );
+  });
+
   it('counts the rest, when a step said more than three', () => {
     expect(describeStep([published, routed, enqueued, enqueued, enqueued], names)).toBe(
       'Stepped: sender published message 3; message 3 was routed to billing; message 3 is in billing; and 2 more.',

@@ -124,7 +124,8 @@ describe('FrameLoop', () => {
     frames.frame(60_000);
     frames.frame(60_010);
 
-    expect(elapsed).toEqual([0, MAX_FRAME_MS, 10]);
+    expect(MAX_FRAME_MS).toBe(100);
+    expect(elapsed).toEqual([0, 100, 10]);
   });
 
   it('counts a time that went backwards as no time', () => {

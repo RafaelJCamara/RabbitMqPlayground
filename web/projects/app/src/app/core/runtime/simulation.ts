@@ -124,7 +124,7 @@ export class Simulation implements RuntimeHost {
     if (this.tween === null) {
       return this.real;
     }
-    return this.tween.from + (this.real - this.tween.from) * Math.min(1, this.tween.elapsed / STEP_TWEEN_MS);
+    return this.tween.from + (this.real - this.tween.from) * (this.tween.elapsed / STEP_TWEEN_MS);
   }
 
   /** Whether something moves, which is when the frames go on: the clock runs with something scheduled, or the picture is on its way after a step. */

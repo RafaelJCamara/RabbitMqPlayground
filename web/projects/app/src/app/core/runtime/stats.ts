@@ -85,7 +85,7 @@ export function statsOf(document: CanvasDocument, view: RuntimeView): Map<Id, No
           stats.set(id, {
             kind,
             holds: channel.consumers.reduce((sum, { unacked }) => sum + unacked, 0),
-            limit: channel.prefetch === 0 ? 0 : channel.prefetch * Math.max(1, live.length),
+            limit: channel.prefetch * Math.max(1, live.length),
             acksItself: live.length > 0 && live.every(({ ack }) => ack === 'auto'),
             finished: channel.consumed,
             waiting: channel.waiting,
