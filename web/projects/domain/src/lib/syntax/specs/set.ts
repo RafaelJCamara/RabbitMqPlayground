@@ -24,6 +24,18 @@ const EXCHANGE_TYPES = ['direct', 'fanout', 'topic', 'headers'] as const;
 const bool = { kind: 'bool' } as const;
 const whole = ({ min, max }: { readonly min: number; readonly max: number }) => ({ kind: 'int', min, max }) as const;
 
+/** The two options that a message has, for `set` of a producer and for `publish`. */
+export const PAYLOAD_OPTION: OptionSpec = {
+  name: 'payload',
+  value: { kind: 'text' },
+  summary: 'the body of the message',
+};
+export const KEY_OPTION: OptionSpec = {
+  name: 'key',
+  value: { kind: 'text' },
+  summary: 'the routing key of the message',
+};
+
 const EXCHANGE: TailSpec = {
   options: [
     { name: 'type', value: { kind: 'enum', values: EXCHANGE_TYPES }, summary: 'how it routes' },
@@ -35,8 +47,8 @@ const EXCHANGE: TailSpec = {
 const QUEUE: TailSpec = { options: [{ name: 'durable', value: bool, summary: 'has to be true' }] };
 const PRODUCER: TailSpec = {
   options: [
-    { name: 'payload', value: { kind: 'text' }, summary: 'the body of the message' },
-    { name: 'key', value: { kind: 'text' }, summary: 'the routing key of the message' },
+    PAYLOAD_OPTION,
+    KEY_OPTION,
     { name: 'burst', value: whole(LIMITS.burst), summary: 'messages in one publish' },
     { name: 'every', value: whole(LIMITS.everyMs), summary: 'milliseconds between publishes' },
     { name: 'repeat', value: bool, summary: 'publish again and again' },

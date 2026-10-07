@@ -3,6 +3,7 @@ import type { HeaderEntry, HeaderValue } from '@rmq/engine';
 import type { OptionSpec } from '../cursor';
 import { refText, type CommandSpec } from '../spec';
 import { formatValue } from '../values';
+import { KEY_OPTION, PAYLOAD_OPTION } from './set';
 import { wordText } from '../words';
 
 /**
@@ -14,10 +15,7 @@ import { wordText } from '../words';
 export const SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 export const SPEED_RANGE = { min: 0.25, max: 4 } as const;
 
-const MESSAGE_OPTIONS: readonly OptionSpec[] = [
-  { name: 'key', value: { kind: 'text' }, summary: 'the routing key of the message' },
-  { name: 'payload', value: { kind: 'text' }, summary: 'the body of the message' },
-];
+const MESSAGE_OPTIONS: readonly OptionSpec[] = [KEY_OPTION, PAYLOAD_OPTION];
 
 const SOURCES = ['producer', 'exchange'] as const;
 

@@ -487,7 +487,7 @@ export class Cursor {
         at: range(word),
       });
     }
-    return number + 0;
+    return number;
   }
 
   /** There must be nothing more. */
