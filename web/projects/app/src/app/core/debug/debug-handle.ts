@@ -4,7 +4,13 @@ import { APP_NAME } from '../app-info';
 import { FeatureFlags } from '../flags/feature-flags';
 import type { FlagName } from '../flags/flags';
 import type { SimulationState } from '../runtime/simulation';
-import { DebugSources, type DebugOverlayFrame, type DebugViewport } from './debug-sources';
+import {
+  DebugSources,
+  type DebugEmphasis,
+  type DebugEventLog,
+  type DebugOverlayFrame,
+  type DebugViewport,
+} from './debug-sources';
 
 /**
  * What `window.__rmq` offers to end-to-end tests. It only reads: nothing here changes the app. What the editor knows is
@@ -28,6 +34,10 @@ export interface RmqDebugHandle {
   readonly simulationState: () => SimulationState | null;
   /** What the overlay of the messages drew in its last frame: where each shape was, how many messages it stood for, and whether it was drawn still. `null` without the overlay. */
   readonly overlayFrame: () => DebugOverlayFrame | null;
+  /** The rows of the event log: how many, how many went, and each as it was said. `null` until the editor has started, and without the flags `explain` and `simulation`. */
+  readonly explainEventLog: () => DebugEventLog | null;
+  /** What Why? lights, as marks of the edges and the nodes, and what its card says. `null` when nothing is lit. */
+  readonly explainEmphasis: () => DebugEmphasis | null;
 }
 
 declare global {
@@ -51,6 +61,8 @@ export function createDebugHandle(flags: FeatureFlags, sources: DebugSources = n
     viewport: () => sources.current?.viewport() ?? null,
     simulationState: () => sources.current?.simulationState() ?? null,
     overlayFrame: () => sources.current?.overlayFrame() ?? null,
+    explainEventLog: () => sources.current?.explainEventLog() ?? null,
+    explainEmphasis: () => sources.current?.explainEmphasis() ?? null,
   });
 }
 

@@ -22,6 +22,16 @@ const state = {
   nextAt: 450,
   view: createEngine({ seed: 1, timing: { publishMs: 0, brokerMs: 0, deliverMs: 0 } }).view(),
 };
+const log = { count: 2, dropped: 0, rows: [] };
+const lit = {
+  source: 'auto' as const,
+  message: 1,
+  title: 'Why? Message 1',
+  text: 'Reached billing.',
+  edges: [],
+  nodes: [{ id: 'q1', mark: 'reached' }],
+  gone: 0,
+};
 const editor: EditorDebugSources = {
   document: () => document,
   selection: () => ({ nodes: ['q1'], edges: ['x1>q1'] }),
@@ -30,6 +40,8 @@ const editor: EditorDebugSources = {
   viewport: () => ({ x: 10, y: 20, zoom: 1.5 }),
   simulationState: () => state,
   overlayFrame: () => frame,
+  explainEventLog: () => log,
+  explainEmphasis: () => lit,
 };
 
 describe('createDebugHandle', () => {
@@ -58,7 +70,8 @@ describe('createDebugHandle', () => {
     expect(handle.viewport()).toBeNull();
     expect(handle.simulationState()).toBeNull();
     expect(handle.overlayFrame()).toBeNull();
-    expect(handle.overlayFrame()).toBeNull();
+    expect(handle.explainEventLog()).toBeNull();
+    expect(handle.explainEmphasis()).toBeNull();
   });
 
   it('says what the editor shows, while it is open, and nothing once it is gone', () => {
@@ -73,11 +86,14 @@ describe('createDebugHandle', () => {
     expect(handle.viewport()).toEqual({ x: 10, y: 20, zoom: 1.5 });
     expect(handle.simulationState()).toBe(state);
     expect(handle.overlayFrame()).toBe(frame);
-    expect(handle.overlayFrame()).toBe(frame);
+    expect(handle.explainEventLog()).toBe(log);
+    expect(handle.explainEmphasis()).toBe(lit);
 
     detach();
     expect(handle.document()).toBeNull();
     expect(handle.viewport()).toBeNull();
+    expect(handle.explainEventLog()).toBeNull();
+    expect(handle.explainEmphasis()).toBeNull();
   });
 
   it('hands out copies of what it lists, so that a test cannot change the editor through them', () => {

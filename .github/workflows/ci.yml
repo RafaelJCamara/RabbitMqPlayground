@@ -50,7 +50,7 @@ jobs:
         run: npm run build:pages
       - name: The deployed bundle has no debug handle
         working-directory: web
-        run: npx tsx tools/pages/check-bundle.ts dist/app/browser __rmq RMQ_E2E drawnEdges simulationState overlayFrame
+        run: npx tsx tools/pages/check-bundle.ts dist/app/browser __rmq RMQ_E2E drawnEdges simulationState overlayFrame explainEventLog explainEmphasis
       - name: Upload the site
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
