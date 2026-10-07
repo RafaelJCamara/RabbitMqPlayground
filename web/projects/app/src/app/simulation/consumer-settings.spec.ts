@@ -35,6 +35,15 @@ const canvas = (ack: 'auto' | 'manual' = 'manual', prefetch = 2): CanvasDocument
   settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
 });
 
+/** Two consumers of `billing`, `worker` and `helper`. */
+const twoConsumers = (): CanvasDocument => ({
+  ...canvas(),
+  consumers: {
+    ...canvas().consumers,
+    D: consumerRecord('helper', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 500 }),
+  },
+});
+
 async function renderSettings(document: CanvasDocument = canvas(), id = 'C') {
   const view = await render(ConsumerSettings, {
     inputs: { id },
@@ -88,9 +97,23 @@ describe('ConsumerSettings (ADR-0056)', () => {
     await renderSettings();
 
     expect(screen.getByRole('heading', { name: 'How it consumes' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'How it consumes' })).toBeVisible();
     expect(screen.getByRole('combobox', { name: 'Acknowledges' })).toHaveValue('manual');
     expect(screen.getByRole('spinbutton', { name: 'Prefetch' })).toHaveValue(2);
     expect(screen.getByRole('spinbutton', { name: 'Milliseconds to handle a message' })).toHaveValue(1000);
+  });
+
+  it('gives each number the limits that the grammar has for it: a prefetch up to 65,535, a time with no top, and whole numbers', async () => {
+    await renderSettings();
+    const prefetch = screen.getByRole('spinbutton', { name: 'Prefetch' });
+    const processing = screen.getByRole('spinbutton', { name: 'Milliseconds to handle a message' });
+
+    expect([prefetch.getAttribute('min'), prefetch.getAttribute('max'), prefetch.getAttribute('step')]).toEqual([
+      '0',
+      '65535',
+      '1',
+    ]);
+    expect([processing.getAttribute('min'), processing.getAttribute('max')]).toEqual(['0', null]);
   });
 
   it('offers the two ways to acknowledge, in words that say when', async () => {
@@ -101,6 +124,10 @@ describe('ConsumerSettings (ADR-0056)', () => {
     expect(options).toEqual([
       'Automatically, as soon as it has the message',
       'By itself, when it has finished with the message',
+    ]);
+    expect(screen.getAllByRole('option').map((option) => (option as HTMLOptionElement).value)).toEqual([
+      'auto',
+      'manual',
     ]);
   });
 
@@ -114,6 +141,19 @@ describe('ConsumerSettings (ADR-0056)', () => {
     expect(consumer()?.ack).toBe('auto');
     expect(log.entries().map(({ origin, text }) => `${origin}: ${text}`)).toEqual(['inspector: set worker ack=auto']);
     expect(status.notice()).toEqual({ kind: 'message', text: 'Changed the acknowledgement of consumer worker.' });
+  });
+
+  it('sets it back to what it was too, which is the other of the two', async () => {
+    const { consumer } = await renderSettings();
+    const ack = screen.getByRole('combobox', { name: 'Acknowledges' }) as HTMLSelectElement;
+
+    ack.value = 'auto';
+    fireEvent.change(ack);
+    expect(consumer()?.ack).toBe('auto');
+    ack.value = 'manual';
+    fireEvent.change(ack);
+
+    expect(consumer()?.ack).toBe('manual');
   });
 
   it('sets the prefetch and the time, and says that 0 is no limit', async () => {
@@ -160,6 +200,40 @@ describe('ConsumerSettings (ADR-0056)', () => {
       'It holds 2 of the 2 that it may hold and has not acknowledged.',
     );
     expect(screen.getByTestId('consumer-holds')).toHaveTextContent('0 messages');
+  });
+
+  it('says one message and one that waits as the singular, and several as the plural', async () => {
+    const { settle } = await renderSettings();
+    const give = (finished: number, waiting: number) => {
+      TestBed.inject(SimStats).apply(
+        new Map([
+          ['C', { kind: 'consumer', holds: 0, limit: 2, acksItself: false, finished, waiting, working: false }],
+        ]),
+      );
+      settle();
+    };
+
+    give(1, 1);
+    expect(screen.getByTestId('consumer-holds')).toHaveTextContent(
+      'It has finished with 1 message, and 1 is waiting for its turn.',
+    );
+
+    give(2, 2);
+    expect(screen.getByTestId('consumer-holds')).toHaveTextContent(
+      'It has finished with 2 messages, and 2 are waiting for its turn.',
+    );
+  });
+
+  it('forgets what was refused when another consumer is shown, because it was refused for the first', async () => {
+    const { give, fixture, settle } = await renderSettings(twoConsumers());
+    give(screen.getByRole('spinbutton', { name: 'Prefetch' }), '70000');
+    expect(screen.getByTestId('refusal')).toBeVisible();
+
+    fixture.componentRef.setInput('id', 'D');
+    settle();
+    settle();
+
+    expect(screen.queryByTestId('refusal')).toBeNull();
   });
 
   it('says nothing of what it holds until the simulation has said anything of it', async () => {

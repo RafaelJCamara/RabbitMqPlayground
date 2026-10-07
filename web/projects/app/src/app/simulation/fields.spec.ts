@@ -56,6 +56,13 @@ describe('Fields (ADR-0056)', () => {
       expect(fields.problems()).toEqual({});
     });
 
+    it('says nothing, and asks for nothing, for the number that the document has', () => {
+      fields.number('burst', 'The burst', given('1').event, 1, burst());
+
+      expect(status.notice()).toBeNull();
+      expect(store.canUndo()).toBe(false);
+    });
+
     it('says that a number has to be one, for a field that is empty, and puts back the number that the document has', () => {
       const { input, event } = given('');
 

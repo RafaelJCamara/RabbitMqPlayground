@@ -164,6 +164,11 @@ describe('keysOf and keysFor', () => {
     expect(keysOf(row('fit'), false)).toBe('F');
   });
 
+  it('write the space bar as Space, with the keys that go with it', () => {
+    expect(formatChord({ key: ' ' }, false)).toBe('Space');
+    expect(formatChord({ key: ' ', mod: true }, true)).toBe('Cmd+Space');
+  });
+
   it('write the keys of the rows that are asked for, in the order asked, with "or" between them', () => {
     expect(keysFor(['commands', 'commands-anywhere'], false)).toBe('/ or Ctrl+K');
     expect(keysFor(['commands-anywhere', 'commands'], true)).toBe('Cmd+K or /');

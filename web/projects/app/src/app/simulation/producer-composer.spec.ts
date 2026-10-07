@@ -83,6 +83,7 @@ describe('ProducerComposer (ADR-0056)', () => {
     await renderComposer();
 
     expect(screen.getByRole('heading', { name: 'What it sends' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'What it sends' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: 'Payload' })).toHaveValue('hello');
     expect(screen.getByRole('textbox', { name: 'Routing key' })).toHaveValue('new');
     expect(screen.getByRole('spinbutton', { name: 'Messages at a time' })).toHaveValue(2);
@@ -99,6 +100,70 @@ describe('ProducerComposer (ADR-0056)', () => {
     );
   });
 
+  it('says that there are none, and that there are several', async () => {
+    const { bus, settle } = await renderComposer();
+
+    bus.apply(
+      {
+        type: 'set',
+        kind: 'producer',
+        name: 'sender',
+        changes: { headers: [{ key: 'm', value: { t: 'string', v: 'x' } }] },
+      },
+      'inspector',
+    );
+    settle();
+    expect(screen.getByTestId('composer-headers')).toHaveTextContent(
+      'The message has 2 headers. The table to edit them is coming with the headers exchange.',
+    );
+
+    bus.apply({ type: 'unset', kind: 'producer', name: 'sender', headers: ['n', 'm'] }, 'inspector');
+    settle();
+    expect(screen.getByTestId('composer-headers')).toHaveTextContent(
+      'The message has no headers. A headers exchange looks at them, and the table to edit them is coming with it.',
+    );
+  });
+
+  it('gives each number the limits that the grammar has for it, and the fields of text a name to be read with', async () => {
+    await renderComposer();
+    const burst = screen.getByRole('spinbutton', { name: 'Messages at a time' });
+    const every = screen.getByRole('spinbutton', { name: 'Milliseconds between sends' });
+
+    expect([burst.getAttribute('min'), burst.getAttribute('max'), burst.getAttribute('step')]).toEqual([
+      '1',
+      '1000',
+      '1',
+    ]);
+    expect([every.getAttribute('min'), every.getAttribute('max')]).toEqual(['1', null]);
+  });
+
+  it('marks the field of text that was refused, and ties the reason to it, for a payload and for a key', async () => {
+    const { give } = await renderComposer();
+    const payload = screen.getByRole('textbox', { name: 'Payload' });
+    const key = screen.getByRole('textbox', { name: 'Routing key' });
+
+    give(key, 'k'.repeat(300));
+    expect(key).toHaveAttribute('aria-invalid', 'true');
+    expect(key).toHaveAccessibleDescription(/255/);
+    expect(payload).not.toHaveAttribute('aria-invalid');
+
+    give(payload, 'p'.repeat(LIMITS.textLength + 1));
+    expect(payload).toHaveAttribute('aria-invalid', 'true');
+    expect(payload).toHaveAccessibleDescription(/\d/);
+  });
+
+  it('forgets what was refused when another producer is shown', async () => {
+    const { give, fixture, settle } = await renderComposer();
+    give(screen.getByRole('spinbutton', { name: 'Messages at a time' }), '0');
+    expect(screen.getByTestId('refusal')).toBeVisible();
+
+    fixture.componentRef.setInput('id', 'L');
+    settle();
+    settle();
+
+    expect(screen.queryByTestId('refusal')).toBeNull();
+  });
+
   it('sets the payload and the key with the command that sets them, logs the line that does the same, and says what it did', async () => {
     const { give, producer, log, status } = await renderComposer();
 
@@ -113,20 +178,22 @@ describe('ProducerComposer (ADR-0056)', () => {
     expect(status.notice()).toEqual({ kind: 'message', text: 'Changed the routing key of producer sender.' });
   });
 
-  it('does nothing for a value that is the one that the document has', async () => {
-    const { give, log } = await renderComposer();
+  it('does nothing for a value that is the one that the document has, and says nothing', async () => {
+    const { give, log, status } = await renderComposer();
 
     give(screen.getByRole('textbox', { name: 'Payload' }), 'hello');
 
     expect(log.entries()).toEqual([]);
+    expect(status.notice()).toBeNull();
   });
 
-  it('does nothing for a number that is the one that the document has', async () => {
-    const { give, log } = await renderComposer();
+  it('does nothing for a number that is the one that the document has, and says nothing', async () => {
+    const { give, log, status } = await renderComposer();
 
     give(screen.getByRole('spinbutton', { name: 'Messages at a time' }), '2');
 
     expect(log.entries()).toEqual([]);
+    expect(status.notice()).toBeNull();
     expect(screen.queryByTestId('refusal')).toBeNull();
   });
 
@@ -158,6 +225,7 @@ describe('ProducerComposer (ADR-0056)', () => {
     expect(burst).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByTestId('refusal-message')).toHaveTextContent(/burst/i);
     expect(burst).toHaveAttribute('aria-describedby', screen.getByTestId('refusal').closest('[id]')?.id ?? 'x');
+    expect(burst).toHaveAccessibleDescription(/burst/i);
     expect(log.entries()).toEqual([]);
   });
 

@@ -12,6 +12,13 @@ describe('Icon', () => {
     expect(svg?.querySelector('path')).toHaveAttribute('d', ICONS.trash);
   });
 
+  it('has a drawing for every name, which starts by putting the pen somewhere, and no two that are the same', () => {
+    const paths = Object.values(ICONS);
+
+    expect(paths.every((path) => path.startsWith('M'))).toBe(true);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
   it('draws another path for another name', async () => {
     const { container } = await render(Icon, { inputs: { name: 'check' } });
 

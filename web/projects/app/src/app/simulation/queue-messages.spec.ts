@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
+import { SimStats } from '../core/runtime/sim-stats';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
@@ -81,6 +82,7 @@ describe('QueueMessages (ADR-0056)', () => {
     await renderSection();
 
     expect(screen.getByRole('heading', { name: 'Messages' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Messages' })).toBeVisible();
     expect(screen.getByTestId('queue-counts')).toHaveTextContent(
       '0 messages are ready, and 0 are held and not acknowledged.',
     );
@@ -106,6 +108,58 @@ describe('QueueMessages (ADR-0056)', () => {
       '#1 new first',
       '#2 new second',
     ]);
+    expect(screen.queryByTestId('queue-more')).toBeNull();
+  });
+
+  it('says that a message has no key', async () => {
+    // A fanout exchange sends a message on whatever its key is, and so on none.
+    const { send, step } = await renderSection({ ...canvas(), exchanges: { E: exchangeRecord('orders', 'fanout') } });
+    send('', 'plain');
+    step(2);
+
+    expect(screen.getByTestId('queue-message')).toHaveTextContent('#1 (no key) plain');
+  });
+
+  it('says what is the limit of the list and of a payload: fifty messages, and forty characters of each payload', () => {
+    expect([LIST_LIMIT, PAYLOAD_CUT]).toEqual([50, 40]);
+  });
+
+  it('shows a payload of forty characters whole, and one of forty-one cut to forty with an ellipsis', async () => {
+    const { send, step } = await renderSection();
+    send('new', 'a'.repeat(40));
+    send('new', 'b'.repeat(41));
+    step(4);
+
+    const [whole, cut] = screen.getAllByTestId('queue-message');
+
+    expect(whole).toHaveTextContent(`#1 new ${'a'.repeat(40)}`);
+    expect(whole).not.toHaveTextContent('…');
+    expect(cut).toHaveTextContent(`#2 new ${'b'.repeat(39)}…`);
+  });
+
+  it('counts what the list leaves out as what is ready and what is held, together, and not as the difference between them', async () => {
+    const { send, step } = await renderSection(canvas(withWorker()));
+    for (let sent = 0; sent < LIST_LIMIT + 3; sent += 1) {
+      send();
+    }
+    // Every message arrives, then every message is put in the queue, and the first of them is given to the consumer.
+    step(2 * (LIST_LIMIT + 3));
+
+    expect(screen.getByTestId('queue-counts')).toHaveTextContent(
+      `${LIST_LIMIT + 2} messages are ready, and 1 is held and not acknowledged.`,
+    );
+    expect(screen.getAllByTestId('queue-message')).toHaveLength(LIST_LIMIT);
+    expect(screen.getByTestId('queue-more')).toHaveTextContent('and 3 more');
+  });
+
+  it('says that nothing is ready or held when the simulation has not said anything of the queue', async () => {
+    const { settle } = await renderSection();
+    TestBed.inject(SimStats).apply(new Map());
+    settle();
+
+    expect(screen.getByTestId('queue-counts')).toHaveTextContent(
+      '0 messages are ready, and 0 are held and not acknowledged.',
+    );
   });
 
   it('says that a message has no key, and cuts a long payload, and says how many more there are than it lists', async () => {

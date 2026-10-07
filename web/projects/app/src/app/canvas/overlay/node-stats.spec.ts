@@ -84,6 +84,9 @@ describe('the words of a node (ADR-0056)', () => {
 
   it('say what an exchange routed and what found no queue, and what was refused only when something was', () => {
     expect(exchangeWords({ kind: 'exchange', routed: 4, unroutable: 1, refused: 0 })).toBe('routed 4 · unroutable 1');
+    expect(exchangeWords({ kind: 'exchange', routed: 0, unroutable: 0, refused: 1 })).toBe(
+      'routed 0 · unroutable 0 · refused 1',
+    );
     expect(exchangeWords({ kind: 'exchange', routed: 0, unroutable: 0, refused: 2 })).toBe(
       'routed 0 · unroutable 0 · refused 2',
     );
@@ -97,6 +100,7 @@ describe('the words of a node (ADR-0056)', () => {
     expect(consumerWords(consumer({ holds: 2, limit: 3, finished: 5 }))).toBe('holds 2 of 3 · done 5');
     expect(consumerWords(consumer({ holds: 2, limit: 0, waiting: 4 }))).toBe('holds 2 of ∞ · done 0 · 4 waiting');
     expect(consumerWords(consumer({ acksItself: true, finished: 7 }))).toBe('holds none · done 7');
+    expect(consumerWords(consumer({ holds: 1, limit: 2, waiting: 1 }))).toBe('holds 1 of 2 · done 0 · 1 waiting');
   });
 });
 
@@ -169,6 +173,7 @@ describe('NodeStatsView (ADR-0056)', () => {
       false,
     ]);
     expect(screen.getByTestId('stats-text')).toHaveTextContent('holds 2 of 3 · done 0');
+    expect(screen.queryByTestId('slots-more')).toBeNull();
   });
 
   it('draws the sign of no limit for a consumer that has none, and for one that acknowledges for itself, and says how many more places than it draws', async () => {

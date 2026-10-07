@@ -42,7 +42,7 @@ const traffic = (): CanvasDocument => ({
   settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
 });
 
-async function renderBar() {
+async function renderBar(document: CanvasDocument = traffic()) {
   const frames = manualFrames();
   const view = await render(SimulationBar, {
     providers: [
@@ -57,7 +57,7 @@ async function renderBar() {
     ],
   });
   const store = TestBed.inject(DocumentStore);
-  store.load(traffic());
+  store.load(document);
   frames.frame(0);
   view.fixture.detectChanges();
   return {
@@ -147,7 +147,7 @@ describe('SimulationBar (ADR-0056)', () => {
   it('changes the speed with a button, and presses the one that is in use', async () => {
     const { user, simulation, settle, log } = await renderBar();
 
-    await user.click(screen.getByRole('button', { name: '4×' }));
+    await user.click(screen.getByTestId('speed-4'));
     settle();
 
     expect(simulation.speed()).toBe(4);
@@ -174,6 +174,20 @@ describe('SimulationBar (ADR-0056)', () => {
     await user.click(screen.getByRole('button', { name: 'Reset counters' }));
     expect(status.notice()).toEqual({ kind: 'message', text: 'The counters are 0 already.' });
     settle();
+  });
+
+  it('reads a long time as seconds and a tenth, to the thousand milliseconds that make a second', async () => {
+    const slow = traffic();
+    const { bus, settle } = await renderBar({
+      ...slow,
+      settings: { ...slow.settings, timing: { publishMs: 1_000_000, brokerMs: 50, deliverMs: 100 } },
+    });
+    bus.run({ type: 'pause' }, 'toolbar');
+    bus.run({ type: 'publish', from: { kind: 'producer', name: 'sender' } }, 'toolbar');
+    bus.run({ type: 'step' }, 'toolbar');
+    settle();
+
+    expect(screen.getByTestId('simulation-readout')).toHaveTextContent('Time 1000.0 s');
   });
 
   it('reads the time to a tenth of a second and how many messages are on their way, as text and not as a live region', async () => {
