@@ -1,4 +1,5 @@
 import {
+  bindingSignature,
   headerValueIssue,
   utf8Length,
   type HeaderArguments,
@@ -38,16 +39,38 @@ export function headerKeyIssue(key: string): Issue | null {
 
 /**
  * Why `value` cannot be the value of the header called `key`, or `null` when it can. What a value may be is the engine's
- * rule, and a value that is text is also kept to `LIMITS.textLength` characters (ADR-0029).
+ * rule, and a value that is text is also kept to `LIMITS.textLength` characters (ADR-0029). A field that has no name yet asks
+ * with `null`, and gets the sentence without the name.
  */
-export function headerValueProblem(key: string, value: HeaderCondition): Issue | null {
+export function headerValueProblem(key: string | null, value: HeaderCondition): Issue | null {
   const issue =
     headerValueIssue(value) ??
     (value.t === 'string' && value.v.length > LIMITS.textLength
       ? `a value that is text is at most ${thousands(LIMITS.textLength)} characters, and this one has ${thousands(value.v.length)}`
       : null);
-  return issue === null ? null : { kind: 'header', message: `The header '${key}': ${issue}.` };
+  if (issue === null) {
+    return null;
+  }
+  return {
+    kind: 'header',
+    message: key === null ? `${issue.charAt(0).toUpperCase()}${issue.slice(1)}.` : `The header '${key}': ${issue}.`,
+  };
 }
+
+/** The sentence for a name that a table of headers has twice, which the commands and the rows of the editor both say (ADR-0068). */
+export const duplicateHeaderIssue = (key: string): Issue => ({
+  kind: 'header',
+  message: `The header '${key}' is there twice. A table of headers has each name once, so give it one value.`,
+});
+
+/**
+ * The sentence for the name `x-match` used as a condition: it is the mode of the binding. The advice differs by where it is said, and the cause
+ * does not: a command is told to write `x-match=any`, and a row of the editor to use the control.
+ */
+export const reservedHeaderIssue = (advice: string): Issue => ({
+  kind: 'header',
+  message: `'${X_MATCH}' is the mode of a headers binding (all, any, all-with-x or any-with-x), and not a condition. ${advice}`,
+});
 
 /** Why a message cannot have this many headers, or a binding this many arguments, or `null` when it can (ADR-0029). */
 export function tooManyEntriesIssue(whose: 'message' | 'binding', count: number): Issue | null {
@@ -71,10 +94,7 @@ function entriesIssue(whose: 'message' | 'binding', entries: readonly HeaderEntr
       return issue;
     }
     if (seen.has(key)) {
-      return {
-        kind: 'header',
-        message: `The header '${key}' is there twice. A table of headers has each name once, so give it one value.`,
-      };
+      return duplicateHeaderIssue(key);
     }
     seen.add(key);
   }
@@ -93,13 +113,14 @@ export function messageHeadersIssue(headers: readonly HeaderEntry<HeaderValue>[]
 export function bindingHeadersIssue(headers: HeaderArguments): Issue | null {
   const reserved = headers.args.find(({ key }) => key === X_MATCH);
   if (reserved !== undefined) {
-    return {
-      kind: 'header',
-      message: `'${X_MATCH}' is the mode of a headers binding (all, any, all-with-x or any-with-x), and not a condition. Write it as ${X_MATCH}=any, for example.`,
-    };
+    return reservedHeaderIssue(`Write it as ${X_MATCH}=any, for example.`);
   }
   return entriesIssue('binding', headers.args);
 }
 
 // A binding is the same binding for the engine and for the canvas, so the question is the engine's (ADR-0051).
 export { bindingSignature, canonicalHeaders } from '@rmq/engine';
+
+/** Whether two sets of arguments are the same binding's: the same mode and the same conditions, in any order (ADR-0051). */
+export const sameHeaders = (a: HeaderArguments | undefined, b: HeaderArguments | undefined): boolean =>
+  bindingSignature('', 'queue', '', '', a) === bindingSignature('', 'queue', '', '', b);

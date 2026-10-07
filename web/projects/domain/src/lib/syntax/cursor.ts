@@ -1,14 +1,14 @@
 import type { HeaderCondition, HeaderEntry, HeaderValue } from '@rmq/engine';
 import { didYouMean, joinList, namesOf } from '../commands/helpers';
 import { findId } from '../document/elements';
-import { headerKeyIssue, headerValueProblem } from '../document/headers';
+import { headerKeyIssue } from '../document/headers';
 import { A_KIND, ELEMENT_KINDS, KIND_LABEL, type ElementKind, type ElementRef, type Issue } from '../document/issue';
 import type { CanvasDocument } from '../document/schema';
 import { suggest } from '../suggest';
 import type { Atom, Word } from './tokenizer';
 import { unknownCommand } from './unknown';
 import { anyQuoted, parseExists, splitAssignment, splitQualifier, textOf, wordText } from './words';
-import { parseValue } from './values';
+import { readValue } from './values';
 
 /**
  * The reading head of a typed command (ADR-0025). A command's `parse` walks its words with a cursor that says what it
@@ -401,12 +401,11 @@ export class Cursor {
     if (problem !== null) {
       throw new Stop({ ...problem, at: range(word) });
     }
-    const parsed = parseValue(value);
-    const unsafe = headerValueProblem(key, parsed);
-    if (unsafe !== null) {
-      throw new Stop({ ...unsafe, at: range(word) });
+    const read = readValue(value, key);
+    if (!read.ok) {
+      throw new Stop({ ...read.error, at: range(word) });
     }
-    return { key, value: parsed };
+    return { key, value: read.value };
   }
 
   private unknownOption(word: Word, key: string, names: readonly string[]): Stop {

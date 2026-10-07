@@ -3,10 +3,13 @@ import { bool, entry, exists, float, headerArguments, int, str } from '@rmq/test
 import { describe, expect, it } from 'vitest';
 import {
   bindingHeadersIssue,
+  duplicateHeaderIssue,
   HEADER_KEY_MAX_BYTES,
   headerKeyIssue,
   headerValueProblem,
   messageHeadersIssue,
+  reservedHeaderIssue,
+  sameHeaders,
   X_MATCH,
 } from './headers';
 
@@ -50,6 +53,57 @@ describe('headerValueProblem', () => {
       "The header 'ratio': A float header must be a finite number.",
     );
     expect(headerValueProblem('ratio', float(Number.POSITIVE_INFINITY))).not.toBeNull();
+  });
+});
+
+describe('headerValueProblem for a header with no name yet', () => {
+  it('says the reason without the name, with a capital letter, as a sentence of its own (ADR-0067)', () => {
+    expect(headerValueProblem(null, int(Number.MAX_SAFE_INTEGER + 2))).toEqual({
+      kind: 'header',
+      message: `${headerValueIssue(int(Number.MAX_SAFE_INTEGER + 2))}.`,
+    });
+    expect(headerValueProblem(null, str('x'.repeat(10_001)))?.message).toBe(
+      'A value that is text is at most 10,000 characters, and this one has 10,001.',
+    );
+    expect(headerValueProblem(null, str('ok'))).toBeNull();
+  });
+});
+
+describe('the sentences that the commands and the rows of the editor both say (ADR-0068)', () => {
+  it('says that a name is there twice, and what to do', () => {
+    expect(duplicateHeaderIssue('format')).toEqual({
+      kind: 'header',
+      message: "The header 'format' is there twice. A table of headers has each name once, so give it one value.",
+    });
+    expect(messageHeadersIssue([entry('a', str('1')), entry('a', str('2'))])).toEqual(duplicateHeaderIssue('a'));
+    expect(bindingHeadersIssue(headerArguments('all', entry('a', str('1')), entry('a', exists)))).toEqual(
+      duplicateHeaderIssue('a'),
+    );
+  });
+
+  it('says that x-match is the mode, with the advice of where it is said', () => {
+    expect(reservedHeaderIssue('Use the control.')).toEqual({
+      kind: 'header',
+      message:
+        "'x-match' is the mode of a headers binding (all, any, all-with-x or any-with-x), and not a condition. Use the control.",
+    });
+    expect(bindingHeadersIssue(headerArguments('all', entry(X_MATCH, str('any'))))).toEqual(
+      reservedHeaderIssue('Write it as x-match=any, for example.'),
+    );
+  });
+
+  it('says whether two sets of arguments are the same binding, in any order, with a mode that is left out told from one that is written', () => {
+    const a = headerArguments('all', entry('a', int(1)), entry('b', str('1')));
+
+    expect(sameHeaders(a, headerArguments('all', entry('b', str('1')), entry('a', int(1))))).toBe(true);
+    expect(sameHeaders(a, headerArguments('any', entry('a', int(1)), entry('b', str('1'))))).toBe(false);
+    expect(sameHeaders(a, headerArguments('all', entry('a', int(1)), entry('b', int(1))))).toBe(false);
+    expect(sameHeaders(headerArguments(null), undefined)).toBe(true);
+    expect(sameHeaders(headerArguments('all'), undefined)).toBe(false);
+    expect(sameHeaders(headerArguments(null, entry('a', float(1))), headerArguments(null, entry('a', int(1))))).toBe(
+      false,
+    );
+    expect(sameHeaders(undefined, undefined)).toBe(true);
   });
 });
 

@@ -60,10 +60,14 @@ export {
   bindingHeadersIssue,
   bindingSignature,
   canonicalHeaders,
+  duplicateHeaderIssue,
   headerKeyIssue,
   HEADER_KEY_MAX_BYTES,
   headerValueProblem,
   messageHeadersIssue,
+  reservedHeaderIssue,
+  sameHeaders,
+  tooManyEntriesIssue,
   X_MATCH,
 } from './lib/document/headers';
 export {
@@ -143,6 +147,16 @@ export { formatCommand } from './lib/syntax/format';
 export { parseMessageText, type MessageText } from './lib/syntax/message';
 export { parseCommand } from './lib/syntax/parse';
 export { SPECS } from './lib/syntax/registry';
+export {
+  formatCondition,
+  formatValue,
+  inferValue,
+  needsValueOf,
+  readType,
+  retypeValue,
+  VALUE_TYPES,
+  type ValueType,
+} from './lib/syntax/values';
 export { wordText } from './lib/syntax/words';
 export type { CommandSpec } from './lib/syntax/spec';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
