@@ -1,9 +1,9 @@
 import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { DocumentCommand } from '@rmq/domain';
+import type { DocumentCommand, RuntimeCommand } from '@rmq/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { documentOf, queueRecord } from '@rmq/testing';
-import { CommandBus } from './command-bus';
+import { bindingRecord, documentOf, exchangeRecord, producerRecord, queueRecord } from '@rmq/testing';
+import { CommandBus, type RuntimeHost } from './command-bus';
 import { CommandLog, LOG_LIMIT } from './command-log';
 import { DocumentStore } from './document-store';
 import { SelectionStore } from './selection-store';
@@ -29,6 +29,87 @@ describe('CommandLog (ADR-0046)', () => {
     bus.apply({ type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'a.*' }, 'typed');
 
     expect(texts()).toEqual(['declare queue billing', 'add producer "my sender"']);
+  });
+
+  describe('the commands of the simulation (ADR-0054)', () => {
+    /** A simulation that changes what the spec says that it changes. */
+    const host = (changes: (command: RuntimeCommand) => boolean): RuntimeHost => ({
+      execute: (command) => ({ changed: changes(command), said: 'Done.' }),
+      takeLost: () => 0,
+    });
+
+    beforeEach(() => {
+      TestBed.inject(DocumentStore).load(
+        documentOf({
+          exchanges: { E: exchangeRecord('orders') },
+          queues: { Q: queueRecord('billing') },
+          bindings: { B: bindingRecord('E', { kind: 'queue', id: 'Q' }, 'new') },
+          producers: { P: producerRecord('my sender', { kind: 'exchange', id: 'E' }) },
+        }),
+      );
+    });
+
+    it('are lines of the same log, in the order with the commands of the canvas, written as the learner would type them', () => {
+      bus.attach(host(() => true));
+
+      bus.apply(declareQueue('archive'), 'gesture');
+      bus.run({ type: 'pause' }, 'toolbar');
+      bus.run({ type: 'publish', from: { kind: 'producer', name: 'my sender' } }, 'key');
+      bus.run(
+        { type: 'publish', from: { kind: 'exchange', name: 'orders' }, key: 'new', payload: 'hello' },
+        'inspector',
+      );
+      bus.run({ type: 'step' }, 'key');
+      bus.run({ type: 'speed', factor: 0.5 }, 'toolbar');
+      bus.run({ type: 'purge', queue: 'billing' }, 'inspector');
+      bus.run({ type: 'clear-messages' }, 'toolbar');
+      bus.run({ type: 'reset-counters' }, 'toolbar');
+      bus.run({ type: 'play' }, 'key');
+
+      expect(texts()).toEqual([
+        'declare queue archive',
+        'pause',
+        'publish "my sender"',
+        'publish orders key=new payload=hello',
+        'step',
+        'speed 0.5',
+        'purge billing',
+        'clear messages',
+        'reset counters',
+        'play',
+      ]);
+      expect(log.entries().map(({ origin }) => origin)).toEqual([
+        'gesture',
+        'toolbar',
+        'key',
+        'inspector',
+        'key',
+        'toolbar',
+        'inspector',
+        'toolbar',
+        'toolbar',
+        'key',
+      ]);
+    });
+
+    it('are not there when they changed nothing, or were refused', () => {
+      bus.attach(host((command) => command.type !== 'pause'));
+
+      bus.run({ type: 'pause' }, 'key');
+      bus.run({ type: 'publish', from: { kind: 'producer', name: 'nobody' } }, 'typed');
+      bus.run({ type: 'step' }, 'key');
+
+      expect(texts()).toEqual(['step']);
+    });
+
+    it('are emptied with the rest when another canvas is opened', () => {
+      bus.attach(host(() => true));
+      bus.run({ type: 'step' }, 'key');
+
+      bus.load(documentOf());
+
+      expect(texts()).toEqual([]);
+    });
   });
 
   it('says what the learner used, and numbers the lines from 1 without reusing a number', () => {

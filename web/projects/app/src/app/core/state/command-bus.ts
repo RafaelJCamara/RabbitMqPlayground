@@ -1,11 +1,15 @@
 import { inject, Injectable } from '@angular/core';
 import {
   applyCommand,
+  fail,
+  ok,
+  runtimeIssue,
   type CanvasDocument,
   type Command,
   type DocumentCommand,
   type Issue,
   type Result,
+  type RuntimeCommand,
 } from '@rmq/domain';
 import { Announcer } from '../announcer';
 import { describeCommand, sentence } from './describe';
@@ -28,6 +32,31 @@ export interface Applied {
 
 export type AppliedListener = (applied: Applied) => void;
 
+/** What running a command of the simulation did (ADR-0054). */
+export interface RuntimeOutcome {
+  /** Whether it changed the simulation, which is what puts a line in the log. */
+  readonly changed: boolean;
+  /** What to tell the learner, on the status line and aloud. */
+  readonly said: string;
+}
+
+/** What the bus hands the commands of the simulation to: the simulation is it. Without one, they are refused. */
+export interface RuntimeHost {
+  execute(command: RuntimeCommand): RuntimeOutcome;
+  /** How many messages the last change of the canvas took out of the simulation. It says each number once, and 0 until the canvas changes again. */
+  takeLost(): number;
+}
+
+const SIMULATION_OFF: Issue = {
+  kind: 'unsupported',
+  message:
+    'The simulation is not switched on yet, so there is nothing to run. It is still being built: add ?ff=simulation to the address to try it.',
+};
+
+/** What the learner is told when a change of the canvas took messages with it, after what was done. */
+const lostWords = (count: number): string =>
+  count === 0 ? '' : ` ${count === 1 ? '1 message was' : `${count} messages were`} lost.`;
+
 export interface ApplyOptions {
   /** Say what was done, on the status line and in the live region. It is `true` unless a caller has a reason, such as a key that the canvas already announced. */
   readonly say?: boolean;
@@ -46,6 +75,7 @@ export class CommandBus {
   private readonly announcer = inject(Announcer);
   private readonly ids = createIdGenerator(() => this.store.document());
   private readonly listeners = new Set<AppliedListener>();
+  private host: RuntimeHost | null = null;
 
   apply(command: DocumentCommand, origin: CommandOrigin, options: ApplyOptions = {}): Result<CanvasDocument> {
     const before = this.store.document();
@@ -62,8 +92,12 @@ export class CommandBus {
       const label = describeCommand(command);
       this.store.commit(after, label);
       this.selection.prune(after);
+      const lost = this.host?.takeLost() ?? 0;
       if (options.say !== false) {
-        this.tell(sentence(label));
+        this.tell(`${sentence(label)}${lostWords(lost)}`);
+      } else if (lost > 0) {
+        // The canvas has said what was done, and not what it cost.
+        this.tell(lostWords(lost).trim());
       } else {
         this.status.clear();
       }
@@ -76,7 +110,11 @@ export class CommandBus {
   undo(origin: CommandOrigin): boolean {
     const before = this.store.document();
     const step = this.store.undo();
-    this.tell(step === undefined ? 'Nothing to undo.' : sentence(`Undid: ${step.label}`));
+    this.tell(
+      step === undefined
+        ? 'Nothing to undo.'
+        : `${sentence(`Undid: ${step.label}`)}${lostWords(this.host?.takeLost() ?? 0)}`,
+    );
     this.selection.prune(this.store.document());
     if (step !== undefined) {
       this.notify({ command: { type: 'undo' }, origin, before, after: this.store.document() });
@@ -87,12 +125,52 @@ export class CommandBus {
   redo(origin: CommandOrigin): boolean {
     const before = this.store.document();
     const step = this.store.redo();
-    this.tell(step === undefined ? 'Nothing to redo.' : sentence(`Redid: ${step.label}`));
+    this.tell(
+      step === undefined
+        ? 'Nothing to redo.'
+        : `${sentence(`Redid: ${step.label}`)}${lostWords(this.host?.takeLost() ?? 0)}`,
+    );
     this.selection.prune(this.store.document());
     if (step !== undefined) {
       this.notify({ command: { type: 'redo' }, origin, before, after: this.store.document() });
     }
     return step !== undefined;
+  }
+
+  /**
+   * Runs a command of the simulation (ADR-0054): the one door of the runtime, as `apply` is of the document. It is checked against the canvas as it is, and a
+   * refusal says the root cause first. What it did is told as a command is, and one that changed the simulation is told to the listeners, which is what writes
+   * it in the log. One that changed nothing is not, and is still said, so that a key that did nothing is not silent.
+   */
+  run(command: RuntimeCommand, origin: CommandOrigin, options: ApplyOptions = {}): Result<RuntimeOutcome> {
+    const document = this.store.document();
+    const host = this.host;
+    const issue = host === null ? SIMULATION_OFF : runtimeIssue(document, command);
+    if (host === null || issue !== null) {
+      const refused = issue ?? SIMULATION_OFF;
+      this.refuse(refused, origin);
+      return fail(refused);
+    }
+    const outcome = host.execute(command);
+    if (options.say !== false) {
+      this.tell(outcome.said);
+    } else {
+      this.status.clear();
+    }
+    if (outcome.changed) {
+      this.notify({ command, origin, before: document, after: document });
+    }
+    return ok(outcome);
+  }
+
+  /** The simulation says that it is the one that runs the commands of the runtime, until the function that it gets is called. */
+  attach(host: RuntimeHost): () => void {
+    this.host = host;
+    return () => {
+      if (this.host === host) {
+        this.host = null;
+      }
+    };
   }
 
   /** Opens a document that has no past, and forgets what was selected and said. */

@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ID_PATTERN, validateDocument, type DocumentCommand } from '@rmq/domain';
+import { ID_PATTERN, validateDocument, type DocumentCommand, type RuntimeCommand } from '@rmq/domain';
 import { transientQueueReply } from '@rmq/engine';
 import { documentOf, exchangeRecord, producerRecord, queueRecord } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../announcer';
-import { CommandBus, type Applied } from './command-bus';
+import { CommandBus, type Applied, type RuntimeHost, type RuntimeOutcome } from './command-bus';
 import { DocumentStore } from './document-store';
 import { SelectionStore } from './selection-store';
 import { StatusStore } from './status-store';
@@ -168,6 +168,175 @@ describe('CommandBus', () => {
       expect(store.undoLabel()).toBe('added queue billing');
       bus.undo('toolbar');
       expect(Object.keys(store.document().queues)).toEqual([]);
+    });
+  });
+
+  describe('run', () => {
+    /** A simulation that does what the spec says, and says what it was asked. */
+    function host(outcome: RuntimeOutcome = { changed: true, said: 'Paused.' }) {
+      const asked: RuntimeCommand[] = [];
+      const stand: RuntimeHost = {
+        execute: (command) => {
+          asked.push(command);
+          return outcome;
+        },
+        takeLost: () => 0,
+      };
+      return { asked, stand };
+    }
+    const pause: RuntimeCommand = { type: 'pause' };
+
+    beforeEach(() => {
+      store.load(
+        documentOf({
+          exchanges: { E: exchangeRecord('orders', 'direct', { internal: true }) },
+          queues: { Q: queueRecord('billing') },
+          producers: { P: producerRecord('sender'), L: producerRecord('linked', { kind: 'queue', id: 'Q' }) },
+        }),
+      );
+      vi.mocked(announcer.announce).mockClear();
+    });
+
+    it('refuses, saying why, when there is no simulation to run it', () => {
+      const result = bus.run(pause, 'key');
+
+      expect(!result.ok && result.error.kind).toBe('unsupported');
+      expect(status.refusal()).toMatchObject({ origin: 'key' });
+      expect(announcer.announce).toHaveBeenCalledWith(expect.stringContaining('not switched on'), 'assertive');
+    });
+
+    it('hands the command to the simulation, and says what it did, on the status line and aloud', () => {
+      const { asked, stand } = host({ changed: true, said: 'Playing at 2×.' });
+      bus.attach(stand);
+
+      const result = bus.run({ type: 'play' }, 'toolbar');
+
+      expect(asked).toEqual([{ type: 'play' }]);
+      expect(result).toEqual({ ok: true, value: { changed: true, said: 'Playing at 2×.' } });
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Playing at 2×.' });
+      expect(announcer.announce).toHaveBeenCalledWith('Playing at 2×.');
+    });
+
+    it('tells a listener of a command that changed the simulation, with its origin, and the canvas that was the same before and after', () => {
+      const applied: Applied[] = [];
+      bus.onApplied((entry) => applied.push(entry));
+      bus.attach(host().stand);
+      const document = store.document();
+
+      bus.run(pause, 'key');
+
+      expect(applied).toEqual([{ command: pause, origin: 'key', before: document, after: document }]);
+    });
+
+    it('does not tell a listener of one that changed nothing, which is still said, so that a key that did nothing is not silent', () => {
+      const applied: Applied[] = [];
+      bus.onApplied((entry) => applied.push(entry));
+      bus.attach(host({ changed: false, said: 'It is paused already.' }).stand);
+
+      const result = bus.run(pause, 'key');
+
+      expect(result.ok && result.value.changed).toBe(false);
+      expect(applied).toEqual([]);
+      expect(status.notice()).toEqual({ kind: 'message', text: 'It is paused already.' });
+    });
+
+    it('does not say what it did when it is asked not to, and clears what was said before', () => {
+      status.say('Something old.');
+      bus.attach(host().stand);
+
+      bus.run(pause, 'key', { say: false });
+
+      expect(status.notice()).toBeNull();
+      expect(announcer.announce).not.toHaveBeenCalled();
+    });
+
+    it('refuses what the canvas cannot do, saying the root cause first, and does not ask the simulation', () => {
+      const { asked, stand } = host();
+      bus.attach(stand);
+
+      const nobody = bus.run({ type: 'publish', from: { kind: 'producer', name: 'nobody' } }, 'typed');
+      const alone = bus.run({ type: 'publish', from: { kind: 'producer', name: 'sender' } }, 'typed');
+      const internal = bus.run({ type: 'publish', from: { kind: 'exchange', name: 'orders' } }, 'typed');
+
+      expect(!nobody.ok && nobody.error.kind).toBe('missing-element');
+      expect(!alone.ok && alone.error.kind).toBe('not-linked');
+      expect(!internal.ok && internal.error.kind).toBe('internal-exchange');
+      expect(status.refusal()).toMatchObject({ origin: 'typed', issue: { kind: 'internal-exchange' } });
+      expect(asked).toEqual([]);
+    });
+
+    it('lets the producer that is linked publish', () => {
+      const { asked, stand } = host();
+      bus.attach(stand);
+
+      expect(bus.run({ type: 'publish', from: { kind: 'producer', name: 'linked' } }, 'key').ok).toBe(true);
+      expect(asked).toHaveLength(1);
+    });
+
+    it('stops handing commands to a simulation that was detached, and keeps the one that took its place', () => {
+      const first = host();
+      const second = host();
+      const detachFirst = bus.attach(first.stand);
+      bus.attach(second.stand);
+
+      detachFirst();
+      bus.run(pause, 'key');
+
+      expect(first.asked).toEqual([]);
+      expect(second.asked).toEqual([pause]);
+    });
+
+    it('refuses again when the simulation that it had is detached', () => {
+      const detach = bus.attach(host().stand);
+
+      detach();
+
+      expect(bus.run(pause, 'key').ok).toBe(false);
+    });
+  });
+
+  describe('what a change of the canvas costs the simulation', () => {
+    const lostOf = (count: number): RuntimeHost => ({
+      execute: () => ({ changed: false, said: '' }),
+      takeLost: () => count,
+    });
+
+    it('is told after what was done, in words, for one message and for several', () => {
+      bus.attach(lostOf(1));
+      bus.apply(declareQueue('one'), 'gesture');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Added queue one. 1 message was lost.' });
+
+      bus.attach(lostOf(5));
+      bus.apply(declareQueue('five'), 'gesture');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Added queue five. 5 messages were lost.' });
+    });
+
+    it('is told after an undo and after a redo as well', () => {
+      bus.apply(declareQueue('billing'), 'gesture');
+      bus.attach(lostOf(2));
+
+      bus.undo('toolbar');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Undid: added queue billing. 2 messages were lost.' });
+      bus.redo('toolbar');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Redid: added queue billing. 2 messages were lost.' });
+    });
+
+    it('is told on its own when the canvas has said what was done already, and is not told when nothing was lost', () => {
+      bus.attach(lostOf(3));
+      bus.apply(declareQueue('billing'), 'key', { say: false });
+      expect(status.notice()).toEqual({ kind: 'message', text: '3 messages were lost.' });
+
+      bus.attach(lostOf(0));
+      bus.apply(declareQueue('archive'), 'key', { say: false });
+      expect(status.notice()).toBeNull();
+    });
+
+    it('says nothing of it when there is nothing to undo, since nothing was lost by it', () => {
+      bus.attach(lostOf(4));
+
+      bus.undo('toolbar');
+
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Nothing to undo.' });
     });
   });
 

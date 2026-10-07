@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { documentOf, exchangeRecord, queueRecord } from '@rmq/testing';
+import { bindingRecord, documentOf, exchangeRecord, manualFrames, producerRecord, queueRecord } from '@rmq/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
+import { FRAME_SOURCE, FrameLoop } from '../core/runtime/frame-loop';
+import { SimStats } from '../core/runtime/sim-stats';
+import { Simulation } from '../core/runtime/simulation';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
@@ -141,6 +145,94 @@ describe('CommandRunner (ADR-0045)', () => {
       runner.run('declare queue second');
 
       expect(Object.keys(store.document().queues)).toEqual(['q1', 'q2']);
+    });
+  });
+
+  describe('a line that runs the simulation (ADR-0054)', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          DocumentStore,
+          SelectionStore,
+          StatusStore,
+          CommandBus,
+          CommandLog,
+          CommandRunner,
+          FrameLoop,
+          SimStats,
+          Simulation,
+          { provide: FRAME_SOURCE, useValue: manualFrames() },
+          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
+        ],
+      });
+      runner = TestBed.inject(CommandRunner);
+      store = TestBed.inject(DocumentStore);
+      status = TestBed.inject(StatusStore);
+      log = TestBed.inject(CommandLog);
+      TestBed.inject(Simulation);
+      store.load(
+        documentOf({
+          exchanges: { E: exchangeRecord('orders') },
+          queues: { Q: queueRecord('billing') },
+          bindings: { B: bindingRecord('E', { kind: 'queue', id: 'Q' }, 'new') },
+          producers: { P: producerRecord('sender', { kind: 'exchange', id: 'E' }), L: producerRecord('lonely') },
+        }),
+      );
+    });
+
+    it('is run through the bus, with the command bar as its origin, and is in the log as the line that was typed, and is not a change of the canvas', () => {
+      const document = store.document();
+
+      expect(runner.run('pause')).toEqual({ kind: 'applied' });
+      expect(runner.run('speed 2')).toEqual({ kind: 'applied' });
+      expect(runner.run('publish sender')).toEqual({ kind: 'applied' });
+
+      expect(log.entries().map(({ origin, text }) => `${origin}: ${text}`)).toEqual([
+        'typed: pause',
+        'typed: speed 2',
+        'typed: publish sender',
+      ]);
+      expect(store.document()).toBe(document);
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('says what the simulation did on the status line, as every command does', () => {
+      runner.run('pause');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Paused.' });
+
+      runner.run('publish sender');
+      expect(status.notice()).toEqual({ kind: 'message', text: 'Published 1 message from sender.' });
+    });
+
+    it('changes nothing, and is not in the log, for a line that says what already is so, and the simulation has said so', () => {
+      expect(runner.run('play')).toEqual({ kind: 'unchanged' });
+
+      expect(log.entries()).toEqual([]);
+      expect(status.notice()).toEqual({ kind: 'message', text: 'It is playing already.' });
+    });
+
+    it('is refused by the canvas with the reason, as a line that cannot be done is, and is not in the log', () => {
+      const outcome = runner.run('publish lonely');
+
+      expect(outcome).toMatchObject({ kind: 'refused', issue: { kind: 'not-linked' } });
+      expect(status.refusal()).toMatchObject({ origin: 'typed', issue: { kind: 'not-linked' } });
+      expect(log.entries()).toEqual([]);
+    });
+
+    it('is refused by the reader when it names what the canvas does not have', () => {
+      expect(runner.run('purge nowhere')).toMatchObject({ kind: 'refused' });
+      expect(runner.run('publish nobody')).toMatchObject({ kind: 'refused' });
+      expect(log.entries()).toEqual([]);
+    });
+  });
+
+  describe('a line that runs the simulation when it is not switched on', () => {
+    it('is refused, and says why, and is not in the log', () => {
+      const outcome = runner.run('pause');
+
+      expect(outcome).toMatchObject({ kind: 'refused', issue: { kind: 'unsupported' } });
+      expect(log.entries()).toEqual([]);
     });
   });
 

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { parseCommand, type Issue } from '@rmq/domain';
+import { isRuntimeCommand, parseCommand, type Issue } from '@rmq/domain';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { helpOutput, type HelpOutput } from './help';
@@ -18,7 +18,8 @@ export const NOTHING_CHANGED = 'Nothing changed, because the canvas already is a
 /**
  * Runs a line of the command bar (ADR-0045): it is read with the parser against the canvas as it is, and applied with the bus as a gesture is, so that it is one step of
  * undo, is saved, said and logged, and a refusal says the root cause first and what the broker answers after it. The only difference from a gesture is the origin.
- * `undo` and `redo` are answered by the bus, and `help` by the registry, which changes nothing.
+ * `undo` and `redo` are answered by the bus, and `help` by the registry, which changes nothing. The commands of the simulation go to the bus too, which runs them and says
+ * what they did (ADR-0054): one that changed nothing has been told so already, and is not a change of the canvas.
  */
 @Injectable()
 export class CommandRunner {
@@ -32,6 +33,12 @@ export class CommandRunner {
       return { kind: 'refused', issue: parsed.error };
     }
     const command = parsed.value;
+    if (isRuntimeCommand(command)) {
+      const result = this.bus.run(command, 'typed');
+      return result.ok
+        ? { kind: result.value.changed ? 'applied' : 'unchanged' }
+        : { kind: 'refused', issue: result.error };
+    }
     switch (command.type) {
       case 'undo':
         return { kind: 'undone', done: this.bus.undo('typed') };

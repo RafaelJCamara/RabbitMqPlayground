@@ -1,4 +1,11 @@
-import { applyCommand, emptyDocument, parseCommand, type CanvasDocument, type DocumentCommand } from '@rmq/domain';
+import {
+  applyCommand,
+  emptyDocument,
+  isDocumentCommand,
+  parseCommand,
+  type CanvasDocument,
+  type DocumentCommand,
+} from '@rmq/domain';
 import { applyAll, arbDocument, configureFastCheck, prefixedIds, queueEnd } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -170,12 +177,7 @@ describe('nextSteps (ADR-0045)', () => {
         for (const line of lines) {
           const parsed = parseCommand(line, document);
           expect(parsed.ok, line).toBe(true);
-          if (
-            parsed.ok &&
-            parsed.value.type !== 'undo' &&
-            parsed.value.type !== 'redo' &&
-            parsed.value.type !== 'help'
-          ) {
+          if (parsed.ok && isDocumentCommand(parsed.value)) {
             const applied = applyCommand(document, parsed.value, prefixedIds('new-'));
             expect(applied.ok, `${line}: ${applied.ok ? '' : applied.error.message}`).toBe(true);
           }
