@@ -1,6 +1,7 @@
 import { ExplainPage } from './pages/explain-page';
 import { expectNoAxeViolations } from './support/axe';
-import { WITH_ARCHIVE } from './support/orders';
+import type { CanvasDocument } from '@rmq/domain';
+import { HEADERS, TOPICS, WITH_ARCHIVE } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
@@ -14,6 +15,8 @@ const states: readonly {
   readonly enter: (explain: ExplainPage) => Promise<void>;
   /** Whether the clock is left alone, so that the log has nothing in it. */
   readonly fresh?: boolean;
+  /** The canvas that the state is on, which is the one with a queue that is missed unless it says another. */
+  readonly document?: CanvasDocument;
 }[] = [
   {
     name: 'with the event log open and nothing in it',
@@ -99,6 +102,76 @@ const states: readonly {
     },
   },
   {
+    name: 'with a message open, its route laid out word by word, and the queue that did not get it',
+    document: TOPICS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step();
+      await explain.openByKey();
+      await explain.openFromRow('routed');
+      await expect(
+        explain.message.getByRole('table', { name: 'The pattern and the key, word by word' }).first(),
+      ).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message open, and the conditions of a headers binding, each held or not',
+    document: HEADERS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step();
+      await explain.openByKey();
+      await explain.openFromRow('routed');
+      await expect(explain.message.getByTestId('header-conditions').first()).toBeVisible();
+      await expect(explain.message.getByTestId('message-headers')).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message open, and the reasons that a queue did not get it',
+    document: TOPICS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step();
+      await explain.openByKey();
+      await explain.openFromRow('routed');
+      await explain.message.getByRole('button', { name: 'Why didn’t it get to warnings?' }).click();
+      await expect(explain.message.getByTestId('why-not-reasons')).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message that has not got to the broker open, and what would happen to it',
+    document: TOPICS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.openByKey();
+      await explain.openFromRow('published');
+      await expect(explain.message.getByTestId('message-basis')).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message open and a queue selected, whose inspector says why it did not get the message',
+    document: TOPICS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step();
+      await explain.openByKey();
+      await explain.openFromRow('routed');
+      await explain.editor.select('Queue warnings');
+      await expect(explain.page.getByTestId('queue-asked')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the messages of a queue as buttons, and one of them open',
+    document: TOPICS,
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step(2);
+      await explain.editor.select('Queue errors');
+      await explain.page.getByTestId('open-message').click();
+      await expect(explain.message).toBeVisible();
+    },
+  },
+  {
     name: 'with a queue that did not get the message asked about',
     enter: async (explain) => {
       await explain.publish();
@@ -116,7 +189,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     for (const state of states) {
       test(`has no axe violations ${state.name}`, async ({ page }) => {
-        const explain = await ExplainPage.open(page, WITH_ARCHIVE, { stop: state.fresh !== true });
+        const explain = await ExplainPage.open(page, state.document ?? WITH_ARCHIVE, { stop: state.fresh !== true });
         await state.enter(explain);
 
         await expectNoAxeViolations(page);

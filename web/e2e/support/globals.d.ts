@@ -21,6 +21,8 @@ interface Window {
         readonly count: number;
         readonly key: string | null;
         readonly redelivered: boolean;
+        /** The number of the message that it stands for, or `null` for a crowd. */
+        readonly message: number | null;
       }[];
     } | null;
     /** The rows of the event log, as they were said: how many are kept, how many went, and each row. `null` without the flags `explain` and `simulation`. */

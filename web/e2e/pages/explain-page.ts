@@ -20,6 +20,8 @@ export class ExplainPage {
   readonly list: Locator;
   readonly rows: Locator;
   readonly card: Locator;
+  /** The message that is open, in the region of the inspector. */
+  readonly message: Locator;
 
   constructor(readonly simulation: SimulationPage) {
     const page = simulation.page;
@@ -28,6 +30,7 @@ export class ExplainPage {
     this.list = this.log.getByRole('listbox', { name: 'Events' });
     this.rows = this.log.getByTestId('event-log-row');
     this.card = page.getByTestId('why-card');
+    this.message = page.getByTestId('message-inspector');
   }
 
   get page(): Page {
@@ -84,6 +87,25 @@ export class ExplainPage {
   /** The rows of the log that are of this kind of event, as they are drawn. */
   rowsOfKind(kind: string): Locator {
     return this.log.locator(`[data-testid="event-log-row"][data-kind="${kind}"]`);
+  }
+
+  /** Chooses the row of the log that is about this kind of event, which opens its message. */
+  async openFromRow(kind: string): Promise<void> {
+    await this.rowsOfKind(kind).first().click();
+  }
+
+  /**
+   * The middle of the shape that the overlay drew for a message, on the page, once it has stopped moving, or the first shape when there is no message given. A press there is a press on the message that it
+   * stands for.
+   */
+  async shapeOf(message?: number): Promise<{ x: number; y: number; count: number }> {
+    const frame = await this.simulation.settledFrame();
+    const marker = frame.markers.find((shape) => message === undefined || shape.message === message);
+    if (marker === undefined) {
+      throw new Error('no shape is drawn for that message');
+    }
+    const host = await this.simulation.host();
+    return { x: host.x + marker.x, y: host.y + marker.y, count: marker.count };
   }
 
   /** How an edge is lit, by the attribute that the canvas sets on it, or `null`. */
