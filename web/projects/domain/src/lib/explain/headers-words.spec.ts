@@ -1,7 +1,16 @@
 import { matchHeaders, type HeaderArguments, type HeaderEntry, type HeaderValue } from '@rmq/engine';
 import { bool, entry, exists, float, headerArguments, int, str } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { conditionLine, headersWords } from './headers-words';
+import {
+  conditionLine,
+  countedLine,
+  describeHeaders,
+  headersWords,
+  ignoredLine,
+  ignoredNote,
+  modeText,
+  nothingCountsText,
+} from './headers-words';
 import { SHORT_MOST } from './words';
 
 const judged = (binding: HeaderArguments | undefined, ...headers: HeaderEntry<HeaderValue>[]) =>
@@ -180,5 +189,101 @@ describe('what a headers binding says of a message (ADR-0009, ADR-0060)', () => 
     const many = headerArguments('any', ...Array.from({ length: 12 }, (_, index) => entry(`h${index}`, int(index))));
 
     expect([...judged(many).short].length).toBeLessThanOrEqual(SHORT_MOST);
+  });
+});
+
+describe('the pieces that the sentences of a binding share (ADR-0068)', () => {
+  it('says the mode, and that a mode that was left out is all', () => {
+    expect(modeText('any', false)).toBe('x-match=any');
+    expect(modeText('all', true)).toBe('x-match=all (left out, so all)');
+  });
+
+  it('says how many arguments are not counted, for one and for many, and nothing for none', () => {
+    expect(ignoredNote(0)).toBe('');
+    expect(ignoredNote(1)).toBe(' 1 argument starts with "x-" and is not counted.');
+    expect(ignoredNote(3)).toBe(' 3 arguments start with "x-" and are not counted.');
+  });
+
+  it('says that nothing counts, and what that makes of every message', () => {
+    expect(nothingCountsText('x-match=all', 'all', '')).toBe(
+      'x-match=all and no condition counts, so it matches every message.',
+    );
+    expect(nothingCountsText('x-match=any', 'any', ' Note.')).toBe(
+      'x-match=any and no condition counts, so it matches no message. Note.',
+    );
+  });
+
+  it('says a condition that is not counted, and one that is, with the name quoted when it has to be', () => {
+    expect(ignoredLine('x-a')).toBe(
+      'The header x-a is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.',
+    );
+    expect(ignoredLine('x a')).toContain('The header "x a" is not counted');
+    expect(countedLine('x-a', 'any-with-x')).toBe('The header x-a is counted, because x-match is any-with-x.');
+    expect(conditionLine(matchHeaders(headerArguments('all', entry('x-a', str('1'))), []).conditions[0]!).text).toBe(
+      ignoredLine('x-a'),
+    );
+  });
+});
+
+describe('what a binding asks (ADR-0068)', () => {
+  it.each<[string, HeaderArguments | undefined, string]>([
+    [
+      'all of two',
+      headerArguments('all', entry('format', str('pdf')), entry('type', str('report'))),
+      'x-match=all: a message matches when all 2 conditions hold (format and type).',
+    ],
+    [
+      'any of three',
+      headerArguments('any', entry('a', int(1)), entry('b', int(2)), entry('c', int(3))),
+      'x-match=any: a message matches when at least one of the 3 conditions holds (a, b and c).',
+    ],
+    [
+      'one condition, whatever the mode',
+      headerArguments('any', entry('a', int(1))),
+      'x-match=any: a message matches when its one condition holds (a).',
+    ],
+    [
+      'a mode that is left out',
+      headerArguments(null, entry('a', int(1)), entry('b', exists)),
+      'x-match=all (left out, so all): a message matches when all 2 conditions hold (a and b).',
+    ],
+    [
+      'a name that needs quotes',
+      headerArguments('all', entry('a b', int(1)), entry('c', int(1))),
+      'x-match=all: a message matches when all 2 conditions hold ("a b" and c).',
+    ],
+    [
+      'an x- argument that is not counted',
+      headerArguments('all', entry('x-a', int(1)), entry('b', int(1))),
+      'x-match=all: a message matches when its one condition holds (b). 1 argument starts with "x-" and is not counted.',
+    ],
+    [
+      'an x- argument that is counted',
+      headerArguments('all-with-x', entry('x-a', int(1)), entry('b', int(1))),
+      'x-match=all-with-x: a message matches when all 2 conditions hold (x-a and b).',
+    ],
+    [
+      'nothing that counts under all',
+      headerArguments('all', entry('x-a', int(1)), entry('x-b', int(1))),
+      'x-match=all and no condition counts, so it matches every message. 2 arguments start with "x-" and are not counted.',
+    ],
+    [
+      'nothing that counts under any',
+      headerArguments('any'),
+      'x-match=any and no condition counts, so it matches no message.',
+    ],
+    [
+      'no arguments at all',
+      undefined,
+      'x-match=all (left out, so all) and no condition counts, so it matches every message.',
+    ],
+  ])('says it for %s', (_name, headers, sentence) => {
+    expect(describeHeaders(headers)).toBe(sentence);
+  });
+
+  it('says for a binding with nothing that counts what it says of the same binding judging a message', () => {
+    for (const headers of [headerArguments('all'), headerArguments('any', entry('x-a', int(1))), undefined]) {
+      expect(describeHeaders(headers)).toBe(headersWords(matchHeaders(headers, [entry('a', int(1))])).text);
+    }
   });
 });

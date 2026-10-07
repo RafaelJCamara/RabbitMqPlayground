@@ -13,7 +13,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import type { HeaderArguments } from '@rmq/engine';
 import type { CanvasDocument } from './document/schema';
-import { lint } from './lints';
+import { headersLint, lint } from './lints';
 
 const sample = (): CanvasDocument => deepFreeze(sampleDocument());
 
@@ -169,5 +169,30 @@ describe('lint', () => {
     expect(lint(document)).toEqual(lint(document));
     expect(lint(document).every(({ severity }) => severity === 'warning')).toBe(true);
     expect(document).toEqual(sampleDocument());
+  });
+});
+
+describe('headersLint, which words the lint for the editor and for lint() (ADR-0068)', () => {
+  it('says it of a binding with x-match=any, or any-with-x, and no condition that counts, and names the two ends', () => {
+    expect(headersLint('docs', 'archive', headerArguments('any'))).toBe(
+      "The binding from 'docs' to 'archive' has x-match=any and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.",
+    );
+    expect(headersLint('a', 'b', headerArguments('any-with-x'))).toContain('x-match=any-with-x');
+    expect(headersLint('a', 'b', headerArguments('any', entry('x-a', int(1))))).not.toBeNull();
+  });
+
+  it('has nothing to say when a condition counts, when the mode is all or left out, or when there are no arguments', () => {
+    expect(headersLint('a', 'b', headerArguments('any', entry('f', int(1))))).toBeNull();
+    expect(headersLint('a', 'b', headerArguments('any-with-x', entry('x-a', int(1))))).toBeNull();
+    expect(headersLint('a', 'b', headerArguments('all'))).toBeNull();
+    expect(headersLint('a', 'b', headerArguments('all-with-x'))).toBeNull();
+    expect(headersLint('a', 'b', headerArguments(null))).toBeNull();
+    expect(headersLint('a', 'b', undefined)).toBeNull();
+  });
+
+  it('is the sentence that lint() gives for a binding that is on the canvas', () => {
+    const [found] = anyLints(headerArguments('any'));
+
+    expect(found?.message).toBe(headersLint('docs', 'archive', headerArguments('any')));
   });
 });

@@ -110,7 +110,28 @@ export {
   type QueueRecord,
 } from './lib/document/schema';
 export { bindingIds, edgeKey, edgeKeys, toTopology } from './lib/document/topology';
-export type { ConditionLine } from './lib/explain/headers-words';
+export {
+  draftFromMessage,
+  draftOf,
+  EMPTY_ROW,
+  isBlank,
+  newDraft,
+  problemAt,
+  reportDraft,
+  reportMessageRows,
+  retypeRow,
+  rowsOf,
+  rowType,
+  sameEntries,
+  withText,
+  type DraftReport,
+  type DraftRow,
+  type HeadersDraft,
+  type MessageReport,
+  type RowReport,
+  type RowType,
+} from './lib/headers/draft';
+export { describeHeaders, type ConditionLine } from './lib/explain/headers-words';
 export { explainQueue } from './lib/explain/queue';
 export { explainRoute, isRouted, messageIssue, outlookOf, refusalText, summaryOf } from './lib/explain/route';
 export { alignmentLines, explanationHeader, explanationText } from './lib/explain/text';
@@ -139,7 +160,7 @@ export {
   type LinkRules,
   type LinkVerdict,
 } from './lib/link-rules';
-export { lint, type Lint, type LintKind } from './lib/lints';
+export { headersLint, lint, type Lint, type LintKind } from './lib/lints';
 export { reconcile } from './lib/reconcile';
 export { editDistance, suggest } from './lib/suggest';
 export { completeCommand, type Completion, type CompletionItem } from './lib/syntax/complete';

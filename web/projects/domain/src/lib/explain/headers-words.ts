@@ -1,4 +1,4 @@
-import type { ConditionResult, HeadersMatch } from '@rmq/engine';
+import { matchHeaders, type ConditionResult, type HeaderArguments, type HeadersMatch, type XMatch } from '@rmq/engine';
 import { wordText as headerName } from '../syntax/words';
 import { listOf, shorten, typeText, valueText } from './words';
 
@@ -25,6 +25,28 @@ export interface HeadersWords {
   readonly conditions: readonly ConditionLine[];
 }
 
+/** The mode of a binding in a sentence: `x-match=all`, and `(left out, so all)` when the binding did not say. */
+export const modeText = (xMatch: XMatch, omitted: boolean): string =>
+  `x-match=${xMatch}${omitted ? ' (left out, so all)' : ''}`;
+
+/** How many arguments start with `x-` and are not counted, as a sentence to follow another, or nothing when there are none. */
+export const ignoredNote = (ignored: number): string =>
+  ignored === 0
+    ? ''
+    : ` ${ignored === 1 ? '1 argument starts' : `${ignored} arguments start`} with "x-" and ${ignored === 1 ? 'is' : 'are'} not counted.`;
+
+/** What a binding makes of every message when no condition counts: `all` matches them all and `any` none (ADR-0009). */
+export const nothingCountsText = (mode: string, requires: 'all' | 'any', note: string): string =>
+  `${mode} and no condition counts, so it matches ${requires === 'all' ? 'every message' : 'no message'}.${note}`;
+
+/** The line for a condition that the mode does not count, which the message inspector, the table and the rows of the editor say. */
+export const ignoredLine = (key: string): string =>
+  `The header ${headerName(key)} is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.`;
+
+/** The line for an `x-` condition that the mode counts (ADR-0068): it is judged like any other. */
+export const countedLine = (key: string, xMatch: XMatch): string =>
+  `The header ${headerName(key)} is counted, because x-match is ${xMatch}.`;
+
 export function conditionLine(result: ConditionResult): ConditionLine {
   const { expected, actual } = result;
   const wanted = expected.t === 'exists' ? 'exists' : valueText(expected);
@@ -33,9 +55,7 @@ export function conditionLine(result: ConditionResult): ConditionLine {
   const line = (text: string): ConditionLine => ({ key: result.key, wanted, found, outcome: result.outcome, text });
 
   if (result.outcome === 'ignored') {
-    return line(
-      `${name} is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.`,
-    );
+    return line(ignoredLine(result.key));
   }
   if (result.outcome === 'pass') {
     return line(`${name} is ${expected.t === 'exists' ? 'there' : found}, as the binding asks.`);
@@ -55,20 +75,16 @@ export function conditionLine(result: ConditionResult): ConditionLine {
 /** The sentence and the short reason for a headers binding as a whole, with a line for each of its conditions. */
 export function headersWords(result: HeadersMatch): HeadersWords {
   const conditions = result.conditions.map(conditionLine);
-  const mode = `x-match=${result.xMatch}${result.omitted ? ' (left out, so all)' : ''}`;
+  const mode = modeText(result.xMatch, result.omitted);
   const passing = conditions.filter(({ outcome }) => outcome === 'pass').map(({ key }) => headerName(key));
   const failing = conditions.filter(({ outcome }) => outcome === 'fail').map(({ key }) => headerName(key));
   const ignored = conditions.length - result.counted;
-  const ignoredNote =
-    ignored === 0
-      ? ''
-      : ` ${ignored === 1 ? '1 argument starts' : `${ignored} arguments start`} with "x-" and ${ignored === 1 ? 'is' : 'are'} not counted.`;
+  const note = ignoredNote(ignored);
 
   if (result.counted === 0) {
-    const everything = result.requires === 'all';
     return {
-      text: `${mode} and no condition counts, so it matches ${everything ? 'every message' : 'no message'}.${ignoredNote}`,
-      short: everything ? 'no conditions: matches all' : 'no conditions: matches none',
+      text: nothingCountsText(mode, result.requires, note),
+      short: result.requires === 'all' ? 'no conditions: matches all' : 'no conditions: matches none',
       conditions,
     };
   }
@@ -76,8 +92,8 @@ export function headersWords(result: HeadersMatch): HeadersWords {
     return {
       text:
         result.requires === 'all'
-          ? `${mode}: ${result.counted === 1 ? 'its one condition holds' : `all ${result.counted} conditions hold`}.${ignoredNote}`
-          : `${mode}: ${listOf(passing)} ${passing.length === 1 ? 'holds' : 'hold'}, and one is enough.${ignoredNote}`,
+          ? `${mode}: ${result.counted === 1 ? 'its one condition holds' : `all ${result.counted} conditions hold`}.${note}`
+          : `${mode}: ${listOf(passing)} ${passing.length === 1 ? 'holds' : 'hold'}, and one is enough.${note}`,
       short: `${result.passed} of ${result.counted} hold`,
       conditions,
     };
@@ -85,8 +101,8 @@ export function headersWords(result: HeadersMatch): HeadersWords {
   return {
     text:
       result.requires === 'all'
-        ? `${mode}: every condition has to hold, and ${listOf(failing)} ${failing.length === 1 ? 'does' : 'do'} not.${ignoredNote}`
-        : `${mode}: at least one condition has to hold, and ${result.counted === 1 ? 'the one that counts does not' : `none of the ${result.counted} does`}.${ignoredNote}`,
+        ? `${mode}: every condition has to hold, and ${listOf(failing)} ${failing.length === 1 ? 'does' : 'do'} not.${note}`
+        : `${mode}: at least one condition has to hold, and ${result.counted === 1 ? 'the one that counts does not' : `none of the ${result.counted} does`}.${note}`,
     short: shorten(
       result.requires === 'all'
         ? `${result.passed} of ${result.counted} hold, all needed`
@@ -94,4 +110,27 @@ export function headersWords(result: HeadersMatch): HeadersWords {
     ),
     conditions,
   };
+}
+
+/**
+ * What a binding asks, in a sentence, without a message (ADR-0068): the mode, how many conditions count and which, and how many arguments are not counted. It is the sentence of the draft in the editor, and says
+ * for a binding with nothing that counts what `headersWords` says of it.
+ */
+export function describeHeaders(headers: HeaderArguments | undefined): string {
+  const result = matchHeaders(headers, []);
+  const mode = modeText(result.xMatch, result.omitted);
+  const note = ignoredNote(result.conditions.length - result.counted);
+  if (result.counted === 0) {
+    return nothingCountsText(mode, result.requires, note);
+  }
+  const names = listOf(
+    result.conditions.filter(({ outcome }) => outcome !== 'ignored').map(({ key }) => headerName(key)),
+  );
+  const holds =
+    result.counted === 1
+      ? 'its one condition holds'
+      : result.requires === 'all'
+        ? `all ${result.counted} conditions hold`
+        : `at least one of the ${result.counted} conditions holds`;
+  return `${mode}: a message matches when ${holds} (${names}).${note}`;
 }

@@ -1,3 +1,4 @@
+import type { HeaderArguments } from '@rmq/engine';
 import { elements, lookup } from './document/elements';
 import type { CanvasDocument, Id } from './document/schema';
 
@@ -6,6 +7,20 @@ import type { CanvasDocument, Id } from './document/schema';
  * change a document. A lint is a warning that the editor shows on the node or the binding that it is about (ADR-0011,
  * ADR-0009).
  */
+
+/**
+ * The sentence of the lint about a headers binding with `x-match=any` (or `any-with-x`) and no condition that counts, or `null` when there is nothing to say (ADR-0068). Under `any`, a condition whose
+ * name starts with `x-` does not count. It is the one place that words it: `lint()` says it of a binding that is on the canvas, and the editor says it of a draft that is not yet.
+ */
+export function headersLint(source: string, target: string, headers: HeaderArguments | undefined): string | null {
+  if (headers === undefined || (headers.xMatch !== 'any' && headers.xMatch !== 'any-with-x')) {
+    return null;
+  }
+  const counted = headers.args.filter(({ key }) => headers.xMatch === 'any-with-x' || !key.startsWith('x-'));
+  return counted.length === 0
+    ? `The binding from '${source}' to '${target}' has x-match=${headers.xMatch} and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.`
+    : null;
+}
 
 export type LintKind = 'exchange-without-bindings' | 'any-without-conditions';
 
@@ -44,23 +59,13 @@ export function lint(document: CanvasDocument): Lint[] {
 
   for (const [id, binding] of Object.entries(document.bindings)) {
     const source = lookup(document.exchanges, binding.source);
-    const { headers } = binding;
-    if (
-      source?.type !== 'headers' ||
-      headers === undefined ||
-      (headers.xMatch !== 'any' && headers.xMatch !== 'any-with-x')
-    ) {
+    if (source?.type !== 'headers') {
       continue;
     }
-    const counted = headers.args.filter(({ key }) => headers.xMatch === 'any-with-x' || !key.startsWith('x-'));
-    if (counted.length === 0) {
-      const target = lookup(binding.dest.kind === 'queue' ? document.queues : document.exchanges, binding.dest.id);
-      lints.push({
-        kind: 'any-without-conditions',
-        severity: 'warning',
-        message: `The binding from '${source.name}' to '${target?.name ?? binding.dest.id}' has x-match=${headers.xMatch} and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.`,
-        subject: { kind: 'binding', id },
-      });
+    const target = lookup(binding.dest.kind === 'queue' ? document.queues : document.exchanges, binding.dest.id);
+    const message = headersLint(source.name, target?.name ?? binding.dest.id, binding.headers);
+    if (message !== null) {
+      lints.push({ kind: 'any-without-conditions', severity: 'warning', message, subject: { kind: 'binding', id } });
     }
   }
 
