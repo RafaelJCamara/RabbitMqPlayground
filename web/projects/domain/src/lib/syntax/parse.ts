@@ -1,6 +1,6 @@
 import { applyCommand } from '../commands/apply';
 import { isDocumentCommand } from '../commands/kinds';
-import type { Command, DocumentCommand } from '../commands/types';
+import type { AppCommand, Command, DocumentCommand, RuntimeCommand } from '../commands/types';
 import { fail, ok, type Issue, type Result } from '../document/issue';
 import type { CanvasDocument } from '../document/schema';
 import { Cursor, Stop } from './cursor';
@@ -30,11 +30,8 @@ function bareWords(tokens: readonly Atom[]): string[] {
   return words;
 }
 
-/**
- * Why a command cannot be one of several, or `undefined` when it can: a batch is one change of the canvas, and these are not (ADR-0025, ADR-0054).
- * They are about the history, a question, or the simulation.
- */
-function standsAlone(command: Command): string | undefined {
+/** Why a command that is not of the document cannot be one of several: a batch is one change of the canvas, and these are about the history, a question, or the simulation (ADR-0025, ADR-0054). */
+function standsAlone(command: AppCommand | RuntimeCommand): string {
   switch (command.type) {
     case 'undo':
     case 'redo':
@@ -50,8 +47,6 @@ function standsAlone(command: Command): string | undefined {
     case 'clear-messages':
     case 'reset-counters':
       return 'runs the simulation and does not change the canvas';
-    default:
-      return undefined;
   }
 }
 
