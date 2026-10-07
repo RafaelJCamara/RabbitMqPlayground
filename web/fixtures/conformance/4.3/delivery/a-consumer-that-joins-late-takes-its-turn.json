@@ -1,0 +1,113 @@
+{
+  "id": "delivery/a-consumer-that-joins-late-takes-its-turn",
+  "kind": "delivery",
+  "title": "A consumer that joins a queue that has been served by another is added behind it, and the messages are dealt out in turn from then on (ADR-0008, rule 14)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1"
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch2"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "auto"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch2",
+      "queue": "jobs",
+      "consumer": "c2",
+      "ack": "auto"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m5"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m6"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 6
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        },
+        {
+          "body": "m5",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m4",
+          "redelivered": false
+        },
+        {
+          "body": "m6",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": []
+    }
+  }
+}

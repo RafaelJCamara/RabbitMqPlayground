@@ -1,0 +1,87 @@
+{
+  "id": "routing/the-default-exchange-cannot-be-unbound-from-or-to",
+  "kind": "routing",
+  "title": "Unbinding from the default exchange, or to it, is refused with 403 as binding is, and leaves nothing behind (ADR-0051, ADR-0008 rule 6)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "unbind",
+      "source": "",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "inbox",
+      "refused": true
+    },
+    {
+      "op": "unbind",
+      "source": "",
+      "destination": {
+        "kind": "exchange",
+        "name": "e"
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "exchange",
+        "name": ""
+      },
+      "key": "k",
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "inbox",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 3,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - operation not permitted on the default exchange"
+      },
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - operation not permitted on the default exchange"
+      },
+      {
+        "step": 5,
+        "level": "channel",
+        "code": 403,
+        "text": "ACCESS_REFUSED - operation not permitted on the default exchange"
+      }
+    ]
+  }
+}

@@ -26,10 +26,13 @@ export const declareExchange = (
   ...options,
 });
 
-type RefusableStep = StepOf<'exchange.declare' | 'queue.declare' | 'bind' | 'basic.publish'>;
+type RefusableStep = StepOf<'exchange.declare' | 'queue.declare' | 'bind' | 'unbind' | 'basic.publish'>;
 
 /** A step that the broker is expected to refuse. The recording keeps what it answered (see `Refusable`). */
 export const refused = <S extends RefusableStep>(step: S): S => ({ ...step, refused: true });
+
+/** A declaration of a name that is declared already: a broker accepts it if every attribute is the same, and refuses it if not (ADR-0051). */
+export const again = <S extends StepOf<'exchange.declare' | 'queue.declare'>>(step: S): S => ({ ...step, again: true });
 
 export const str = (v: string): HeaderValue => ({ t: 'string', v });
 export const int = (v: number, width?: 8 | 16 | 32 | 64): HeaderValue =>
@@ -66,3 +69,17 @@ export const bindHeaders = (
   xMatch: XMatch | null,
   args: readonly HeaderEntry<HeaderCondition>[],
 ): StepOf<'bind'> => ({ op: 'bind', source, destination, key: '', headers: { xMatch, args } });
+
+export const unbindKey = (source: string, destination: Destination, key: string): StepOf<'unbind'> => ({
+  op: 'unbind',
+  source,
+  destination,
+  key,
+});
+
+export const unbindHeaders = (
+  source: string,
+  destination: Destination,
+  xMatch: XMatch | null,
+  args: readonly HeaderEntry<HeaderCondition>[],
+): StepOf<'unbind'> => ({ op: 'unbind', source, destination, key: '', headers: { xMatch, args } });

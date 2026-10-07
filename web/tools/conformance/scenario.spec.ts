@@ -56,7 +56,12 @@ describe('validateScenario', () => {
       /not a name a client may declare/,
     ],
     ['declaring an exchange twice', routing(exchange, exchange), /declared twice/],
-    ['declaring a queue twice', routing(queue, queue), /empty or declared twice/],
+    ['declaring a queue twice', routing(queue, queue), /queue "q" is declared twice. Say again: true/],
+    [
+      'declaring a queue with no name',
+      routing({ op: 'queue.declare', name: '', durable: true }),
+      /a queue needs a name/,
+    ],
     [
       'binding from an undeclared exchange',
       routing(queue, { op: 'bind', source: 'nope', destination: { kind: 'queue', name: 'q' } }),
@@ -162,7 +167,7 @@ describe('validateScenario, for a step that the broker is expected to refuse', (
     ],
     [
       'declaring an exchange that exists with other properties',
-      routing(exchange, refused({ op: 'exchange.declare', name: 'e', type: 'topic' })),
+      routing(exchange, refused({ op: 'exchange.declare', name: 'e', type: 'topic', again: true })),
     ],
     ['declaring a reserved queue name', routing(refused({ op: 'queue.declare', name: 'amq.custom', durable: true }))],
     [
@@ -225,7 +230,9 @@ describe('validateScenario, for a step that the broker is expected to refuse', (
   });
 
   it('keeps what was declared before a refused step, because the broker kept it too', () => {
-    expect(() => validateScenario(routing(exchange, refused(exchange), exchange))).toThrow(/declared twice/);
+    expect(() => validateScenario(routing(exchange, refused({ ...exchange, again: true }), exchange))).toThrow(
+      /declared twice/,
+    );
   });
 
   it.each<[string, Scenario, RegExp]>([
@@ -314,6 +321,79 @@ describe('validateScenario, for the queues and names that RabbitMQ 4.3 does not 
   it('rejects a queue name that starts with amq., unless the step is expected to be refused', () => {
     expect(() => validateScenario(routing({ op: 'queue.declare', name: 'amq.mine', durable: true }))).toThrow(
       /not a name a client may declare/,
+    );
+  });
+});
+
+describe('validateScenario, for a declaration that repeats and for an unbind (ADR-0051)', () => {
+  const again = <S extends Step>(step: S): S => ({ ...step, again: true });
+  const refused = <S extends Step>(step: S): S => ({ ...step, refused: true });
+  const unbind = (
+    source: string,
+    destination: { kind: 'queue' | 'exchange'; name: string },
+    extra: object = {},
+  ): Step => ({ op: 'unbind', source, destination, key: 'k', ...extra });
+
+  it('accepts a declaration of a name that is there when it says "again", for an exchange and for a queue, refused or not', () => {
+    expect(() => validateScenario(routing(exchange, again(exchange), queue, again(queue)))).not.toThrow();
+    expect(() =>
+      validateScenario(
+        routing(
+          exchange,
+          refused(again({ op: 'exchange.declare', name: 'e', type: 'topic' })),
+          queue,
+          refused(again({ op: 'queue.declare', name: 'q', durable: false })),
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  it.each<[string, Scenario, RegExp]>([
+    [
+      '"again" on an exchange that is not declared',
+      routing(again(exchange)),
+      /"again" says that exchange "e" is declared/,
+    ],
+    ['"again" on a queue that is not declared', routing(again(queue)), /"again" says that queue "q" is declared/],
+    [
+      '"again" on the default exchange, which is never declared',
+      routing(again({ op: 'exchange.declare', name: '', type: 'direct' })),
+      /"again" says that exchange "" is declared/,
+    ],
+    [
+      'a refused repeat that does not say "again"',
+      routing(exchange, refused({ op: 'exchange.declare', name: 'e', type: 'topic' })),
+      /exchange "e" is declared twice. Say again: true/,
+    ],
+  ])('rejects %s', (_name, scenario, message) => {
+    expect(() => validateScenario(scenario)).toThrow(ScenarioError);
+    expect(() => validateScenario(scenario)).toThrow(message);
+  });
+
+  it('accepts an unbind whether or not the binding, or its ends, are there, because a broker does', () => {
+    expect(() =>
+      validateScenario(
+        routing(
+          unbind('nope', { kind: 'queue', name: 'nope' }),
+          unbind('nope', { kind: 'exchange', name: 'nope' }),
+          unbind('e', { kind: 'queue', name: 'q' }, { headers: { xMatch: 'all', args: [] } }),
+        ),
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects an unbind from or to the default exchange, unless the step is expected to be refused, and counts it as a routing step', () => {
+    const message = /the default exchange cannot be unbound from or to. Expect the refusal/;
+
+    expect(() => validateScenario(routing(unbind('', { kind: 'queue', name: 'q' })))).toThrow(message);
+    expect(() => validateScenario(routing(unbind('e', { kind: 'exchange', name: '' })))).toThrow(message);
+    expect(() =>
+      validateScenario(
+        routing(refused(unbind('', { kind: 'queue', name: 'q' })), unbind('e', { kind: 'queue', name: 'q' })),
+      ),
+    ).not.toThrow();
+    expect(() => validateScenario(delivery(refused(unbind('', { kind: 'queue', name: 'q' }))))).toThrow(
+      /a delivery scenario cannot expect a refusal/,
     );
   });
 });

@@ -1,0 +1,67 @@
+{
+  "id": "delivery/auto-ack-ignores-prefetch",
+  "kind": "delivery",
+  "title": "A consumer that acknowledges automatically is given every message, whatever the prefetch of its channel (ADR-0008, rule 15)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "auto"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": []
+    }
+  }
+}

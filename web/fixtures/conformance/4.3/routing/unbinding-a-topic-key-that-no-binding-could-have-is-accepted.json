@@ -1,0 +1,55 @@
+{
+  "id": "routing/unbinding-a-topic-key-that-no-binding-could-have-is-accepted",
+  "kind": "routing",
+  "title": "An unbind with a key that a topic exchange would refuse in a binding (more than two # words) is accepted: only a binding is checked for it (ADR-0051, ADR-0022)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "t",
+      "type": "topic",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "a.#"
+    },
+    {
+      "op": "unbind",
+      "source": "t",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "#.#.#"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "t",
+      "key": "a.b",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ]
+  }
+}

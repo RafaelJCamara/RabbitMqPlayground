@@ -74,6 +74,7 @@ export interface BrokerSession {
   declareExchange(step: StepOf<'exchange.declare'>): Promise<void>;
   declareQueue(step: StepOf<'queue.declare'>): Promise<void>;
   bind(step: StepOf<'bind'>): Promise<void>;
+  unbind(step: StepOf<'unbind'>): Promise<void>;
   /** Publishes as `mandatory`, waits for the publisher confirm, and says whether the message came back. */
   publish(step: StepOf<'basic.publish'>): Promise<{ readonly returned: boolean }>;
   openChannel(step: StepOf<'channel.open'>): Promise<void>;

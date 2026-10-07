@@ -1,0 +1,141 @@
+{
+  "id": "delivery/acknowledging-does-not-change-the-order-in-which-consumers-are-served",
+  "kind": "delivery",
+  "title": "A consumer that is full, and has not been tried since, keeps its place in the turn: acknowledging in another order does not change who is served first (ADR-0008, rule 14)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch2",
+      "prefetch": 1
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch3",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch2",
+      "queue": "jobs",
+      "consumer": "c2",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch3",
+      "queue": "jobs",
+      "consumer": "c3",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c3"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c1"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m5"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m6"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 6
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m5",
+          "redelivered": false
+        }
+      ],
+      "c3": [
+        {
+          "body": "m3",
+          "redelivered": false
+        },
+        {
+          "body": "m6",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": []
+    }
+  }
+}

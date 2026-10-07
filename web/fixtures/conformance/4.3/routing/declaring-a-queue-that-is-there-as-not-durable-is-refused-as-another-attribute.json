@@ -1,0 +1,61 @@
+{
+  "id": "routing/declaring-a-queue-that-is-there-as-not-durable-is-refused-as-another-attribute",
+  "kind": "routing",
+  "title": "A queue that is there and is declared again as not durable is refused with 406 and the durable flag, and not with the 541 of a new transient queue (ADR-0051, ADR-0021)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "fanout",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": false,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'inbox' in vhost '/': received 'false' but current is 'true'"
+      }
+    ]
+  }
+}

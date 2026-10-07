@@ -42,6 +42,15 @@ interface Refusable {
   readonly refused?: true;
 }
 
+/**
+ * A declaration of a name that is declared already. A broker accepts it when every attribute is the same and refuses it
+ * with 406 when one is not (ADR-0051), so the scenario has to say that this is what it is about, and `validateScenario`
+ * refuses a repeat that does not say so, and an `again` that is not a repeat.
+ */
+interface Repeatable {
+  readonly again?: true;
+}
+
 export type Step =
   | ({
       readonly op: 'exchange.declare';
@@ -51,7 +60,8 @@ export type Step =
       readonly autoDelete?: boolean;
       /** An internal exchange cannot be published to by a client, but other exchanges can still route through it. */
       readonly internal?: boolean;
-    } & Refusable)
+    } & Refusable &
+      Repeatable)
   /**
    * RabbitMQ 4.3 refuses a queue that is neither durable nor exclusive, so a scenario either leaves `durable` out (a
    * durable queue) or says `durable: false` together with `exclusive: true`, or expects the refusal.
@@ -62,13 +72,26 @@ export type Step =
       readonly durable?: boolean;
       /** An exclusive queue belongs to the connection that declared it, and goes when that connection closes. */
       readonly exclusive?: boolean;
-    } & Refusable)
+    } & Refusable &
+      Repeatable)
   | ({
       readonly op: 'bind';
       readonly source: string;
       readonly destination: Destination;
       readonly key?: string;
       /** For a headers exchange. `xMatch: null` leaves `x-match` out, which the broker treats as `all`. */
+      readonly headers?: { readonly xMatch: XMatch | null; readonly args: readonly HeaderEntry<HeaderCondition>[] };
+    } & Refusable)
+  | ({
+      /**
+       * Takes a binding off: the one with these two ends, this key and these arguments. A broker accepts it whether or
+       * not there is such a binding, and whether or not the two ends exist, so a scenario does not have to declare them
+       * (ADR-0051). The default exchange is refused, as it is for `bind`.
+       */
+      readonly op: 'unbind';
+      readonly source: string;
+      readonly destination: Destination;
+      readonly key?: string;
       readonly headers?: { readonly xMatch: XMatch | null; readonly args: readonly HeaderEntry<HeaderCondition>[] };
     } & Refusable)
   | ({
@@ -121,7 +144,7 @@ export class ScenarioError extends Error {
 }
 
 const ID = /^(routing|delivery)\/[a-z0-9]+(-[a-z0-9]+)*$/;
-const ROUTING_OPS = new Set<Step['op']>(['exchange.declare', 'queue.declare', 'bind', 'basic.publish']);
+const ROUTING_OPS = new Set<Step['op']>(['exchange.declare', 'queue.declare', 'bind', 'unbind', 'basic.publish']);
 
 /**
  * Checks that a scenario is well formed: the id fits the kind, every name a step uses was declared before, names are
@@ -176,25 +199,42 @@ export function validateScenario(scenario: Scenario): void {
     }
     const refused = flag === true;
 
+    /** A name that is declared again says so with `again`, and `again` is for nothing else (ADR-0051). */
+    const repeats = (kind: 'exchange' | 'queue', name: string, declared: boolean, again: true | undefined): void => {
+      if (again === true && !declared) {
+        fail(`${at}: "again" says that ${kind} "${name}" is declared already, and it is not`);
+      }
+      if (again !== true && declared) {
+        fail(
+          `${at}: ${kind} "${name}" is declared twice. Say again: true if a declaration that repeats is what the scenario is about`,
+        );
+      }
+    };
+
     switch (step.op) {
-      case 'exchange.declare':
+      case 'exchange.declare': {
+        // The default exchange always exists, and it is not declared: a client cannot.
+        const declared = step.name !== '' && exchanges.has(step.name);
+        repeats('exchange', step.name, declared, step.again);
         if (!refused) {
           if (step.name === '' || step.name.startsWith('amq.')) {
             fail(`${at}: "${step.name}" is not a name a client may declare`);
           }
-          if (exchanges.has(step.name)) {
-            fail(`${at}: exchange "${step.name}" is declared twice`);
-          }
-          exchanges.add(step.name);
-          if (step.internal === true) {
-            internalExchanges.add(step.name);
+          if (!declared) {
+            exchanges.add(step.name);
+            if (step.internal === true) {
+              internalExchanges.add(step.name);
+            }
           }
         }
         break;
-      case 'queue.declare':
+      }
+      case 'queue.declare': {
+        const declared = queues.has(step.name);
+        repeats('queue', step.name, declared, step.again);
         if (!refused) {
-          if (step.name === '' || queues.has(step.name)) {
-            fail(`${at}: queue "${step.name}" is empty or declared twice`);
+          if (step.name === '') {
+            fail(`${at}: a queue needs a name`);
           }
           if (step.name.startsWith('amq.')) {
             fail(`${at}: "${step.name}" is not a name a client may declare`);
@@ -205,6 +245,16 @@ export function validateScenario(scenario: Scenario): void {
             );
           }
           queues.add(step.name);
+        }
+        break;
+      }
+      case 'unbind':
+        // A broker accepts an unbind of anything, even of ends that are not there, so nothing has to be declared.
+        if (
+          !refused &&
+          (step.source === '' || (step.destination.kind === 'exchange' && step.destination.name === ''))
+        ) {
+          fail(`${at}: the default exchange cannot be unbound from or to. Expect the refusal`);
         }
         break;
       case 'bind':

@@ -53,10 +53,16 @@ export async function runScenario(session: BrokerSession, scenario: Scenario): P
         break;
       case 'queue.declare':
         await session.declareQueue(step);
-        queues.push(step.name);
+        // A queue that is declared again is the same queue, and is drained once.
+        if (!queues.includes(step.name)) {
+          queues.push(step.name);
+        }
         break;
       case 'bind':
         await session.bind(step);
+        break;
+      case 'unbind':
+        await session.unbind(step);
         break;
       case 'basic.publish': {
         const { returned } = await session.publish(step);

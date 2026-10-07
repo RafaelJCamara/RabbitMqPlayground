@@ -1,0 +1,65 @@
+{
+  "id": "routing/declaring-a-queue-again-changes-nothing",
+  "kind": "routing",
+  "title": "Declaring a queue that is there, with the same attributes, is accepted and changes nothing: the messages and the bindings stay (ADR-0051)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "fanout",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "",
+      "body": "m1"
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true,
+      "again": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ]
+  }
+}

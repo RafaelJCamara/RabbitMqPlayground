@@ -1,0 +1,129 @@
+{
+  "id": "routing/an-unbind-with-x-match-all-is-not-the-binding-that-left-x-match-out",
+  "kind": "routing",
+  "title": "A headers binding that leaves x-match out is another binding than one that says all, so an unbind has to say the same (ADR-0051, ADR-0009)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "h",
+      "type": "headers",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "unbind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": "all",
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "m1",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    },
+    {
+      "op": "unbind",
+      "source": "h",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "",
+      "headers": {
+        "xMatch": null,
+        "args": [
+          {
+            "key": "a",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "h",
+      "key": "",
+      "body": "m2",
+      "headers": [
+        {
+          "key": "a",
+          "value": {
+            "t": "integer",
+            "v": 1
+          }
+        }
+      ]
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

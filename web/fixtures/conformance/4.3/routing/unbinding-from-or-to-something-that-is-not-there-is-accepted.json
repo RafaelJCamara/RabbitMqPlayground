@@ -1,0 +1,82 @@
+{
+  "id": "routing/unbinding-from-or-to-something-that-is-not-there-is-accepted",
+  "kind": "routing",
+  "title": "An unbind whose exchange or queue does not exist is accepted, as is one between two exchanges where one is missing, and routing is unchanged (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k"
+    },
+    {
+      "op": "unbind",
+      "source": "nope",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "nope"
+      },
+      "key": "k"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "exchange",
+        "name": "nope"
+      },
+      "key": "k"
+    },
+    {
+      "op": "unbind",
+      "source": "nope",
+      "destination": {
+        "kind": "exchange",
+        "name": "e"
+      },
+      "key": "k"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ]
+  }
+}

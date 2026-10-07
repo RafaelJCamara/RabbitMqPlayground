@@ -1,0 +1,98 @@
+{
+  "id": "routing/unbinding-what-is-not-bound-changes-nothing",
+  "kind": "routing",
+  "title": "Unbinding a key that is not bound, a binding that is already gone, or two ends that were never bound is accepted and changes nothing (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "other",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "never-bound"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "other"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k1",
+      "body": "m1"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k1",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

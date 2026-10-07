@@ -72,6 +72,54 @@ describe('runScenario', () => {
     ]);
   });
 
+  it('plays an unbind, and drains a queue that is declared again once and not twice (ADR-0051)', async () => {
+    const session = new FakeSession();
+
+    await runScenario(
+      session,
+      routing(
+        { op: 'exchange.declare', name: 'e', type: 'direct' },
+        { op: 'queue.declare', name: 'q' },
+        { op: 'bind', source: 'e', destination: { kind: 'queue', name: 'q' }, key: 'k' },
+        { op: 'queue.declare', name: 'q', again: true },
+        { op: 'unbind', source: 'e', destination: { kind: 'queue', name: 'q' }, key: 'k' },
+        { op: 'basic.publish', exchange: 'e', key: 'k', body: 'm1' },
+      ),
+    );
+
+    expect(session.calls.filter((call) => call !== 'settle')).toEqual([
+      'exchange.declare e',
+      'queue.declare q',
+      'bind e q',
+      'queue.declare q',
+      'unbind e q',
+      'publish m1',
+      'drain q',
+    ]);
+  });
+
+  it('records the refusal of a declaration that repeats with other attributes, and goes on', async () => {
+    const session = new FakeSession();
+    session.refusals.set('exchange.declare e#2', {
+      level: 'channel',
+      code: 406,
+      text: 'PRECONDITION_FAILED - inequivalent arg',
+    });
+
+    const observed = await runScenario(
+      session,
+      routing(
+        { op: 'exchange.declare', name: 'e', type: 'direct' },
+        { op: 'exchange.declare', name: 'e', type: 'topic', again: true, refused: true },
+      ),
+    );
+
+    expect(observed).toEqual({
+      routes: [],
+      refusals: [{ step: 2, level: 'channel', code: 406, text: 'PRECONDITION_FAILED - inequivalent arg' }],
+    });
+  });
+
   it('drains every declared queue once, after the last step, in the order they were declared', async () => {
     const session = new FakeSession();
 

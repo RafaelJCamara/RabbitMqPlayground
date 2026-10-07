@@ -8,8 +8,12 @@ import type { LiveBroker } from './management';
 export class FakeSession implements BrokerSession {
   readonly vhost = 'fake-vhost';
   readonly calls: string[] = [];
-  /** Calls that the broker refuses, by the text `calls` records for them. They throw a `BrokerRefusal`. */
+  /**
+   * Calls that the broker refuses, by the text `calls` records for them. They throw a `BrokerRefusal`. A call that is made more than
+   * once can be refused the second time only, by writing `#2` after its text.
+   */
   readonly refusals = new Map<string, Refusal>();
+  private readonly made = new Map<string, number>();
   /** Bodies that `publish` should report as returned. */
   readonly returned = new Set<string>();
   /** What `drain` hands back, by queue. */
@@ -21,7 +25,9 @@ export class FakeSession implements BrokerSession {
 
   private record(call: string): Promise<void> {
     this.calls.push(call);
-    const refusal = this.refusals.get(call);
+    const times = (this.made.get(call) ?? 0) + 1;
+    this.made.set(call, times);
+    const refusal = this.refusals.get(`${call}#${times}`) ?? this.refusals.get(call);
     if (refusal) {
       return Promise.reject(new BrokerRefusal(refusal));
     }
@@ -38,6 +44,9 @@ export class FakeSession implements BrokerSession {
   }
   bind(step: StepOf<'bind'>) {
     return this.record(`bind ${step.source} ${step.destination.name}`);
+  }
+  unbind(step: StepOf<'unbind'>) {
+    return this.record(`unbind ${step.source} ${step.destination.name}`);
   }
   async publish(step: StepOf<'basic.publish'>) {
     await this.record(`publish ${step.body}`);

@@ -1,0 +1,123 @@
+{
+  "id": "routing/declaring-an-exchange-again-with-another-attribute-is-refused",
+  "kind": "routing",
+  "title": "Declaring an exchange that is there with another type, or another durable, auto-delete or internal flag, is refused with 406 and the attribute that differs, and the exchange is as it was (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "a.*"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "topic",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": false,
+      "autoDelete": false,
+      "internal": false,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": true,
+      "internal": false,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": true,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.b",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "a.*",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'type' for exchange 'e' in vhost '/': received 'topic' but current is 'direct'"
+      },
+      {
+        "step": 5,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'durable' for exchange 'e' in vhost '/': received 'false' but current is 'true'"
+      },
+      {
+        "step": 6,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'auto_delete' for exchange 'e' in vhost '/': received 'true' but current is 'false'"
+      },
+      {
+        "step": 7,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'internal' for exchange 'e' in vhost '/': received 'true' but current is 'false'"
+      }
+    ]
+  }
+}

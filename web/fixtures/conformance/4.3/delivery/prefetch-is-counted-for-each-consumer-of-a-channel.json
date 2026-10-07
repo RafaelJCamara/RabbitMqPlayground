@@ -1,0 +1,94 @@
+{
+  "id": "delivery/prefetch-is-counted-for-each-consumer-of-a-channel",
+  "kind": "delivery",
+  "title": "A channel that consumes from two queues has a window of its prefetch for each of its consumers, and not one to share (ADR-0008, rule 15)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "a",
+      "durable": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "b",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "a",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "b",
+      "consumer": "c2",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "a",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "a",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "b",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "b",
+      "body": "m4"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        }
+      ],
+      "c2": [
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "a": [
+        {
+          "body": "m2",
+          "redelivered": false
+        }
+      ],
+      "b": [
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

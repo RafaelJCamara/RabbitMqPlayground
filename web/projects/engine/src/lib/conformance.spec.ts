@@ -47,6 +47,20 @@ const asCondition = (json: Json): HeaderCondition => (json['t'] === 'exists' ? {
 const asEntries = <V>(list: unknown, convert: (value: Json) => V): HeaderEntry<V>[] =>
   ((list ?? []) as { key: string; value: Json }[]).map(({ key, value }) => ({ key, value: convert(value) }));
 
+/** What makes a binding the same binding for a broker: its ends, its key and its arguments, in any order of the arguments. */
+function identityOf(
+  source: string,
+  destination: Binding['destination'],
+  key: string,
+  headers: { readonly xMatch: XMatch | null; readonly args: unknown } | undefined,
+): string {
+  const args = ((headers?.args ?? []) as { key: string; value: unknown }[])
+    .map(({ key: name, value }) => [name, value] as const)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const noArguments = headers === undefined || (headers.xMatch === null && args.length === 0);
+  return JSON.stringify([source, destination.kind, destination.name, key, noArguments ? null : [headers.xMatch, args]]);
+}
+
 /** Plays a fixture's steps into a topology, and routes each publish. Returns what differs from the broker's answers. */
 function replay(fixture: Fixture): string[] {
   const problems: string[] = [];
@@ -62,7 +76,8 @@ function replay(fixture: Fixture): string[] {
     const refused = step['refused'] === true;
     switch (step['op']) {
       case 'exchange.declare':
-        if (!refused) {
+        // A declaration that repeats changes nothing when the broker accepts it, and is refused when it differs (ADR-0051).
+        if (!refused && step['again'] !== true) {
           exchanges.push({
             name: step['name'] as string,
             type: step['type'] as ExchangeType,
@@ -71,7 +86,7 @@ function replay(fixture: Fixture): string[] {
         }
         break;
       case 'queue.declare':
-        if (!refused) {
+        if (!refused && step['again'] !== true) {
           queues.push(step['name'] as string);
         }
         break;
@@ -93,6 +108,24 @@ function replay(fixture: Fixture): string[] {
           });
         }
         break;
+      case 'unbind': {
+        // A broker accepts an unbind of anything, and takes off the binding that is exactly this one, if there is one.
+        if (!refused) {
+          const wanted = identityOf(
+            step['source'] as string,
+            step['destination'] as Binding['destination'],
+            (step['key'] as string | undefined) ?? '',
+            step['headers'] as { xMatch: XMatch | null; args: unknown } | undefined,
+          );
+          const at = bindings.findIndex(
+            (binding) => identityOf(binding.source, binding.destination, binding.key, binding.headers) === wanted,
+          );
+          if (at >= 0) {
+            bindings.splice(at, 1);
+          }
+        }
+        break;
+      }
       case 'basic.publish': {
         const result = route(topology(), {
           exchange: step['exchange'] as string,

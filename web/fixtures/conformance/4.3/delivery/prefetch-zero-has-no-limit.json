@@ -1,0 +1,87 @@
+{
+  "id": "delivery/prefetch-zero-has-no-limit",
+  "kind": "delivery",
+  "title": "A prefetch of 0 is no limit: a consumer that acknowledges by hand is given every message (ADR-0008, rule 15)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 0
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m4"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m5"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 5
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        },
+        {
+          "body": "m4",
+          "redelivered": false
+        },
+        {
+          "body": "m5",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": []
+    }
+  }
+}

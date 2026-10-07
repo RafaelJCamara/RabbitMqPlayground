@@ -1,0 +1,83 @@
+{
+  "id": "routing/unbinding-an-exchange-from-an-exchange",
+  "kind": "routing",
+  "title": "An exchange-to-exchange binding is taken away by an unbind, and then nothing is routed through it (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "front",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "exchange.declare",
+      "name": "back",
+      "type": "fanout",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "front",
+      "destination": {
+        "kind": "exchange",
+        "name": "back"
+      },
+      "key": "k"
+    },
+    {
+      "op": "bind",
+      "source": "back",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": ""
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "front",
+      "key": "k",
+      "body": "m1"
+    },
+    {
+      "op": "unbind",
+      "source": "front",
+      "destination": {
+        "kind": "exchange",
+        "name": "back"
+      },
+      "key": "k"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "front",
+      "key": "k",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      }
+    ]
+  }
+}

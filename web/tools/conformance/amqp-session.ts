@@ -198,7 +198,10 @@ export class AmqpSession implements BrokerSession {
         ...(step.exclusive === true ? { exclusive: true } : {}),
       }),
     );
-    this.queues.push(step.name);
+    // A queue that is declared again is the same queue, and is asked about once.
+    if (!this.queues.includes(step.name)) {
+      this.queues.push(step.name);
+    }
     if (step.exclusive === true) {
       this.exclusive.add(step.name);
     }
@@ -212,6 +215,17 @@ export class AmqpSession implements BrokerSession {
       kind === 'queue'
         ? this.control.bindQueue(name, step.source, key, args)
         : this.control.bindExchange(name, step.source, key, args),
+    );
+  }
+
+  async unbind(step: StepOf<'unbind'>): Promise<void> {
+    const args = step.headers ? bindingArguments(step.headers) : undefined;
+    const key = step.key ?? '';
+    const { kind, name } = step.destination;
+    await this.call(`unbind ${kind} "${name}" from "${step.source}"`, () =>
+      kind === 'queue'
+        ? this.control.unbindQueue(name, step.source, key, args)
+        : this.control.unbindExchange(name, step.source, key, args),
     );
   }
 

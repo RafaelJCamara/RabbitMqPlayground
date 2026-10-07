@@ -1,0 +1,84 @@
+{
+  "id": "delivery/closing-a-channel-requeues-what-a-cancelled-consumer-still-held",
+  "kind": "delivery",
+  "title": "A consumer that was cancelled still holds its unacknowledged messages, and they are requeued as redelivered when its channel is closed (ADR-0008, rule 16)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 2
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    },
+    {
+      "op": "basic.cancel",
+      "consumer": "c1"
+    },
+    {
+      "op": "channel.close",
+      "channel": "ch1"
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": [
+        {
+          "body": "m1",
+          "redelivered": true
+        },
+        {
+          "body": "m2",
+          "redelivered": true
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

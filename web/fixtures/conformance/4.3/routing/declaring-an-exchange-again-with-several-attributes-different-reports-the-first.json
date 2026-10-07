@@ -1,0 +1,96 @@
+{
+  "id": "routing/declaring-an-exchange-again-with-several-attributes-different-reports-the-first",
+  "kind": "routing",
+  "title": "When several attributes differ, the refusal names the first of the type, durable, auto-delete and internal flags, in that order (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "fanout",
+      "durable": false,
+      "autoDelete": true,
+      "internal": true,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": false,
+      "autoDelete": true,
+      "internal": true,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": true,
+      "internal": true,
+      "again": true,
+      "refused": true
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k",
+      "body": "m1"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ],
+    "refusals": [
+      {
+        "step": 2,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'type' for exchange 'e' in vhost '/': received 'fanout' but current is 'direct'"
+      },
+      {
+        "step": 3,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'durable' for exchange 'e' in vhost '/': received 'false' but current is 'true'"
+      },
+      {
+        "step": 4,
+        "level": "channel",
+        "code": 406,
+        "text": "PRECONDITION_FAILED - inequivalent arg 'auto_delete' for exchange 'e' in vhost '/': received 'true' but current is 'false'"
+      }
+    ]
+  }
+}

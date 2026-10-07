@@ -1,0 +1,94 @@
+{
+  "id": "routing/declaring-an-exchange-again-with-the-same-attributes-changes-nothing",
+  "kind": "routing",
+  "title": "Declaring an exchange that is there, with every attribute the same, is accepted and changes nothing: the bindings stay (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false,
+      "again": true
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k",
+      "body": "m1"
+    },
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "topic",
+      "durable": false,
+      "autoDelete": true,
+      "internal": true
+    },
+    {
+      "op": "exchange.declare",
+      "name": "f",
+      "type": "topic",
+      "durable": false,
+      "autoDelete": true,
+      "internal": true,
+      "again": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "exchange",
+        "name": "f"
+      },
+      "key": "k"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k",
+      "body": "m2"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ]
+  }
+}

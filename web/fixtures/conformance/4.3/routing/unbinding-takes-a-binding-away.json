@@ -1,0 +1,88 @@
+{
+  "id": "routing/unbinding-takes-a-binding-away",
+  "kind": "routing",
+  "title": "After an unbind, the exchange no longer routes by that binding, and the others stay (ADR-0051)",
+  "steps": [
+    {
+      "op": "exchange.declare",
+      "name": "e",
+      "type": "direct",
+      "durable": true,
+      "autoDelete": false,
+      "internal": false
+    },
+    {
+      "op": "queue.declare",
+      "name": "inbox",
+      "durable": true
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "bind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k1",
+      "body": "m1"
+    },
+    {
+      "op": "unbind",
+      "source": "e",
+      "destination": {
+        "kind": "queue",
+        "name": "inbox"
+      },
+      "key": "k1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k1",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "e",
+      "key": "k2",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "routes": [
+      {
+        "body": "m1",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      },
+      {
+        "body": "m2",
+        "returned": true,
+        "queues": []
+      },
+      {
+        "body": "m3",
+        "returned": false,
+        "queues": [
+          "inbox"
+        ]
+      }
+    ]
+  }
+}
