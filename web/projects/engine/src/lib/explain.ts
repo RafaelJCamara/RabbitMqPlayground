@@ -24,7 +24,9 @@ export type MissReason =
       readonly because: readonly MissReason[];
     }
   /** The explanation has come back round to an exchange that it is already explaining. */
-  | { readonly kind: 'cycle'; readonly exchange: string };
+  | { readonly kind: 'cycle'; readonly exchange: string }
+  /** The reasons for this exchange are given once, where it was first met (ADR-0059): this is another binding that points at it. */
+  | { readonly kind: 'already-explained'; readonly exchange: string };
 
 export interface MissExplanation {
   readonly queue: string;
@@ -51,7 +53,7 @@ export function explainMiss(topology: Topology, message: Message, queue: string)
   return {
     queue,
     reached: false,
-    reasons: explainDestination(topology, result, { kind: 'queue', name: queue }, new Set()),
+    reasons: explainDestination(topology, result, { kind: 'queue', name: queue }, new Set(), new Set()),
   };
 }
 
@@ -59,6 +61,7 @@ function explainDestination(
   topology: Topology,
   result: Routed,
   destination: Destination,
+  explained: Set<string>,
   explaining: ReadonlySet<string>,
 ): MissReason[] {
   const incoming = topology.bindings.flatMap((binding, index) =>
@@ -79,6 +82,10 @@ function explainDestination(
     if (explaining.has(binding.source)) {
       return { kind: 'cycle', exchange: binding.source };
     }
+    if (explained.has(binding.source)) {
+      return { kind: 'already-explained', exchange: binding.source };
+    }
+    explained.add(binding.source);
     return {
       kind: 'exchange-not-reached',
       binding: index,
@@ -87,6 +94,7 @@ function explainDestination(
         topology,
         result,
         { kind: 'exchange', name: binding.source },
+        explained,
         new Set([...explaining, binding.source]),
       ),
     };

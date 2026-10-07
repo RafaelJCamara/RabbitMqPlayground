@@ -1,7 +1,7 @@
 import { arbMessageFor, arbTopology, exchange, message, toExchange, toQueue, topology } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { explainMiss } from './explain';
+import { explainMiss, type MissReason } from './explain';
 import { route, type Routed } from './route';
 import type { Message, Topology } from './topology';
 
@@ -13,6 +13,13 @@ import type { Message, Topology } from './topology';
 const arbCase: fc.Arbitrary<{ topology: Topology; message: Message }> = arbTopology.chain((generated) =>
   arbMessageFor(generated).map((generatedMessage) => ({ topology: generated, message: generatedMessage })),
 );
+
+/** How many reasons an answer has, counting the ones that are inside others. */
+const countReasons = (reasons: readonly MissReason[]): number =>
+  reasons.reduce(
+    (count, reason) => count + 1 + (reason.kind === 'exchange-not-reached' ? countReasons(reason.because) : 0),
+    0,
+  );
 
 const publishable = (result: ReturnType<typeof route>): Routed => {
   fc.pre(result.ok);
@@ -186,6 +193,18 @@ describe('explainMiss, as a property', () => {
           expect(explanation.reached).toBe(result.ok && result.queues.includes(queue));
           expect(explanation.reasons.length === 0).toBe(explanation.reached);
           expect(JSON.parse(JSON.stringify(explanation))).toEqual(explanation);
+        }
+      }),
+    );
+  });
+
+  it('is as big as the topology and no bigger: at most a reason for each binding, each exchange and the queue (ADR-0059)', () => {
+    fc.assert(
+      fc.property(arbCase, ({ topology: t, message: m }) => {
+        for (const queue of t.queues) {
+          const { reasons } = explainMiss(t, m, queue);
+
+          expect(countReasons(reasons)).toBeLessThanOrEqual(t.bindings.length + t.exchanges.length + 1);
         }
       }),
     );

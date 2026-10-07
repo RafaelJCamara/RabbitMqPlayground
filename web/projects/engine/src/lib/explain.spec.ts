@@ -1,6 +1,13 @@
 import { entry, exchange, headerArguments, int, message, toExchange, toQueue, topology } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { explainMiss } from './explain';
+import { explainMiss, type MissReason } from './explain';
+
+/** How many reasons an answer has, counting the ones that are inside others. */
+const countReasons = (reasons: readonly MissReason[]): number =>
+  reasons.reduce(
+    (count, reason) => count + 1 + (reason.kind === 'exchange-not-reached' ? countReasons(reason.because) : 0),
+    0,
+  );
 
 describe('explainMiss (ADR-0010: "why didn’t it get here?")', () => {
   it('says that a queue was reached, and gives no reason', () => {
@@ -105,6 +112,103 @@ describe('explainMiss (ADR-0010: "why didn’t it get here?")', () => {
     expect(viaX).toMatchObject({ kind: 'exchange-not-reached', exchange: 'x' });
     const [back] = viaX?.kind === 'exchange-not-reached' ? viaX.because : [];
     expect(back).toEqual({ kind: 'cycle', exchange: 'y' });
+  });
+
+  it('gives the reasons for an exchange once, where it is first met, and refers to it the next time (ADR-0059)', () => {
+    // hub feeds both left and right, and both feed q, but nothing leads into hub from where the message was published.
+    const t = topology({
+      exchanges: [
+        exchange('start', 'fanout'),
+        exchange('hub', 'fanout'),
+        exchange('left', 'fanout'),
+        exchange('right', 'fanout'),
+      ],
+      queues: ['q'],
+      bindings: [toExchange('hub', 'left'), toExchange('hub', 'right'), toQueue('left', 'q'), toQueue('right', 'q')],
+    });
+
+    expect(explainMiss(t, message('start'), 'q').reasons).toEqual([
+      {
+        kind: 'exchange-not-reached',
+        binding: 2,
+        exchange: 'left',
+        because: [
+          {
+            kind: 'exchange-not-reached',
+            binding: 0,
+            exchange: 'hub',
+            because: [{ kind: 'no-bindings', destination: { kind: 'exchange', name: 'hub' } }],
+          },
+        ],
+      },
+      {
+        kind: 'exchange-not-reached',
+        binding: 3,
+        exchange: 'right',
+        because: [{ kind: 'already-explained', exchange: 'hub' }],
+      },
+    ]);
+  });
+
+  it('still says cycle for an exchange that is being explained, and each answer is its own', () => {
+    // y and z lead into each other, and x leads into y: asking about x's queue goes through y, then z, then back to y.
+    const t = topology({
+      exchanges: [
+        exchange('start', 'fanout'),
+        exchange('y', 'fanout'),
+        exchange('z', 'fanout'),
+        exchange('x', 'fanout'),
+      ],
+      queues: ['q', 'r'],
+      bindings: [
+        toExchange('y', 'z'),
+        toExchange('z', 'y'),
+        toExchange('y', 'x'),
+        toQueue('x', 'q'),
+        toQueue('z', 'r'),
+      ],
+    });
+    const [viaX] = explainMiss(t, message('start'), 'q').reasons;
+    const [viaY] = viaX?.kind === 'exchange-not-reached' ? viaX.because : [];
+    const [viaZ] = viaY?.kind === 'exchange-not-reached' ? viaY.because : [];
+
+    expect(viaX).toMatchObject({ exchange: 'x' });
+    expect(viaY).toMatchObject({ exchange: 'y' });
+    expect(viaZ).toMatchObject({ kind: 'exchange-not-reached', exchange: 'z' });
+    // z is bound from y, which is being explained, so that is a cycle, and not another explanation of y.
+    expect(viaZ?.kind === 'exchange-not-reached' ? viaZ.because : []).toEqual([{ kind: 'cycle', exchange: 'y' }]);
+    // r is bound from z, which has been explained by now, in the answer for q: but each answer is its own, so r explains z again.
+    expect(explainMiss(t, message('start'), 'r').reasons).toMatchObject([{ exchange: 'z' }]);
+  });
+
+  it('does not grow with the number of paths: a ladder of 40 diamonds is as long as its bindings, and not 2^40 paths', () => {
+    const levels = 40;
+    const exchanges = [exchange('start', 'fanout')];
+    const bindings = [];
+    for (let level = 0; level < levels; level++) {
+      const from = level === 0 ? 'island' : `e${level}`;
+      exchanges.push(
+        exchange(`a${level}`, 'fanout'),
+        exchange(`b${level}`, 'fanout'),
+        exchange(`e${level + 1}`, 'fanout'),
+      );
+      bindings.push(
+        toExchange(from, `a${level}`),
+        toExchange(from, `b${level}`),
+        toExchange(`a${level}`, `e${level + 1}`),
+        toExchange(`b${level}`, `e${level + 1}`),
+      );
+    }
+    exchanges.push(exchange('island', 'fanout'));
+    bindings.push(toQueue(`e${levels}`, 'q'));
+    const ladder = topology({ exchanges, queues: ['q'], bindings });
+
+    const { reasons } = explainMiss(ladder, message('start'), 'q');
+
+    expect(countReasons(reasons)).toBeLessThanOrEqual(ladder.bindings.length + ladder.exchanges.length + 1);
+    // Every exchange of the ladder is explained once, so the first and the last of them are both there.
+    expect(JSON.stringify(reasons)).toContain('"exchange":"island"');
+    expect(JSON.stringify(reasons)).toContain(`"exchange":"e${levels}"`);
   });
 
   it('explains the default exchange: it routes by the name of the queue, and the key was another', () => {
