@@ -46,7 +46,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md) | The Foblex adapter: one component, intents out, and the four workarounds | Accepted (the fit is the app's, by 0038, a menu on the canvas itself is the key's, by 0040, labels, the default exchange node and their intents by 0043 and 0044) |
 | [0034](0034-the-foblex-contract-suite-and-how-an-upgrade-fails-loudly.md) | The Foblex contract suite, and how an upgrade fails loudly | Accepted |
 | [0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) | The keyboard service: scope, modifiers and text fields | Accepted (its listener moved to the document by 0037, the menu held open by 0039, a menu on the canvas itself made the key's by 0040, the rows for `/`, Ctrl/Cmd+K and `?` by 0045 and 0047, and Ctrl/Cmd+K in a field of text by 0048, the rows for P, Space and . by 0054) |
-| [0036](0036-the-test-strategy-of-the-editor.md) | The test strategy of the editor | Accepted (the quota test changed by 0037, the pointer tests by 0039, touch and the replay test by 0046, what the tests wait for by 0048, the journeys of the adapter by 0049) |
+| [0036](0036-the-test-strategy-of-the-editor.md) | The test strategy of the editor | Accepted (the quota test changed by 0037, the pointer tests by 0039, touch and the replay test by 0046, what the tests wait for by 0048, the journeys of the adapter by 0049, the document that the specs share by 0058) |
 | [0037](0037-the-editors-keys-are-heard-on-the-document-and-the-browsers-refusal-is-made-at-its-api.md) | The editor's keys are heard on the document, and the browser's refusal is made at its API | Accepted |
 | [0038](0038-the-app-fits-the-canvas-and-does-not-ask-the-library-to.md) | The app fits the canvas, and does not ask the library to | Accepted |
 | [0039](0039-the-context-menu-stays-open-through-the-end-of-the-click-that-opened-it.md) | The context menu stays open through the end of the click that opened it | Accepted (held by the create menu too, 0042) |
@@ -58,7 +58,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) | The command bar: a panel that types through the same door | Accepted (its draft, its refusals and its list settled by 0048, its place among the folders by 0057) |
 | [0046](0046-the-equivalent-command-log-and-the-tests-that-hold-gestures-and-commands-together.md) | The equivalent-command log, and the tests that hold gestures and typed commands together | Accepted (the contract suite and the replay as built, 0048, the runtime verbs are in the log, 0054) |
 | [0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md) | Guidance: the hint bar, the "How to link" card and the cheat-sheet | Accepted (the card as chips, and the top bar that fits, 0048) |
-| [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md) | What building S5 settled: Ctrl+K in a field, a bar that keeps its draft, a top bar that fits, and tests that wait | Accepted |
+| [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md) | What building S5 settled: Ctrl+K in a field, a bar that keeps its draft, a top bar that fits, and tests that wait | Accepted (the document that the specs share is emptied after each test, 0058) |
 | [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md) | The reader of paths knows what the bezier edge draws, and a browser holds where the labels are put | Accepted (the overlay reads the paths with it, 0055) |
 | [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) | The simulator has no connections, a consumer owns a channel, and a refusal is a result | Accepted |
 | [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md) | A declaration that repeats is idempotent, an unbind of nothing changes nothing, and a 406 names the attribute | Accepted |
@@ -68,6 +68,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) | The overlay draws on a canvas, outside change detection, and follows the real paths | Accepted (the colours, the wake of the loop and the frame that cannot jump, 0057) |
 | [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md) | Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar | Accepted (the strip is a labelled region and not a toolbar, 0057) |
 | [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md) | What building S6 settled: folders that run one way, a strip that is a region, frames that cannot jump, and colours read through a probe | Accepted (what wakes the overlay, as built, is in OPEN_QUESTIONS) |
+| [0058](0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md) | The specs of the app share one document, so each test leaves it empty | Accepted |
 
 ## Where to start
 
@@ -108,7 +109,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
   [0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md),
   [0049](0049-the-reader-of-paths-knows-what-the-bezier-edge-draws-and-a-browser-holds-where-labels-are-put.md),
   [0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md), [0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), [0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md),
-  [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
+  [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md),
+  [0058](0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md).
 
 ## Adding or changing a decision
 

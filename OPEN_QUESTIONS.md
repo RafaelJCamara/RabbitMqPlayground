@@ -432,6 +432,9 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   and the simulation wakes the loop for the second.
 - **The speed is held by the clock of the page**, which a test advances (`page.clock`), and not by waiting: a second of it is 244 milliseconds of the simulation at a quarter of the speed, and the tests accept a little less than
   the whole, since the first frame after a rest lasts no time.
+- **The specs of the app are not isolated, and the body of their shared document is emptied after each test** ([ADR-0058](docs/adr/0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md)). The Nightly of the random seed found a spec that found
+  another's `id="label"`, in a way that no push and no run at the same seed on one machine could repeat. The head, the attributes of the `html` element and the window are not emptied: the specs that change them put them
+  back, and if a leak is ever found there, the answer is to isolate the files, which costs a document for each of the 74.
 
 ## Follow-ups that are already owned
 
