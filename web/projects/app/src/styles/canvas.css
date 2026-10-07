@@ -372,9 +372,7 @@ rmq-flow-canvas .rmq-node.f-selected[data-emphasis='reached'] .rmq-node-outline 
 
 @media (prefers-reduced-motion: reduce) {
   rmq-flow-canvas .rmq-node-outline,
-  rmq-flow-canvas .rmq-handle-dot,
-  rmq-flow-canvas .rmq-edge[data-emphasis] .f-connection-path,
-  rmq-flow-canvas .rmq-node[data-emphasis] .rmq-node-outline {
+  rmq-flow-canvas .rmq-handle-dot {
     transition: none;
   }
 }
