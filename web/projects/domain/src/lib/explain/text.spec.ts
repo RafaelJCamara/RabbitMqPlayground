@@ -74,16 +74,11 @@ describe('explanationText (ADR-0060)', () => {
         '    pattern  archive | *',
         '    key      order ✗ | created ✓',
         '',
-        'queue billing: reached',
-        '  ✓ orders -> queue billing ("order.*") [matches]',
-        '    pattern  order   | *',
-        '    key      order ✓ | created ✓',
+        'queue billing: reached through ✓ orders -> queue billing ("order.*") [matches]',
         '',
         'queue archive: not reached',
         '  The queue archive did not get the message.',
         '  - The binding from orders to queue archive ("archive.*") was tried, and it did not match. The pattern "archive.*" does not match the key "order.created": the first word of the key is "order", and the pattern asks for "archive".',
-        '    pattern  archive | *',
-        '    key      order ✗ | created ✓',
         '  - hub is bound to queue archive ("x"), but the message never reached hub.',
         '    - Nothing is bound to the exchange hub, so nothing leads into it and the message cannot reach it.',
         '',
@@ -144,7 +139,7 @@ describe('explanationText (ADR-0060)', () => {
 
   it('writes the empty key as such, and a message to the default exchange as published to it', () => {
     expect(explanationText(explainRoute(topology({}), message('', '')))).toMatch(
-      /^message: published to the default exchange with key the empty key\n/,
+      /^message: published to the default exchange with the empty key\n/,
     );
   });
 

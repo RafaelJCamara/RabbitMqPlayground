@@ -246,6 +246,21 @@ describe('explainRoute: a message that reaches no queue', () => {
   });
 });
 
+describe('explainRoute: a binding to something that is not there', () => {
+  it('says that it matched and could not lead anywhere, which a canvas that is valid never has but the engine tolerates', () => {
+    const t = topology({ exchanges: [exchange('e', 'fanout')], queues: ['q'], bindings: [toQueue('e', 'ghost')] });
+    const result = routed(explainRoute(t, message('e')));
+    const [binding] = result.root.bindings;
+
+    expect(result.outcome).toBe('unroutable');
+    expect(result.summary).toBe(
+      'No queue got it: it reached e, and 1 of its 1 binding matched, but none of them led to a queue.',
+    );
+    expect(binding).toMatchObject({ verdict: 'matched', followed: false, outcome: 'destination-missing' });
+    expect(binding?.text.endsWith('The queue ghost is not there.')).toBe(true);
+  });
+});
+
 describe('explainRoute: the default exchange', () => {
   const t = topology({ queues: ['billing', 'audit'] });
 

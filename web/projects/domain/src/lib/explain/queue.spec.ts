@@ -186,6 +186,18 @@ describe('explainQueue: a queue that did not', () => {
     ]);
   });
 
+  it('says a binding that starts from an exchange that is not declared as it is, with its key, and that nothing leads into it', () => {
+    const t = topology({
+      exchanges: [exchange('start', 'fanout')],
+      queues: ['q'],
+      bindings: [toQueue('ghost', 'q', 'k')],
+    });
+    const [reason] = explainQueue(t, message('start'), 'q').because;
+
+    expect(reason?.text).toBe('ghost is bound to queue q ("k"), but the message never reached ghost.');
+    expect(reason?.kind === 'exchange-not-reached' && reason.because.map(({ kind }) => kind)).toEqual(['no-bindings']);
+  });
+
   it('says that there is no such queue', () => {
     expect(explainQueue(orders, created, 'nope').because).toEqual([
       { kind: 'no-such-queue', text: 'There is no queue called "nope".' },

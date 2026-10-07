@@ -109,7 +109,7 @@ export { bindingIds, edgeKey, edgeKeys, toTopology } from './lib/document/topolo
 export type { ConditionLine } from './lib/explain/headers-words';
 export { explainQueue } from './lib/explain/queue';
 export { explainRoute, messageIssue, refusalText } from './lib/explain/route';
-export { alignmentLines, explanationText } from './lib/explain/text';
+export { alignmentLines, explanationHeader, explanationText } from './lib/explain/text';
 export { topicWords, type TopicWords } from './lib/explain/topic-words';
 export type {
   BindingDetail,

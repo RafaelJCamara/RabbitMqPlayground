@@ -1,10 +1,12 @@
 import {
   explainMiss,
   route,
+  type Binding,
   type ExchangeType,
   type Message,
   type MissReason,
   type Routed,
+  type RoutePath,
   type Topology,
 } from '@rmq/engine';
 import { bindingEnds, bindingLabel, bindingNode, destinationText } from './binding';
@@ -22,7 +24,7 @@ const typeOf = (topology: Topology, name: string): ExchangeType | 'default' =>
 
 /** The bindings that took the message to a queue, in order, each as the tree draws it. */
 function pathTo(topology: Topology, result: Routed, queue: string): BindingNode[] {
-  const hops = result.paths.find((path) => path.queue === queue)?.hops ?? [];
+  const { hops } = result.paths.find((path) => path.queue === queue) as RoutePath;
   return hops.map((hop) => {
     const visit = result.trace.visits.find((candidate) => candidate.exchange === hop.from);
     const evaluation = visit?.bindings.find((candidate) => candidate.index === hop.binding);
@@ -63,7 +65,7 @@ function reasonNode(topology: Topology, message: Message, queue: string, reason:
         destination: reason.destination,
       };
     case 'binding-did-not-match': {
-      const source = topology.bindings[reason.binding]?.source ?? '';
+      const source = (topology.bindings[reason.binding] as Binding).source;
       const node = bindingNode(topology, source, typeOf(topology, source), reason.evaluation, null);
       return {
         kind: 'binding-did-not-match',
@@ -72,9 +74,9 @@ function reasonNode(topology: Topology, message: Message, queue: string, reason:
       };
     }
     case 'exchange-not-reached': {
-      const binding = topology.bindings[reason.binding];
+      const binding = topology.bindings[reason.binding] as Binding;
       const label = bindingLabel(binding, typeOf(topology, reason.exchange));
-      const to = binding === undefined ? 'somewhere' : destinationText(binding.destination);
+      const to = destinationText(binding.destination);
       return {
         kind: 'exchange-not-reached',
         text: `${exchangeText(reason.exchange)} is bound to ${to} (${label}), but the message never reached ${exchangeText(reason.exchange)}.`,

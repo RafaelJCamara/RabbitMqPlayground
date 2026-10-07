@@ -1,5 +1,6 @@
 import { entry, exchangeRecord, documentOf, int, str } from '@rmq/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { Cursor } from './cursor';
 import { parseCommand } from './parse';
 import { parseMessageText } from './message';
 
@@ -64,6 +65,18 @@ describe('parseMessageText (ADR-0060, ADR-0064)', () => {
     const result = parseMessageText('key=a ; key=b');
 
     expect(result.ok ? undefined : result.error.at).toEqual({ start: 6, end: 7 });
+  });
+
+  it('does not swallow an error that is not a refusal: a bug is a bug', () => {
+    const broken = vi.spyOn(Cursor.prototype, 'options').mockImplementation(() => {
+      throw new Error('not a refusal');
+    });
+
+    try {
+      expect(() => parseMessageText('key=a')).toThrow('not a refusal');
+    } finally {
+      broken.mockRestore();
+    }
   });
 
   it('reads what publish reads after an exchange: the same key, payload and headers', () => {

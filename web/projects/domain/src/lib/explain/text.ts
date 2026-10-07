@@ -8,7 +8,7 @@ import type {
   RoutedExplanation,
   RouteExplanation,
 } from './types';
-import { exchangeText, keyText, quoted, valueText } from './words';
+import { exchangeText, quoted, valueText } from './words';
 
 /**
  * The explanation as lines of text (ADR-0060): deterministic, with `\n`, and readable in a diff. It is what a golden file holds, and a template draws the same data with marks and a table. It is written with
@@ -91,18 +91,14 @@ function treeLines(root: ExchangeNode): string[] {
   return lines;
 }
 
-/** The reasons that a queue did not get a message, nested as they were found. */
+/** The reasons that a queue did not get a message, nested as they were found. Each is a sentence: the tree of the route above it has the alignment and the conditions. */
 function reasonLines(reasons: readonly ReasonNode[], depth: number): string[] {
   const lines: string[] = [];
   const stack: { reason: ReasonNode; depth: number }[] = [...reasons].reverse().map((reason) => ({ reason, depth }));
   for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
     const pad = INDENT.repeat(item.depth);
     lines.push(`${pad}- ${item.reason.text}`);
-    if (item.reason.kind === 'binding-did-not-match') {
-      for (const line of detailLines(item.reason.binding.detail)) {
-        lines.push(`${pad}${INDENT}${line}`);
-      }
-    } else if (item.reason.kind === 'exchange-not-reached') {
+    if (item.reason.kind === 'exchange-not-reached') {
       for (const inner of [...item.reason.because].reverse()) {
         stack.push({ reason: inner, depth: item.depth + 1 });
       }
@@ -113,13 +109,7 @@ function reasonLines(reasons: readonly ReasonNode[], depth: number): string[] {
 
 function queueLines(explanation: QueueExplanation): string[] {
   if (explanation.reached) {
-    return [
-      `queue ${explanation.queue}: reached`,
-      ...explanation.path.flatMap((binding) => [
-        `${INDENT}${bindingHeader(binding)}`,
-        ...detailLines(binding.detail).map((line) => `${INDENT}${INDENT}${line}`),
-      ]),
-    ];
+    return [`queue ${explanation.queue}: reached through ${explanation.path.map(bindingHeader).join(' ; ')}`];
   }
   return [
     `queue ${explanation.queue}: not reached`,
@@ -135,22 +125,27 @@ const isRouted = (explanation: RouteExplanation): explanation is RoutedExplanati
 function messageLine(explanation: RouteExplanation): string {
   const { message } = explanation;
   const headers = message.headers.map(({ key, value }) => `${key}=${valueText(value)}`);
-  return `message: published to ${message.exchange === '' ? 'the default exchange' : quoted(message.exchange)} with key ${keyText(message.key)}${headers.length === 0 ? '' : `, headers ${headers.join(' ')}`}`;
+  return `message: published to ${message.exchange === '' ? 'the default exchange' : quoted(message.exchange)} with ${message.key === '' ? 'the empty key' : `key ${quoted(message.key)}`}${headers.length === 0 ? '' : `, headers ${headers.join(' ')}`}`;
 }
 
 /**
- * The explanation of a message, and of the queues that it is asked about, as text. The lines that start `outcome:` and `reached:` are for a reader that checks the words against the broker, which is what
- * `tools/explain` does with the fixtures that RabbitMQ recorded.
+ * The four lines that say what became of a message: how it was published, the outcome, the queues that were reached and the summary. The lines that start `outcome:` and `reached:` are for a reader
+ * that checks the words against the broker, which is what `tools/explain` does with the fixtures that RabbitMQ recorded.
  */
-export function explanationText(explanation: RouteExplanation, queues: readonly QueueExplanation[] = []): string {
+export function explanationHeader(explanation: RouteExplanation): string[] {
   const routed = isRouted(explanation);
-  const lines = [
+  return [
     messageLine(explanation),
     `outcome: ${explanation.outcome}`,
     `reached: ${routed && explanation.queues.length > 0 ? explanation.queues.join(', ') : 'nothing'}`,
     `summary: ${routed ? explanation.summary : explanation.text}`,
   ];
-  if (routed) {
+}
+
+/** The explanation of a message, and of the queues that it is asked about, as text: its header, the tree of the route, and a section for each queue. */
+export function explanationText(explanation: RouteExplanation, queues: readonly QueueExplanation[] = []): string {
+  const lines = explanationHeader(explanation);
+  if (isRouted(explanation)) {
     lines.push('', ...treeLines(explanation.root));
   }
   for (const queue of queues) {

@@ -92,12 +92,14 @@ function nothingReached(
   const matched = bindings.filter(({ verdict }) => verdict === 'matched').length;
   const reached = `it reached ${listOf(names)}`;
   if (bindings.length === 0) {
-    return `No queue got it: ${reached}, which ${names.length === 1 ? 'has' : 'have'} no bindings.`;
+    // An exchange that no binding leaves is the only one that the message reached.
+    return `No queue got it: ${reached}, which has no bindings.`;
   }
   if (matched === 0) {
+    // Nothing matched, so the message did not go beyond the exchange that it was published to.
     return bindings.length === 1
       ? `No queue got it: ${reached}, and its only binding did not match.`
-      : `No queue got it: ${reached}, and none of ${names.length === 1 ? 'its' : 'their'} ${bindings.length} bindings matched.`;
+      : `No queue got it: ${reached}, and none of its ${bindings.length} bindings matched.`;
   }
   return `No queue got it: ${reached}, and ${matched} of ${names.length === 1 ? 'its' : 'their'} ${plural(bindings.length, 'binding')} matched, but none of them led to a queue.`;
 }
@@ -128,7 +130,9 @@ export function explainRoute(topology: Topology, message: Message): RouteExplana
         visit.exchange,
         visit.type,
         evaluation,
-        evaluation.outcome === 'exchange-visited-next' ? (nodes.get(evaluation.destination.name) ?? null) : null,
+        evaluation.outcome === 'exchange-visited-next'
+          ? (nodes.get(evaluation.destination.name) as ExchangeNode)
+          : null,
       ),
     );
     nodes.set(visit.exchange, {
