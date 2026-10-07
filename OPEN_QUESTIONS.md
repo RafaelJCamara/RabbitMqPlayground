@@ -8,18 +8,18 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)) and S6
 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
-[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 8 and 9 are missing:
+[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 6, 8 and 9 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
 [ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md),
 [ADR-0050](docs/adr/0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) and
-[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md).
+[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), and 6 by
+[ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md).
 
 | # | Question | Settled by |
 |---|---|---|
 | 3 | How are values that the scenario vocabulary cannot write recorded: an invalid `x-match`, an integer beyond 2^53? | S10 ([#12](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/12)) |
 | 4 | How should a new scenario reach the Nightly record run, when the offline fixture spec refuses scenarios that have no fixture? | the repo owner |
 | 5 | Should the repository pin its line endings with a `.gitattributes`? | the repo owner |
-| 6 | Is the shape of the trace and of `explainMiss` right for the Why? overlay? | S7 ([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)) |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
 | 10 | What do the home screen, the backup and "delete all" do with a canvas that cannot be read? | S9 ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) |
 
@@ -84,27 +84,6 @@ the files). A root `.gitattributes` with `* text=auto eol=lf` would fix it for e
 Where S3 left it: nothing new needed it. The manifest of the schema fixtures hashes what a file parses to, and not its
 bytes, and the specs that build the golden text of a file from a fixture read it with `\n` whatever the checkout has, so
 that neither depends on line endings. The conformance fixtures and the specs that compare them byte for byte still do.
-
-## 6. The shape of the trace and of `explainMiss`
-
-S7 builds on both, and the shape is a first design: a visit for each exchange, with the binding that led there and every
-binding that starts from it; a word alignment for a topic binding; pass, fail or ignored with a reason for each header
-argument; and a tree of reasons for a miss. Four things I am not sure of:
-
-- A topic miss says how far the pattern got. When a `#` takes the rest of the key and the next word then has nothing to
-  match, it says `key-ran-out`. For `a.#.c` against `a.b.d` the pattern consumed the whole key and then needed a `c`, which
-  reads oddly next to "the key does not end in c". The alternative is to report the last word that differed.
-- The default exchange is a visit of type `default` with one implicit binding, or none.
-- `topicSamples` fills wildcards with `x`, `y` and `z`, gives up to 4 matching and 5 non-matching keys, and leaves out any
-  key over 255 bytes.
-- `explainMiss` ends on `{ kind: 'cycle' }` instead of going round a cycle.
-
-These are cheap to change now, and dearer once S7 renders them.
-
-Where S6 left it: S6 did not change the trace or `explainMiss`. The engine puts the trace of `route()` in the events `routed` and `unroutable`, as it
-is, so S7's overlay can read it from the event that its log shows, and `explainMiss` is worked out from the topology when it is asked for, and is not
-kept in the event. Whether an event should carry the explanation of a miss, so that a log that is read later still has it after the canvas was
-changed, is for S7 to say.
 
 ## 7. Mutation checks
 
@@ -464,7 +443,7 @@ S3 hands on what the app has to wire, in the order that the slices come
 S6 hands on what the next slices read, in the order that they come ([ADR-0052](docs/adr/0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), [ADR-0054](docs/adr/0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md)):
 
 - **S7** (the Why? overlay and the event log) reads `Simulation.onEvents`, which tells its listener the events that each command and each advance of the clock made, in order, and `describeEvent` for the sentence of
-  each. The `routed` and `unroutable` events have the `trace` of S1 as it was (question 6) and `routed` has the `paths` that its message took. The log of equivalent commands already holds the lines of the
+  each. The `routed` and `unroutable` events have the `trace` of S1 and `routed` has the `paths` that its message took ([ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) settled the shape of the trace and of `explainMiss`). The log of equivalent commands already holds the lines of the
   runtime verbs, in the same store, which is where S7 shows them beside the events (ADR-0046).
 - **S8** (headers) gives the composer its table of headers. The grammar, the engine and `reconcile` carry headers already, and the composer says how many there are.
 - **S9** (the screens of the canvases) and **S10** (share and export) have no engine in what is saved: a canvas that is opened has a new engine, and nothing of a simulation that was running is kept with the canvas or in a
