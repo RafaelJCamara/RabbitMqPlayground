@@ -25,16 +25,8 @@ export {
   sampleDocument,
   type DocumentParts,
 } from './lib/documents';
-export {
-  applyEngineCommand,
-  applyEngineCommands,
-  bindingKey,
-  BrokerError,
-  canonicalTopology,
-  emptyBroker,
-  topologyOf,
-  type BrokerState,
-} from './lib/broker';
+export { bindingKey, canonicalTopology } from './lib/broker';
+export { documentHolds, engineHolds, type Held } from './lib/held';
 export {
   DEFAULT_FC_NUM_RUNS,
   DEFAULT_FC_SEED,

@@ -1,18 +1,18 @@
-import { route, type Message } from '@rmq/engine';
+import { createEngine, route, type Engine, type Message } from '@rmq/engine';
 import {
-  applyEngineCommands,
   arbIntent,
   arbScript,
   canonicalTopology,
   commandFor,
   deepFreeze,
-  emptyBroker,
+  documentHolds,
+  engineHolds,
   playScript,
   prefixedIds,
+  runAll,
   sequentialIds,
-  topologyOf,
   undoRedoProblems,
-  type BrokerState,
+  ZERO_TIMING,
   type Transition,
 } from '@rmq/testing';
 import * as fc from 'fast-check';
@@ -283,55 +283,65 @@ describe('parse(format(c)) ≅ c (ADR-0011, ADR-0025)', () => {
   });
 });
 
-/** The topology of a document, written out by hand, one more way: the names, the flags and the bindings. */
-function declarationsOf(document: CanvasDocument) {
-  return {
-    exchanges: Object.values(document.exchanges)
-      .map(({ name, type, durable, autoDelete, internal }) => `${name}|${type}|${durable}|${autoDelete}|${internal}`)
-      .sort(),
-    queues: Object.values(document.queues)
-      .map(({ name, durable }) => `${name}|${durable}`)
-      .sort(),
-  };
-}
-function declarationsHeld(engine: BrokerState) {
-  return {
-    exchanges: engine.exchanges
-      .map(({ name, type, durable, autoDelete, internal }) => `${name}|${type}|${durable}|${autoDelete}|${internal}`)
-      .sort(),
-    queues: engine.queues.map(({ name, durable }) => `${name}|${durable}`).sort(),
-  };
+/** An engine that starts where a canvas does: new, and told what the empty canvas says. */
+function startEngine(): Engine {
+  const engine = createEngine({ seed: 99, timing: ZERO_TIMING, vhost: '/' });
+  runAll(engine, ...reconcile(null, emptyDocument()));
+  return engine;
 }
 
-describe('reconcile keeps the engine equal to the document (ADR-0019)', () => {
-  it('leaves the engine with the topology of the document after every step: a command, an undo, a redo and a load', () => {
+/** An engine that is made from a canvas alone, as a load of the canvas into a new engine does. */
+function engineFor(document: CanvasDocument): Engine {
+  const engine = createEngine({ seed: 99, timing: ZERO_TIMING, vhost: document.vhost });
+  runAll(engine, ...reconcile(null, document));
+  return engine;
+}
+
+describe('reconcile keeps the engine equal to the document (ADR-0019, ADR-0054)', () => {
+  it('leaves the engine holding what the document says after every step: a command, an undo, a redo and a load', () => {
     fc.assert(
       fc.property(arbScript, (script) => {
-        let engine = emptyBroker();
+        const engine = startEngine();
         for (const transition of playScript(script)) {
-          const commands = reconcile(transition.before, transition.after);
-          // The oracle refuses a command that a broker would refuse, so a command out of order or redundant throws here.
-          engine = applyEngineCommands(engine, commands);
+          // The engine refuses a command that a broker would refuse, so a command out of order or redundant throws here.
+          runAll(engine, ...reconcile(transition.before, transition.after));
 
-          expect(
-            canonicalTopology(topologyOf(engine)),
-            `${transition.via} ${JSON.stringify(transition.command)}`,
-          ).toEqual(canonicalTopology(toTopology(transition.after)));
-          expect(declarationsHeld(engine)).toEqual(declarationsOf(transition.after));
+          const step = `${transition.via} ${JSON.stringify(transition.command)}`;
+          expect(canonicalTopology(engine.view().topology), step).toEqual(
+            canonicalTopology(toTopology(transition.after)),
+          );
+          expect(engineHolds(engine), step).toEqual(documentHolds(transition.after));
         }
       }),
     );
   });
 
-  it('builds the topology of the document from nothing, which is what a load of a canvas into a new engine does', () => {
+  it('builds what the document says from nothing, which is what a load of a canvas into a new engine does', () => {
     fc.assert(
       fc.property(arbScript, (script) => {
         for (const { after } of playScript(script)) {
-          const engine = applyEngineCommands(emptyBroker(), reconcile(null, after));
+          const engine = engineFor(after);
 
-          expect(canonicalTopology(topologyOf(engine))).toEqual(canonicalTopology(toTopology(after)));
-          expect(declarationsHeld(engine)).toEqual(declarationsOf(after));
+          expect(canonicalTopology(engine.view().topology)).toEqual(canonicalTopology(toTopology(after)));
+          expect(engineHolds(engine)).toEqual(documentHolds(after));
         }
+      }),
+    );
+  });
+
+  it('holds the same after a whole run as an engine that is made from the last canvas alone', () => {
+    fc.assert(
+      fc.property(arbScript, (script) => {
+        const followed = startEngine();
+        let last = emptyDocument();
+        for (const transition of playScript(script)) {
+          runAll(followed, ...reconcile(transition.before, transition.after));
+          last = transition.after;
+        }
+        const fresh = engineFor(last);
+
+        expect(engineHolds(followed)).toEqual(engineHolds(fresh));
+        expect(canonicalTopology(followed.view().topology)).toEqual(canonicalTopology(fresh.view().topology));
       }),
     );
   });
@@ -350,12 +360,12 @@ describe('reconcile keeps the engine equal to the document (ADR-0019)', () => {
 
     fc.assert(
       fc.property(arbScript, fc.array(arbMessage, { maxLength: 4 }), (script, messages) => {
-        let engine = emptyBroker();
+        const engine = startEngine();
         for (const transition of playScript(script)) {
-          engine = applyEngineCommands(engine, reconcile(transition.before, transition.after));
+          runAll(engine, ...reconcile(transition.before, transition.after));
           for (const message of messages) {
             const fromDocument = route(toTopology(transition.after), message);
-            const fromEngine = route(topologyOf(engine), message);
+            const fromEngine = route(engine.view().topology, message);
 
             expect(fromEngine.ok).toBe(fromDocument.ok);
             expect(fromEngine.ok ? [...fromEngine.queues].sort() : null).toEqual(
@@ -372,13 +382,12 @@ describe('reconcile keeps the engine equal to the document (ADR-0019)', () => {
       fc.property(arbScript, (script) => {
         for (const { before, after } of playScript(script)) {
           expect(reconcile(after, after)).toEqual([]);
-          const forward = applyEngineCommands(
-            applyEngineCommands(emptyBroker(), reconcile(null, before)),
-            reconcile(before, after),
-          );
-          const back = applyEngineCommands(forward, reconcile(after, before));
+          const engine = engineFor(before);
+          runAll(engine, ...reconcile(before, after));
+          runAll(engine, ...reconcile(after, before));
 
-          expect(canonicalTopology(topologyOf(back))).toEqual(canonicalTopology(toTopology(before)));
+          expect(canonicalTopology(engine.view().topology)).toEqual(canonicalTopology(toTopology(before)));
+          expect(engineHolds(engine)).toEqual(documentHolds(before));
         }
       }),
     );
@@ -391,6 +400,35 @@ describe('reconcile keeps the engine equal to the document (ADR-0019)', () => {
           const commands = reconcile(before, after).map((command) => JSON.stringify(command));
 
           expect(new Set(commands).size).toBe(commands.length);
+        }
+      }),
+    );
+  });
+
+  it('is valid for an engine that is running, with messages on their way and held by consumers when the canvas changes', () => {
+    fc.assert(
+      fc.property(arbScript, (script) => {
+        const engine = startEngine();
+        for (const transition of playScript(script)) {
+          for (const command of reconcile(transition.before, transition.after)) {
+            const result = engine.dispatch(command);
+            expect(
+              result.ok,
+              `${transition.via} ${JSON.stringify(transition.command)}: ${JSON.stringify(command)}`,
+            ).toBe(true);
+          }
+          expect(engineHolds(engine)).toEqual(documentHolds(transition.after));
+
+          // Something happens before the canvas changes again: a few messages are published by hand, and the engine runs some of what is scheduled.
+          for (const { source, key } of Object.values(transition.after.bindings).slice(0, 3)) {
+            const exchange = transition.after.exchanges[source];
+            if (exchange !== undefined) {
+              expect(engine.dispatch({ op: 'basic.publish', exchange: exchange.name, key, body: 'm' }).ok).toBe(true);
+            }
+          }
+          for (let steps = 0; steps < 12; steps += 1) {
+            engine.step();
+          }
         }
       }),
     );
