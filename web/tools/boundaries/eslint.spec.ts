@@ -43,6 +43,8 @@ const FLOW = 'projects/app/src/app/canvas/flow/example.ts';
 const CORE = 'projects/app/src/app/core/state/example.ts';
 const MODEL = 'projects/app/src/app/canvas/model/example.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/example.ts';
+const OVERLAY = 'projects/app/src/app/canvas/overlay/example.ts';
+const SIMULATION = 'projects/app/src/app/simulation/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -108,6 +110,99 @@ describe('imports', () => {
       '../canvas/flow/flow-canvas',
       /`command-bar\/` may not import from/,
     ],
+    // What the simulation draws on the canvas, and its controls, have a place of their own between the canvas and the editor (ADR-0057).
+    [
+      'the canvas overlay importing the editor',
+      OVERLAY,
+      '../../editor/editor',
+      /`canvas\/` may not import from `editor\/`/,
+    ],
+    [
+      'the canvas overlay importing the Foblex adapter',
+      OVERLAY,
+      '../flow/flow-canvas',
+      /`canvas\/overlay\/` may not import from `canvas\/flow\/`/,
+    ],
+    [
+      'the canvas overlay importing the adapter by its path from the app',
+      OVERLAY,
+      '../../canvas/flow/flow-canvas',
+      /may not import from `canvas\/flow\/`/,
+    ],
+    ['the canvas overlay importing Foblex Flow', OVERLAY, '@foblex/flow', /only be imported inside `canvas\/flow/],
+    ['the canvas overlay importing the testing library', OVERLAY, '@rmq/testing', /only be imported from specs/],
+    [
+      'the canvas overlay importing the command bar',
+      OVERLAY,
+      '../../command-bar/command-bar',
+      /may not import from `command-bar\/`/,
+    ],
+    [
+      'the canvas overlay importing the controls of the simulation',
+      OVERLAY,
+      '../../simulation/simulation-bar',
+      /may not import from `simulation\/`/,
+    ],
+    [
+      'the canvas model importing the overlay',
+      MODEL,
+      '../overlay/overlay',
+      /`canvas\/model\/` may not import from `canvas\/overlay\/`/,
+    ],
+    [
+      'the canvas model importing the controls of the simulation',
+      MODEL,
+      '../../simulation/simulation-bar',
+      /may not import from `simulation\/`/,
+    ],
+    [
+      'core importing the controls of the simulation',
+      CORE,
+      '../../simulation/simulation-bar',
+      /may not import from `simulation\/`/,
+    ],
+    [
+      'the Foblex adapter importing the controls of the simulation',
+      FLOW,
+      '../../simulation/simulation-bar',
+      /may not import from `simulation\/`/,
+    ],
+    [
+      'the command bar importing the controls of the simulation',
+      COMMAND_BAR,
+      '../simulation/simulation-bar',
+      /may not import from `simulation\/`/,
+    ],
+    [
+      'the controls of the simulation importing the editor',
+      SIMULATION,
+      '../editor/editor',
+      /`simulation\/` may not import from `editor\/`, `canvas\/flow\/` or `command-bar\/`/,
+    ],
+    [
+      'the controls of the simulation importing the Foblex adapter',
+      SIMULATION,
+      '../canvas/flow/flow-canvas',
+      /`simulation\/` may not import from/,
+    ],
+    [
+      'the controls of the simulation importing the command bar',
+      SIMULATION,
+      '../command-bar/command-bar',
+      /`simulation\/` may not import from/,
+    ],
+    [
+      'the controls of the simulation importing Foblex Flow',
+      SIMULATION,
+      '@foblex/flow',
+      /only be imported inside `canvas\/flow/,
+    ],
+    [
+      'the controls of the simulation importing the testing library',
+      SIMULATION,
+      '@rmq/testing',
+      /only be imported from specs/,
+    ],
     ['the command bar importing Foblex Flow', COMMAND_BAR, '@foblex/flow', /only be imported inside `canvas\/flow/],
     ['the command bar importing the testing library', COMMAND_BAR, '@rmq/testing', /only be imported from specs/],
     ['core importing the command bar', CORE, '../../command-bar/command-bar', /may not import from `command-bar\/`/],
@@ -161,6 +256,16 @@ describe('imports', () => {
     ['the command bar importing core', COMMAND_BAR, '../core/state/command-bus'],
     ['the command bar importing the canvas model', COMMAND_BAR, '../canvas/model/flow-viewport'],
     ['the command bar importing its own folder', COMMAND_BAR, './history'],
+    ['the canvas overlay importing core and the canvas model', OVERLAY, '../model/flow-viewport'],
+    ['the canvas overlay importing core', OVERLAY, '../../core/runtime/simulation'],
+    ['the canvas overlay importing its own folder', OVERLAY, './sprites'],
+    ['the controls of the simulation importing core', SIMULATION, '../core/state/command-bus'],
+    ['the controls of the simulation importing the canvas model', SIMULATION, '../canvas/model/flow-viewport'],
+    ['the controls of the simulation importing the overlay', SIMULATION, '../canvas/overlay/overlay'],
+    ['the controls of the simulation importing their own folder', SIMULATION, './simulation-bar'],
+    ['the editor importing the controls of the simulation', APP, '../simulation/simulation-bar'],
+    ['the editor importing the canvas overlay', APP, '../canvas/overlay/overlay'],
+    ['the Foblex adapter importing the canvas overlay', FLOW, '../overlay/node-stats'],
     ['the editor importing the command bar', APP, '../command-bar/command-bar'],
     ['the editor importing the adapter', APP, '../canvas/flow/flow-canvas'],
     ['the editor importing the canvas model and core', APP, '../canvas/model/canvas-vm'],

@@ -50,8 +50,9 @@ const noFoblex = {
 };
 
 /**
- * Which way the folders of the app look (ADR-0030): `core`, then `canvas/model`, then `canvas/flow`, then `editor`. A folder
- * may import what is before it and nothing after.
+ * Which way the folders of the app look (ADR-0030, ADR-0045, ADR-0057): `core`, then `canvas/model`, then `canvas/overlay`, then `canvas/flow`, then
+ * `command-bar`, then `simulation`, then `editor`. A folder may import what is before it and nothing after. The command bar and the simulation do not look
+ * at each other, and the editor hosts both.
  */
 const coreStaysBelow = {
   regex: '^(\\.\\./)+(editor|canvas)(/|$)',
@@ -77,6 +78,27 @@ const modelStaysBelowFlow = {
   regex: '^(\\.\\./)+(canvas/)?flow(/|$)',
   message:
     '`canvas/model/` may not import from `canvas/flow/`: the folders run core, canvas/model, canvas/flow, editor (ADR-0030).',
+};
+
+const belowSimulation = {
+  regex: '^(\\.\\./)+simulation(/|$)',
+  message:
+    '`core/`, `canvas/` and `command-bar/` may not import from `simulation/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, editor (ADR-0057).',
+};
+const simulationStaysBelowEditor = {
+  regex: '^(\\.\\./)+(editor|canvas/flow|command-bar)(/|$)',
+  message:
+    '`simulation/` may not import from `editor/`, `canvas/flow/` or `command-bar/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, editor (ADR-0057).',
+};
+const overlayStaysBelowFlow = {
+  regex: '^(\\.\\./)+(canvas/)?flow(/|$)',
+  message:
+    '`canvas/overlay/` may not import from `canvas/flow/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, editor (ADR-0057).',
+};
+const modelStaysBelowOverlay = {
+  regex: '^(\\.\\./)+(canvas/)?overlay(/|$)',
+  message:
+    '`canvas/model/` may not import from `canvas/overlay/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, editor (ADR-0057).',
 };
 
 const restrictImports = (...patterns) => ['error', { patterns }];
@@ -185,6 +207,8 @@ const APP_SOURCES = ['projects/app/src/**/*.ts'];
 const FLOW_ADAPTER = 'projects/app/src/app/canvas/flow/**';
 const APP_CORE = 'projects/app/src/app/core/**/*.ts';
 const CANVAS_MODEL = 'projects/app/src/app/canvas/model/**/*.ts';
+const CANVAS_OVERLAY = 'projects/app/src/app/canvas/overlay/**/*.ts';
+const SIMULATION_UI = 'projects/app/src/app/simulation/**/*.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/**/*.ts';
 
 export default defineConfig([
@@ -316,6 +340,7 @@ export default defineConfig([
         noFoblex,
         coreStaysBelow,
         belowCommandBar,
+        belowSimulation,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -331,7 +356,42 @@ export default defineConfig([
         noFoblex,
         canvasStaysBelowEditor,
         belowCommandBar,
+        belowSimulation,
         modelStaysBelowFlow,
+        modelStaysBelowOverlay,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // What the simulation draws on the canvas reads core and the canvas model, and the editor hosts it (ADR-0055, ADR-0057).
+    files: [CANVAS_OVERLAY],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        canvasStaysBelowEditor,
+        belowCommandBar,
+        belowSimulation,
+        overlayStaysBelowFlow,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // The controls and the parts of the inspector that the simulation has read core and the canvas, and the editor hosts them (ADR-0056, ADR-0057).
+    files: [SIMULATION_UI],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        simulationStaysBelowEditor,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -347,6 +407,7 @@ export default defineConfig([
         reachesIntoAnotherProject('app'),
         noFoblex,
         commandBarStaysBelowEditor,
+        belowSimulation,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -362,6 +423,7 @@ export default defineConfig([
         reachesIntoAnotherProject('app'),
         canvasStaysBelowEditor,
         belowCommandBar,
+        belowSimulation,
       ),
       ...noOptingOutOfOnPush,
     },
