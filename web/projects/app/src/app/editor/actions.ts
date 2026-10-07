@@ -17,6 +17,8 @@ export interface ActionSurface {
   openCommandBar(): void;
   /** Opens the cheat-sheet (ADR-0047). */
   openCheatSheet(): void;
+  /** Shows the event log when it is hidden and hides it when it is shown (ADR-0061). It answers `false` when there is no log, which needs both flags. */
+  toggleEventLog(): boolean;
 }
 
 /**
@@ -117,6 +119,11 @@ export class EditorActions {
 
   openCheatSheet(): void {
     this.surface?.openCheatSheet();
+  }
+
+  /** Shows or hides the event log. It answers `false` when there is none, so that the key is left for the page. */
+  toggleEventLog(): boolean {
+    return this.surface?.toggleEventLog() ?? false;
   }
 
   /** Takes the learner to the fields of what is selected. It answers whether there was anything to take them to. */

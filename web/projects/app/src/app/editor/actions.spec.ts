@@ -60,6 +60,7 @@ describe('EditorActions', () => {
       focusInspector: vi.fn(() => true),
       openCommandBar: vi.fn(),
       openCheatSheet: vi.fn(),
+      toggleEventLog: vi.fn(() => true),
     };
     actions.surface = surface;
     store.load(sampleDocument());
@@ -97,6 +98,22 @@ describe('EditorActions', () => {
 
       expect(surface.openCommandBar).toHaveBeenCalledOnce();
       expect(surface.openCheatSheet).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('the event log', () => {
+    it('is shown and hidden by the editor, which has it, and the answer is the editor’s', () => {
+      expect(actions.toggleEventLog()).toBe(true);
+      vi.mocked(surface.toggleEventLog).mockReturnValueOnce(false);
+
+      expect(actions.toggleEventLog()).toBe(false);
+      expect(surface.toggleEventLog).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves the key to the page when there is no editor to show it', () => {
+      actions.surface = undefined;
+
+      expect(actions.toggleEventLog()).toBe(false);
     });
   });
 

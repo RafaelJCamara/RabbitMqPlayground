@@ -154,6 +154,16 @@ export const SHORTCUTS: readonly Shortcut[] = [
     run: (actions) => actions.publishSelected('key'),
   },
   {
+    id: 'event-log',
+    label: 'Show or hide the event log',
+    chords: [{ key: 'e' }],
+    scope: 'canvas',
+    owner: 'app',
+    flag: 'explain',
+    shows: always,
+    run: (actions) => actions.toggleEventLog(),
+  },
+  {
     id: 'zoom',
     label: 'Zoom',
     chords: [{ key: '+' }, { key: '-' }, { key: '0' }],

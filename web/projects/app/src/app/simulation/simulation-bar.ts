@@ -76,6 +76,8 @@ const SPEED_BUTTON =
           <span>Reset counters</span>
         </button>
       </div>
+      <!-- What the editor puts in the strip besides these: the button of the event log, when it is there (ADR-0061). -->
+      <ng-content />
       <p class="text-muted ml-auto flex items-center gap-4 tabular-nums" data-testid="simulation-readout">
         <span>Time {{ seconds() }} s</span>
         <span>{{ onTheWay() }}</span>

@@ -30,7 +30,7 @@ async function openSheet(flags: string | null = null) {
 
 describe('keyRows (ADR-0047)', () => {
   it('has a row for every row of the table of shortcuts, in its order, whether or not the hint bar shows it', () => {
-    expect(keyRows(false, ['simulation']).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
+    expect(keyRows(false, ['simulation', 'explain']).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
   });
 
   it('leaves out the keys that are for a feature flag that is off, which are the page\u2019s, and says them when it is on', () => {
@@ -41,7 +41,10 @@ describe('keyRows (ADR-0047)', () => {
     expect(without).not.toContain('step');
     expect(without).not.toContain('publish');
     expect(withFlag).toEqual(expect.arrayContaining(['play', 'step', 'publish']));
-    expect(keyRows(false, ['explain']).map((row) => row.id)).toEqual(without);
+    expect(without).not.toContain('event-log');
+    expect(keyRows(false, ['explain']).map((row) => row.id)).toEqual(
+      SHORTCUTS.filter((row) => row.flag === undefined || row.flag === 'explain').map((row) => row.id),
+    );
   });
 
   it('writes Space as a word, and the other keys of the simulation as they are', () => {
@@ -50,6 +53,12 @@ describe('keyRows (ADR-0047)', () => {
     expect(rows['play']).toBe('Space');
     expect(rows['step']).toBe('.');
     expect(rows['publish']).toBe('P');
+  });
+
+  it('writes the key of the event log as the letter that it is', () => {
+    const rows = Object.fromEntries(keyRows(false, ['explain']).map((row) => [row.id, row.keys]));
+
+    expect(rows['event-log']).toBe('E');
   });
 
   it('writes the keys of a row as the table does: the words that it has, or its chords with "or" between them', () => {
@@ -77,7 +86,9 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('says what each does, in the words of the table', () => {
-    expect(keyRows(false, ['simulation']).map((row) => row.label)).toEqual(SHORTCUTS.map((row) => row.label));
+    expect(keyRows(false, ['simulation', 'explain']).map((row) => row.label)).toEqual(
+      SHORTCUTS.map((row) => row.label),
+    );
   });
 });
 
@@ -168,14 +179,15 @@ describe('the cheat-sheet (ADR-0047)', () => {
     }
   });
 
-  it('says the keys of the simulation when its flag is on', async () => {
-    const { dialog } = await openSheet('simulation');
+  it('says the keys of the simulation and of the explanation when their flags are on', async () => {
+    const { dialog } = await openSheet('simulation,explain');
 
     const table = within(dialog).getByRole('table', { name: 'Keys' });
 
     expect(within(table).getAllByRole('row')).toHaveLength(SHORTCUTS.length + 1);
     expect(within(table).getByText('Play or pause the simulation')).toBeVisible();
     expect(within(table).getByText('Space')).toBeVisible();
+    expect(within(table).getByText('Show or hide the event log')).toBeVisible();
   });
 
   it('has every command of the registry with how it is written and its first sentence, and says that help says more', async () => {

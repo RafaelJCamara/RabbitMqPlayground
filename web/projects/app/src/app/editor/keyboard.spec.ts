@@ -305,7 +305,8 @@ describe('KeyboardService', () => {
     | 'openCheatSheet'
     | 'togglePlay'
     | 'step'
-    | 'publishSelected',
+    | 'publishSelected'
+    | 'toggleEventLog',
     ReturnType<typeof vi.fn>
   >;
   let service: KeyboardService;
@@ -335,6 +336,7 @@ describe('KeyboardService', () => {
       togglePlay: vi.fn(),
       step: vi.fn(),
       publishSelected: vi.fn(() => true),
+      toggleEventLog: vi.fn(() => true),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -485,6 +487,59 @@ describe('KeyboardService', () => {
         expect(actions.togglePlay).not.toHaveBeenCalled();
         expect(actions.step).not.toHaveBeenCalled();
         expect(actions.publishSelected).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('the key of the event log (ADR-0061)', () => {
+    it('is left to the page without the flag: E is not taken, and nothing is run', () => {
+      expect(send('flow', { key: 'e' }).prevented).toBe(false);
+
+      expect(actions.toggleEventLog).not.toHaveBeenCalled();
+    });
+
+    describe('with the flag', () => {
+      beforeEach(() => {
+        TestBed.resetTestingModule();
+        flags = 'explain';
+        TestBed.configureTestingModule({
+          providers: [
+            KeyboardService,
+            { provide: EditorActions, useValue: actions },
+            { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+          ],
+        });
+        service = TestBed.inject(KeyboardService);
+        mount();
+      });
+
+      afterEach(() => {
+        flags = null;
+      });
+
+      it('shows and hides the log on E, in either case, and keeps the page from acting on the key', () => {
+        expect(send('flow', { key: 'e' }).prevented).toBe(true);
+        expect(send('node', { key: 'E' }).prevented).toBe(true);
+        expect(send('flow', { key: 'E', shiftKey: true }).prevented).toBe(false);
+
+        expect(actions.toggleEventLog).toHaveBeenCalledTimes(2);
+      });
+
+      it('leaves the key to the page when there is no log to show, which needs the simulation too', () => {
+        actions.toggleEventLog.mockReturnValue(false);
+
+        expect(send('flow', { key: 'e' }).prevented).toBe(false);
+        expect(actions.toggleEventLog).toHaveBeenCalledOnce();
+      });
+
+      it('does nothing outside the canvas, where a single key is not a shortcut, in a text field, where it is typed, and with a modifier held', () => {
+        send('toolbox-button', { key: 'e' });
+        send('name', { key: 'e' });
+        send('flow', { key: 'e', ctrlKey: true });
+        send('flow', { key: 'e', metaKey: true });
+        send('flow', { key: 'e', altKey: true });
+
+        expect(actions.toggleEventLog).not.toHaveBeenCalled();
       });
     });
   });

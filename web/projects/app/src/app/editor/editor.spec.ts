@@ -5,15 +5,26 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/ang
 import userEvent from '@testing-library/user-event';
 import { transientQueueReply } from '@rmq/engine';
 import { createMemoryRepository, type CanvasRepository } from '@rmq/persistence';
-import { manualClock, manualFrames, manualTimer } from '@rmq/testing';
+import {
+  bindingRecord,
+  consumerRecord,
+  documentOf,
+  exchangeRecord,
+  manualClock,
+  manualFrames,
+  manualTimer,
+  producerRecord,
+  queueRecord,
+} from '@rmq/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { LinkRules } from '@rmq/domain';
+import { emptyDocument, type CanvasDocument, type LinkRules } from '@rmq/domain';
 import { FlowCanvas } from '../canvas/flow/flow-canvas';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { CanvasVm } from '../canvas/model/canvas-vm';
 import type { CanvasIntent } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
+import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { CANVAS_CONTEXT } from '../canvas/overlay/overlay';
@@ -28,7 +39,7 @@ import {
 } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
-import type { Selection } from '../core/state/selection-store';
+import { SelectionStore, type Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { THEME_STORAGE_KEY } from '../core/theme/theme';
 import { ContextMenu } from './context-menu';
@@ -44,6 +55,7 @@ class FakeCanvas {
   readonly model = input.required<CanvasVm>();
   readonly selection = input.required<Selection>();
   readonly rules = input<LinkRules>();
+  readonly emphasis = input<Emphasis>(NO_EMPHASIS);
   readonly intent = output<CanvasIntent>();
   /** What the editor asked of the canvas, in order. */
   readonly calls: string[] = [];
@@ -1686,6 +1698,190 @@ describe('Editor', () => {
       fixture.detectChanges();
       expect(screen.queryByTestId('producer-composer')).not.toBeInTheDocument();
       expect(screen.getByTestId('queue-messages')).toBeVisible();
+    });
+  });
+
+  describe('the explanation (ADR-0061, ADR-0062)', () => {
+    /** A producer that sends a message with the key `new` to `orders`, which sends what has that key to `billing` and what has the key `old` to `archive`, which is nothing. */
+    const traffic = (): CanvasDocument => ({
+      ...documentOf({
+        exchanges: { E: exchangeRecord('orders') },
+        queues: { Q: queueRecord('billing'), A: queueRecord('archive') },
+        bindings: {
+          B: bindingRecord('E', { kind: 'queue', id: 'Q' }, 'new'),
+          B2: bindingRecord('E', { kind: 'queue', id: 'A' }, 'old'),
+        },
+        producers: {
+          P: producerRecord(
+            'sender',
+            { kind: 'exchange', id: 'E' },
+            { message: { payload: 'hi', key: 'new', headers: [] }, burst: 1, interval: { everyMs: 1_000, on: false } },
+          ),
+        },
+        consumers: { C: consumerRecord('worker', ['Q'], {}) },
+      }),
+      settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
+    });
+
+    async function openEditor(flags: string | null) {
+      const providers = [
+        ...harness().providers,
+        { provide: FRAME_SOURCE, useValue: manualFrames() },
+        { provide: CANVAS_CONTEXT, useValue: () => null },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+      ];
+      const view = await renderEditor(providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      const fake = () => view.fixture.debugElement.query(By.directive(FakeCanvas));
+      const injector = view.fixture.debugElement.injector;
+      return {
+        ...view,
+        onCanvas: (init: KeyboardEventInit & { key: string }) => {
+          fireEvent.keyDown(fake().nativeElement as HTMLElement, init);
+          view.fixture.detectChanges();
+        },
+        canvas: () => fake().componentInstance as FakeCanvas,
+        user: userEvent.setup(),
+        bus: injector.get(CommandBus),
+        store: injector.get(DocumentStore),
+        selection: injector.get(SelectionStore),
+        announcer: injector.get(Announcer),
+        /** The clock is stopped, a message is published, and the first thing that happens to it happens: it is routed. */
+        async routeOne(): Promise<void> {
+          injector.get(DocumentStore).load(traffic());
+          const bus = injector.get(CommandBus);
+          bus.run({ type: 'pause' }, 'toolbar');
+          bus.run({ type: 'publish', from: { kind: 'producer', name: 'sender' } }, 'toolbar');
+          bus.run({ type: 'step' }, 'toolbar');
+          // The log puts what was said in its rows when the turn is over.
+          await Promise.resolve();
+          view.fixture.detectChanges();
+        },
+      };
+    }
+
+    it('has none of it without both of its flags: no button in the strip, no log, no card, and E is the page’s', async () => {
+      for (const flags of [null, 'simulation', 'explain']) {
+        TestBed.resetTestingModule();
+        document.body.replaceChildren();
+        const { onCanvas, announcer, canvas, routeOne } = await openEditor(flags);
+
+        expect(screen.queryByRole('button', { name: 'Event log' }), String(flags)).not.toBeInTheDocument();
+        onCanvas({ key: 'e' });
+        expect(screen.queryByRole('region', { name: 'Event log' }), String(flags)).not.toBeInTheDocument();
+        expect(announcer.last(), String(flags)).not.toMatch(/^Event log/);
+        await routeOne();
+        expect(screen.queryByTestId('why-card'), String(flags)).not.toBeInTheDocument();
+        expect(canvas().emphasis(), String(flags)).toBe(NO_EMPHASIS);
+      }
+    });
+
+    it('has the button of the log in the strip of the simulation, and the log is closed', async () => {
+      await openEditor('simulation,explain');
+
+      const strip = screen.getByRole('region', { name: 'Simulation' });
+      const button = within(strip).getByRole('button', { name: 'Event log' });
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+      expect(button).toHaveAttribute('aria-keyshortcuts', 'E');
+      expect(screen.queryByRole('region', { name: 'Event log' })).not.toBeInTheDocument();
+    });
+
+    it('opens the log with its button, at the bottom of the editor above the command bar, and closes it with the button again', async () => {
+      const { user, fixture } = await openEditor('simulation,explain');
+      const button = screen.getByRole('button', { name: 'Event log' });
+
+      await user.click(button);
+      fixture.detectChanges();
+
+      const log = screen.getByRole('region', { name: 'Event log' });
+      expect(button).toHaveAttribute('aria-expanded', 'true');
+      expect(button).toHaveAttribute('aria-controls', 'event-log');
+      expect(log.id).toBe('event-log');
+      expect(
+        screen.getByRole('main', { name: 'Canvas' }).compareDocumentPosition(log) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('region', { name: 'Command bar' }).compareDocumentPosition(log) &
+          Node.DOCUMENT_POSITION_PRECEDING,
+      ).toBeTruthy();
+      expect(screen.getByRole('main', { name: 'Canvas' })).not.toContainElement(log);
+
+      await user.click(button);
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('region', { name: 'Event log' })).not.toBeInTheDocument();
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('shows and hides the log on E, from the canvas, and says which', async () => {
+      const { onCanvas, announcer } = await openEditor('simulation,explain');
+
+      onCanvas({ key: 'e' });
+
+      expect(screen.getByRole('region', { name: 'Event log' })).toBeVisible();
+      expect(announcer.last()).toBe('Event log shown.');
+
+      onCanvas({ key: 'e' });
+
+      expect(screen.queryByRole('region', { name: 'Event log' })).not.toBeInTheDocument();
+      expect(announcer.last()).toBe('Event log hidden.');
+    });
+
+    it('says the key of the log in the hints, and in the cheat-sheet’s table, because the table has it', async () => {
+      await openEditor('simulation,explain');
+
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('E Show or hide the event log');
+    });
+
+    it('lists what happened in the log, and a row that is chosen lights what it is about, on the canvas that the editor draws', async () => {
+      const { routeOne, user, fixture, canvas, onCanvas } = await openEditor('simulation,explain');
+      await routeOne();
+      onCanvas({ key: 'e' });
+      fixture.detectChanges();
+
+      const routed = screen.getAllByTestId('event-log-row').find((row) => row.getAttribute('data-kind') === 'routed');
+      await user.click(routed as HTMLElement);
+      fixture.detectChanges();
+
+      expect(routed).toHaveAttribute('aria-selected', 'true');
+      expect(canvas().emphasis().nodes.get('Q')).toBe('reached');
+      expect(canvas().emphasis().nodes.get('A')).toBe('missed');
+      expect(canvas().emphasis().edges.get('E>A')?.mark).toBe('missed');
+    });
+
+    it('lights the Why? of the message that was routed last, while the clock is stopped, with its card in the region of the canvas', async () => {
+      const { routeOne, canvas } = await openEditor('simulation,explain');
+
+      await routeOne();
+
+      const card = screen.getByTestId('why-card');
+      expect(screen.getByRole('main', { name: 'Canvas' })).toContainElement(card);
+      expect(card).toHaveTextContent('Why? Message 1 (the last one routed)');
+      expect(card).toHaveTextContent('Reached billing.');
+      expect(canvas().emphasis().nodes.get('Q')).toBe('reached');
+    });
+
+    it('lets go of what is lit with the button of the card, and lights nothing on the canvas that the editor draws', async () => {
+      const { routeOne, user, fixture, canvas } = await openEditor('simulation,explain');
+      await routeOne();
+
+      await user.click(screen.getByRole('button', { name: 'Let go' }));
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('why-card')).not.toBeInTheDocument();
+      expect(canvas().emphasis().nodes.size).toBe(0);
+    });
+
+    it('says what a queue made of the message when it is selected, in the card and on the canvas', async () => {
+      const { routeOne, fixture, canvas, selection } = await openEditor('simulation,explain');
+      await routeOne();
+
+      selection.select(['A']);
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('why-card')).toHaveTextContent('Why? Message 1 and archive');
+      expect(screen.getByTestId('why-card')).toHaveTextContent('The queue archive did not get the message.');
+      expect(canvas().emphasis().nodes.get('A')).toBe('asked');
     });
   });
 

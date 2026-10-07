@@ -21,6 +21,10 @@ import { popoverPosition, type Point, type Size } from '../canvas/model/transfor
 import { MessageOverlay } from '../canvas/overlay/overlay';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
+import { NO_EMPHASIS } from '../core/explain/emphasis';
+import { EventLog } from '../core/explain/event-log';
+import { ExplainState } from '../core/explain/explain-state';
+import { EXPLAIN_SERVICES } from '../core/explain/services';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
 import { CanvasSession } from '../core/session/canvas-session';
@@ -33,6 +37,9 @@ import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { CommandBar } from '../command-bar/command-bar';
 import { CommandLog } from '../core/state/command-log';
+import { EventLogPanel } from '../explain/event-log-panel';
+import { LogToggle } from '../explain/log-toggle';
+import { WhyCard } from '../explain/why-card';
 import { EditorActions, type ActionSurface } from './actions';
 import { BindingKey, type GiveUp } from './binding-key';
 import { CheatSheetService } from './cheat-sheet';
@@ -105,6 +112,9 @@ interface Peek {
     LabelCard,
     CommandBar,
     HowToLinkCard,
+    EventLogPanel,
+    LogToggle,
+    WhyCard,
   ],
   providers: [
     DocumentStore,
@@ -122,12 +132,17 @@ interface Peek {
     KeyboardService,
     CheatSheetService,
     ...RUNTIME_SERVICES,
+    ...EXPLAIN_SERVICES,
   ],
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
       <rmq-top-bar />
       @if (simulation.enabled) {
-        <rmq-simulation-bar />
+        <rmq-simulation-bar>
+          @if (explain.enabled) {
+            <rmq-log-toggle [keys]="logKeys" />
+          }
+        </rmq-simulation-bar>
       }
       <rmq-how-to-link />
       <div class="flex min-h-0 flex-1">
@@ -140,6 +155,7 @@ interface Peek {
               [model]="model()"
               [selection]="selection.selection()"
               [rules]="rules()"
+              [emphasis]="emphasis()"
               (intent)="onIntent($event)"
             />
           } @else {
@@ -147,6 +163,9 @@ interface Peek {
           }
           @if (ready() && simulation.enabled) {
             <rmq-message-overlay />
+          }
+          @if (ready() && explain.enabled) {
+            <rmq-why-card />
           }
           @if (ready() && model().nodes.length === 0) {
             <p
@@ -202,6 +221,9 @@ interface Peek {
           <rmq-inspector />
         </aside>
       </div>
+      @if (explain.enabled && explain.logOpen()) {
+        <rmq-event-log-panel />
+      }
       <rmq-command-bar [keys]="commandKeys" />
       <rmq-hint-bar />
       <rmq-status-bar />
@@ -221,6 +243,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly intents = inject(IntentHandler);
   protected readonly keys = inject(KeyboardService);
   protected readonly simulation = inject(Simulation);
+  /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flags `explain` and `simulation`. */
+  protected readonly explain = inject(ExplainState);
+  private readonly eventLog = inject(EventLog);
   private readonly links = inject(LinkFlow);
   private readonly actions = inject(EditorActions);
   private readonly cheatSheet = inject(CheatSheetService);
@@ -229,6 +254,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private readonly overlay = viewChild(MessageOverlay);
   /** The keys that open the command bar, as the table of shortcuts says them. */
   protected readonly commandKeys = keysFor(['commands', 'commands-anywhere']);
+  /** The keys that show and hide the event log. */
+  protected readonly logKeys = keysFor(['event-log']);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly page = inject(DOCUMENT);
 
@@ -236,6 +263,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private drawn = EMPTY_VM;
   protected readonly model = computed(() => (this.drawn = buildCanvasVm(this.store.document(), this.drawn)));
   protected readonly rules = computed(() => linkRules(this.store.document()));
+  /** What Why? lights, which the canvas draws as a look on the edges and the nodes (ADR-0062). */
+  protected readonly emphasis = computed(() => this.explain.shown()?.emphasis ?? NO_EMPHASIS);
   private readonly intentLog: CanvasIntent[] = [];
   private readonly contextMenu = viewChild.required<ContextMenu>('contextMenu');
   private readonly createMenu = viewChild.required<ContextMenu>('createMenu');
@@ -270,6 +299,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         viewport: () => this.viewport.live(),
         simulationState: () => (this.simulation.enabled ? this.simulation.debugState() : null),
         overlayFrame: () => this.overlay()?.lastFrame() ?? null,
+        explainEventLog: () => (this.explain.enabled ? this.eventLog.debugState() : null),
+        explainEmphasis: () => this.explain.debugState(),
       });
       inject(DestroyRef).onDestroy(detach);
     }
@@ -361,6 +392,15 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   /** Opens the cheat-sheet, for the key and the button that are for it (ADR-0047). */
   openCheatSheet(): void {
     this.cheatSheet.open();
+  }
+
+  /** Shows the event log, or hides it, and says which. It answers `false` when there is none, which needs both flags, so that the key is left for the page. */
+  toggleEventLog(): boolean {
+    if (!this.explain.enabled) {
+      return false;
+    }
+    this.announcer.announce(this.explain.toggleLog() ? 'Event log shown.' : 'Event log hidden.');
+    return true;
   }
 
   /** Gives the focus to the first field of the inspector, for the key that edits what is selected. */
