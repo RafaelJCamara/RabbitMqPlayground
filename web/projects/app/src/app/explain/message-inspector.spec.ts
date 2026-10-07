@@ -385,6 +385,35 @@ describe('MessageInspector (ADR-0063)', () => {
       expect(screen.getByTestId('message-redelivered')).toHaveTextContent('Yes');
     });
 
+    it('says that it was redelivered when any of its copies was, and not only when all of them were', async () => {
+      const { run, open, bus, fixture, store } = await renderInspector();
+      // Two queues get the message, each with a consumer of its own.
+      store.load({
+        ...traffic(),
+        bindings: {
+          B: bindingRecord('E', { kind: 'queue', id: 'Q' }, 'new'),
+          B2: bindingRecord('E', { kind: 'queue', id: 'A' }, 'new'),
+        },
+        consumers: {
+          C: consumerRecord('worker', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 100 }),
+          C2: consumerRecord('helper', ['A'], { ack: 'manual', prefetch: 1, processingMs: 100 }),
+        },
+      });
+      run({ type: 'pause' });
+      run(PUBLISH);
+      for (let step = 0; step < 4; step += 1) {
+        run({ type: 'step' });
+      }
+      open(1);
+      expect(screen.getByTestId('message-redelivered')).toHaveTextContent('No');
+
+      // Only one of the two consumers goes, and the copy that it held goes back to its queue as a redelivery.
+      bus.apply({ type: 'delete', target: { kind: 'consumer', name: 'worker' } }, 'gesture');
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('message-redelivered')).toHaveTextContent('Yes');
+    });
+
     it('does not say anything of redelivery when no queue has a copy', async () => {
       const { run, open } = await renderInspector();
       run({ type: 'pause' });
