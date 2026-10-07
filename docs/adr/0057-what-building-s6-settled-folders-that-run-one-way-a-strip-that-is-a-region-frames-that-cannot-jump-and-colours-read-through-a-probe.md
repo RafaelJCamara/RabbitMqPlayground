@@ -1,6 +1,6 @@
 # ADR-0057: What building S6 settled: folders that run one way, a strip that is a region, frames that cannot jump, and colours read through a probe
 
-- **Status:** Accepted
+- **Status:** Accepted. What wakes the overlay is as built in [`OPEN_QUESTIONS.md`](../../OPEN_QUESTIONS.md), which says that the adapter watches the `style` of the canvas and no other attribute, and that a path that is drawn another way wakes it too.
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md) and [ADR-0045](0045-the-command-bar-a-panel-that-types-through-the-same-door.md) (the order of the folders),

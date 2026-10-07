@@ -4,8 +4,9 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#3](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/3)) was closed, and brought up to date after S2
 ([#4](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/4)), S3
 ([#5](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/5)), S4
-([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) and S5
-([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)). Each one says what is open, why, what the options
+([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) S5
+([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)) and S6
+([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
 [M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 8 and 9 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
@@ -68,6 +69,11 @@ Where S3 left it: S3 has no broker and added no scenario. Its fixtures, `fixture
 writes and not recordings of a broker, so they do not meet this question. They are pinned by a manifest of hashes instead,
 and a spec fails on a file that was edited ([ADR-0027](docs/adr/0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md)).
 
+Where S6 left it: S6 added 22 scenarios, 13 of routing and 9 of delivery, and did what S1 did. It recorded them on Docker first
+(`CONFORMANCE_MODE=record`, Testcontainers, the pinned image), pushed them with their fixtures, and the 83 that were there came out
+byte for byte as they were. The Nightly run in verify mode then played all 105 against the broker of CI. It is the same cost as in S1, and
+it still needs Docker on the machine of whoever adds a scenario, which the cloud container has not got, so the question is as open as it was.
+
 ## 5. Line endings
 
 On Windows, with Git's default `core.autocrlf=true`, a checkout is CRLF. That fails `npm run format:check` and the
@@ -94,6 +100,11 @@ argument; and a tree of reasons for a miss. Four things I am not sure of:
 - `explainMiss` ends on `{ kind: 'cycle' }` instead of going round a cycle.
 
 These are cheap to change now, and dearer once S7 renders them.
+
+Where S6 left it: S6 did not change the trace or `explainMiss`. The engine puts the trace of `route()` in the events `routed` and `unroutable`, as it
+is, so S7's overlay can read it from the event that its log shows, and `explainMiss` is worked out from the topology when it is asked for, and is not
+kept in the event. Whether an event should carry the explanation of a miss, so that a log that is read later still has it after the canvas was
+changed, is for S7 to say.
 
 ## 7. Mutation checks
 
@@ -200,9 +211,52 @@ the 3,344 mutants of the 47 files of `core/`, `canvas/model/`, `command-bar/` an
 - **The replay**: the property of ADR-0046 was checked by hand changes of the code that it is about (ids that a refused batch spent, an undo that was not logged), which it finds at the 100
   runs of the hook, and it ran at 5,000 runs with seven seeds when it was written, and with nine more after the mutations had changed the link flow, and once at 40,000.
 
-The scripts are the same ones, plus a generator for templates, a runner for the hand changes, a picker of what to run again and, since S5, the keeper of the lines that changed. They are
-still outside the repository. The question of whether a tool should live in it is still open, and S5 makes the case for it a little stronger again: the hand changes found the one gap that the
-other sweeps could not (a thing that only a browser sees), and the three runs of S5 each needed the copies to be brought up to date with a command that is easy to forget.
+Where S6 left it: S6 used the same scripts on the engine, which is new, on what it changed in the domain, the testing library and the conformance tool, and on the app, in the lines that it changed.
+Three things were new. The copies are made, and brought up to date, by one script (`make-copies.ps1 -Sync`), because the command that did it was forgotten twice. The runner of the app
+stops at the first test that fails, and a mutant of the runtime is looked for first in the specs that are about it and not in the editor and the replay: a first try with both took 90 seconds for a
+mutant on twelve workers (three hours), and the second took about 20 a minute. And the ready list of a queue has a getter, `retained`, so that a spec can see that it is let go of.
+
+- **The engine (1,143 mutants** of 14 files, with the properties at 1,000 runs): 1,022 were caught, 14 looped, which is a catch, and 107 were not. What they had in common is that no test read it: a consumer that was
+  found to be full, and what happens to it when another consumer of the queue acknowledges (a bug in `unblock` would have starved it, and two specs now say who is served); the consumers that a channel keeps when one
+  of them is cancelled, deleted with its queue or cleared; a close that called back what was on its way to another channel; the bindings that a deleted queue or exchange takes, and the ones that it must leave; the
+  sentences of fifteen `RangeError`s, which no test read; what `cleared` and `counters.reset` say when only one thing was counted; where a producer's tick is among what happens at its time when something other than its
+  interval changes. 53 tests were written (the engine's 854 became 907) and six pieces of code that nothing reaches were taken out: the early answer of `hasRoom` for a consumer that acknowledges by itself, which holds nothing,
+  the list of the queues that a close touches (a set does it), the check that a binding is there before it is written again, the check that a consumer is not cancelled before a change of prefetch, the early return of
+  `removeTick`, and the defaults of a producer, which every field wrote over. A second run of 732 mutants, of the files that changed and of what had survived, left 18, each read: 10 are in the signature of a binding (the order of
+  a sort whose keys are unique, and the value of a condition that `exists` does not have, which are the same JSON), 4 are counters that only have to change (`nextSeq`, `version` twice, `nextOrder`), 3 are in the
+  heap (a `seq` is never used twice, and the size of the sign of a comparator) and 1 is in the ready list (an `order` is never used twice).
+- **The domain (451 mutants** in the lines that S6 changed), **the testing library (121)** and **the conformance tool (70)**: 440, 104 and 69 were caught. The ones that were not had the words of a batch with `redo` in
+  it, the shape of a `publish` that has no key and no payload (a property that is `undefined` is a property, to `toStrictEqual`), the sentence for a key of 256 bytes, and the helpers of the specs of the engine, which
+  had no spec of their own and now have (12 tests, so the libraries went from 4,051 tests to 4,116). The two options of a message were written twice, for `set` and for `publish`, and are one definition now, which a spec
+  of the first holds for the second. Left: 4 of the domain (a guard that the next line makes redundant, and the verb that a refusal says, which is the same sentence for anything but `declare`), 3 of the testing library
+  (the handle of a frame that only has to be one, and how long `settle` goes) and none of the tool.
+- **The code of the app (1,347 mutants** in the changed lines): 520 did not build, 712 were caught and one looped, and 114 were not. They led to 36 tests (the app's 1,446 are 1,482) in a dozen specs and to the removal of what
+  they showed to be unneeded (the cap of a tween that the frame has already ended, the special case of a prefetch of 0, which 0 times anything is, the zoom and the document in the effect of the overlay, which
+  the canvas that moves and the simulation already say, and an attribute, `transform`, that the host of the canvas has no use for). What nothing had read: that the longest frame is a hundred milliseconds and not the
+  name of the constant, a quarter of the speed being a quarter of a millisecond for the engine, the way that the picture goes from where the last step left it, what a queue that is deleted loses (what it held and what its
+  consumers held), the thirty frames after which the colours are read again, the size of the canvas to the nearest pixel and only when the host changes, the thirty-two parts of an edge, the dot and the ring, the
+  names, the limits and the words for one and for many of every part of the inspector, and a refusal that must go when the learner gives a field what the document has. One of them was a defect: a number given again as it was
+  cleared the refusal under its field and left the one on the status line (a text did both), and they are the same call now. A second run of the 385 mutants that the changes could affect and a third of the 72 that were
+  left, with the editor and the replay among the specs, left 23, each read: 8 are names (of an injection token, of a selector, which only a build sees, and of a field that is never refused), 7 are counters, ids and the first
+  value of something that the next line sets, 2 only make a run faster (the cache of a path, and the places that are worked out again), `trim` against `trimEnd` where only an empty text is asked, `every` and `some` over the subscriptions of a
+  consumer, which all have the one acknowledgement that the consumer has, the guard of `simulationState`, which only the end-to-end build has (2), and the classes of the buttons (2).
+- **The inline templates (152 mutants)**: 23 did not build, 80 were caught, 49 were not. The names of the regions and of their headings, the limits of the number fields, the `aria-invalid` and `aria-describedby` of the fields of the
+  composer, the bindings of a queue's list and `@if (more() > 0)` led to tests. 15 are left: 7 take the type off a button, and the linter's `button-has-type` catches all 7, 7 are the size of an icon, and 1 is `type="text"`.
+- **The browser (31 changes by hand)**: the flag, the keys, what wakes the overlay, what is drawn and where, the clock and the picture of a step. 21 were caught at once and 10 were not. Of the 10, two (the full stop and `P` without
+  the flag) were not seen because a test that says that a refusal did not come looked before it could, and now waits for two frames of the page; one (the speed) had no journey that measured it, and the clock of the page,
+  which Playwright advances, now says that a second of it is a quarter, one and four seconds of the simulation at the three speeds; three were dependencies that nothing needed, one attribute and two signals of the effect of the overlay,
+  and are gone; and four are caught by unit specs and cannot be by a browser with one hop in every canvas, a picture that settles before a test looks, and an edge that is also said to be drawn by its path
+  (`edges.spec.ts`, `simulation.spec.ts` and `overlay.spec.ts`, each shown by the same change made to the tree). Two more were written after, because the sweep showed what the first thirty had not looked at: **nothing read the pixels that
+  the overlay paints** (a journey reads the canvas at the place that `overlayFrame` says, and at none other, and finds it clear when nothing is on its way), and **a node that was dragged while the clock was stopped did not take its
+  messages with it** until it was let go, which ADR-0055 says it does (a journey holds a node and moves it, and the watcher of the edges tells the viewport that a path is drawn another way now). It is one of the two defects of the slice
+  that a mutant found and that a learner would have seen, the other being the refusal that stayed on the status line.
+- **The replay and the properties**: the property of ADR-0046 plays the commands of the runtime and the steps of the clock, and the properties of the engine ran at 5,000 runs with five seeds (11, 222, 3333, 44444 and
+  555555) for the three libraries, and with three (7, 808 and 90909) for the app, after the last change of the engine.
+
+The scripts are the same ones, plus a generator for templates, a runner for the hand changes, a picker of what to run again, the keeper of the lines that changed and, since S6, a script that makes the copies. They are
+still outside the repository. The question of whether a tool should live in it is still open, and S6 makes the case for it stronger again: the mutation check was the way that two defects were found (the status line that
+kept a refusal, and a node that was dragged and did not take its messages), it took about four hours of a machine with 32 threads, and each of its commands, the copies, the keeper of the lines, the picker and the
+runner with its own filters, is easy to get wrong without the one that wrote them.
 
 ## 10. Canvases that cannot be read
 
@@ -339,14 +393,56 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   A learner sees a canvas that moves under the first thing that they do. The tests are given the promise ([ADR-0048](docs/adr/0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md)),
   and the note is tested alone. Room kept for the note, or a note that is drawn over the status bar, would stop the move.
 
+## Decisions taken in S6 that are easy to revisit
+
+- **The simulation starts playing, at 1×**, and stands still while nothing is scheduled ([ADR-0054](docs/adr/0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md)).
+  A canvas with a producer that repeats starts to send as soon as it is opened, which the tests of the browser avoid by pausing first. If that surprises a learner, the simulation can start
+  stopped, and a template of S11 can say `play`.
+- **A step jumps the clock and moves the picture over a quarter of a second** ([ADR-0055](docs/adr/0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md)),
+  and a frame is taken to last at most 100 ms and the first after a rest none ([ADR-0057](docs/adr/0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md)).
+  Both are constants (`STEP_TWEEN_MS`, `MAX_FRAME_MS`), and neither has been tried on a slow machine.
+- **Undo restores the design and not the simulation**: an undo that deletes a queue that holds messages loses them, and the line says how many ("3 messages were lost"). The alternative is to
+  keep the engine's state in the undo history, which would make every step of the clock an entry of it.
+- **A change of how a consumer acknowledges, and of the name of a queue, starts it again**, so what it held goes back to its queue and comes again as redelivered. It is what a broker does, and
+  a learner sees it the first time as a surprise. A change of prefetch applies at once, where a broker applies it to the consumers that start later ([ADR-0053](docs/adr/0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md)).
+- **A refused publish does not stop the producer** ([ADR-0050](docs/adr/0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md)): a client library would see its
+  channel closed. The `refused` event and the sentence say what the broker said, and there is no connection to close.
+- **The slots of a consumer show what it may hold in all**: its prefetch times its subscriptions that are alive, because the window is counted for each tag. A learner who gives one consumer two queues
+  sees twice the places. Drawing a row for each tag would say it better, and needs a place for it under the node.
+- **A message has one of eight colours, by a hash of its routing key**, so two keys can have the same one, and the key as a word, the ring and the badge say the rest. The hash is FNV-1a and
+  the palette is in `styles.css` as tokens, so it is a change of a few files to make it bigger (the tokens, the list and the spec that holds their contrast).
+- **The numbers of a node are words under its box, and a picture beside them** ([ADR-0056](docs/adr/0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md)):
+  up to eight squares for a queue and eight places for a consumer, and `+N` for the rest. The list of the messages of a queue has the first fifty (`LIST_LIMIT`), ready first and then held.
+- **More than 500 messages in flight are regrouped by edge and by thirty-second of the way**, so that a burst of thousands is a few dozen shapes, and a shape stands for the messages that were
+  near. At most 12 shapes have their key written beside them. Where the limits are (`SHAPE_LIMIT`, `DENSE_PARTS`, `LABELLED_LIMIT`) is a matter of taste, and S12 measures on hardware.
+- **The composer does not edit the headers of a message**: it says how many it has and that the table to edit them comes with the headers exchange (S8). The command `publish … header:name=value` and
+  `set <producer> header:name=value` already do.
+- **`speed` takes any number from 0.25 to 4, and the strip has five buttons**: 0.25, 0.5, 1, 2 and 4. A learner who types `speed 3` gets 3.
+- **Without the flag the bar completes, explains and lists the runtime verbs, and the bus refuses to run them** ([ADR-0057](docs/adr/0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md)),
+  so that the grammar is one thing and `docs/commands.md` is true of it. The alternative is that the verbs are not in the bar until the flag is on, which would make `help` differ from the document that is generated.
+- **The sentences of the events are first drafts**, as ADR-0025 says of every wording: "Stepped: message 1 is in billing; billing gave message 1 to worker." was read on a screen once, and the two that
+  join several events with a semicolon are the ones to look at first. They are in `core/runtime/sentences.ts`, and S7's log may want its own.
+- **The seed of the engine is read and kept, and nothing draws from it in M1.** The engine is deterministic without randomness, as ADR-0007 says; the generator is there, is part of a snapshot, and
+  is what a later jitter or a failure that is injected would use, which is a change that does not alter any of the events of today.
+- **The strip costs a row of the window (about 44 pixels) for anyone who has the flag**, whether or not they ever press play ([ADR-0056](docs/adr/0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md)).
+- **What the overlay paints is checked by one journey of pixels and by what it says it drew** (`overlayFrame`), and not by comparing pictures, which are the browser's to change.
+- **What wakes the overlay is a canvas that moves, a path that is drawn another way, an edge that is drawn, the theme and the preference for motion.** [ADR-0057](docs/adr/0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md)
+  says that the adapter watches the `style` and the `transform` of the canvas's host: it watches `style` only now, since the host is not an SVG element, and a path that is drawn another way, which is what a node that is dragged
+  makes, tells the viewport too. The mutation check of the browser found it (a node that was held while the clock was stopped left its messages behind). The zoom and the document are not in the effect: the first moves the canvas,
+  and the simulation wakes the loop for the second.
+- **The speed is held by the clock of the page**, which a test advances (`page.clock`), and not by waiting: a second of it is 244 milliseconds of the simulation at a quarter of the speed, and the tests accept a little less than
+  the whole, since the first frame after a rest lasts no time.
+
 ## Follow-ups that are already owned
 
 These are not questions. S2 replays the refusals at declare and bind time against the fixtures, through the commands: the
 `amq.` names, the default exchange as a declared name or as a binding's source or destination, a missing queue or exchange
 in a binding, a topic binding key with three `#` words, the transient queue, and a binding with two faults. The table is in
 [ADR-0021](docs/adr/0021-transient-queues-are-refused.md) and
-[ADR-0022](docs/adr/0022-topic-binding-keys-have-at-most-two-hash-wildcards.md). S6 has to replay the same declare and bind
-steps through the engine's `dispatch`, which S1 could not do for lack of one.
+[ADR-0022](docs/adr/0022-topic-binding-keys-have-at-most-two-hash-wildcards.md). S6 had to replay the same declare and bind
+steps through the engine's `dispatch`, which S1 could not do for lack of one, and it does: `fixtures.spec.ts` of the engine plays 103 of the 105 fixtures through `dispatch`, twice (with no
+latency and with the latency of a new canvas), and compares what each consumer was given, what each queue kept and every refusal with what was recorded. The two that it leaves out use an exclusive
+queue, which arrives with connections in M3, and are listed with that reason.
 
 S3 hands on what the app has to wire, in the order that the slices come
 ([ADR-0028](docs/adr/0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md)):
@@ -361,3 +457,15 @@ S3 hands on what the app has to wire, in the order that the slices come
   times of. It decides question 10.
 - **S10** ends the decoding of a share link in `loadCanvas` and nothing of its own, so that the caps, the versions and the
   errors are the same as a file's. The limits of the codec itself are bytes before there is any data, and are its own.
+
+S6 hands on what the next slices read, in the order that they come ([ADR-0052](docs/adr/0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md), [ADR-0054](docs/adr/0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md)):
+
+- **S7** (the Why? overlay and the event log) reads `Simulation.onEvents`, which tells its listener the events that each command and each advance of the clock made, in order, and `describeEvent` for the sentence of
+  each. The `routed` and `unroutable` events have the `trace` of S1 as it was (question 6) and `routed` has the `paths` that its message took. The log of equivalent commands already holds the lines of the
+  runtime verbs, in the same store, which is where S7 shows them beside the events (ADR-0046).
+- **S8** (headers) gives the composer its table of headers. The grammar, the engine and `reconcile` carry headers already, and the composer says how many there are.
+- **S9** (the screens of the canvases) and **S10** (share and export) have no engine in what is saved: a canvas that is opened has a new engine, and nothing of a simulation that was running is kept with the canvas or in a
+  file. The share panel of S10 offers the topology "only or with messages", and the messages are the engine's snapshot (versioned JSON, `snapshot()` and `restore()`, ADR-0052), which the app does not call yet. S9 has
+  to decide whether a canvas that is saved keeps one. The seed and the three latencies are in the document's settings, and so they are in every file.
+- **S11** (the tour and the templates) can start a template with `pause` and drive the simulation with `publish` and `step`, as the tests of the browser do, since they are commands.
+- **S12** measures the frame rates of the overlay on real hardware, with the burst and the big canvas that `e2e/performance.spec.ts` has, whose budget of three seconds to draw 200 nodes and 500 edges holds with the flag on.

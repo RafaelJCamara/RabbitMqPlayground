@@ -67,7 +67,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) | The runtime verbs go through the bus and are in the log, and `reconcile` keeps the engine whole | Accepted (what the bar and the bus do with them while the flag is off, 0057) |
 | [0055](0055-the-overlay-draws-on-a-canvas-outside-change-detection-and-follows-the-real-paths.md) | The overlay draws on a canvas, outside change detection, and follows the real paths | Accepted (the colours, the wake of the loop and the frame that cannot jump, 0057) |
 | [0056](0056-counters-stacks-and-slots-are-signals-of-their-own-and-the-controls-are-a-strip-under-the-top-bar.md) | Counters, stacks and slots are signals of their own, and the controls are a strip under the top bar | Accepted (the strip is a labelled region and not a toolbar, 0057) |
-| [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md) | What building S6 settled: folders that run one way, a strip that is a region, frames that cannot jump, and colours read through a probe | Accepted |
+| [0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md) | What building S6 settled: folders that run one way, a strip that is a region, frames that cannot jump, and colours read through a probe | Accepted (what wakes the overlay, as built, is in OPEN_QUESTIONS) |
 
 ## Where to start
 
