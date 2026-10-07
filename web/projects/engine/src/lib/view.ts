@@ -1,3 +1,4 @@
+import type { HeaderEntry, HeaderValue } from './headers';
 import type { RoutePath } from './route';
 import type { Topology } from './topology';
 
@@ -117,7 +118,11 @@ export type Flight =
 /** A message that a queue holds: ready, or given to a consumer that has not acknowledged it. */
 export interface QueueMessage {
   readonly id: number;
+  /** Where it was published (`""` is the default exchange), and by whom: the producer, or `null` for a message that a command published. */
+  readonly exchange: string;
+  readonly producer: string | null;
   readonly key: string;
+  readonly headers: readonly HeaderEntry<HeaderValue>[];
   readonly payload: string;
   readonly redelivered: boolean;
   /** The consumer that holds it, or `null` for a message that is ready. */

@@ -138,6 +138,8 @@ describe('issue #18: messages kept going to a consumer that had been deleted', (
     const events = run(engine, { op: 'channel.close', channel: 'c1' });
 
     expect(events.map(({ type }) => type)).toEqual(['channel.closed', 'requeued']);
-    expect(engine.messages('jobs')).toEqual([{ id: 1, key: 'job', payload: 'work', redelivered: true, heldBy: null }]);
+    expect(engine.messages('jobs')).toMatchObject([
+      { id: 1, key: 'job', payload: 'work', redelivered: true, heldBy: null },
+    ]);
   });
 });

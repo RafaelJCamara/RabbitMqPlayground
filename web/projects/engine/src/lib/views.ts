@@ -1,3 +1,4 @@
+import type { MessageInfo } from './events';
 import type { State } from './state';
 import type { ChannelView, ExchangeView, Flight, ProducerView, QueueMessage, QueueView, RuntimeView } from './view';
 import type { Topology } from './topology';
@@ -133,6 +134,18 @@ export function buildFlights(state: State): Flight[] {
   return flights;
 }
 
+/** What a copy says of the message that it is a copy of: where it was published and by whom, its key, its headers and its payload. */
+const about = (
+  message: MessageInfo,
+): Pick<QueueMessage, 'id' | 'exchange' | 'producer' | 'key' | 'headers' | 'payload'> => ({
+  id: message.id,
+  exchange: message.exchange,
+  producer: message.producer,
+  key: message.key,
+  headers: message.headers,
+  payload: message.payload,
+});
+
 /** What a queue holds, ready first and then held by consumers, at most `limit` of them. */
 export function listMessages(state: State, queueName: string, limit: number): QueueMessage[] {
   const queue = state.queues.get(queueName);
@@ -140,9 +153,7 @@ export function listMessages(state: State, queueName: string, limit: number): Qu
     return [];
   }
   const messages: QueueMessage[] = queue.ready.first(limit).map(({ message, redelivered }) => ({
-    id: message.id,
-    key: message.key,
-    payload: message.payload,
+    ...about(message),
     redelivered,
     heldBy: null,
   }));
@@ -154,13 +165,7 @@ export function listMessages(state: State, queueName: string, limit: number): Qu
       if (messages.length >= limit) {
         return messages;
       }
-      messages.push({
-        id: message.id,
-        key: message.key,
-        payload: message.payload,
-        redelivered,
-        heldBy: { consumer: tag.tag, channel: tag.channel },
-      });
+      messages.push({ ...about(message), redelivered, heldBy: { consumer: tag.tag, channel: tag.channel } });
     }
   }
   return messages;

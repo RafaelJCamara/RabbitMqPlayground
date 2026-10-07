@@ -239,13 +239,72 @@ describe('what a consumer holds', () => {
     send(engine, 'm1');
 
     expect(engine.messages('jobs')).toEqual([
-      { id: 1, key: 'jobs', payload: 'm1', redelivered: false, heldBy: { consumer: 'c1', channel: 'ch-c1' } },
+      {
+        id: 1,
+        exchange: '',
+        producer: null,
+        key: 'jobs',
+        headers: [],
+        payload: 'm1',
+        redelivered: false,
+        heldBy: { consumer: 'c1', channel: 'ch-c1' },
+      },
     ]);
     expect(run(engine, ack('c1'))).toMatchObject([
       { type: 'acked', message: 1, queue: 'jobs', consumer: 'c1', channel: 'ch-c1' },
     ]);
     expect(engine.messages('jobs')).toEqual([]);
     expect(engine.view().channels['ch-c1']).toMatchObject({ received: 1, consumed: 1 });
+  });
+
+  it('says, of each copy that a queue holds, where it was published and by whom, and what headers it carries, whether it is ready or held', () => {
+    const engine = jobs();
+    join(engine, 'c1', { ack: 'manual', prefetch: 1 });
+    runAll(
+      engine,
+      {
+        op: 'producer.set',
+        producer: 'p',
+        target: { kind: 'queue', name: 'jobs' },
+        key: '',
+        payload: 'from p',
+        headers: [{ key: 'format', value: { t: 'string', v: 'pdf' } }],
+        burst: 1,
+        everyMs: 1000,
+        repeat: false,
+      },
+      { op: 'producer.publish', producer: 'p' },
+      {
+        op: 'basic.publish',
+        exchange: '',
+        key: 'jobs',
+        body: 'by hand',
+        headers: [{ key: 'n', value: { t: 'integer', v: 3 } }],
+      },
+    );
+    settle(engine);
+
+    // The ready messages come first, and then the ones that a consumer holds.
+    const [ready, held] = engine.messages('jobs');
+
+    expect(held).toMatchObject({
+      id: 1,
+      exchange: '',
+      producer: 'p',
+      key: 'jobs',
+      headers: [{ key: 'format', value: { t: 'string', v: 'pdf' } }],
+      payload: 'from p',
+      heldBy: { consumer: 'c1' },
+    });
+    expect(ready).toMatchObject({
+      id: 2,
+      exchange: '',
+      producer: null,
+      key: 'jobs',
+      headers: [{ key: 'n', value: { t: 'integer', v: 3 } }],
+      payload: 'by hand',
+      heldBy: null,
+    });
   });
 
   it('is gone from the queue at once for a consumer that acknowledges by itself', () => {
