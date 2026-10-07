@@ -64,11 +64,13 @@ describe('createHeap', () => {
       expect(heap.pop()).toEqual(timed(1, 1));
     });
 
-    it('touches nothing when it is true of none', () => {
+    it('touches nothing when it is true of none, and does not make the heap again', () => {
       const heap = createHeap([timed(2, 1), timed(1, 2)]);
+      const items = heap.values();
 
       expect(heap.removeWhere(() => false)).toBe(0);
       expect(heap.sorted()).toEqual([timed(1, 2), timed(2, 1)]);
+      expect(heap.values()).toBe(items);
     });
 
     it('can take out everything', () => {

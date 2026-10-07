@@ -106,6 +106,18 @@ describe('snapshot and restore', () => {
     expect(drive(restored)).toBe(drive(original));
   });
 
+  it('keeps the stream of the generator when the seed is set again to what it was, and starts another when it is another', () => {
+    const engine = newEngine();
+    engine.restore({ ...engine.snapshot(), prng: 12_345 });
+    const { seed, timing } = engine.view();
+
+    run(engine, { op: 'sim.configure', seed, timing });
+    expect(engine.snapshot().prng).toBe(12_345);
+
+    run(engine, { op: 'sim.configure', seed: seed + 1, timing });
+    expect([engine.snapshot().prng, engine.view().seed]).toEqual([seed + 1, seed + 1]);
+  });
+
   it('is not changed by what the engine does afterwards, and does not change what it was restored into', () => {
     const engine = busy();
     const snapshot = engine.snapshot();

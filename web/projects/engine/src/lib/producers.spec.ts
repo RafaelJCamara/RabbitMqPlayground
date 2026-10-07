@@ -172,6 +172,45 @@ describe('a producer that repeats', () => {
     expect(publishes(engine.advanceTo(399))).toEqual([300]);
   });
 
+  it('keeps its tick in its place among what happens at the same time when something other than the interval changes', () => {
+    const engine = rig({ publishMs: 1000, brokerMs: 0, deliverMs: 0 });
+    run(engine, producer('p', { target: toExchange, everyMs: 1000, repeat: true }));
+    engine.advanceTo(0);
+    // Message 2 is scheduled for the time of the tick, after the tick was.
+    run(engine, { op: 'producer.publish', producer: 'p' });
+
+    run(engine, producer('p', { target: toExchange, everyMs: 1000, repeat: true, payload: 'new' }));
+
+    const order = engine
+      .advanceTo(1000)
+      .flatMap((event) =>
+        event.type === 'published'
+          ? [`published ${event.message.id}`]
+          : event.type === 'routed'
+            ? [`routed ${event.message}`]
+            : [],
+      );
+    expect(order).toEqual(['routed 1', 'published 3', 'routed 2']);
+  });
+
+  it('puts a tick that has not run yet where the new interval says, which is now at the latest and not an interval later', () => {
+    const engine = rig();
+    run(engine, producer('p', { target: toExchange, everyMs: 1000, repeat: true }));
+
+    run(engine, producer('p', { target: toExchange, everyMs: 400, repeat: true }));
+
+    expect(engine.view().producers['p']?.nextAt).toBe(0);
+    expect(publishes(engine.advanceTo(0))).toEqual([0]);
+  });
+
+  it('takes an interval of a millisecond, which is the shortest, and a burst of one', () => {
+    const engine = rig();
+
+    run(engine, producer('p', { target: toExchange, everyMs: 1, burst: 1, repeat: true }));
+
+    expect(publishes(engine.advanceTo(2))).toEqual([0, 1, 2]);
+  });
+
   it('does not change when it sends because of a message that it sends by hand', () => {
     const engine = rig();
     run(engine, producer('p', { target: toExchange, everyMs: 100, repeat: true }));

@@ -33,11 +33,27 @@ describe('createPrng', () => {
     it.each([0, 1, 2 ** 32 - 1])('accepts %s', (seed) => {
       expect(() => createPrng(seed)).not.toThrow();
     });
+
+    it('says what a seed is, and what it was given', () => {
+      expect(() => createPrng(-1)).toThrow(
+        new RangeError('A PRNG seed must be an integer from 0 to 4294967295, got -1'),
+      );
+    });
   });
 
   describe('nextInt', () => {
     it.each([0, -1, 1.5, Number.NaN, 2 ** 32 + 1])('rejects a range of %s', (max) => {
       expect(() => createPrng(1).nextInt(max)).toThrow(RangeError);
+    });
+
+    it('says what a range is, and what it was given', () => {
+      expect(() => createPrng(1).nextInt(0)).toThrow(
+        new RangeError('maxExclusive must be an integer from 1 to 4294967296, got 0'),
+      );
+    });
+
+    it('takes the largest range that a 32-bit number can fill', () => {
+      expect(createPrng(1).nextInt(2 ** 32)).toBeLessThan(2 ** 32);
     });
 
     it('always returns 0 for a range of 1', () => {

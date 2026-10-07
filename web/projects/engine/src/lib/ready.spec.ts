@@ -92,6 +92,47 @@ describe('ReadyList', () => {
     expect(list.toArray()[0]?.order).toBe(2400);
   });
 
+  describe('what it keeps in memory', () => {
+    it('lets go of what was taken from the front when that is at least 1,024 and half of what it keeps, and not before', () => {
+      const list = new ReadyList<string>();
+      for (let order = 1; order <= 2048; order += 1) {
+        list.push(entry(order));
+      }
+      for (let count = 0; count < 1023; count += 1) {
+        list.shift();
+      }
+      expect(list.retained).toBe(2048);
+
+      list.shift();
+
+      expect([list.retained, list.length]).toEqual([1024, 1024]);
+    });
+
+    it('does not let go while less than half of what it keeps has been taken, however far the front has gone', () => {
+      const list = new ReadyList<string>();
+      for (let order = 1; order <= 4000; order += 1) {
+        list.push(entry(order));
+      }
+      for (let count = 0; count < 1500; count += 1) {
+        list.shift();
+      }
+
+      expect([list.retained, list.length]).toEqual([4000, 2500]);
+    });
+
+    it('does not let go of a short list that has been used a little, which is not worth the copy', () => {
+      const list = new ReadyList<string>();
+      for (const order of [1, 2, 3, 4]) {
+        list.push(entry(order));
+      }
+      for (let count = 0; count < 3; count += 1) {
+        list.shift();
+      }
+
+      expect([list.retained, list.length]).toEqual([4, 1]);
+    });
+  });
+
   it('gives a copy that is given back its redelivered flag as it was set', () => {
     const list = new ReadyList<string>();
     list.insert(entry(1, true));
