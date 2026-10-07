@@ -1,7 +1,11 @@
-import { Component, computed, effect, inject, input, untracked } from '@angular/core';
-import { lookup, type Id } from '@rmq/domain';
+import { Component, computed, effect, inject, input, linkedSignal, untracked } from '@angular/core';
+import { lookup, problemAt, reportMessageRows, rowsOf, sameEntries, type DraftRow, type Id } from '@rmq/domain';
+import type { HeaderEntry, HeaderValue } from '@rmq/engine';
+import { FeatureFlags } from '../core/flags/feature-flags';
+import { messageHeadersCommand } from '../core/state/header-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
+import { HeaderRows } from '../core/ui/header-rows';
 import { Help } from '../core/ui/help';
 import { Icon } from '../core/ui/icon';
 import { RefusalNotice } from '../core/ui/refusal-notice';
@@ -15,7 +19,7 @@ import { Fields, NumberField } from './fields';
  */
 @Component({
   selector: 'rmq-producer-composer',
-  imports: [Help, Icon, NumberField, RefusalNotice, Switch],
+  imports: [HeaderRows, Help, Icon, NumberField, RefusalNotice, Switch],
   template: `
     @if (producer(); as p) {
       <section class="flex flex-col gap-3" [attr.aria-labelledby]="fields.id('title')" data-testid="producer-composer">
@@ -51,17 +55,54 @@ import { Fields, NumberField } from './fields';
             [id]="fields.id('key')"
             [value]="p.message.key"
             [attr.aria-invalid]="problem('key') ? 'true' : null"
-            [attr.aria-describedby]="problem('key') ? fields.id('key-problem') : null"
+            [attr.aria-describedby]="keyDescription()"
             (change)="setText('key', $event, p.name, p.message.key)"
           />
+          @if (keyIgnored()) {
+            <p class="text-muted text-xs" [id]="fields.id('key-note')" data-testid="composer-key-note">
+              Not used by this exchange; still carried for exchange-to-exchange hops and dead-lettering.
+            </p>
+          }
           @if (problem('key'); as issue) {
             <div [id]="fields.id('key-problem')"><rmq-refusal-notice [issue]="issue" /></div>
           }
         </div>
 
-        <p class="text-muted text-xs" data-testid="composer-headers">
-          {{ headerWords(p.message.headers.length) }}
-        </p>
+        @if (headersTable) {
+          <div
+            class="flex flex-col gap-1.5"
+            role="group"
+            [attr.aria-labelledby]="fields.id('headers-title')"
+            data-testid="composer-headers-table"
+          >
+            <div class="flex flex-wrap items-center gap-1">
+              <h4 class="text-sm font-medium" [id]="fields.id('headers-title')">Headers</h4>
+              <rmq-help topic="Headers">
+                A header has a name and a value, and a headers exchange compares them with the conditions of its
+                bindings. A number is an integer: 1. With a point it is a float: 1.0. true and false are booleans, and a
+                text in quotes is a string: "1" is not 1.
+              </rmq-help>
+            </div>
+            <rmq-header-rows
+              [rows]="rows()"
+              [reports]="report().rows"
+              noun="header"
+              label="Headers"
+              (rowsChange)="rows.set($event)"
+              (commit)="commitHeaders(p.name, p.message.headers)"
+            />
+            @if (countProblem(); as issue) {
+              <div data-testid="composer-headers-count"><rmq-refusal-notice [issue]="issue" /></div>
+            }
+            @if (problem('headers'); as issue) {
+              <div data-testid="composer-headers-problem"><rmq-refusal-notice [issue]="issue" /></div>
+            }
+          </div>
+        } @else {
+          <p class="text-muted text-xs" data-testid="composer-headers">
+            {{ headerWords(p.message.headers.length) }}
+          </p>
+        }
 
         <rmq-number-field
           label="Messages at a time"
@@ -128,6 +169,39 @@ export class ProducerComposer {
 
   protected readonly producer = computed(() => lookup(this.store.document().producers, this.id()));
 
+  /** The table of the headers of the message is there with the flag `headers`, and without it the composer says how many there are (ADR-0069). */
+  protected readonly headersTable = inject(FeatureFlags).isEnabled('headers');
+
+  /**
+   * The rows of the table: the headers of the message, and what is typed on the way to changing them. A row that is complete is applied when its control is left, and the rows keep what
+   * is not finished through that; they start again from the message when its headers change from somewhere else (an undo, a typed command), and when another producer is shown (ADR-0069).
+   */
+  protected readonly rows = linkedSignal<
+    { readonly id: Id; readonly headers: readonly HeaderEntry<HeaderValue>[] },
+    readonly DraftRow[]
+  >({
+    source: () => ({ id: this.id(), headers: this.producer()?.message.headers ?? [] }),
+    computation: (source, previous) =>
+      previous !== undefined &&
+      previous.source.id === source.id &&
+      sameEntries(reportMessageRows(previous.value).entries, source.headers)
+        ? previous.value
+        : rowsOf(source.headers),
+  });
+  protected readonly report = computed(() => reportMessageRows(this.rows()));
+  /** A problem of the whole table that no row has: too many headers. */
+  protected readonly countProblem = computed(() => (problemAt(this.report()) === null ? this.report().problem : null));
+
+  /** Whether the exchange that the producer publishes to does not read the routing key: a headers exchange (ADR-0009, ADR-0069). */
+  protected readonly keyIgnored = computed(() => {
+    const target = this.producer()?.target;
+    return (
+      this.headersTable &&
+      target?.kind === 'exchange' &&
+      lookup(this.store.document().exchanges, target.id)?.type === 'headers'
+    );
+  });
+
   constructor() {
     // What was refused belongs to what was selected when it was refused.
     effect(() => {
@@ -138,6 +212,32 @@ export class ProducerComposer {
 
   protected problem(field: string) {
     return this.fields.problems()[field];
+  }
+
+  /** What describes the routing key: the note about a headers exchange, and the refusal, if there is one. */
+  protected keyDescription(): string | null {
+    const ids = [
+      ...(this.keyIgnored() ? [this.fields.id('key-note')] : []),
+      ...(this.problem('key') ? [this.fields.id('key-problem')] : []),
+    ];
+    return ids.length === 0 ? null : ids.join(' ');
+  }
+
+  /**
+   * A control of the table was left, a type was chosen or a row was taken off: the table is applied, as the commands that a learner could type, if it has no problem. A table that has one applies
+   * nothing, and each row says its own (ADR-0068); the message keeps the headers it had, which are the ones that are sent.
+   */
+  protected commitHeaders(name: string, current: readonly HeaderEntry<HeaderValue>[]): void {
+    const report = this.report();
+    if (!report.ok) {
+      return;
+    }
+    const command = messageHeadersCommand(name, current, report.entries);
+    if (command === undefined) {
+      this.fields.reset();
+      return;
+    }
+    this.fields.apply('headers', command);
   }
 
   protected headerWords(count: number): string {
