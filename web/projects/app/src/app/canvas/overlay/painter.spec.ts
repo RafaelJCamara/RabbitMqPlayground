@@ -16,6 +16,7 @@ import {
 /** A context that writes down what it was asked, in the order, with the colour and the line that each stroke had. */
 function recorder() {
   const calls: string[] = [];
+  const sweeps: number[][] = [];
   const context = {
     fillStyle: '',
     strokeStyle: '',
@@ -26,7 +27,10 @@ function recorder() {
     setTransform: (...n: number[]) => calls.push(`transform ${n.join(',')}`),
     clearRect: (...n: number[]) => calls.push(`clear ${n.join(',')}`),
     beginPath: () => calls.push('begin'),
-    arc: (x: number, y: number, r: number) => calls.push(`arc ${x},${y},${r}`),
+    arc: (x: number, y: number, r: number, from: number, to: number) => {
+      sweeps.push([from, to]);
+      calls.push(`arc ${x},${y},${r}`);
+    },
     fill() {
       calls.push(`fill ${context.fillStyle}`);
     },
@@ -34,9 +38,10 @@ function recorder() {
       calls.push(`stroke ${context.strokeStyle} ${context.lineWidth}`);
     },
     fillText: (text: string, x: number, y: number) => calls.push(`text ${text} ${x},${y} ${context.fillStyle}`),
-    strokeText: (text: string, x: number, y: number) => calls.push(`halo ${text} ${x},${y} ${context.strokeStyle}`),
+    strokeText: (text: string, x: number, y: number) =>
+      calls.push(`halo ${text} ${x},${y} ${context.strokeStyle} ${context.lineWidth}`),
   };
-  return { context: context as unknown as Paintable, calls };
+  return { context: context as unknown as Paintable, calls, sweeps };
 }
 
 /** A palette in which every token is its own name, so that a call says which token it drew with. */
@@ -70,6 +75,7 @@ describe('labelOf and wordFor', () => {
   });
 
   it('says how many a shape stands for when it stands for several, and else its key when there are few shapes, and nothing for no key', () => {
+    expect(wordFor(sprite({ count: 2 }), false)).toBe('×2');
     expect(wordFor(sprite({ count: 20 }), true)).toBe('×20');
     expect(wordFor(sprite({ count: 20 }), false)).toBe('×20');
     expect(wordFor(sprite(), true)).toBe('order.created');
@@ -98,8 +104,23 @@ describe('paint (ADR-0055)', () => {
       `arc 100,50,${RADIUS}`,
       `fill <${tokenFor('order.created')}>`,
       'stroke <--rmq-message-outline> 2',
-      `halo order.created ${100 + RADIUS + RING_GAP + 4},50 <--rmq-canvas>`,
+      `halo order.created ${100 + RADIUS + RING_GAP + 4},50 <--rmq-canvas> 3`,
       `text order.created ${100 + RADIUS + RING_GAP + 4},50 <--rmq-fg>`,
+    ]);
+  });
+
+  it('is as big as the plan draws it: a dot of 7 pixels, a ring 3 pixels outside it, and a key for 12 shapes at most', () => {
+    expect([RADIUS, RING_GAP, LABELLED_LIMIT]).toEqual([7, 3, 12]);
+  });
+
+  it('draws every dot and ring as a whole circle, from the start of the angle to a full turn', () => {
+    const { context, sweeps } = recorder();
+
+    paint(context, [sprite({ redelivered: true })], palette, options);
+
+    expect(sweeps).toEqual([
+      [0, Math.PI * 2],
+      [0, Math.PI * 2],
     ]);
   });
 

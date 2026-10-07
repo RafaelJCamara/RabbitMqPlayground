@@ -47,6 +47,13 @@ describe('groupMarkers (ADR-0055)', () => {
     expect(groupMarkers([marker({ at: 0.5 }), marker({ at: 0.502 })])).toHaveLength(2);
   });
 
+  it('puts a place at the nearest thousandth of the way, and not the one before it', () => {
+    // 0.4995 and 0.5004 are both nearest to 0.500, and 0.0004 and 0.0006 are nearest to different thousandths.
+    expect(groupMarkers([marker({ at: 0.4995 }), marker({ at: 0.5004 })])).toHaveLength(1);
+    expect(groupMarkers([marker({ at: 0.0004 }), marker({ at: 0.0006 })])).toHaveLength(2);
+    expect(groupMarkers([marker({ at: 0.0001 }), marker({ at: 0.0004 })])).toHaveLength(1);
+  });
+
   it('has no key when the messages do not share one, so that a crowd of mixed messages is not the colour of one of them', () => {
     const [shape] = groupMarkers([marker({ key: 'a' }), marker({ key: 'b' }), marker({ key: 'a' })]);
 
@@ -96,7 +103,31 @@ describe('groupMarkers (ADR-0055)', () => {
       expect(shapes[0]?.count).toBe(2);
     });
 
+    it('makes a part of an edge a thirty-second of it, from the start, and the last holds the end', () => {
+      const parts = (...places: number[]) =>
+        groupMarkers(
+          places.map((at, message) => marker({ message, at })),
+          0,
+        ).length;
+
+      expect(DENSE_PARTS).toBe(32);
+      expect(parts(0, 0.03)).toBe(1);
+      expect(parts(0.03, 0.04)).toBe(2);
+      expect(parts(0.0306, 0.0313)).toBe(2);
+      expect(parts(0.5, 0.9)).toBe(2);
+      expect(parts(0.96, 0.97)).toBe(2);
+      expect(parts(0.97, 0.99, 1)).toBe(1);
+    });
+
+    it('keeps the edges apart when it groups by part', () => {
+      const shapes = groupMarkers([marker({ edge: 'a', at: 0.5 }), marker({ edge: 'b', at: 0.5 })], 0);
+
+      expect(shapes.map(({ edge }) => edge)).toEqual(['a', 'b']);
+    });
+
     it('is the limit that the plan says, which is 500 shapes', () => {
+      expect(SHAPE_LIMIT).toBe(500);
+
       const many = Array.from({ length: SHAPE_LIMIT + 1 }, (_, index) =>
         marker({ message: index, at: (index % 997) / 1_000, edge: `e${Math.floor(index / 997)}` }),
       );

@@ -33,7 +33,7 @@ import { paletteFrom, type Paintable } from './painter';
  */
 
 /** A producer `sender` that sends two messages at a time to the exchange `orders`, which sends them to the queue `billing`, which the consumer `worker` takes from. */
-const traffic = (): CanvasDocument => ({
+const traffic = (leg = 100): CanvasDocument => ({
   ...documentOf({
     exchanges: { E: exchangeRecord('orders') },
     queues: { Q: queueRecord('billing') },
@@ -47,7 +47,27 @@ const traffic = (): CanvasDocument => ({
     },
     consumers: { C: consumerRecord('worker', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 100 }) },
   }),
-  settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 100, deliverMs: 100 } },
+  settings: { ...emptyDocument().settings, timing: { publishMs: leg, brokerMs: leg, deliverMs: leg } },
+});
+
+/** `sender` publishes straight to the queue `billing`, which `worker` takes from: the link goes through the default exchange, which the canvas draws or not. */
+const direct = (showDefaultExchange: boolean): CanvasDocument => ({
+  ...documentOf({
+    queues: { Q: queueRecord('billing') },
+    producers: {
+      P: producerRecord(
+        'sender',
+        { kind: 'queue', id: 'Q' },
+        { message: { payload: 'hi', key: 'new', headers: [] }, burst: 1 },
+      ),
+    },
+    consumers: { C: consumerRecord('worker', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 100 }) },
+  }),
+  settings: {
+    ...emptyDocument().settings,
+    showDefaultExchange,
+    timing: { publishMs: 100, brokerMs: 100, deliverMs: 100 },
+  },
 });
 
 /** The paths that the library has drawn, in the coordinates of the canvas. */
@@ -55,6 +75,8 @@ const PATHS: Record<string, string> = {
   'P>E': 'M 0 0 L 100 0',
   'E>Q': 'M 100 0 L 200 0',
   'Q>C': 'M 200 0 L 300 0',
+  'P>Q': 'M 0 0 L 100 0',
+  '~default>Q': 'M 100 0 L 200 0',
 };
 
 interface Strokes {
@@ -95,6 +117,9 @@ async function renderOverlay(
     readonly paths?: Record<string, string | null>;
     readonly viewport?: () => { x: number; y: number; zoom: number };
     readonly context?: boolean;
+    /** How long each leg of a message takes, which is 100 ms. */
+    readonly leg?: number;
+    readonly document?: CanvasDocument;
   } = {},
 ) {
   const frames = manualFrames();
@@ -102,7 +127,7 @@ async function renderOverlay(
   const paletteRead = vi.fn((_host: HTMLElement) => paletteFrom((token) => `<${token}>`));
   const paths: Record<string, string | null> = options.paths ?? PATHS;
   const live = { x: 10, y: 20, zoom: 1, ...options.viewport?.() };
-  const state = { transform: live };
+  const state = { transform: live, host: { width: 800, height: 600 } };
   const view = await render(MessageOverlay, {
     providers: [
       DocumentStore,
@@ -132,7 +157,7 @@ async function renderOverlay(
       scaledPosition: { x: 0, y: 0 },
       scale: state.transform.zoom,
     }),
-    host: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+    host: () => ({ x: 0, y: 0, ...state.host }),
     fit: () => undefined,
     zoomIn: () => undefined,
     zoomOut: () => undefined,
@@ -143,7 +168,7 @@ async function renderOverlay(
   });
   const simulation = TestBed.inject(Simulation);
   const bus = TestBed.inject(CommandBus);
-  TestBed.inject(DocumentStore).load(traffic());
+  TestBed.inject(DocumentStore).load(options.document ?? traffic(options.leg));
   simulation.execute({ type: 'pause' });
   const overlay = view.fixture.componentInstance;
   let started = false;
@@ -426,6 +451,105 @@ describe('MessageOverlay (ADR-0055)', () => {
     expect(simulation.animating()).toBe(false);
     expect(frames.pending).toBe(0);
   });
+
+  it('says that it has drawn nothing, and that it was not asked for less motion, before it has drawn anything', async () => {
+    const { last } = await renderOverlay();
+
+    expect(last()).toEqual({ reducedMotion: false, markers: [] });
+  });
+
+  it('reads the colours again every thirty frames that it draws, and not sooner or later', async () => {
+    const { send, play, paletteRead } = await renderOverlay({ leg: 10_000 });
+    send();
+
+    play(290);
+    expect(paletteRead.mock.calls.length).toBe(1);
+    play(10);
+    expect(paletteRead.mock.calls.length).toBe(2);
+    play(290);
+    expect(paletteRead.mock.calls.length).toBe(2);
+    play(10);
+    expect(paletteRead.mock.calls.length).toBe(3);
+  });
+
+  it('sizes the canvas to the nearest pixel of the screen when the host is not a whole number of them', async () => {
+    const { send, play, container, state } = await renderOverlay();
+    state.host = { width: 801, height: 601 };
+    Object.defineProperty(window, 'devicePixelRatio', { value: 1.5, configurable: true });
+    try {
+      send();
+      play(20);
+
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+      expect([canvas.width, canvas.height]).toEqual([1_202, 902]);
+    } finally {
+      Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
+    }
+  });
+
+  it('sets the size of the canvas when the host changes in width or in height, and only then, since setting it clears what is drawn', async () => {
+    const { send, play, container, state } = await renderOverlay({ leg: 10_000 });
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    const sets: string[] = [];
+    let [width, height] = [canvas.width, canvas.height];
+    Object.defineProperty(canvas, 'width', {
+      configurable: true,
+      get: () => width,
+      set: (value: number) => {
+        sets.push(`width ${value}`);
+        width = value;
+      },
+    });
+    Object.defineProperty(canvas, 'height', {
+      configurable: true,
+      get: () => height,
+      set: (value: number) => {
+        sets.push(`height ${value}`);
+        height = value;
+      },
+    });
+    send();
+
+    play(30);
+    expect(sets).toEqual(['width 800', 'height 600']);
+
+    state.host = { width: 900, height: 600 };
+    play(10);
+    expect(sets).toEqual(['width 800', 'height 600', 'width 900', 'height 600']);
+
+    state.host = { width: 900, height: 700 };
+    play(10);
+    expect(sets).toEqual(['width 800', 'height 600', 'width 900', 'height 600', 'width 900', 'height 700']);
+  });
+
+  it('works out again where the names are on the canvas when the canvas changes, so that a message waits where the canvas has it now', async () => {
+    const { send, play, last, bus } = await renderOverlay({ document: direct(false) });
+    send();
+
+    // The default exchange is not drawn, so a message that is in the broker waits at the end of the link that it came along.
+    play(150);
+    expect(last().markers).toMatchObject([{ edge: 'P>Q', x: 110 }]);
+
+    bus.apply({ type: 'set', kind: 'canvas', changes: { showDefaultExchange: true } }, 'toolbar');
+    play(10);
+
+    expect(last().markers).toMatchObject([{ edge: '~default>Q' }]);
+  });
+
+  it('wipes the canvas once when the last message is gone, and leaves it alone for the frames that follow', async () => {
+    const { send, play, seen, bus, viewport, frame } = await renderOverlay();
+    send();
+    play(50);
+    bus.run({ type: 'clear-messages' }, 'toolbar');
+    frame(1_000);
+    const wiped = seen.clears;
+
+    viewport.noteMoved();
+    TestBed.tick();
+    frame(1_010);
+
+    expect(seen.clears).toBe(wiped);
+  });
 });
 
 describe('what the overlay draws with in a browser (ADR-0055)', () => {
@@ -440,12 +564,13 @@ describe('what the overlay draws with in a browser (ADR-0055)', () => {
   it('reads each colour from a probe in its host, which the page gives the token to, and takes the probe away', () => {
     const host = document.createElement('div');
     document.body.append(host);
-    const given: { token: string; hidden: string | null; inside: boolean }[] = [];
+    const given: { token: string; hidden: string | null; inside: boolean; display: string }[] = [];
     const computed = vi.spyOn(window, 'getComputedStyle').mockImplementation(((probe: HTMLElement) => {
       given.push({
         token: probe.style.color,
         hidden: probe.getAttribute('aria-hidden'),
         inside: probe.parentElement === host,
+        display: probe.style.display,
       });
       return { color: `rgb(${given.length}, 0, 0)` } as CSSStyleDeclaration;
     }) as typeof window.getComputedStyle);
@@ -453,7 +578,9 @@ describe('what the overlay draws with in a browser (ADR-0055)', () => {
       const palette = TestBed.inject(PALETTE_READER)(host);
 
       expect(given.map(({ token }) => token)).toEqual(PAINT_TOKENS.map((token) => `var(${token})`));
-      expect(given.every(({ hidden, inside }) => hidden === 'true' && inside)).toBe(true);
+      expect(given.every(({ hidden, inside, display }) => hidden === 'true' && inside && display === 'none')).toBe(
+        true,
+      );
       expect(Object.values(palette)).toEqual(PAINT_TOKENS.map((_, index) => `rgb(${index + 1}, 0, 0)`));
       expect(host.children).toHaveLength(0);
     } finally {
