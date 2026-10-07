@@ -10,7 +10,7 @@ import {
   producerRecord,
   queueRecord,
 } from '@rmq/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
 import { FRAME_SOURCE, FrameLoop } from '../runtime/frame-loop';
 import { MOTION_QUERY } from '../runtime/motion';
@@ -44,7 +44,9 @@ const traffic = (burst = 2): CanvasDocument => ({
 
 const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', name: 'sender' } };
 
-function setup(options: { readonly flags?: string | null; readonly burst?: number } = {}) {
+function setup(
+  options: { readonly flags?: string | null; readonly burst?: number; readonly before?: () => void } = {},
+) {
   const frames = manualFrames();
   const providers: Provider[] = [
     DocumentStore,
@@ -68,6 +70,7 @@ function setup(options: { readonly flags?: string | null; readonly burst?: numbe
     },
   ];
   TestBed.configureTestingModule({ providers });
+  options.before?.();
   const store = TestBed.inject(DocumentStore);
   const bus = TestBed.inject(CommandBus);
   TestBed.inject(CommandLog);
@@ -221,6 +224,68 @@ describe('EventLog (ADR-0061)', () => {
     expect(log.rowBySeq(first)?.seq).toBe(first);
     expect(log.rowBySeq(first + LOG_CAP - 1)?.seq).toBe(first + LOG_CAP - 1);
     expect(log.rowBySeq(first + LOG_CAP)).toBeUndefined();
+  });
+
+  it('never shows or counts more than the cap, as soon as the turn that went over it is over, and counts what that turn dropped', () => {
+    const { run, log } = setup({ burst: 1000 });
+    run({ type: 'pause' });
+    // The line of the pause, and five bursts of a thousand and the line of each: 5,006 rows, six more than the cap.
+    for (let times = 0; times < 5; times += 1) {
+      run(PUBLISH);
+    }
+
+    expect(log.count()).toBe(LOG_CAP);
+    expect(log.dropped()).toBe(6);
+    expect(log.shown()).toHaveLength(LOG_CAP);
+    expect(log.shown()[0]?.seq).toBe(7);
+    expect(log.debugState().rows).toHaveLength(LOG_CAP);
+    expect(log.rowBySeq(6)).toBeUndefined();
+    expect(log.rowBySeq(7)?.seq).toBe(7);
+  });
+
+  it('has dropped nothing when it has not been full, and the first row is the first', () => {
+    const { run, log } = setup();
+    run({ type: 'pause' });
+
+    expect(log.dropped()).toBe(0);
+    expect(log.shown().map(({ seq }) => seq)).toEqual([1]);
+  });
+
+  it('puts the line of a command that made no events after the events of the clock that were said in the same turn', () => {
+    const { bus, frames, log } = setup();
+    bus.run(PUBLISH, 'toolbar');
+    log.flush();
+    for (let time = 10; time <= 300; time += 10) {
+      frames.frame(time);
+    }
+
+    bus.run({ type: 'speed', factor: 2 }, 'toolbar');
+    log.flush();
+
+    const kinds = log.shown().map(({ kind }) => kind);
+    expect(kinds.at(-1)).toBe('command');
+    expect(kinds.slice(1, -1).every((kind) => kind !== 'command')).toBe(true);
+    expect(kinds).toContain('routed');
+    expect(log.shown().at(-1)?.text).toBe('speed 2');
+  });
+
+  it('schedules one flush for a turn, however many things were said in it, and one more for the next turn', async () => {
+    const { bus, log } = setup();
+    const flush = vi.spyOn(log, 'flush');
+
+    bus.run({ type: 'pause' }, 'toolbar');
+    bus.run({ type: 'play' }, 'toolbar');
+    bus.run({ type: 'pause' }, 'toolbar');
+    await Promise.resolve();
+
+    expect(flush).toHaveBeenCalledOnce();
+    expect(log.count()).toBe(3);
+
+    bus.run({ type: 'play' }, 'toolbar');
+    await Promise.resolve();
+
+    expect(flush).toHaveBeenCalledTimes(2);
+    expect(log.count()).toBe(4);
   });
 
   it('says what it keeps as plain data for a test of the whole app, which is every row that is kept and how many went', () => {
@@ -398,13 +463,20 @@ describe('EventLog (ADR-0061)', () => {
     }
   });
 
-  it('stops listening when it is destroyed, so that a closed editor says nothing', () => {
-    const { bus, log } = setup();
-    bus.run({ type: 'pause' }, 'key');
-    log.flush();
+  it('stops listening to the events and to the lines of commands when it is destroyed, so that a closed editor says nothing', () => {
+    const stops = { events: vi.fn(), lines: vi.fn() };
+    setup({
+      before: () => {
+        vi.spyOn(TestBed.inject(Simulation), 'onEvents').mockReturnValue(stops.events);
+        vi.spyOn(TestBed.inject(CommandLog), 'onLine').mockReturnValue(stops.lines);
+      },
+    });
+    expect(stops.events).not.toHaveBeenCalled();
+    expect(stops.lines).not.toHaveBeenCalled();
 
     TestBed.resetTestingModule();
 
-    expect(log.count()).toBe(1);
+    expect(stops.events).toHaveBeenCalledOnce();
+    expect(stops.lines).toHaveBeenCalledOnce();
   });
 });

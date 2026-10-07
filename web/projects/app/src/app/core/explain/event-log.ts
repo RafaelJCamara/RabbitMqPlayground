@@ -20,9 +20,6 @@ import {
 /** How many rows the log keeps (ADR-0061). The oldest go, and the log says how many. */
 export const LOG_CAP = 5000;
 
-/** How many rows more than the cap are written before the oldest are taken off in one go, so that a row costs a push and not a shift. */
-const TRIM_SLACK = 256;
-
 /**
  * The event log (ADR-0061): the events of the engine and the lines of the log of commands, in one order, with a time on every row. It listens from the moment that the editor opens, so that nothing that happened is missing
  * from it when the panel is opened, and it costs a record for each row and nothing for a panel that is closed. The bus tells it of a command after the simulation has said what the command made, so what was said in a
@@ -40,7 +37,7 @@ export class EventLog {
   /** The messages that it still holds, each with the canvas that routed it. */
   readonly held = new HeldMessages();
 
-  /** The rows, oldest first. It holds up to a slack more than the cap: what the log keeps is the last `LOG_CAP` of them. */
+  /** The rows, oldest first: the last `LOG_CAP` of them, after each turn. */
   private rows: LogRow[] = [];
   /** How many rows have been taken off the front of `rows` to make room. */
   private off = 0;
@@ -63,18 +60,18 @@ export class EventLog {
   /** How many rows it keeps now. */
   readonly count = computed(() => {
     this.revision();
-    return this.kept();
+    return this.rows.length;
   });
   /** How many rows went because the log was full. */
   readonly dropped = computed(() => {
     this.revision();
-    return this.lost();
+    return this.off;
   });
   /** The rows that the filter lets through, oldest first. */
   readonly shown = computed(() => {
     this.revision();
     const filter = this.filterState();
-    const rows = this.keptRows();
+    const rows = this.rows.slice();
     return isFiltering(filter) ? rows.filter((row) => matchesFilter(row, filter)) : rows;
   });
 
@@ -132,7 +129,7 @@ export class EventLog {
     }
     this.pending = [];
     this.settled.set(this.held.lastSettled);
-    if (this.rows.length > LOG_CAP + TRIM_SLACK) {
+    if (this.rows.length > LOG_CAP) {
       const extra = this.rows.length - LOG_CAP;
       this.rows.splice(0, extra);
       this.off += extra;
@@ -142,7 +139,7 @@ export class EventLog {
 
   /** The row with this number, if it is still kept. */
   rowBySeq(seq: number): LogRow | undefined {
-    let low = Math.max(0, this.rows.length - LOG_CAP);
+    let low = 0;
     let high = this.rows.length - 1;
     while (low <= high) {
       const middle = (low + high) >> 1;
@@ -162,9 +159,9 @@ export class EventLog {
   /** What a test of the whole app reads (ADR-0061): how many rows are kept, how many went, and each row as it was said, without what choosing it lights. */
   debugState(): DebugEventLog {
     return {
-      count: this.kept(),
-      dropped: this.lost(),
-      rows: this.keptRows().map(({ seq, at, family, kind, text, message }) => ({
+      count: this.rows.length,
+      dropped: this.off,
+      rows: this.rows.map(({ seq, at, family, kind, text, message }) => ({
         seq,
         at,
         family,
@@ -181,20 +178,6 @@ export class EventLog {
 
   clearFilter(): void {
     this.filterState.set(NO_FILTER);
-  }
-
-  private kept(): number {
-    return Math.min(this.rows.length, LOG_CAP);
-  }
-
-  /** How many rows went because the log was full: the ones taken off the front, and the ones past the cap that are waiting to be. */
-  private lost(): number {
-    return this.off + Math.max(0, this.rows.length - LOG_CAP);
-  }
-
-  /** A copy of the rows that it keeps, oldest first. */
-  private keptRows(): LogRow[] {
-    return this.rows.length > LOG_CAP ? this.rows.slice(-LOG_CAP) : this.rows.slice();
   }
 
   private schedule(): void {
