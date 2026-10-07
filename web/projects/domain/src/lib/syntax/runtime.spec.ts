@@ -62,11 +62,11 @@ const inserts = (completion: Completion): string[] => completion.items.map(({ in
 
 describe('publish', () => {
   it('reads the name of a producer, and then asks for nothing more', () => {
-    expect(read('publish sender')).toEqual({ type: 'publish', from: { kind: 'producer', name: 'sender' } });
+    expect(read('publish sender')).toStrictEqual({ type: 'publish', from: { kind: 'producer', name: 'sender' } });
   });
 
   it('reads an exchange, with the key, the payload and the headers of the message that it is sent, each typed as in a binding', () => {
-    expect(read('publish orders')).toEqual({ type: 'publish', from: { kind: 'exchange', name: 'orders' } });
+    expect(read('publish orders')).toStrictEqual({ type: 'publish', from: { kind: 'exchange', name: 'orders' } });
     expect(
       read(
         'publish orders key=order.created payload=hello header:format=pdf header:n=1 header:f=1.0 header:ok=true header:s="1"',

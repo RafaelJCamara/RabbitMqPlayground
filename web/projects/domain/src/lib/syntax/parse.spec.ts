@@ -1150,6 +1150,9 @@ describe('parseCommand', () => {
       );
       expect(pointedAt(text, issue)).toBe('undo');
       expect(refused('redo; declare queue a')).toMatchObject({ kind: 'batch', batchIndex: 0 });
+      expect(refused('redo; declare queue a').message).toBe(
+        'redo is about the history and not the canvas, so it cannot be one of several commands. Type it by itself.',
+      );
     });
 
     it('does not take an id that the canvas has for the canvases that it steps through on the way', () => {

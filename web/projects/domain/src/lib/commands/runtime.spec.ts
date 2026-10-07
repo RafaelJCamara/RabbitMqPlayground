@@ -109,7 +109,10 @@ describe('runtimeIssue', () => {
     });
 
     it('refuses a key of more than 255 bytes, headers that no message could have, and a payload that is too long', () => {
-      expect(runtimeIssue(sample(), exchange('orders', { key: 'k'.repeat(256) }))?.kind).toBe('routing-key');
+      expect(runtimeIssue(sample(), exchange('orders', { key: 'k'.repeat(256) }))).toMatchObject({
+        kind: 'routing-key',
+        message: 'A routing key is at most 255 bytes of UTF-8, and this one is 256.',
+      });
       expect(
         runtimeIssue(sample(), exchange('orders', { headers: [{ key: 'n', value: { t: 'integer', v: 2 ** 53 } }] }))
           ?.kind,
