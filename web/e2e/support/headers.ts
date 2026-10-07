@@ -200,3 +200,15 @@ export const DIRECT_AND_HEADERS = buildDocument([
   headersExchange('files'),
   { type: 'declare-queue', name: 'pdfs', durable: true },
 ]);
+
+/**
+ * `files` has a binding to `pdfs` with x-match any and one argument, `x-region`, which `any` does not count: with nothing to match it matches no message, which is what the lint says. The second binding,
+ * to `scans`, is as it should be. The edges are `x1>q1` and `x1>q2`.
+ */
+export const NEVER = buildDocument([
+  headersExchange('files'),
+  { type: 'declare-queue', name: 'pdfs', durable: true },
+  { type: 'declare-queue', name: 'scans', durable: true },
+  bindTo('files', 'pdfs', 'any', [text('x-region', 'eu')]),
+  bindTo('files', 'scans', 'any', [text('format', 'tiff')]),
+]);

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { HeadersPage } from './pages/headers-page';
 import { FILES } from './support/headers';
+import { Finger } from './support/touch';
 import { expect, test } from './support/test';
 
 /**
@@ -169,6 +170,75 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     await expect(popover.modeHelp).toHaveText(
       'At least one condition has to hold. Arguments that start with x- are not counted.',
     );
+  });
+});
+
+test.describe('every way of making a link asks for the conditions of a headers binding (ADR-0066)', () => {
+  test('by "Link to…" in the inspector, which lists the targets and then asks, with the cursor in the first row', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    await headers.editor.select('Exchange files, headers');
+
+    await page.getByRole('button', { name: 'Link exchange files to…' }).click();
+    await expect(page.getByRole('combobox', { name: 'Search the targets' })).toBeFocused();
+    await page.keyboard.type('scans');
+    await page.keyboard.press('Enter');
+
+    const popover = headers.popover('exchange files', 'queue scans');
+    await expect(popover.scope).toBeVisible();
+    await expect(popover.name(1)).toBeFocused();
+    await popover.fill(1, 'format', 'tiff');
+    await popover.value(1).press('Enter');
+    await expect.poll(() => headers.bindings()).toHaveLength(1);
+    expect(await headers.commands()).toEqual(['bind files -> scans x-match=all format=tiff']);
+  });
+
+  test('by the key L, which the library takes: the arrow keys choose the target and Enter asks', async ({ page }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    await headers.editor.select('Exchange files, headers');
+
+    await page.keyboard.press('l');
+    await expect(headers.polite).toHaveText(/^(Linking from exchange files\.|Target \d+ of \d+)/);
+    await page.keyboard.press('Enter');
+
+    await expect(
+      page.getByRole('group', { name: /^Conditions for the binding from exchange files to / }),
+    ).toBeVisible();
+  });
+
+  test.describe('by touch', () => {
+    test.use({ hasTouch: true });
+
+    test('by dragging a finger from the dot of the exchange to a queue', async ({ page }) => {
+      const headers = await HeadersPage.open(page, FILES);
+      const { editor } = headers;
+      const finger = await Finger.on(page);
+
+      await finger.drag(await editor.centre(editor.handle('x1', 'out')), await editor.centre(editor.nodeById('q2')));
+
+      const popover = headers.popover('exchange files', 'queue scans');
+      await expect(popover.scope).toBeVisible();
+      await expect(popover.name(1)).toBeFocused();
+    });
+  });
+
+  test('by letting a link go on nothing, which makes a queue and asks for the conditions of its binding', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    const { editor } = headers;
+    const from = await editor.centre(editor.handle('x1', 'out'));
+
+    await editor.dragLinkTo('x1', { x: from.x + 40, y: from.y + 200 });
+    await page.getByRole('menuitem', { name: 'New queue' }).click();
+
+    const popover = page.getByRole('group', { name: /^Conditions for the binding from exchange files to queue / });
+    await expect(popover).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Name of condition 1' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    expect(await headers.bindings()).toEqual([]);
+    expect(await editor.edges()).toEqual(['sender -> files']);
   });
 });
 
@@ -360,6 +430,28 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
     const other = popover.modes.locator('label').filter({ hasText: /^all$/ }).locator('span');
     await other.hover();
     await expect(other).toHaveCSS('background-color', await headers.tokenColour('--rmq-canvas'));
+  });
+
+  test('tells a lint of the conditions while they are typed: any with nothing that counts matches no message, and a condition that counts takes it away', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    const popover = await askForConditions(headers);
+    await expect(popover.lint).toHaveCount(0);
+
+    await popover.choose('any');
+    await popover.fill(1, 'x-region', 'eu');
+
+    await expect(popover.lint).toContainText('Worth a look');
+    await expect(popover.lint).toContainText(
+      "The binding from 'files' to 'pdfs' has x-match=any and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.",
+    );
+    await popover.append('format', 'pdf');
+    await expect(popover.lint).toHaveCount(0);
+    await popover.name(2).fill('x-other');
+    await expect(popover.lint).toBeVisible();
+    await popover.choose('any-with-x');
+    await expect(popover.lint).toHaveCount(0);
   });
 
   test('chooses the mode with the arrow keys as a group of radio buttons does, and a mode that is chosen is written out', async ({

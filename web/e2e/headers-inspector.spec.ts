@@ -1,5 +1,5 @@
 import { HeadersPage } from './pages/headers-page';
-import { FILES_BOUND, FILES_TWICE } from './support/headers';
+import { FILES_BOUND, FILES_TWICE, NEVER } from './support/headers';
 import { expect, test } from './support/test';
 
 /**
@@ -223,5 +223,48 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
     await expect(popover.scope).toHaveCount(0);
     await expect(headers.said).toHaveText('Already bound with those conditions.');
     expect((await headers.bindings()).filter(({ to }) => to === 'pdfs')).toHaveLength(1);
+  });
+
+  test('is kept in what is saved, so that a page that is opened again has the binding as it was applied, with its chip', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES_BOUND);
+    await headers.selectBinding('x1>q1');
+    await headers.conditions().choose('any-with-x');
+    await headers.conditions().append('x-region', 'eu');
+    await headers.conditions().submit.click();
+    await expect(headers.chips('x1>q1')).toHaveText(['any-with-x · format=pdf · type=report · x-region=eu']);
+    await expect(headers.editor.saveState).toHaveText('All changes saved');
+
+    await page.reload();
+    await headers.editor.heading.waitFor();
+    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
+
+    await expect(headers.chips('x1>q1')).toHaveText(['any-with-x · format=pdf · type=report · x-region=eu']);
+    await headers.selectBinding('x1>q1');
+    await expect(headers.conditions().mode('any-with-x')).toBeChecked();
+    await expect(headers.conditions().rows).toHaveCount(3);
+  });
+
+  test('says in three places that a binding with any and no condition that counts matches no message: a badge on its label, the inspector and its own editor', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, NEVER);
+    await expect(headers.label('x1>q1').getByTestId('edge-lint')).toBeVisible();
+    await expect(headers.label('x1>q2').getByTestId('edge-lint')).toHaveCount(0);
+
+    await headers.selectBinding('x1>q1');
+
+    const sentence =
+      "The binding from 'files' to 'pdfs' has x-match=any and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.";
+    await expect(headers.editor.inspector.getByTestId('inspector-warnings')).toContainText(sentence);
+    await expect(headers.conditions().lint).toContainText(sentence);
+    // A condition that counts, typed and not applied, takes it from the editor and leaves it where the document has it.
+    await headers.conditions().append('format', 'pdf');
+    await expect(headers.conditions().lint).toHaveCount(0);
+    await expect(headers.editor.inspector.getByTestId('inspector-warnings')).toContainText(sentence);
+    await headers.conditions().submit.click();
+    await expect(headers.editor.inspector.getByTestId('inspector-warnings')).toHaveCount(0);
+    await expect(headers.label('x1>q1').getByTestId('edge-lint')).toHaveCount(0);
   });
 });
