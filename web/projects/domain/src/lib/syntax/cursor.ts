@@ -61,7 +61,9 @@ export type Expected =
   | { readonly kind: 'arrow' }
   | { readonly kind: 'tail'; readonly spec: TailSpec; readonly used: readonly string[] }
   /** The name of a command, of which `words` are typed. */
-  | { readonly kind: 'command'; readonly words: readonly string[] };
+  | { readonly kind: 'command'; readonly words: readonly string[] }
+  /** A number that stands by itself, and the ones that are worth offering. */
+  | { readonly kind: 'number'; readonly label: string; readonly suggestions: readonly string[] };
 
 /** A refusal in the middle of a parse. It is caught where the parse started and becomes the result. */
 export class Stop extends Error {
@@ -466,6 +468,26 @@ export class Cursor {
         names,
       ),
     );
+  }
+
+  /**
+   * A number that stands by itself, for a command that has one thing to say and where `name=value` would only be longer: `speed 2`. It is read as an
+   * option's number is, and the numbers that make sense are what completion offers.
+   */
+  number(
+    label: string,
+    spec: { readonly min: number; readonly max: number; readonly suggestions: readonly string[] },
+  ): number {
+    const word = this.word({ kind: 'number', label, suggestions: spec.suggestions }, label);
+    const number = Number(word.text);
+    if (!NUMBER.test(word.text) || number < spec.min || number > spec.max) {
+      throw new Stop({
+        kind: 'invalid-value',
+        message: `${label} must be ${describeValue({ kind: 'number', min: spec.min, max: spec.max })}, and '${word.text}' is not.`,
+        at: range(word),
+      });
+    }
+    return number + 0;
   }
 
   /** There must be nothing more. */

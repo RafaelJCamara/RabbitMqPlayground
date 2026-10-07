@@ -981,12 +981,13 @@ describe('parseCommand', () => {
       expect(read('redo')).toEqual({ type: 'redo' });
     });
 
-    it('refuse a word after them, as `clear messages`, which is a command of the simulation that comes later', () => {
-      const text = 'clear messages';
+    it('refuse a word after them, as `layout fast` and `clear canvas`, and `clear messages` is a command of the simulation (ADR-0054)', () => {
+      const text = 'clear canvas';
       const issue = refused(text);
 
-      expect(issue.message).toBe("Unexpected 'messages': there is nothing more to say here.");
-      expect(pointedAt(text, issue)).toBe('messages');
+      expect(issue.message).toBe("Unexpected 'canvas': there is nothing more to say here.");
+      expect(pointedAt(text, issue)).toBe('canvas');
+      expect(read('clear messages')).toEqual({ type: 'clear-messages' });
       expect(refused('layout fast').kind).toBe('syntax');
       expect(refused('undo twice').kind).toBe('syntax');
       expect(refused('redo -> x').message).toBe("Unexpected '->': there is nothing more to say here.");

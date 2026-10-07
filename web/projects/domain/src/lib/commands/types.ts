@@ -220,4 +220,55 @@ export interface Help {
 /** A command about the history of the document, or about the commands, and not about the document: the app answers it. */
 export type AppCommand = Undo | Redo | Help;
 
-export type Command = DocumentCommand | AppCommand;
+/**
+ * The commands that run the simulation and not the canvas (ADR-0054). They are not applied to the document, so `applyCommand` is not given one: the app
+ * hands them to the simulation, and tells the learner what they did.
+ */
+
+/** Sends a message now. A producer sends the message that it has, as many times as its burst says. An exchange is sent one message, with no producer. */
+export interface Publish {
+  readonly type: 'publish';
+  readonly from: { readonly kind: 'producer' | 'exchange'; readonly name: string };
+  /** For an exchange: the routing key of the message, which is empty when it is left out. */
+  readonly key?: string;
+  readonly payload?: string;
+  readonly headers?: readonly HeaderEntry<HeaderValue>[];
+}
+
+/** Takes the ready messages out of a queue. The messages that consumers hold stay with them. */
+export interface Purge {
+  readonly type: 'purge';
+  readonly queue: string;
+}
+
+export interface Play {
+  readonly type: 'play';
+}
+
+export interface Pause {
+  readonly type: 'pause';
+}
+
+/** Runs the one event that is next, and moves the clock to it. */
+export interface Step {
+  readonly type: 'step';
+}
+
+/** How fast the virtual clock runs: 1 is a virtual millisecond for each real one. */
+export interface Speed {
+  readonly type: 'speed';
+  readonly factor: number;
+}
+
+/** Takes every message out of the simulation. The canvas is as it was. */
+export interface ClearMessages {
+  readonly type: 'clear-messages';
+}
+
+export interface ResetCounters {
+  readonly type: 'reset-counters';
+}
+
+export type RuntimeCommand = Publish | Purge | Play | Pause | Step | Speed | ClearMessages | ResetCounters;
+
+export type Command = DocumentCommand | RuntimeCommand | AppCommand;

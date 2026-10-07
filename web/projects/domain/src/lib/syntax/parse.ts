@@ -3,7 +3,7 @@ import type { Command, DocumentCommand } from '../commands/types';
 import { fail, ok, type Issue, type Result } from '../document/issue';
 import type { CanvasDocument } from '../document/schema';
 import { Cursor, Stop } from './cursor';
-import { matchSpec, SPECS } from './registry';
+import { matchSpec, specFor, SPECS } from './registry';
 import { scratchIds } from './scratch';
 import { isAtom, tokenize, type Atom, type Token } from './tokenizer';
 import { rangeOf, unknownCommand } from './unknown';
@@ -28,6 +28,34 @@ function bareWords(tokens: readonly Atom[]): string[] {
   }
   return words;
 }
+
+/**
+ * Why a command cannot be one of several, or `undefined` when it can: a batch is one change of the canvas, and these are not (ADR-0025, ADR-0054).
+ * They are about the history, a question, or the simulation.
+ */
+function standsAlone(command: Command): string | undefined {
+  switch (command.type) {
+    case 'undo':
+    case 'redo':
+      return 'is about the history and not the canvas';
+    case 'help':
+      return 'answers a question and does not change the canvas';
+    case 'publish':
+    case 'purge':
+    case 'play':
+    case 'pause':
+    case 'step':
+    case 'speed':
+    case 'clear-messages':
+    case 'reset-counters':
+      return 'runs the simulation and does not change the canvas';
+    default:
+      return undefined;
+  }
+}
+
+/** Whether a command changes the document, which is what a batch holds. */
+const isDocumentCommand = (command: Command): command is DocumentCommand => standsAlone(command) === undefined;
 
 /** Reads one command, with no `;` in it. */
 function parseOne(tokens: readonly Atom[], document: CanvasDocument): Result<Command> {
@@ -102,14 +130,10 @@ export function parseCommand(text: string, document: CanvasDocument): Result<Com
       return fail({ ...parsed.error, batchIndex: index });
     }
     const command = parsed.value;
-    if (command.type === 'undo' || command.type === 'redo' || command.type === 'help') {
-      const why =
-        command.type === 'help'
-          ? 'answers a question and does not change the canvas'
-          : 'is about the history and not the canvas';
+    if (!isDocumentCommand(command)) {
       return fail({
         kind: 'batch',
-        message: `${command.type} ${why}, so it cannot be one of several commands. Type it by itself.`,
+        message: `${specFor(command.type).name} ${standsAlone(command)}, so it cannot be one of several commands. Type it by itself.`,
         at: rangeOf(part),
         batchIndex: index,
       });

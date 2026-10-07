@@ -5,6 +5,7 @@ import { addConsumer, addProducer, declareExchange, declareQueue } from './specs
 import { link, subscribe, unlink, unsubscribe } from './specs/links';
 import { helpSpec } from './specs/help';
 import { clear, deleteElement, layout, move, moveLabel, redo, rename, undo } from './specs/place';
+import { clearMessages, pause, play, publish, purge, resetCounters, speed, step } from './specs/runtime';
 import { set, unset } from './specs/set';
 
 /** `help` answers with the names of every command, which are these. */
@@ -34,6 +35,14 @@ export const SPECS: readonly CommandSpec[] = [
   deleteElement,
   clear,
   layout,
+  publish,
+  purge,
+  play,
+  pause,
+  step,
+  speed,
+  clearMessages,
+  resetCounters,
   undo,
   redo,
   help,

@@ -1,5 +1,18 @@
 export { BATCH_DOC, COMMAND_DOCS, renderCommandReference, type CommandDoc } from './lib/command-docs';
 export { applyCommand } from './lib/commands/apply';
+export { runtimeIssue } from './lib/commands/runtime';
+export type {
+  ClearMessages,
+  Pause,
+  Play,
+  Publish,
+  Purge,
+  ResetCounters,
+  RuntimeCommand,
+  Speed,
+  Step,
+} from './lib/commands/types';
+export { SPEED_RANGE, SPEEDS } from './lib/syntax/specs/runtime';
 export { COLUMN_X, defaultPosition, ROW_HEIGHT, type ApplyContext, type IdKind } from './lib/commands/helpers';
 export type {
   AddConsumer,

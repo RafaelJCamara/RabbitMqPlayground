@@ -46,6 +46,13 @@ describe('completeCommand', () => {
         'delete',
         'clear',
         'layout',
+        'publish',
+        'purge',
+        'play',
+        'pause',
+        'step',
+        'speed',
+        'reset',
         'undo',
         'redo',
         'help',
@@ -396,7 +403,7 @@ describe('completeCommand', () => {
     });
 
     it('is nothing for a command that has nothing more to say', () => {
-      expect(inserts(at('clear '))).toEqual([]);
+      expect(inserts(at('layout '))).toEqual([]);
       expect(inserts(at('add producer p '))).toEqual([]);
       expect(inserts(at('undo '))).toEqual([]);
     });

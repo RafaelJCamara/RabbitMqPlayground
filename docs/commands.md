@@ -82,6 +82,18 @@ Takes everything off the canvas. Its vhost and its settings stay, and undo bring
 clear
 ```
 
+## `clear messages`
+
+Takes every message out of the simulation: the ones on their way, in the queues and in the consumers. The canvas, the producers that repeat and the counters are as they were.
+
+**Syntax:** `clear messages`
+
+**Examples:**
+
+```
+clear messages
+```
+
 ## `declare exchange`
 
 Puts an exchange on the canvas. A name may not be empty or start with `amq.`. If an exchange of that name is there, a declaration that says the same changes nothing, as on a broker, and one that says another type or flag is refused, because a broker does not change an exchange that it has: use `set` for that.
@@ -181,6 +193,55 @@ Puts the label of an edge somewhere along it: 0 is at its start, where the messa
 move label orders -> billing at=0.25
 ```
 
+## `pause`
+
+Stops the virtual clock: nothing moves until it is played or stepped, and what is in flight stays where it is.
+
+**Syntax:** `pause`
+
+**Examples:**
+
+```
+pause
+```
+
+## `play`
+
+Lets the virtual clock run, so that messages move. It runs at the speed that was set, and starts running when the page opens.
+
+**Syntax:** `play`
+
+**Examples:**
+
+```
+play
+```
+
+## `publish`
+
+Sends a message now. A producer sends the message that it has, as many times as its burst says, so it is told nothing more: change what it sends with `set`. An exchange is sent one message, with the key, the payload and the headers that are given, from no producer, which is a way to try a route. Nothing is sent when a producer has nowhere to send to, and an internal exchange is refused.
+
+**Syntax:** `publish <producer|exchange> [key=<text>] [payload=<text>] [header:<name>=<value>...]`
+
+**Examples:**
+
+```
+publish sender
+publish orders key=order.created payload=hello header:format=pdf
+```
+
+## `purge`
+
+Takes the ready messages out of a queue, as a broker does. The messages that consumers hold and have not acknowledged stay with them, and the canvas is as it was.
+
+**Syntax:** `purge <queue>`
+
+**Examples:**
+
+```
+purge billing
+```
+
 ## `redo`
 
 Does again the change that the last undo took back.
@@ -205,6 +266,18 @@ Gives an element another name. Every binding, link and subscription keeps pointi
 rename billing invoices
 ```
 
+## `reset counters`
+
+Sets the counters on the nodes to zero: what was sent, routed, found unroutable, given and finished with. The messages are as they were.
+
+**Syntax:** `reset counters`
+
+**Examples:**
+
+```
+reset counters
+```
+
 ## `set`
 
 Sets attributes of an element, or of the canvas. A queue that is not durable is refused, as it is when it is declared. An exchange cannot become internal while a producer publishes to it, and cannot become a topic exchange while a binding of it has a key that a topic exchange refuses. A producer's message headers are set one at a time, as `header:name=value`, with the value typed as in `bind`.
@@ -219,6 +292,31 @@ set billing durable=true
 set sender payload="Hello, world" key=order.created burst=3 every=500 repeat=true header:format=pdf
 set worker ack=manual prefetch=5 processing=250
 set canvas default-exchange=true
+```
+
+## `speed`
+
+How fast the virtual clock runs, from a quarter to four times. At 1 a virtual millisecond passes for each real one, so the legs that a message takes (500 ms from a producer, 300 ms in the broker, 500 ms to a consumer, by default) take that long.
+
+**Syntax:** `speed <0.25 to 4>`
+
+**Examples:**
+
+```
+speed 2
+speed 0.25
+```
+
+## `step`
+
+Runs the one event that is next, and moves the clock to it. A step is a whole event, such as the arrival of a message at an exchange, and not a hop: routing is decided at once.
+
+**Syntax:** `step`
+
+**Examples:**
+
+```
+step
 ```
 
 ## `subscribe`

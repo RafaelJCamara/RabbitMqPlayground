@@ -31,6 +31,14 @@ const TYPES: readonly Exclude<Command['type'], 'batch'>[] = [
   'delete',
   'clear',
   'layout',
+  'publish',
+  'purge',
+  'play',
+  'pause',
+  'step',
+  'speed',
+  'clear-messages',
+  'reset-counters',
   'undo',
   'redo',
   'help',
@@ -43,14 +51,14 @@ describe('the command registry (ADR-0011)', () => {
     expect(SPECS.map(({ type }) => type).sort()).toEqual([...TYPES].sort());
   });
 
-  it('names a command with one word or two, in lower case, and a name is not the first words of another unless that is `move`', () => {
+  it('names a command with one word or two, in lower case, and a name is not the first words of another unless that is `move` or `clear`', () => {
     for (const spec of SPECS) {
       expect(spec.name, spec.name).toMatch(/^[a-z]+( [a-z]+)?$/);
     }
     const oneWord = new Set(SPECS.filter((spec) => !spec.name.includes(' ')).map(({ name }) => name));
     const prefixes = SPECS.filter((spec) => spec.name.includes(' ')).map((spec) => nameWords(spec)[0] as string);
 
-    expect(prefixes.filter((prefix) => oneWord.has(prefix))).toEqual(['move']);
+    expect(prefixes.filter((prefix) => oneWord.has(prefix))).toEqual(['move', 'clear']);
   });
 
   it('says what each command is: its syntax begins with its name, it has a summary of whole sentences, and an example', () => {
@@ -64,9 +72,19 @@ describe('the command registry (ADR-0011)', () => {
     }
   });
 
-  it('puts undo, redo and help in the scope of the app and every other command in that of the document', () => {
+  it('puts undo, redo and help in the scope of the app, the commands that run the simulation in that of the runtime, and every other in that of the document', () => {
     expect(SPECS.filter(({ scope }) => scope === 'app').map(({ name }) => name)).toEqual(['undo', 'redo', 'help']);
-    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 3);
+    expect(SPECS.filter(({ scope }) => scope === 'runtime').map(({ name }) => name)).toEqual([
+      'publish',
+      'purge',
+      'play',
+      'pause',
+      'step',
+      'speed',
+      'clear messages',
+      'reset counters',
+    ]);
+    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 3 - 8);
   });
 
   describe('its examples, which are the examples of docs/commands.md', () => {
