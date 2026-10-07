@@ -1,5 +1,14 @@
 export { arbSeed } from './lib/arbitraries';
-export { idSequence, manualClock, manualTimer, type ManualClock, type ManualTimer } from './lib/doubles';
+export {
+  idSequence,
+  manualClock,
+  manualFrames,
+  manualTimer,
+  type ManualClock,
+  type ManualFrames,
+  type ManualFramesSource,
+  type ManualTimer,
+} from './lib/doubles';
 export { applyAll, exchangeEnd, prefixedIds, queueEnd, sequentialIds, undoRedoProblems } from './lib/commands';
 export {
   arbDocument,

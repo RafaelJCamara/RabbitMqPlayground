@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { idSequence, manualClock, manualTimer } from './doubles';
+import { idSequence, manualClock, manualFrames, manualTimer } from './doubles';
 
 describe('manualClock', () => {
   it('stands where it was put, and moves only when it is told to', () => {
@@ -126,5 +126,69 @@ describe('manualTimer', () => {
     expect(ran).toBe(false);
     timer.advance(0);
     expect(ran).toBe(true);
+  });
+});
+
+describe('manualFrames', () => {
+  it('runs the frame that was asked for when a spec says, with the time that it says, and only once', () => {
+    const frames = manualFrames();
+    const times: number[] = [];
+    frames.request((time) => times.push(time));
+
+    expect(frames.pending).toBe(1);
+    expect(frames.frame(16)).toBe(1);
+    expect(frames.frame(32)).toBe(0);
+    expect(times).toEqual([16]);
+    expect(frames.pending).toBe(0);
+  });
+
+  it('runs a frame that was asked for during a frame in the next one, as a page does', () => {
+    const frames = manualFrames();
+    const ran: string[] = [];
+    frames.request(() => {
+      ran.push('first');
+      frames.request(() => ran.push('second'));
+    });
+
+    frames.frame(1);
+    expect(ran).toEqual(['first']);
+    expect(frames.pending).toBe(1);
+    frames.frame(2);
+    expect(ran).toEqual(['first', 'second']);
+  });
+
+  it('runs every frame that was asked for, in the order that they were asked for', () => {
+    const frames = manualFrames();
+    const ran: number[] = [];
+    frames.request(() => ran.push(1));
+    frames.request(() => ran.push(2));
+
+    expect(frames.frame(1)).toBe(2);
+    expect(ran).toEqual([1, 2]);
+  });
+
+  it('does not run a frame that was taken back, and ignores a handle that it does not have', () => {
+    const frames = manualFrames();
+    let ran = false;
+    const handle = frames.request(() => (ran = true));
+    expect(frames.requested).toBe(1);
+
+    frames.cancel(handle);
+    frames.cancel(handle);
+    frames.cancel(99);
+
+    expect(frames.requested).toBe(0);
+    expect(frames.pending).toBe(0);
+    expect(frames.frame(1)).toBe(0);
+    expect(ran).toBe(false);
+  });
+
+  it('counts the frames that it was asked for, so that a spec can say that a loop did not ask for more than it needed', () => {
+    const frames = manualFrames();
+    frames.request(() => undefined);
+    frames.frame(1);
+    frames.request(() => undefined);
+
+    expect(frames.requested).toBe(2);
   });
 });
