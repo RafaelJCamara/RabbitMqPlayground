@@ -189,6 +189,96 @@ export class LiveTable {
 }
 
 /**
+ * "Bind from this message…" (ADR-0070), a section of the message inspector: the headers of the message with a tick for each, the exchange to bind from and what to bind to, the mode, what the binding asks
+ * in a sentence, the table of recent messages and the line that "Create binding" makes.
+ */
+export class BindPanel {
+  constructor(readonly scope: Locator) {}
+
+  get toggle(): Locator {
+    return this.scope.getByTestId('bind-toggle');
+  }
+
+  get body(): Locator {
+    return this.scope.getByTestId('bind-body');
+  }
+
+  /** The tick of a header of the message, by the name of the header. */
+  tick(name: string): Locator {
+    return this.scope.getByRole('checkbox', { name: `Use the header ${name} as a condition` });
+  }
+
+  get ticks(): Locator {
+    return this.scope.getByTestId('bind-tick');
+  }
+
+  get from(): Locator {
+    return this.scope.getByTestId('bind-from');
+  }
+
+  get to(): Locator {
+    return this.scope.getByTestId('bind-to');
+  }
+
+  /** The mode, which is the same control as the editor of a binding has. */
+  get mode(): Conditions {
+    return new Conditions(this.scope);
+  }
+
+  get sentence(): Locator {
+    return this.scope.getByTestId('bind-sentence');
+  }
+
+  get line(): Locator {
+    return this.scope.getByTestId('bind-line');
+  }
+
+  get lint(): Locator {
+    return this.scope.getByTestId('bind-lint');
+  }
+
+  get notes(): Locator {
+    return this.scope.getByTestId('bind-notes');
+  }
+
+  get reserved(): Locator {
+    return this.scope.getByTestId('bind-reserved');
+  }
+
+  get noHeaders(): Locator {
+    return this.scope.getByTestId('bind-no-headers');
+  }
+
+  get noExchange(): Locator {
+    return this.scope.getByTestId('bind-no-exchange');
+  }
+
+  get elsewhere(): Locator {
+    return this.scope.getByTestId('bind-elsewhere');
+  }
+
+  get refusal(): Locator {
+    return this.scope.getByTestId('bind-refusal');
+  }
+
+  get create(): Locator {
+    return this.scope.getByTestId('bind-create');
+  }
+
+  get live(): LiveTable {
+    return new LiveTable(this.scope.getByTestId('headers-live'));
+  }
+
+  /** Opens the panel with its button, if it is shut, and waits for what is in it. */
+  async show(): Promise<void> {
+    if ((await this.toggle.getAttribute('aria-expanded')) !== 'true') {
+      await this.toggle.click();
+    }
+    await expect(this.body).toBeVisible();
+  }
+}
+
+/**
  * The conditions of a headers binding in a real browser (S8, ADR-0066 to ADR-0070). It opens the editor with the flags that a test asks for, and has the places where the conditions are drawn: the popover that
  * asks for them, the editor in the inspector, the chips on the label of an edge and the card behind them, the table of a producer's headers, and, with the explanation, the table of recent messages and the
  * panel that makes a binding from a message. It is an explanation page, so that what is lit and what the log says are read in the same way.
@@ -241,9 +331,9 @@ export class HeadersPage extends ExplainPage {
     return new Conditions(this.editor.inspector.getByTestId('binding-conditions').nth(binding - 1));
   }
 
-  /** The chips on the label of an edge, as they are drawn. */
+  /** The chips of the bindings on the label of an edge, as they are drawn: not the reason that a lit canvas gives for a binding that missed, which is a chip of its own. */
   chips(edge: string): Locator {
-    return this.page.locator(`[data-label="${edge}"] .rmq-chip`);
+    return this.page.locator(`[data-label="${edge}"] .rmq-chip:not(.rmq-reason)`);
   }
 
   /** The label of an edge, which is a part of the edge and moves with it. */
@@ -254,6 +344,20 @@ export class HeadersPage extends ExplainPage {
   /** The card that lists everything that a label says, while a pointer is over the label. */
   get labelCard(): Locator {
     return this.page.getByTestId('label-card');
+  }
+
+  /** The panel of the message inspector that makes a binding from the message that is open. */
+  get bind(): BindPanel {
+    return new BindPanel(this.message.getByTestId('bind-from-message'));
+  }
+
+  /** Publishes from the producer and runs everything that happens to the message, and opens it from the row of the log that says what became of it. */
+  async openLastMessage(kind: string, producer = 'Producer sender'): Promise<void> {
+    await this.publish(producer);
+    await this.simulation.stepThrough();
+    await this.openByKey();
+    await this.rowsOfKind(kind).last().click();
+    await expect(this.message).toBeVisible();
   }
 
   /** The composer of the selected producer, with the table of its headers. */
@@ -309,6 +413,11 @@ export class HeadersPage extends ExplainPage {
       const found = Object.values(document?.producers ?? {}).find(({ name: candidate }) => candidate === producer);
       return found?.message.headers ?? [];
     }, name);
+  }
+
+  /** The lines of the log of equivalent commands that the test made happen, oldest first: the one that stopped the clock, when the page was opened, is not one of them. */
+  async commands(): Promise<string[]> {
+    return (await this.editor.log()).filter((line) => line !== 'pause');
   }
 
   /** The words that the screen reader is told, politely, last. */

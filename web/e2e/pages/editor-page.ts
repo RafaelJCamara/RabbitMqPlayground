@@ -272,7 +272,7 @@ export class EditorPage {
       return;
     }
     const name = await node.locator('.rmq-node-name').textContent();
-    await expect(this.page.getByRole('textbox', { name: 'Name' })).toHaveValue(name ?? '');
+    await expect(this.page.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(name ?? '');
   }
 
   /** Renames the node that is selected, with F2: waits for the field to have the focus before it types, as a person does. */

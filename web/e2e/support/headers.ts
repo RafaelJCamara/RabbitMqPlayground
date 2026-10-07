@@ -1,4 +1,5 @@
 import type { DocumentCommand } from '@rmq/domain';
+import { ORDERS_COMMANDS } from './orders';
 import { buildDocument } from './seed';
 
 /**
@@ -164,4 +165,38 @@ export const FILES_UNBOUND = buildDocument([
     name: 'sender',
     changes: { payload: 'q3.pdf', headers: [text('format', 'pdf'), text('type', 'report')] },
   },
+]);
+
+/**
+ * `FILES_UNBOUND`, with a message that also has `x-region` and `x-match`: the first starts with `x-` and is not counted by every mode, and the second is the mode of a binding and cannot be a condition.
+ */
+export const FILES_WITH_X = buildDocument([
+  { type: 'add-producer', name: 'sender' },
+  headersExchange('files'),
+  { type: 'declare-queue', name: 'pdfs', durable: true },
+  { type: 'declare-queue', name: 'reports', durable: true },
+  { type: 'link', producer: 'sender', target: { kind: 'exchange', name: 'files' } },
+  {
+    type: 'set',
+    kind: 'producer',
+    name: 'sender',
+    changes: { payload: 'q3.pdf', headers: [text('format', 'pdf'), text('x-region', 'eu'), text('x-match', 'any')] },
+  },
+]);
+
+/**
+ * The canvas of `orders.ts` that has a direct exchange, with the headers `format=pdf` in the message that `sender` sends to it, which the exchange does not read, and no headers exchange to make a binding
+ * on. The ids are `p1`, `x1` (`orders`), `q1` (`billing`) and `c1`.
+ */
+export const DIRECT_WITH_HEADERS = buildDocument([
+  ...ORDERS_COMMANDS,
+  { type: 'set', kind: 'producer', name: 'sender', changes: { headers: [text('format', 'pdf')] } },
+]);
+
+/** `DIRECT_WITH_HEADERS`, and a headers exchange `files` with a queue `pdfs`, which the message did not go to, for a binding made from it. The ids are `x2` and `q2`. */
+export const DIRECT_AND_HEADERS = buildDocument([
+  ...ORDERS_COMMANDS,
+  { type: 'set', kind: 'producer', name: 'sender', changes: { headers: [text('format', 'pdf')] } },
+  headersExchange('files'),
+  { type: 'declare-queue', name: 'pdfs', durable: true },
 ]);

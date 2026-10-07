@@ -25,6 +25,9 @@ const orders: DocumentCommand[] = [
   { type: 'set', kind: 'consumer', name: 'worker', changes: { ack: 'manual', prefetch: 1, processingMs: 1_000 } },
 ];
 
+/** The commands that make `ORDERS`, for a canvas that goes on from it: ids are given in the order that the commands are applied, so a canvas that adds to it has to be made with all of them. */
+export const ORDERS_COMMANDS: readonly DocumentCommand[] = orders;
+
 /**
  * `sender` sends `order.new` to the direct exchange `orders`, which sends it to the queue `billing`, which `worker` takes from, one at a time, a second for each. A message takes
  * 500 ms to get to the broker, 300 ms in it, and 500 ms to get from the queue to the consumer. The ids are `p1`, `x1`, `q1`, `c1` and `b1`, and the edges `p1>x1`, `x1>q1`
