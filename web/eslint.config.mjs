@@ -50,9 +50,9 @@ const noFoblex = {
 };
 
 /**
- * Which way the folders of the app look (ADR-0030, ADR-0045, ADR-0057): `core`, then `canvas/model`, then `canvas/overlay`, then `canvas/flow`, then
- * `command-bar`, then `simulation`, then `editor`. A folder may import what is before it and nothing after. The command bar and the simulation do not look
- * at each other, and the editor hosts both.
+ * Which way the folders of the app look (ADR-0030, ADR-0045, ADR-0057, ADR-0061): `core`, then `canvas/model`, then `canvas/overlay`, then `canvas/flow`, then
+ * `command-bar`, then `simulation`, then `explain`, then `editor`. A folder may import what is before it and nothing after. The command bar and the simulation
+ * do not look at each other, and the editor hosts both and the explanation.
  */
 const coreStaysBelow = {
   regex: '^(\\.\\./)+(editor|canvas)(/|$)',
@@ -89,6 +89,29 @@ const simulationStaysBelowEditor = {
   regex: '^(\\.\\./)+(editor|canvas/flow|command-bar)(/|$)',
   message:
     '`simulation/` may not import from `editor/`, `canvas/flow/` or `command-bar/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, editor (ADR-0057).',
+};
+const belowExplain = {
+  regex: '^(\\.\\./)+explain(/|$)',
+  message:
+    '`canvas/`, `command-bar/` and `simulation/` may not import from `explain/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, editor (ADR-0061).',
+};
+/**
+ * `core/explain/` is core's, and `explain/` is the folder of components that is above `simulation/`. From a file two folders down in `core/` the first is `../explain/` and the second `../../explain/`, so only the
+ * second is forbidden there, and from a file directly in `core/` the second is `../explain/`.
+ */
+const coreStaysBelowExplain = {
+  regex: '^(\\.\\./){2,}explain(/|$)',
+  message:
+    '`core/` may not import from `explain/`, which is above it: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, editor (ADR-0061).',
+};
+const coreFilesStayBelowExplain = {
+  regex: '^\\.\\./explain(/|$)',
+  message: coreStaysBelowExplain.message,
+};
+const explainStaysBelowEditor = {
+  regex: '^(\\.\\./)+(editor|canvas/flow|command-bar)(/|$)',
+  message:
+    '`explain/` may not import from `editor/`, `canvas/flow/` or `command-bar/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, editor (ADR-0061).',
 };
 const overlayStaysBelowFlow = {
   regex: '^(\\.\\./)+(canvas/)?flow(/|$)',
@@ -210,6 +233,8 @@ const CANVAS_MODEL = 'projects/app/src/app/canvas/model/**/*.ts';
 const CANVAS_OVERLAY = 'projects/app/src/app/canvas/overlay/**/*.ts';
 const SIMULATION_UI = 'projects/app/src/app/simulation/**/*.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/**/*.ts';
+const EXPLAIN_UI = 'projects/app/src/app/explain/**/*.ts';
+const CORE_ROOT = 'projects/app/src/app/core/*.ts';
 
 export default defineConfig([
   globalIgnores([
@@ -341,6 +366,25 @@ export default defineConfig([
         coreStaysBelow,
         belowCommandBar,
         belowSimulation,
+        coreStaysBelowExplain,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // The few files that are directly in `core/` are one folder closer to `explain/`.
+    files: [CORE_ROOT],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        coreStaysBelow,
+        belowCommandBar,
+        belowSimulation,
+        coreFilesStayBelowExplain,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -359,6 +403,7 @@ export default defineConfig([
         belowSimulation,
         modelStaysBelowFlow,
         modelStaysBelowOverlay,
+        belowExplain,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -377,6 +422,7 @@ export default defineConfig([
         belowCommandBar,
         belowSimulation,
         overlayStaysBelowFlow,
+        belowExplain,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -392,6 +438,22 @@ export default defineConfig([
         reachesIntoAnotherProject('app'),
         noFoblex,
         simulationStaysBelowEditor,
+        belowExplain,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // The parts of the explanation that are drawn read core, the canvas model and the simulation, and the editor hosts them (ADR-0061).
+    files: [EXPLAIN_UI],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        explainStaysBelowEditor,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -408,6 +470,7 @@ export default defineConfig([
         noFoblex,
         commandBarStaysBelowEditor,
         belowSimulation,
+        belowExplain,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -424,6 +487,7 @@ export default defineConfig([
         canvasStaysBelowEditor,
         belowCommandBar,
         belowSimulation,
+        belowExplain,
       ),
       ...noOptingOutOfOnPush,
     },

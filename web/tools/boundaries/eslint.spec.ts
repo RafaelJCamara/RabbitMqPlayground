@@ -45,6 +45,9 @@ const MODEL = 'projects/app/src/app/canvas/model/example.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/example.ts';
 const OVERLAY = 'projects/app/src/app/canvas/overlay/example.ts';
 const SIMULATION = 'projects/app/src/app/simulation/example.ts';
+const EXPLAIN = 'projects/app/src/app/explain/example.ts';
+const CORE_ROOT = 'projects/app/src/app/core/example.ts';
+const CORE_EXPLAIN = 'projects/app/src/app/core/explain/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -218,6 +221,85 @@ describe('imports', () => {
       '../../command-bar/command-bar',
       /may not import from `command-bar\/`/,
     ],
+    // What the explanation draws has a place of its own between the simulation and the editor (ADR-0061). Its state is `core/explain/`, which is core's.
+    [
+      'core importing the components of the explanation',
+      CORE,
+      '../../explain/event-log-panel',
+      /`core\/` may not import from `explain\/`/,
+    ],
+    [
+      'a file directly in core importing the components of the explanation',
+      CORE_ROOT,
+      '../explain/event-log-panel',
+      /`core\/` may not import from `explain\/`/,
+    ],
+    [
+      'the state of the explanation importing the components of the explanation',
+      CORE_EXPLAIN,
+      '../../explain/event-log-panel',
+      /`core\/` may not import from `explain\/`/,
+    ],
+    [
+      'the canvas model importing the components of the explanation',
+      MODEL,
+      '../../explain/event-log-panel',
+      /may not import from `explain\/`/,
+    ],
+    [
+      'the canvas overlay importing the components of the explanation',
+      OVERLAY,
+      '../../explain/event-log-panel',
+      /may not import from `explain\/`/,
+    ],
+    [
+      'the Foblex adapter importing the components of the explanation',
+      FLOW,
+      '../../explain/event-log-panel',
+      /may not import from `explain\/`/,
+    ],
+    [
+      'the command bar importing the components of the explanation',
+      COMMAND_BAR,
+      '../explain/event-log-panel',
+      /may not import from `explain\/`/,
+    ],
+    [
+      'the controls of the simulation importing the components of the explanation',
+      SIMULATION,
+      '../explain/event-log-panel',
+      /may not import from `explain\/`/,
+    ],
+    [
+      'the components of the explanation importing the editor',
+      EXPLAIN,
+      '../editor/editor',
+      /`explain\/` may not import from `editor\/`, `canvas\/flow\/` or `command-bar\/`/,
+    ],
+    [
+      'the components of the explanation importing the Foblex adapter',
+      EXPLAIN,
+      '../canvas/flow/flow-canvas',
+      /`explain\/` may not import from/,
+    ],
+    [
+      'the components of the explanation importing the command bar',
+      EXPLAIN,
+      '../command-bar/command-bar',
+      /`explain\/` may not import from/,
+    ],
+    [
+      'the components of the explanation importing Foblex Flow',
+      EXPLAIN,
+      '@foblex/flow',
+      /only be imported inside `canvas\/flow/,
+    ],
+    [
+      'the components of the explanation importing the testing library',
+      EXPLAIN,
+      '@rmq/testing',
+      /only be imported from specs/,
+    ],
   ] as const)('%s', (_description, file, source, message) => {
     it('is refused', async () => {
       const found = await violations(file, importing(source));
@@ -269,6 +351,25 @@ describe('imports', () => {
     ['the editor importing the command bar', APP, '../command-bar/command-bar'],
     ['the editor importing the adapter', APP, '../canvas/flow/flow-canvas'],
     ['the editor importing the canvas model and core', APP, '../canvas/model/canvas-vm'],
+    ['core importing the state of the explanation, which is core', CORE, '../explain/event-log'],
+    ['the state of the explanation importing core', CORE_EXPLAIN, '../state/document-store'],
+    ['the state of the explanation importing its own folder', CORE_EXPLAIN, './emphasis'],
+    ['the Foblex adapter importing the state of the explanation', FLOW, '../../core/explain/emphasis'],
+    [
+      'the controls of the simulation importing the state of the explanation',
+      SIMULATION,
+      '../core/explain/explain-state',
+    ],
+    ['the components of the explanation importing core and its state', EXPLAIN, '../core/explain/explain-state'],
+    ['the components of the explanation importing the canvas model', EXPLAIN, '../canvas/model/flow-viewport'],
+    ['the components of the explanation importing the canvas overlay', EXPLAIN, '../canvas/overlay/overlay'],
+    [
+      'the components of the explanation importing the controls of the simulation',
+      EXPLAIN,
+      '../simulation/queue-messages',
+    ],
+    ['the components of the explanation importing their own folder', EXPLAIN, './event-log-panel'],
+    ['the editor importing the components of the explanation', APP, '../explain/event-log-panel'],
     ['the Foblex adapter importing Foblex Flow', FLOW, '@foblex/flow'],
     ['the Foblex adapter importing a Foblex helper', 'projects/app/src/app/canvas/flow/deep/more.ts', '@foblex/utils'],
   ] as const)('%s', (_description, file, source) => {
