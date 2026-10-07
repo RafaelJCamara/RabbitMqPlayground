@@ -240,16 +240,10 @@ export class MessageInspector {
         return [queue, this.simulation.messages(queue, (counts?.ready ?? 0) + (counts?.unacked ?? 0))];
       }),
     );
-    const flights = this.simulation.flights();
-    const places = placesOf(opened.number, opened.queues, flights, (queue) => lists.get(queue) ?? []);
+    const places = placesOf(opened.number, opened.queues, this.simulation.flights(), (queue) => lists.get(queue) ?? []);
+    // A copy that is on its way to a consumer is still in the list of its queue, as one that is not acknowledged, so the lists say whether it was redelivered.
     const copies = [...lists.values()].flatMap((list) => list.filter(({ id }) => id === opened.number));
-    const carried = flights.filter(
-      (flight) => flight.leg === 'deliver' && flight.message === opened.number,
-    ) as readonly { readonly redelivered: boolean }[];
-    const redelivered =
-      copies.length === 0 && carried.length === 0
-        ? null
-        : copies.some((copy) => copy.redelivered) || carried.some((flight) => flight.redelivered);
+    const redelivered = copies.length === 0 ? null : copies.some((copy) => copy.redelivered);
     return { places, redelivered };
   });
   protected readonly places = computed(() => this.facts().places);
