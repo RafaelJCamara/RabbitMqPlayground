@@ -29,7 +29,7 @@ function ordinal(index: number, count: number): string {
 }
 
 /** What the wildcards of a pattern took, which is all that a match has to say beyond that it matched. */
-function took(alignment: TopicAlignment): string[] {
+export function wildcardWords(alignment: TopicAlignment): string[] {
   return alignment.segments.flatMap((segment) => {
     if (segment.pattern === '#') {
       return [segment.words.length === 0 ? '# took no words' : `# took ${quoted(segment.words.join('.'))}`];
@@ -93,7 +93,7 @@ export function topicWords(
   alignment: TopicAlignment,
 ): TopicWords {
   if (alignment.matched) {
-    const wildcards = took(alignment);
+    const wildcards = wildcardWords(alignment);
     return {
       text:
         wildcards.length === 0

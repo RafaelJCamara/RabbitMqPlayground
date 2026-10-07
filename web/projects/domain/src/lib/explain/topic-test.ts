@@ -1,6 +1,6 @@
 import { alignTopic, routingKeyIssue, splitTopic, topicSamples } from '@rmq/engine';
 import { topicKeyIssue } from '../document/rules';
-import { topicWords } from './topic-words';
+import { topicWords, wildcardWords } from './topic-words';
 
 /**
  * What a topic binding key matches, tried on sample keys (ADR-0059, ADR-0064): the keys that it matches, each with how, and the keys that it does not, each with the first thing that is wrong, in the words that the explanation of a
@@ -12,6 +12,8 @@ export interface TopicSample {
   readonly key: string;
   /** How it matched, or why it did not: the sentence of the explanation. */
   readonly text: string;
+  /** The same in few words: what the wildcards took, or "word for word", for a key that matches, and the short reason for one that does not. */
+  readonly short: string;
   /** A note on what may surprise, for a key that matches: a star that took an empty word. */
   readonly note?: string;
 }
@@ -25,11 +27,13 @@ const EMPTY_WORD_NOTE =
 
 function sampleOf(pattern: string, key: string): TopicSample {
   const alignment = alignTopic(pattern, key);
-  const { text } = topicWords(pattern, key, splitTopic(pattern), splitTopic(key), alignment);
+  const { text, short: reason } = topicWords(pattern, key, splitTopic(pattern), splitTopic(key), alignment);
+  const wildcards = wildcardWords(alignment);
+  const short = alignment.matched ? (wildcards.length === 0 ? 'word for word' : wildcards.join('; ')) : reason;
   const emptyStar = alignment.segments.some(
     (segment) => segment.pattern === '*' && segment.outcome === 'matched' && segment.words[0] === '',
   );
-  return emptyStar ? { key, text, note: EMPTY_WORD_NOTE } : { key, text };
+  return emptyStar ? { key, text, short, note: EMPTY_WORD_NOTE } : { key, text, short };
 }
 
 /** Tries a binding key on the keys that show what it matches and what it does not. */

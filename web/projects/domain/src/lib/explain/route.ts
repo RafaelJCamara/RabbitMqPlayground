@@ -26,6 +26,17 @@ export const isRouted = (explanation: RouteExplanation): explanation is RoutedEx
 export const summaryOf = (explanation: RouteExplanation): string =>
   isRouted(explanation) ? explanation.summary : explanation.text;
 
+/**
+ * What would become of the message if it were published now, in a sentence that says the answer first (the what-if tester, ADR-0064): the queues that it would reach, that none would, or, for a message that cannot be
+ * sent or that the broker refuses, the cause.
+ */
+export const outlookOf = (explanation: RouteExplanation): string => {
+  if (!isRouted(explanation)) {
+    return explanation.text;
+  }
+  return explanation.queues.length === 0 ? 'No queue would get it.' : `Would reach ${listOf(explanation.queues)}.`;
+};
+
 /** Why a message cannot be sent at all, or `null` when it can: the checks that `route` throws for, in the same words. */
 export function messageIssue(message: Message): string | null {
   const key = routingKeyIssue(message.key);

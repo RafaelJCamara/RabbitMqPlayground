@@ -108,7 +108,7 @@ export {
 export { bindingIds, edgeKey, edgeKeys, toTopology } from './lib/document/topology';
 export type { ConditionLine } from './lib/explain/headers-words';
 export { explainQueue } from './lib/explain/queue';
-export { explainRoute, isRouted, messageIssue, refusalText, summaryOf } from './lib/explain/route';
+export { explainRoute, isRouted, messageIssue, outlookOf, refusalText, summaryOf } from './lib/explain/route';
 export { alignmentLines, explanationHeader, explanationText } from './lib/explain/text';
 export { topicWords, type TopicWords } from './lib/explain/topic-words';
 export { testTopicKey, type TopicSample, type TopicTest } from './lib/explain/topic-test';

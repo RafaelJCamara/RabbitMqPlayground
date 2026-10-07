@@ -12,7 +12,7 @@ import {
   topology,
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { explainRoute, isRouted, messageIssue, refusalText, summaryOf } from './route';
+import { explainRoute, isRouted, messageIssue, outlookOf, refusalText, summaryOf } from './route';
 import type { BindingNode, ExchangeNode, RoutedExplanation } from './types';
 
 const routed = (explanation: ReturnType<typeof explainRoute>): RoutedExplanation => {
@@ -77,6 +77,38 @@ describe('isRouted and summaryOf', () => {
       'A routing key is at most 255 bytes of UTF-8, and this one is 300.',
       'No queue got it: it reached e, which has no bindings.',
     ]);
+  });
+});
+
+describe('outlookOf (ADR-0064)', () => {
+  const t = topology({
+    exchanges: [exchange('hidden', 'fanout', true), exchange('e', 'fanout')],
+    queues: ['q', 'r', 's'],
+    bindings: [toQueue('e', 'q'), toQueue('e', 'r'), toQueue('e', 's')],
+  });
+
+  it('says the answer first, in the conditional: the queues that would get the message, one, two or more', () => {
+    const one = topology({ exchanges: [exchange('e', 'fanout')], queues: ['q'], bindings: [toQueue('e', 'q')] });
+    const two = topology({
+      exchanges: [exchange('e', 'fanout')],
+      queues: ['q', 'r'],
+      bindings: [toQueue('e', 'q'), toQueue('e', 'r')],
+    });
+
+    expect(outlookOf(explainRoute(one, message('e')))).toBe('Would reach q.');
+    expect(outlookOf(explainRoute(two, message('e')))).toBe('Would reach q and r.');
+    expect(outlookOf(explainRoute(t, message('e')))).toBe('Would reach q, r and s.');
+  });
+
+  it('says that no queue would get it when none would, and the cause when the message cannot be sent or the broker refuses it', () => {
+    expect(outlookOf(explainRoute(topology({ exchanges: [exchange('e', 'fanout')] }), message('e')))).toBe(
+      'No queue would get it.',
+    );
+    expect(outlookOf(explainRoute(t, message('nope')))).toContain('There is no exchange called "nope"');
+    expect(outlookOf(explainRoute(t, message('hidden')))).toContain('internal exchange');
+    expect(outlookOf(explainRoute(t, message('e', 'x'.repeat(300))))).toBe(
+      'A routing key is at most 255 bytes of UTF-8, and this one is 300.',
+    );
   });
 });
 

@@ -16,10 +16,11 @@ describe('testTopicKey (ADR-0059, ADR-0064)', () => {
     const { matching, nonMatching } = tested('*.error');
 
     expect(matching).toEqual([
-      { key: 'x.error', text: 'The pattern "*.error" matches the key "x.error": * took "x".' },
+      { key: 'x.error', text: 'The pattern "*.error" matches the key "x.error": * took "x".', short: '* took "x"' },
       {
         key: '.error',
         text: 'The pattern "*.error" matches the key ".error": * took an empty word.',
+        short: '* took an empty word',
         note: expect.any(String),
       },
     ]);
@@ -28,6 +29,7 @@ describe('testTopicKey (ADR-0059, ADR-0064)', () => {
     expect(nonMatching[3]?.text).toBe(
       'The pattern "*.error" does not match the key "x.errorx": the last word of the key is "errorx", and the pattern asks for "error".',
     );
+    expect(nonMatching[3]?.short).toBe('last word is "errorx", not "error"');
   });
 
   it('says that a star that took an empty word did, which is the sample that surprises, and only for that sample', () => {
@@ -35,6 +37,16 @@ describe('testTopicKey (ADR-0059, ADR-0064)', () => {
 
     expect(matching.find(({ key }) => key === '.b')?.note).toMatch(/^The \* took an empty word/);
     expect(matching.find(({ key }) => key === 'x.b')?.note).toBeUndefined();
+  });
+
+  it('says what the wildcards took in few words, and that a key with none matched word for word', () => {
+    expect(tested('a.*.#').matching.map(({ short }) => short)).toEqual([
+      '* took "x"; # took no words',
+      '* took "x"; # took "y"',
+      '* took "x"; # took "y.z"',
+      '* took an empty word; # took no words',
+    ]);
+    expect(tested('a.b').matching.map(({ short }) => short)).toEqual(['word for word']);
   });
 
   it('has a sample of each way that a hash can match: no word, one and two', () => {
