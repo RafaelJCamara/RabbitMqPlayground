@@ -12,7 +12,7 @@ import {
   topology,
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { explainRoute, messageIssue, refusalText } from './route';
+import { explainRoute, isRouted, messageIssue, refusalText, summaryOf } from './route';
 import type { BindingNode, ExchangeNode, RoutedExplanation } from './types';
 
 const routed = (explanation: ReturnType<typeof explainRoute>): RoutedExplanation => {
@@ -45,6 +45,39 @@ const orders = topology({
     toQueue('payments', 'audit'),
     toQueue('hub', 'archive', 'x'),
   ],
+});
+
+describe('isRouted and summaryOf', () => {
+  const t = topology({
+    exchanges: [exchange('hidden', 'fanout', true), exchange('e', 'fanout')],
+    queues: ['q'],
+    bindings: [toQueue('e', 'q')],
+  });
+
+  it('say whether a message has a tree, and what became of it in a sentence, for every outcome', () => {
+    const cases = [
+      explainRoute(t, message('e')),
+      explainRoute(t, message('hidden')),
+      explainRoute(t, message('nope')),
+      explainRoute(t, message('e', 'x'.repeat(300))),
+      explainRoute(topology({ exchanges: [exchange('e', 'fanout')] }), message('e')),
+    ];
+
+    expect(cases.map((explanation) => [explanation.outcome, isRouted(explanation)])).toEqual([
+      ['routed', true],
+      ['refused', false],
+      ['refused', false],
+      ['invalid', false],
+      ['unroutable', true],
+    ]);
+    expect(cases.map(summaryOf)).toEqual([
+      'Reached q.',
+      expect.stringContaining('internal exchange'),
+      expect.stringContaining('There is no exchange called "nope"'),
+      'A routing key is at most 255 bytes of UTF-8, and this one is 300.',
+      'No queue got it: it reached e, which has no bindings.',
+    ]);
+  });
 });
 
 describe('explainRoute: a message that is routed (ADR-0060)', () => {

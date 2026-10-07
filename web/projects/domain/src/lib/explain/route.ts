@@ -9,7 +9,7 @@ import {
   type Topology,
 } from '@rmq/engine';
 import { bindingNode } from './binding';
-import type { BindingNode, ExchangeNode, RouteExplanation } from './types';
+import type { BindingNode, ExchangeNode, RoutedExplanation, RouteExplanation } from './types';
 import { exchangeText, listOf, plural, quoted } from './words';
 
 /**
@@ -17,6 +17,14 @@ import { exchangeText, listOf, plural, quoted } from './words';
  * and the queues that got a copy and the ones that did not. It is the one function that the inspector, the Why? overlay, the what-if tester and the golden files all read, and it never throws:
  * a message that no client could send is `invalid` and says why.
  */
+
+/** Whether the message was routed, to some queues or to none, and so has a tree: the other outcomes are a refusal and a message that could not be sent. */
+export const isRouted = (explanation: RouteExplanation): explanation is RoutedExplanation =>
+  explanation.outcome === 'routed' || explanation.outcome === 'unroutable';
+
+/** What became of the message, in a sentence: the summary of a route, the cause of a refusal, or why it could not be sent. */
+export const summaryOf = (explanation: RouteExplanation): string =>
+  isRouted(explanation) ? explanation.summary : explanation.text;
 
 /** Why a message cannot be sent at all, or `null` when it can: the checks that `route` throws for, in the same words. */
 export function messageIssue(message: Message): string | null {

@@ -1,13 +1,6 @@
 import type { TopicMiss, TopicSegment } from '@rmq/engine';
-import type {
-  BindingDetail,
-  BindingNode,
-  ExchangeNode,
-  QueueExplanation,
-  ReasonNode,
-  RoutedExplanation,
-  RouteExplanation,
-} from './types';
+import type { BindingDetail, BindingNode, ExchangeNode, QueueExplanation, ReasonNode, RouteExplanation } from './types';
+import { isRouted, summaryOf } from './route';
 import { exchangeText, quoted, valueText } from './words';
 
 /**
@@ -118,9 +111,6 @@ function queueLines(explanation: QueueExplanation): string[] {
   ];
 }
 
-const isRouted = (explanation: RouteExplanation): explanation is RoutedExplanation =>
-  explanation.outcome === 'routed' || explanation.outcome === 'unroutable';
-
 /** The message as it is published, in one line. */
 function messageLine(explanation: RouteExplanation): string {
   const { message } = explanation;
@@ -138,7 +128,7 @@ export function explanationHeader(explanation: RouteExplanation): string[] {
     messageLine(explanation),
     `outcome: ${explanation.outcome}`,
     `reached: ${routed && explanation.queues.length > 0 ? explanation.queues.join(', ') : 'nothing'}`,
-    `summary: ${routed ? explanation.summary : explanation.text}`,
+    `summary: ${summaryOf(explanation)}`,
   ];
 }
 
