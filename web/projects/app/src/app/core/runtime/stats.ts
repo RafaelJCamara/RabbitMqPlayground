@@ -1,5 +1,5 @@
 import { elements, type CanvasDocument, type Id } from '@rmq/domain';
-import type { RuntimeView } from '@rmq/engine';
+import type { ExchangeView, RuntimeView } from '@rmq/engine';
 import { DEFAULT_EXCHANGE_ID } from '../state/default-exchange';
 
 /**
@@ -96,15 +96,14 @@ export function statsOf(document: CanvasDocument, view: RuntimeView): Map<Id, No
       }
     }
   }
-  const defaultExchange = view.exchanges[''];
-  if (defaultExchange !== undefined) {
-    stats.set(DEFAULT_EXCHANGE_ID, {
-      kind: 'exchange',
-      routed: defaultExchange.routed,
-      unroutable: defaultExchange.unroutable,
-      refused: defaultExchange.refused,
-    });
-  }
+  // The engine counts for the default exchange from the start, under the name `""`.
+  const defaultExchange = view.exchanges[''] as ExchangeView;
+  stats.set(DEFAULT_EXCHANGE_ID, {
+    kind: 'exchange',
+    routed: defaultExchange.routed,
+    unroutable: defaultExchange.unroutable,
+    refused: defaultExchange.refused,
+  });
   return stats;
 }
 

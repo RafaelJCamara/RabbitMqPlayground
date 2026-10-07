@@ -24,8 +24,9 @@ const exchangeName = (name: string): string => (name === '' ? 'the default excha
 
 const plural = (count: number, one: string, many = `${one}s`): string => `${count} ${count === 1 ? one : many}`;
 
+/** The names of the queues that a message was routed to, which are one at least: `a`, `a and b`, `a, b and c`. */
 const list = (items: readonly string[]): string =>
-  items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+  items.length === 1 ? (items[0] as string) : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 
 export function describeEvent(event: EngineEvent, names: Names): string {
   switch (event.type) {
