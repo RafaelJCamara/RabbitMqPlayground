@@ -135,7 +135,8 @@ export function retypeValue(text: string, to: ValueType): Result<string> {
         return ok(BigInt(content).toString());
       }
       if (FLOAT.test(content) && Number.isInteger(Number(content))) {
-        const whole = Number(content) + 0;
+        // A zero that is negative is written 0 by String, so the sign is not looked at here.
+        const whole = Number(content);
         return Number.isSafeInteger(whole)
           ? ok(String(whole))
           : refuse(

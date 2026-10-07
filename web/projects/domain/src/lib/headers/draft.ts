@@ -170,11 +170,10 @@ function reportRow(row: DraftRow, of: Kind, copies: ReadonlyMap<string, number>)
 }
 
 function reportRows(draft: readonly DraftRow[], of: Kind): RowReport[] {
+  // A blank row has the name '', which no other row is asked about: a row that has a value and no name has its own problem before it is asked whether it has a twin.
   const copies = new Map<string, number>();
   for (const row of draft) {
-    if (!isBlank(row)) {
-      copies.set(row.key, (copies.get(row.key) ?? 0) + 1);
-    }
+    copies.set(row.key, (copies.get(row.key) ?? 0) + 1);
   }
   return draft.map((row) => reportRow(row, of, copies));
 }
