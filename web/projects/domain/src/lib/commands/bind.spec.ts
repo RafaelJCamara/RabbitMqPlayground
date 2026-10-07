@@ -477,63 +477,78 @@ describe('unbind', () => {
     expect(none.ok && validateDocument(none.value)).toEqual([]);
   });
 
-  describe('refuses', () => {
-    it('a binding that is not there, and lists the keys of the bindings that are between the two', () => {
-      const none = applyUnbind(sample(), unbind('orders', queueEnd('archive'), 'x'));
-      const wrongKey = applyUnbind(sample(), unbind('orders', queueEnd('billing'), 'order.#'));
+  describe('accepts, and changes nothing, what a broker accepts (ADR-0051)', () => {
+    it('a binding that is not there: another key, other arguments, two ends that were never bound, and one that is gone', () => {
+      const before = sample();
 
-      expect(!none.ok && none.error).toEqual({
-        kind: 'not-bound',
-        message: "There is no binding from exchange 'orders' to queue 'archive' with the key 'x'.",
+      expect(applyUnbind(before, unbind('orders', queueEnd('archive'), 'x'))).toEqual({ ok: true, value: before });
+      expect(applyUnbind(before, unbind('orders', queueEnd('billing'), 'order.#'))).toEqual({
+        ok: true,
+        value: before,
       });
-      expect(!wrongKey.ok && wrongKey.error.message).toBe(
-        "There is no binding from exchange 'orders' to queue 'billing' with the key 'order.#'. The bindings between them have the key 'order.*'.",
-      );
+      const once = applyUnbind(before, unbind('orders', queueEnd('billing'), 'order.*'));
+      expect(once.ok && once.value).not.toBe(before);
+      expect(once.ok && applyUnbind(once.value, unbind('orders', queueEnd('billing'), 'order.*'))).toEqual({
+        ok: true,
+        value: once.ok ? once.value : undefined,
+      });
     });
 
-    it('lists several keys, and says when it was the arguments that differed', () => {
+    it('returns the very document that it was given, so that nothing is saved and there is nothing to undo', () => {
+      const before = sample();
+      const result = applyUnbind(before, unbind('orders', queueEnd('archive'), 'x'));
+
+      expect(result.ok && result.value).toBe(before);
+      expect(result.ok && undoRedoProblems(before, result.value)).toEqual([]);
+    });
+
+    it('arguments that are not the ones of the binding, and another x-match, which is another binding', () => {
       const document = deepFreeze(
         documentOf({
-          exchanges: { D: exchangeRecord('direct') },
+          exchanges: { H: exchangeRecord('docs', 'headers') },
           queues: { Q: queueRecord('q') },
           bindings: {
-            B1: bindingRecord('D', { kind: 'queue', id: 'Q' }, 'a'),
-            B2: bindingRecord('D', { kind: 'queue', id: 'Q' }, 'b'),
+            B1: bindingRecord('H', { kind: 'queue', id: 'Q' }, '', headerArguments(null, entry('n', int(1)))),
           },
         }),
       );
-      const result = applyUnbind(
-        document,
-        unbind('direct', queueEnd('q'), 'a', headerArguments('all', entry('n', int(1)))),
-      );
 
-      expect(!result.ok && result.error.message).toBe(
-        "There is no binding from exchange 'direct' to queue 'q' with the key 'a' and those arguments. The bindings between them have the keys 'a', 'b'.",
-      );
+      expect(
+        applyUnbind(document, unbind('docs', queueEnd('q'), '', headerArguments('all', entry('n', int(1))))),
+      ).toEqual({ ok: true, value: document });
+      expect(
+        applyUnbind(document, unbind('docs', queueEnd('q'), '', headerArguments(null, entry('n', int(2))))),
+      ).toEqual({ ok: true, value: document });
     });
 
-    it('the default exchange, a source or a destination that is not there, and a key that cannot exist, as bind does', () => {
+    it('an exchange or a queue that is not on the canvas, which a broker does not look for, and a key that no binding could have', () => {
+      const before = sample();
+
+      expect(applyUnbind(before, unbind('nope', queueEnd('billing')))).toEqual({ ok: true, value: before });
+      expect(applyUnbind(before, unbind('orders', queueEnd('nope')))).toEqual({ ok: true, value: before });
+      expect(applyUnbind(before, unbind('orders', exchangeEnd('nope')))).toEqual({ ok: true, value: before });
+      expect(applyUnbind(before, unbind('amq.topic', queueEnd('billing')))).toEqual({ ok: true, value: before });
+      expect(applyUnbind(before, unbind('orders', queueEnd('billing'), '#.#.#'))).toEqual({ ok: true, value: before });
+    });
+  });
+
+  describe('refuses what a broker or a client library refuses, as bind does', () => {
+    it('the default exchange, as a source or as a destination, with the 403 that the broker gave', () => {
       expect(applyUnbind(sample(), unbind('', queueEnd('billing')))).toMatchObject({
-        error: { kind: 'default-exchange' },
+        error: { kind: 'default-exchange', refusal: { code: 403 } },
       });
       expect(applyUnbind(sample(), unbind('orders', exchangeEnd('')))).toMatchObject({
-        error: { kind: 'default-exchange' },
+        error: { kind: 'default-exchange', refusal: { code: 403 } },
       });
-      expect(applyUnbind(sample(), unbind('nope', queueEnd('billing')))).toMatchObject({
-        error: { kind: 'missing-exchange', refusal: noExchangeReply('nope', '/') },
-      });
-      expect(applyUnbind(sample(), unbind('orders', queueEnd('nope')))).toMatchObject({
-        error: { kind: 'missing-queue', refusal: noQueueReply('nope', '/') },
-      });
+    });
+
+    it('a key of more than 255 bytes, which no client could send', () => {
       expect(applyUnbind(sample(), unbind('orders', queueEnd('billing'), 'k'.repeat(256)))).toMatchObject({
         error: { kind: 'routing-key' },
       });
-      expect(applyUnbind(sample(), unbind('amq.topic', queueEnd('billing')))).toMatchObject({
-        error: { kind: 'built-in-exchange' },
-      });
     });
 
-    it('arguments that no binding could have, and a topic key that no binding could have, as a binding that is not there', () => {
+    it('arguments that no binding could have, which no client could send', () => {
       expect(
         applyUnbind(
           sample(),
@@ -541,9 +556,6 @@ describe('unbind', () => {
         ),
       ).toMatchObject({
         error: { kind: 'header' },
-      });
-      expect(applyUnbind(sample(), unbind('orders', queueEnd('billing'), '#.#.#'))).toMatchObject({
-        error: { kind: 'not-bound' },
       });
     });
   });

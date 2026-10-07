@@ -2,7 +2,7 @@ import { routingKeyIssue } from '@rmq/engine';
 import { noRoomForEdge } from '../document/capacity';
 import { findId, lookup } from '../document/elements';
 import { bindingHeadersIssue, bindingSignature, canonicalHeaders } from '../document/headers';
-import { fail, ok, type ElementKind, type Result } from '../document/issue';
+import { fail, ok, type ElementKind, type Issue, type Result } from '../document/issue';
 import {
   BUILT_IN_EXCHANGES,
   builtInExchangeIssue,
@@ -20,6 +20,9 @@ import type { BindCommand, UnbindCommand } from './types';
  * (403), the source and then the destination that are not there (404), and the key of a topic binding (406). A fault of
  * each kind has a reply that was recorded (ADR-0021, ADR-0022), and so has the order in which a broker reports two of them
  * (`routing/a-binding-with-two-faults-gets-one-refusal`, ADR-0026).
+ *
+ * An unbind is checked for the first two only. A broker accepts an unbind of a binding that is not there, of ends that are
+ * not there, and of a key that no binding could have, and does nothing (ADR-0051), so the document is the same one.
  */
 
 interface Ends {
@@ -36,20 +39,28 @@ function missingEnd(document: CanvasDocument, kind: Exclude<ElementKind, 'produc
   return withNameHints(missingEndIssue(kind, name, document.vhost), document, kind, name);
 }
 
-function resolveEnds(document: CanvasDocument, command: BindCommand | UnbindCommand): Result<Ends> {
+/** What a client library refuses before it sends anything, and the default exchange, which a broker refuses for a bind and for an unbind. */
+function checkBinding(command: BindCommand | UnbindCommand): Issue | null {
   const { source, destination, key, headers } = command;
 
   const keyProblem = routingKeyIssue(key);
   if (keyProblem !== null) {
-    return fail({ kind: 'routing-key', message: `${keyProblem}.` });
+    return { kind: 'routing-key', message: `${keyProblem}.` };
   }
   const headersProblem = headers === undefined ? null : bindingHeadersIssue(headers);
   if (headersProblem !== null) {
-    return fail(headersProblem);
+    return headersProblem;
   }
+  return source === '' || (destination.kind === 'exchange' && destination.name === '')
+    ? defaultExchangeIssue('bind')
+    : null;
+}
 
-  if (source === '' || (destination.kind === 'exchange' && destination.name === '')) {
-    return fail(defaultExchangeIssue('bind'));
+function resolveEnds(document: CanvasDocument, command: BindCommand): Result<Ends> {
+  const { source, destination } = command;
+  const problem = checkBinding(command);
+  if (problem !== null) {
+    return fail(problem);
   }
 
   const sourceId = findId(document, 'exchange', source);
@@ -65,7 +76,11 @@ function resolveEnds(document: CanvasDocument, command: BindCommand | UnbindComm
 }
 
 /** The id of the binding that is this binding, if there is one. */
-function findBinding(document: CanvasDocument, command: BindCommand | UnbindCommand, ends: Ends): Id | undefined {
+function findBinding(
+  document: CanvasDocument,
+  command: BindCommand | UnbindCommand,
+  ends: Pick<Ends, 'sourceId' | 'destinationId'>,
+): Id | undefined {
   const wanted = bindingSignature(
     ends.sourceId,
     command.destination.kind,
@@ -123,33 +138,22 @@ export function applyBind(
   });
 }
 
-/** Describes what a binding is, for a message that says that there is none. */
-function describe(command: UnbindCommand): string {
-  return `from exchange '${command.source}' to ${command.destination.kind} '${command.destination.name}' with the key '${command.key}'`;
-}
-
+/**
+ * Takes off the binding that is exactly this one: the same two ends, key and arguments. If there is none, or the ends are
+ * not on the canvas, nothing is changed and the document is the same one, because a broker accepts it (ADR-0051).
+ */
 export function applyUnbind(document: CanvasDocument, command: UnbindCommand): Result<CanvasDocument> {
-  const ends = resolveEnds(document, command);
-  if (!ends.ok) {
-    return ends;
+  const problem = checkBinding(command);
+  if (problem !== null) {
+    return fail(problem);
   }
-  const id = findBinding(document, command, ends.value);
-  if (id === undefined) {
-    const { sourceId, destinationId } = ends.value;
-    const keys = Object.values(document.bindings)
-      .filter(
-        ({ source, dest }) =>
-          source === sourceId && dest.kind === command.destination.kind && dest.id === destinationId,
-      )
-      .map(({ key }) => `'${key}'`);
-    const between =
-      keys.length === 0
-        ? ''
-        : ` The bindings between them have the ${keys.length === 1 ? 'key' : 'keys'} ${keys.join(', ')}.`;
-    return fail({
-      kind: 'not-bound',
-      message: `There is no binding ${describe(command)}${command.headers === undefined ? '' : ' and those arguments'}.${between}`,
-    });
+  const sourceId = findId(document, 'exchange', command.source);
+  const destinationId = findId(document, command.destination.kind, command.destination.name);
+  if (sourceId === undefined || destinationId === undefined) {
+    return ok(document);
   }
-  return ok(withoutDanglingLabels({ ...document, bindings: without(document.bindings, id) }));
+  const id = findBinding(document, command, { sourceId, destinationId });
+  return id === undefined
+    ? ok(document)
+    : ok(withoutDanglingLabels({ ...document, bindings: without(document.bindings, id) }));
 }

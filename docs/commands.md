@@ -84,7 +84,7 @@ clear
 
 ## `declare exchange`
 
-Puts an exchange on the canvas. A name may not be empty or start with `amq.`, and an exchange of that name may not be there already.
+Puts an exchange on the canvas. A name may not be empty or start with `amq.`. If an exchange of that name is there, a declaration that says the same changes nothing, as on a broker, and one that says another type or flag is refused, because a broker does not change an exchange that it has: use `set` for that.
 
 **Syntax:** `declare exchange <name> type=direct|fanout|topic|headers [durable=true|false] [auto-delete=true|false] [internal=true|false]`
 
@@ -97,7 +97,7 @@ declare exchange audit type=fanout durable=false auto-delete=true
 
 ## `declare queue`
 
-Puts a queue on the canvas. A queue that is not durable is refused, as RabbitMQ 4.3 refuses it, because every queue here has to be durable. Quorum queues and streams arrive in M4.
+Puts a queue on the canvas. A queue that is not durable is refused, as RabbitMQ 4.3 refuses it, because every queue here has to be durable. Declaring a queue that is there changes nothing, as on a broker. Quorum queues and streams arrive in M4.
 
 **Syntax:** `declare queue <name> [durable=true|false] [type=classic]`
 
@@ -235,7 +235,7 @@ subscribe worker archive
 
 ## `unbind`
 
-Takes a binding off, the one with exactly this key and these conditions.
+Takes a binding off, the one with exactly this key and these conditions. If there is none, nothing changes, as on a broker.
 
 **Syntax:** `unbind <exchange> -> <queue|exchange> [key=<text>] [x-match=all|any|all-with-x|any-with-x] [<header>=<value> | exists(<header>)]...`
 

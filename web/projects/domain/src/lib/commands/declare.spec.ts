@@ -1,4 +1,4 @@
-import { defaultExchangeReply, reservedNameReply, transientQueueReply } from '@rmq/engine';
+import { defaultExchangeReply, inequivalentReply, reservedNameReply, transientQueueReply } from '@rmq/engine';
 import { deepFreeze, documentOf, sampleDocument, sequentialIds, undoRedoProblems } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import type { CanvasDocument } from '../document/schema';
@@ -114,13 +114,65 @@ describe('declare exchange', () => {
       expect(!result.ok && result.error.kind).toBe('name-too-long');
     });
 
-    it('a name that another exchange has, and says so in the simulator’s words and not in the broker’s', () => {
-      const result = applyDeclareExchange(sample(), exchange('orders'), sequentialIds());
+    it('a name that an exchange has, when the declaration says another type, with the broker’s 406 and what to do', () => {
+      const result = applyDeclareExchange(sample(), exchange('orders', { exchangeType: 'direct' }), sequentialIds());
 
       expect(!result.ok && result.error).toEqual({
-        kind: 'duplicate-name',
-        message: "There is already an exchange named 'orders'. Names are unique within a kind.",
+        kind: 'inequivalent-declaration',
+        message:
+          "There is already an exchange named 'orders', and it is a topic exchange, and this declaration says direct. A declaration that repeats has to say what the first one said: RabbitMQ does not change an exchange that it has. To change this one, use set orders type=direct, which on a broker is a delete and a declare.",
+        refusal: inequivalentReply('exchange', 'type', 'orders', '/', 'direct', 'topic'),
       });
+      expect(!result.ok && result.error.refusal?.text).toBe(
+        "PRECONDITION_FAILED - inequivalent arg 'type' for exchange 'orders' in vhost '/': received 'direct' but current is 'topic'",
+      );
+    });
+
+    it.each([
+      [{ durable: false }, 'durable', 'it is durable, and this declaration says it is not durable', 'durable=false'],
+      [
+        { autoDelete: true },
+        'auto_delete',
+        'it stays when its last binding goes, and this declaration says it goes when its last binding does',
+        'auto-delete=true',
+      ],
+      [{ internal: true }, 'internal', 'it is not internal, and this declaration says it is internal', 'internal=true'],
+    ])('a name that an exchange has, when the declaration says another flag: %j', (change, attribute, said, option) => {
+      const result = applyDeclareExchange(
+        sample(),
+        exchange('orders', { exchangeType: 'topic', ...change }),
+        sequentialIds(),
+      );
+
+      expect(!result.ok && result.error.kind).toBe('inequivalent-declaration');
+      expect(!result.ok && result.error.refusal?.text).toContain(
+        `inequivalent arg '${attribute}' for exchange 'orders'`,
+      );
+      expect(!result.ok && result.error.message).toContain(said);
+      expect(!result.ok && result.error.message).toContain(`use set orders ${option}`);
+    });
+
+    it('names the first attribute that differs, in the order that the broker checks them: type, durable, auto-delete, internal', () => {
+      const all = { exchangeType: 'direct' as const, durable: false, autoDelete: true, internal: true };
+      const attribute = (change: Partial<DeclareExchange>) => {
+        const result = applyDeclareExchange(sample(), exchange('orders', { ...all, ...change }), sequentialIds());
+        return !result.ok && result.error.refusal?.text.split("'")[1];
+      };
+
+      expect(attribute({})).toBe('type');
+      expect(attribute({ exchangeType: 'topic' })).toBe('durable');
+      expect(attribute({ exchangeType: 'topic', durable: true })).toBe('auto_delete');
+      expect(attribute({ exchangeType: 'topic', durable: true, autoDelete: false })).toBe('internal');
+    });
+
+    it('writes the vhost of the canvas in the broker’s reply', () => {
+      const result = applyDeclareExchange(
+        deepFreeze({ ...sampleDocument(), vhost: 'prod' }),
+        exchange('orders', { exchangeType: 'direct' }),
+        sequentialIds(),
+      );
+
+      expect(!result.ok && result.error.refusal?.text).toContain("in vhost 'prod'");
     });
 
     it('nothing else: a queue or a producer may have the same name', () => {
@@ -181,10 +233,12 @@ describe('declare queue', () => {
       expect(before).toEqual(sampleDocument());
     });
 
-    it('whether or not the name is taken, because the durability is read before the name is looked up', () => {
-      expect(!applyDeclareQueue(sample(), queue('billing', false), sequentialIds()).ok).toBe(true);
+    it('when the name is not taken, and a name that is taken is answered with 406, because the broker looks at what is there first', () => {
+      expect(applyDeclareQueue(sample(), queue('fresh', false), sequentialIds())).toMatchObject({
+        error: { kind: 'transient-queue', refusal: { code: 541 } },
+      });
       expect(applyDeclareQueue(sample(), queue('billing', false), sequentialIds())).toMatchObject({
-        error: { kind: 'transient-queue' },
+        error: { kind: 'inequivalent-declaration', refusal: { code: 406 } },
       });
     });
 
@@ -218,13 +272,21 @@ describe('declare queue', () => {
       expect(applyDeclareQueue(empty(), queue('q'.repeat(255)), sequentialIds()).ok).toBe(true);
     });
 
-    it('a name that another queue has, and not one that an exchange has', () => {
-      expect(applyDeclareQueue(sample(), queue('billing'), sequentialIds())).toMatchObject({
-        error: {
-          kind: 'duplicate-name',
-          message: "There is already a queue named 'billing'. Names are unique within a kind.",
-        },
+    it('a queue that is there, declared as not durable, with the broker’s 406 for the durable flag and not the 541 of a new queue', () => {
+      const result = applyDeclareQueue(sample(), queue('billing', false), sequentialIds());
+
+      expect(!result.ok && result.error).toEqual({
+        kind: 'inequivalent-declaration',
+        message:
+          "There is already a queue named 'billing', and it is durable, and this declaration says it is not durable. A declaration that repeats has to say what the first one said, and every queue here has to be durable: declare it again with durable=true, or leave the flag out.",
+        refusal: inequivalentReply('queue', 'durable', 'billing', '/', 'false', 'true'),
       });
+      expect(!result.ok && result.error.refusal?.text).toBe(
+        "PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'billing' in vhost '/': received 'false' but current is 'true'",
+      );
+    });
+
+    it('and a queue that an exchange has the name of is a new queue', () => {
       expect(applyDeclareQueue(sample(), queue('orders'), sequentialIds()).ok).toBe(true);
     });
   });
@@ -370,5 +432,48 @@ describe('ids', () => {
     expect(() => applyAddConsumer(before, consumer('fresh'), { newId: () => '1x' })).toThrow('not a valid id');
     expect(() => applyAddConsumer(before, consumer('fresh'), { newId: () => '__proto__' })).toThrow('not a valid id');
     expect(before).toEqual(sampleDocument());
+  });
+});
+
+describe('a declaration that repeats (ADR-0051)', () => {
+  it('is accepted when it says what the exchange is, and answers the document that it was given', () => {
+    const before = sample();
+    const result = applyDeclareExchange(before, exchange('orders', { exchangeType: 'topic' }), sequentialIds());
+
+    expect(result.ok && result.value).toBe(before);
+    expect(result.ok && undoRedoProblems(before, result.value)).toEqual([]);
+  });
+
+  it('is accepted when it says what the queue is, and answers the document that it was given', () => {
+    const before = sample();
+    const result = applyDeclareQueue(before, queue('billing'), sequentialIds());
+
+    expect(result.ok && result.value).toBe(before);
+  });
+
+  it('asks for no id, so that a replay of a log makes the ids that the gestures made', () => {
+    const ids = {
+      newId: () => {
+        throw new Error('no id was needed');
+      },
+    };
+
+    expect(applyDeclareExchange(sample(), exchange('orders', { exchangeType: 'topic' }), ids).ok).toBe(true);
+    expect(applyDeclareQueue(sample(), queue('billing'), ids).ok).toBe(true);
+  });
+
+  it('is judged by the exchange of that name and not by a queue that has it too', () => {
+    const result = applyDeclareExchange(sample(), exchange('billing', { exchangeType: 'headers' }), sequentialIds());
+
+    expect(result.ok && Object.values(result.value.exchanges).filter(({ name }) => name === 'billing')).toHaveLength(1);
+  });
+
+  it('is still refused for a producer and a consumer, which a canvas has once and a broker does not have', () => {
+    expect(applyAddProducer(sample(), producer('sender'), sequentialIds())).toMatchObject({
+      error: { kind: 'duplicate-name' },
+    });
+    expect(applyAddConsumer(sample(), consumer('worker'), sequentialIds())).toMatchObject({
+      error: { kind: 'duplicate-name' },
+    });
   });
 });

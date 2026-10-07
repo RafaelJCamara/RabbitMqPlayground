@@ -1,6 +1,7 @@
 import {
   defaultExchangeReply,
   hashWordCount,
+  inequivalentReply,
   internalExchangeReply,
   noExchangeReply,
   noQueueReply,
@@ -9,6 +10,7 @@ import {
   TOPIC_MAX_HASH_WORDS,
   topicWildcardsReply,
   transientQueueReply,
+  type Difference,
 } from '@rmq/engine';
 import { A_KIND, type ElementKind, type Issue } from './issue';
 
@@ -86,6 +88,52 @@ export function duplicateNameIssue(kind: ElementKind, name: string): Issue {
   return {
     kind: 'duplicate-name',
     message: `There is already ${A_KIND[kind]} named '${name}'. Names are unique within a kind.`,
+  };
+}
+
+/** How a flag is told in a sentence: what the exchange or the queue has, and what the declaration says. */
+const FLAG_PHRASE: Readonly<Record<'durable' | 'auto_delete' | 'internal', readonly [string, string]>> = {
+  durable: ['it is durable', 'it is not durable'],
+  auto_delete: ['it goes when its last binding does', 'it stays when its last binding goes'],
+  internal: ['it is internal', 'it is not internal'],
+};
+
+/** The option of `set` that changes an attribute here, which a broker cannot do: it takes a delete and a declare. */
+const SET_OPTION: Readonly<Record<Difference['attribute'], string>> = {
+  type: 'type',
+  durable: 'durable',
+  auto_delete: 'auto-delete',
+  internal: 'internal',
+};
+
+/** What the exchange or the queue has and what the declaration says, as the middle of a sentence. */
+const phrase = (difference: Difference): string => {
+  if (difference.attribute === 'type') {
+    return `it is a ${difference.current} exchange, and this declaration says ${difference.received}`;
+  }
+  const [yes, no] = FLAG_PHRASE[difference.attribute];
+  return `${difference.current === 'true' ? yes : no}, and this declaration says ${difference.received === 'true' ? yes : no}`;
+};
+
+/**
+ * `406`: an exchange that is there is declared again with another attribute (ADR-0051). A declaration says "make sure that this is
+ * there", so one that says what the exchange already is changes nothing, and one that does not is refused, with the first
+ * attribute that differs. A broker cannot change an exchange, so the message says how it is done on the canvas.
+ */
+export function inequivalentExchangeIssue(name: string, difference: Difference, vhost: string): Issue {
+  return {
+    kind: 'inequivalent-declaration',
+    message: `There is already an exchange named '${name}', and ${phrase(difference)}. A declaration that repeats has to say what the first one said: RabbitMQ does not change an exchange that it has. To change this one, use set ${name} ${SET_OPTION[difference.attribute]}=${difference.received}, which on a broker is a delete and a declare.`,
+    refusal: inequivalentReply('exchange', difference.attribute, name, vhost, difference.received, difference.current),
+  };
+}
+
+/** `406`: a queue that is there is declared again as not durable (ADR-0051). It is not the 541 of a queue that is new (ADR-0024). */
+export function inequivalentQueueIssue(name: string, difference: Difference, vhost: string): Issue {
+  return {
+    kind: 'inequivalent-declaration',
+    message: `There is already a queue named '${name}', and ${phrase(difference)}. A declaration that repeats has to say what the first one said, and every queue here has to be durable: declare it again with durable=true, or leave the flag out.`,
+    refusal: inequivalentReply('queue', difference.attribute, name, vhost, difference.received, difference.current),
   };
 }
 

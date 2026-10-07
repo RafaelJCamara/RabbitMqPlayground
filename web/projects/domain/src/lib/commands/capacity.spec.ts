@@ -127,8 +127,20 @@ describe('the number of elements (exchanges, queues, producers and consumers tog
     expect(apply(full, { type: 'declare-queue', name: 'fresh', durable: false })).toMatchObject({
       error: { kind: 'transient-queue' },
     });
-    expect(apply(full, { type: 'declare-queue', name: 'q0', durable: true })).toMatchObject({
-      error: { kind: 'duplicate-name' },
+    expect(apply(full, { type: 'declare-queue', name: 'q0', durable: false })).toMatchObject({
+      error: { kind: 'inequivalent-declaration' },
+    });
+    expect(
+      apply(full, {
+        type: 'declare-exchange',
+        name: 'e0',
+        exchangeType: 'topic',
+        durable: true,
+        autoDelete: false,
+        internal: false,
+      }),
+    ).toMatchObject({
+      error: { kind: 'inequivalent-declaration' },
     });
     expect(apply(full, { type: 'add-producer', name: '' })).toMatchObject({ error: { kind: 'empty-name' } });
   });

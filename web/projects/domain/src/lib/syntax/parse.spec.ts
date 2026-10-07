@@ -1126,11 +1126,11 @@ describe('parseCommand', () => {
     });
 
     it('says which command the canvas refuses, with the broker’s reply, since each is applied to the canvas on the way', () => {
-      const text = 'declare queue a; declare queue billing; declare queue c';
+      const text = 'declare queue a; add producer sender; declare queue c';
       const issue = refused(text);
 
       expect(issue).toMatchObject({ kind: 'duplicate-name', batchIndex: 1 });
-      expect(pointedAt(text, issue)).toBe('declare queue billing');
+      expect(pointedAt(text, issue)).toBe('add producer sender');
       expect(refused('declare queue jobs durable=false; declare queue b')).toMatchObject({
         kind: 'transient-queue',
         batchIndex: 0,

@@ -77,3 +77,23 @@ export function transientQueueReply(): BrokerReply<541> {
     ].join('\n'),
   };
 }
+
+/**
+ * `406`: a client declared an exchange or a queue that is there, with an attribute that is not the same as the one it has
+ * (ADR-0051). The broker names the first attribute that differs, with the value that it was sent and the value that it has,
+ * and the attributes are `type`, `durable`, `auto_delete` and `internal` for an exchange, and `durable` and `auto_delete` for
+ * a queue, written the way a broker writes them: `true` and `false`, and a type by its name.
+ */
+export function inequivalentReply(
+  kind: 'exchange' | 'queue',
+  attribute: string,
+  name: string,
+  vhost: string,
+  received: string,
+  current: string,
+): BrokerReply<406> {
+  return {
+    code: 406,
+    text: `PRECONDITION_FAILED - inequivalent arg '${attribute}' for ${kind} '${name}' in vhost '${vhost}': received '${received}' but current is '${current}'`,
+  };
+}

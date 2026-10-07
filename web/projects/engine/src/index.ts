@@ -22,9 +22,11 @@ export {
   type XMatch,
 } from './lib/headers';
 export { ROUTING_KEY_MAX_BYTES, routingKeyIssue, utf8Length } from './lib/keys';
+export { exchangeDifference, queueDifference, type Difference, type ExchangeAttributes } from './lib/declaration';
 export { createPrng, type Prng } from './lib/prng';
 export {
   defaultExchangeReply,
+  inequivalentReply,
   internalExchangeReply,
   noExchangeReply,
   noQueueReply,

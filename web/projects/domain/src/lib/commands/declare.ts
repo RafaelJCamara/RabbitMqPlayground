@@ -1,16 +1,27 @@
 import { noRoomForElement } from '../document/capacity';
-import { findId } from '../document/elements';
+import { exchangeDifference, queueDifference } from '@rmq/engine';
+import { findId, lookup } from '../document/elements';
 import { fail, ok, type ElementKind, type Result } from '../document/issue';
 import { nameIssue } from '../document/names';
-import { duplicateNameIssue, transientQueueIssue } from '../document/rules';
-import type { CanvasDocument } from '../document/schema';
+import {
+  duplicateNameIssue,
+  inequivalentExchangeIssue,
+  inequivalentQueueIssue,
+  transientQueueIssue,
+} from '../document/rules';
+import type { CanvasDocument, Id } from '../document/schema';
 import { freshId, withElement, type ApplyContext } from './helpers';
 import type { AddConsumer, AddProducer, DeclareExchange, DeclareQueue } from './types';
 
 /**
- * The commands that put something new on the canvas. A name has to be one that a broker would take (ADR-0021) and that no
- * other element of its kind has, there has to be room for one more (ADR-0029), and a new node goes where its kind belongs
- * (`defaultPosition`). The room is checked last, so that a name that is wrong is told so even on a canvas that is full.
+ * The commands that put something new on the canvas. A name has to be one that a broker would take (ADR-0021), there has to
+ * be room for one more (ADR-0029), and a new node goes where its kind belongs (`defaultPosition`). The room is checked last, so
+ * that a name that is wrong is told so even on a canvas that is full.
+ *
+ * An exchange or a queue that has the name is not refused for that: a declaration says "make sure that this is there", so
+ * one that says what is there already changes nothing and answers the same document, and one that says another thing is
+ * refused with the attribute that differs, as a broker does (ADR-0051). A producer and a consumer are not a broker's, and a
+ * canvas has each of their names once.
  */
 
 const taken = (document: CanvasDocument, kind: ElementKind, name: string): boolean =>
@@ -25,14 +36,17 @@ export function applyDeclareExchange(
   if (problem !== null) {
     return fail(problem);
   }
-  if (taken(document, 'exchange', command.name)) {
-    return fail(duplicateNameIssue('exchange', command.name));
+  const { name, exchangeType: type, durable, autoDelete, internal } = command;
+  const id = findId(document, 'exchange', name);
+  if (id !== undefined) {
+    const there = lookup(document.exchanges, id) as CanvasDocument['exchanges'][Id];
+    const difference = exchangeDifference(there, { type, durable, autoDelete, internal });
+    return difference === null ? ok(document) : fail(inequivalentExchangeIssue(name, difference, document.vhost));
   }
   const full = noRoomForElement(document);
   if (full !== null) {
     return fail(full);
   }
-  const { name, exchangeType: type, durable, autoDelete, internal } = command;
   return ok(
     withElement(document, 'exchange', freshId(document, context, 'exchange'), {
       name,
@@ -46,8 +60,9 @@ export function applyDeclareExchange(
 
 /**
  * A queue that is not durable is refused with the broker's own 541 and a message that says why (ADR-0021, ADR-0024). The
- * name is checked first, then the flag, then whether the name is taken. No fixture has a queue with two of these faults, so
- * that order is the simulator's.
+ * name is checked first, then whether it is taken, then the flag: a queue that is there and is declared as not durable is
+ * answered as a declaration that repeats with another attribute, with 406, and not with the 541 of a new queue, which is the
+ * order that the broker has (`routing/declaring-a-queue-that-is-there-as-not-durable-is-refused-as-another-attribute`).
  */
 export function applyDeclareQueue(
   document: CanvasDocument,
@@ -58,11 +73,14 @@ export function applyDeclareQueue(
   if (problem !== null) {
     return fail(problem);
   }
+  const id = findId(document, 'queue', command.name);
+  if (id !== undefined) {
+    const there = lookup(document.queues, id) as CanvasDocument['queues'][Id];
+    const difference = queueDifference(there, command);
+    return difference === null ? ok(document) : fail(inequivalentQueueIssue(command.name, difference, document.vhost));
+  }
   if (!command.durable) {
     return fail(transientQueueIssue(command.name));
-  }
-  if (taken(document, 'queue', command.name)) {
-    return fail(duplicateNameIssue('queue', command.name));
   }
   const full = noRoomForElement(document);
   if (full !== null) {

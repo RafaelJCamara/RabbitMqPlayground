@@ -129,7 +129,11 @@ describe('CommandBus', () => {
     it('does not spend an id on a command that is refused, so that what is made next has the id that a replay of the accepted commands makes', () => {
       const refusedBatch: DocumentCommand = {
         type: 'batch',
-        commands: [declareQueue('made-then-refused'), declareQueue('made-then-refused')],
+        commands: [
+          declareQueue('made-then-refused'),
+          { type: 'add-producer', name: 'sender' },
+          { type: 'add-producer', name: 'sender' },
+        ],
       };
 
       const result = bus.apply(refusedBatch, 'gesture');

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { utf8Length } from './keys';
 import {
   defaultExchangeReply,
+  inequivalentReply,
   internalExchangeReply,
   noExchangeReply,
   noQueueReply,
@@ -54,6 +55,18 @@ const BUILDERS: readonly [RegExp, (...captured: string[]) => BrokerReply][] = [
   [
     /^PRECONDITION_FAILED - Topic binding key '(.*)' uses (\d+) '#' wildcards, at most 2 are allowed$/s,
     (key, count) => topicWildcardsReply(key as string, Number(count)),
+  ],
+  [
+    /^PRECONDITION_FAILED - inequivalent arg '(.*)' for (exchange|queue) '(.*)' in vhost '\/': received '(.*)' but current is '(.*)'$/s,
+    (attribute, kind, name, received, current) =>
+      inequivalentReply(
+        kind as 'exchange' | 'queue',
+        attribute as string,
+        name as string,
+        '/',
+        received as string,
+        current as string,
+      ),
   ],
   [/^INTERNAL_ERROR - Feature `transient_nonexcl_queues` is deprecated\./, () => transientQueueReply()],
 ];

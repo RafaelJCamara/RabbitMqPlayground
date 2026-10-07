@@ -80,7 +80,8 @@ export const unbind: CommandSpec<UnbindCommand> = {
   type: 'unbind',
   scope: 'document',
   syntax: `unbind ${SYNTAX}`,
-  summary: 'Takes a binding off, the one with exactly this key and these conditions.',
+  summary:
+    'Takes a binding off, the one with exactly this key and these conditions. If there is none, nothing changes, as on a broker.',
   examples: ['unbind orders -> billing key=order.*'],
   parse: (cursor) => ({ type: 'unbind', ...parseBinding(cursor) }),
   format: (command, document) => formatBinding('unbind', command, document),

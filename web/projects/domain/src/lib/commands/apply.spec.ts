@@ -167,7 +167,7 @@ describe('batch', () => {
         type: 'batch',
         commands: [
           { type: 'declare-queue', name: 'fresh', durable: true },
-          { type: 'declare-queue', name: 'billing', durable: true },
+          { type: 'add-producer', name: 'sender' },
           { type: 'declare-queue', name: 'never', durable: true },
         ],
       },
@@ -176,7 +176,7 @@ describe('batch', () => {
 
     expect(!result.ok && result.error).toEqual({
       kind: 'duplicate-name',
-      message: "There is already a queue named 'billing'. Names are unique within a kind.",
+      message: "There is already a producer named 'sender'. Names are unique within a kind.",
       batchIndex: 1,
     });
     expect(before).toEqual(sampleDocument());
@@ -245,12 +245,12 @@ describe('batch', () => {
       {
         type: 'batch',
         commands: [
-          { type: 'declare-queue', name: 'a', durable: true },
+          { type: 'add-producer', name: 'a' },
           {
             type: 'batch',
             commands: [
-              { type: 'declare-queue', name: 'b', durable: true },
-              { type: 'declare-queue', name: 'a', durable: true },
+              { type: 'add-producer', name: 'b' },
+              { type: 'add-producer', name: 'a' },
             ],
           },
         ],

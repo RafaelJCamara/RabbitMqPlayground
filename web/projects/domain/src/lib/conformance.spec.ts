@@ -13,7 +13,7 @@ import {
 import { bindingKey, canonicalTopology, sequentialIds } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { applyCommand } from './commands/apply';
-import type { BindCommand, DeclareExchange, DeclareQueue, DocumentCommand } from './commands/types';
+import type { BindCommand, DeclareExchange, DeclareQueue, DocumentCommand, UnbindCommand } from './commands/types';
 import { canonicalHeaders } from './document/headers';
 import { emptyDocument, type CanvasDocument } from './document/schema';
 import { toTopology } from './document/topology';
@@ -92,15 +92,16 @@ function commandOf(step: Json): DocumentCommand | undefined {
         name: step['name'] as string,
         durable: (step['durable'] as boolean | undefined) ?? true,
       } satisfies DeclareQueue;
-    case 'bind': {
+    case 'bind':
+    case 'unbind': {
       const headers = step['headers'] as { xMatch: XMatch | null; args: unknown } | undefined;
       return {
-        type: 'bind',
+        type: step['op'] as 'bind' | 'unbind',
         source: step['source'] as string,
         destination: step['destination'] as BindCommand['destination'],
         key: (step['key'] as string | undefined) ?? '',
         ...(headers ? { headers: { xMatch: headers.xMatch, args: asEntries(headers.args, asCondition) } } : {}),
-      };
+      } satisfies BindCommand | UnbindCommand;
     }
     default:
       return undefined;
@@ -109,7 +110,7 @@ function commandOf(step: Json): DocumentCommand | undefined {
 
 /** What reading a command back from its text must give: the command, with arguments that say nothing left out. */
 function normalise(command: DocumentCommand): DocumentCommand {
-  if (command.type !== 'bind') {
+  if (command.type !== 'bind' && command.type !== 'unbind') {
     return command;
   }
   const { headers, ...rest } = command;
@@ -228,9 +229,21 @@ function replay(fixture: Fixture): Replayed {
     document = result.value;
 
     if (command.type === 'declare-exchange') {
-      expected.exchanges.push({ name: command.name, type: command.exchangeType, internal: command.internal });
+      // A declaration that repeats and is accepted changes nothing, and the canvas answers the document that it was given (ADR-0051).
+      if (step['again'] === true && result.value !== document) {
+        problems.push(`${at}: the declaration repeats, and the canvas changed`);
+      }
+      if (step['again'] !== true) {
+        expected.exchanges.push({ name: command.name, type: command.exchangeType, internal: command.internal });
+      }
     } else if (command.type === 'declare-queue') {
-      expected.queues.push(command.name);
+      if (step['again'] !== true) {
+        expected.queues.push(command.name);
+      }
+    } else if (command.type === 'unbind') {
+      const gone = bindingKey({ op: 'bind', ...command });
+      seen.delete(gone);
+      expected.bindings = expected.bindings.filter((binding) => bindingKey({ op: 'bind', ...binding }) !== gone);
     } else if (command.type === 'bind') {
       const binding: Binding = {
         source: command.source,
