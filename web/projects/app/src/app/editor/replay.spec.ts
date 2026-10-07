@@ -223,6 +223,12 @@ function editor() {
         ask.cancel();
       }
     },
+    askConditions: (ask) => {
+      // Conditions that are refused keep the popover open, and the learner gives up, as with a key.
+      if (!ask.submit({ xMatch: 'all', args: [] }).ok) {
+        ask.cancel();
+      }
+    },
     askTarget: (ask) => {
       const option = ask.options[answers.choice % Math.max(1, ask.options.length)];
       if (option === undefined) {

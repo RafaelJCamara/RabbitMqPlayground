@@ -1,10 +1,10 @@
 import { Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
 import { KIND_LABEL, lookup, type DocumentCommand, type ExchangeChanges, type Issue } from '@rmq/domain';
-import type { ExchangeType } from '@rmq/engine';
+import type { ExchangeType, HeaderArguments } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXCHANGE_TYPES } from '../canvas/model/new-node';
 import { FeatureFlags } from '../core/flags/feature-flags';
-import { rebindCommand, unbindCommand, type BindingRow } from '../core/state/binding-commands';
+import { rebindCommand, rebindHeadersCommand, unbindCommand, type BindingRow } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { refOf } from '../core/state/refs';
@@ -14,6 +14,7 @@ import { Help } from '../core/ui/help';
 import { Icon } from '../core/ui/icon';
 import { Switch } from '../core/ui/switch';
 import { IntentHandler } from './intents';
+import { BindingConditions } from './binding-conditions';
 import { inspectorView, type EdgeView, type NodeView } from './inspector-view';
 import { LinkFlow } from './link-flow';
 import { RefusalNotice } from '../core/ui/refusal-notice';
@@ -56,6 +57,7 @@ let nextInspector = 0;
     RefusalNotice,
     QueueAsked,
     TopicTester,
+    BindingConditions,
     QueueMessages,
     ProducerComposer,
     ConsumerSettings,
@@ -310,45 +312,68 @@ let nextInspector = 0;
                     role="group"
                     [attr.aria-label]="'Binding ' + (index + 1) + ' of ' + e.bindings.length"
                   >
-                    <label class="text-muted text-xs" [for]="id('binding-' + row.id)">Key</label>
-                    <div class="flex gap-2">
-                      <input
-                        type="text"
-                        class="border-border bg-surface min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm"
-                        [id]="id('binding-' + row.id)"
-                        [value]="row.key"
-                        [attr.aria-invalid]="problem('binding:' + row.id) ? 'true' : null"
-                        [attr.aria-describedby]="
-                          problem('binding:' + row.id) ? id('binding-' + row.id + '-problem') : null
-                        "
-                        (change)="rekey($event, row)"
-                        (focus)="typing.set({ id: row.id, text: row.key })"
-                        (input)="typeKey($event, row)"
-                        (blur)="stopTyping(row.id)"
+                    @if (conditionsEnds(); as ends) {
+                      <rmq-binding-conditions
+                        purpose="edit"
+                        [title]="'Conditions of binding ' + (index + 1)"
+                        [headers]="row.headers"
+                        [exchange]="ends.exchange"
+                        [destination]="ends.destination"
+                        [key]="row.key"
+                        [error]="problem('binding:' + row.id) ?? null"
+                        (confirm)="applyConditions(row, $event)"
                       />
                       <button
                         type="button"
-                        class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center rounded-md border px-2"
-                        [attr.aria-label]="
-                          row.key === ''
-                            ? 'Delete the binding with an empty key'
-                            : 'Delete the binding with key ' + row.key
-                        "
+                        class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+                        data-testid="delete-binding"
+                        [attr.aria-label]="'Delete binding ' + (index + 1) + ' of ' + e.bindings.length"
                         (click)="unbind(row)"
                       >
                         <rmq-icon name="trash" [size]="18" />
+                        Delete this binding
                       </button>
-                    </div>
-                    @if (row.hasArguments) {
-                      <p class="text-muted text-xs" data-testid="binding-headers">
-                        This binding has header arguments, which are written with the command bar for now.
-                      </p>
-                    }
-                    @if (problem('binding:' + row.id); as issue) {
-                      <div [id]="id('binding-' + row.id + '-problem')"><rmq-refusal-notice [issue]="issue" /></div>
-                    }
-                    @if (testsKeys(e) && typing()?.id === row.id) {
-                      <rmq-topic-tester [pattern]="typing()?.text ?? ''" />
+                    } @else {
+                      <label class="text-muted text-xs" [for]="id('binding-' + row.id)">Key</label>
+                      <div class="flex gap-2">
+                        <input
+                          type="text"
+                          class="border-border bg-surface min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm"
+                          [id]="id('binding-' + row.id)"
+                          [value]="row.key"
+                          [attr.aria-invalid]="problem('binding:' + row.id) ? 'true' : null"
+                          [attr.aria-describedby]="
+                            problem('binding:' + row.id) ? id('binding-' + row.id + '-problem') : null
+                          "
+                          (change)="rekey($event, row)"
+                          (focus)="typing.set({ id: row.id, text: row.key })"
+                          (input)="typeKey($event, row)"
+                          (blur)="stopTyping(row.id)"
+                        />
+                        <button
+                          type="button"
+                          class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center rounded-md border px-2"
+                          [attr.aria-label]="
+                            row.key === ''
+                              ? 'Delete the binding with an empty key'
+                              : 'Delete the binding with key ' + row.key
+                          "
+                          (click)="unbind(row)"
+                        >
+                          <rmq-icon name="trash" [size]="18" />
+                        </button>
+                      </div>
+                      @if (row.hasArguments) {
+                        <p class="text-muted text-xs" data-testid="binding-headers">
+                          This binding has header arguments, which are written with the command bar for now.
+                        </p>
+                      }
+                      @if (problem('binding:' + row.id); as issue) {
+                        <div [id]="id('binding-' + row.id + '-problem')"><rmq-refusal-notice [issue]="issue" /></div>
+                      }
+                      @if (testsKeys(e) && typing()?.id === row.id) {
+                        <rmq-topic-tester [pattern]="typing()?.text ?? ''" />
+                      }
                     }
                   </div>
                 </li>
@@ -451,6 +476,8 @@ export class Inspector {
   protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   /** The tester of a topic key, under the field that is typed in, needs the flag of the explanation alone (ADR-0064). */
   private readonly explainTools = inject(FeatureFlags).isEnabled('explain');
+  /** The editor of the conditions of a headers binding replaces the key field of its rows, with the flag headers (ADR-0066, ADR-0069). */
+  private readonly conditionsUi = inject(FeatureFlags).isEnabled('headers');
   /** The key field of a binding that is being typed in, and what is typed in it, which the tester follows before the key is changed (it is changed when the field is left). */
   protected readonly typing = signal<{ readonly id: string; readonly text: string } | null>(null);
   private readonly uid = `rmq-inspector-${nextInspector++}`;
@@ -477,7 +504,9 @@ export class Inspector {
     },
   ] as const;
 
-  private readonly view = computed(() => inspectorView(this.store.document(), this.selection.selection()));
+  private readonly view = computed(() =>
+    inspectorView(this.store.document(), this.selection.selection(), { conditions: this.conditionsUi }),
+  );
   protected readonly node = computed<NodeView | null>(() => {
     const view = this.view();
     return view.kind === 'node' ? view : null;
@@ -490,6 +519,24 @@ export class Inspector {
   protected readonly several = computed(() => {
     const view = this.view();
     return view.kind === 'several' ? view.count : 0;
+  });
+
+  /**
+   * The two ends of the bindings of the selected edge, by name, when they are edited with the editor of the conditions: the edge is a binding from a headers exchange and the flag is on. It is one object until the
+   * document or the selection changes, because it is an input of the editor.
+   */
+  protected readonly conditionsEnds = computed(() => {
+    const edge = this.edge();
+    if (!this.conditionsUi || edge === null || edge.edge !== 'binding') {
+      return null;
+    }
+    const document = this.store.document();
+    const exchange = lookup(document.exchanges, edge.from);
+    const to = refOf(document, edge.to);
+    if (exchange?.type !== 'headers' || to === undefined) {
+      return null;
+    }
+    return { exchange: exchange.name, destination: { kind: to.kind as 'queue' | 'exchange', name: to.name } };
   });
 
   /** What each field was refused for, until something else is selected or changed. */
@@ -518,7 +565,9 @@ export class Inspector {
   focusFirst(): boolean {
     // A field first, which is what the key means to edit, and a button when there is none.
     const control =
-      this.host.querySelector<HTMLElement>('input, select') ?? this.host.querySelector<HTMLElement>('button');
+      this.host.querySelector<HTMLElement>('input[type="radio"]:checked') ??
+      this.host.querySelector<HTMLElement>('input, select') ??
+      this.host.querySelector<HTMLElement>('button');
     control?.focus();
     return control !== null;
   }
@@ -623,6 +672,19 @@ export class Inspector {
     }
   }
 
+  /** A binding gets other conditions, as an unbind and a bind in one step. A refusal is shown by the editor; two bindings that come to be the same are one, and the learner is told. */
+  protected applyConditions(row: BindingRow, headers: HeaderArguments): void {
+    const before = this.store.document();
+    const command = rebindHeadersCommand(before, row.id, headers);
+    if (command === undefined) {
+      this.problems.set({});
+      return;
+    }
+    if (this.apply('binding:' + row.id, command) && bindingCount(this.store.document()) < bindingCount(before)) {
+      this.bus.say('That is the same as another binding between these nodes, so there is one now.');
+    }
+  }
+
   protected unbind(row: BindingRow): void {
     const command = unbindCommand(this.store.document(), row.id);
     if (command !== undefined) {
@@ -674,3 +736,6 @@ export class Inspector {
     this.problems.set({ [field]: { kind: 'invalid-value', message } });
   }
 }
+
+/** How many bindings the document has, which is how an edit that made two bindings one is known. */
+const bindingCount = (document: ReturnType<DocumentStore['document']>): number => Object.keys(document.bindings).length;

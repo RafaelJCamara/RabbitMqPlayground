@@ -197,6 +197,37 @@ describe('describeCommand', () => {
       );
     });
 
+    it('says that a binding was changed, and not two changes, when it was taken off and made again between the same ends (ADR-0066)', () => {
+      const unbind: DocumentCommand = {
+        type: 'unbind',
+        source: 'docs',
+        destination: { kind: 'queue', name: 'pdf' },
+        key: '',
+      };
+      const bind: DocumentCommand = {
+        type: 'bind',
+        source: 'docs',
+        destination: { kind: 'queue', name: 'pdf' },
+        key: '',
+      };
+      const toExchange: DocumentCommand = {
+        type: 'bind',
+        source: 'docs',
+        destination: { kind: 'exchange', name: 'pdf' },
+        key: '',
+      };
+
+      expect(describeCommand({ type: 'batch', commands: [unbind, bind] })).toBe(
+        'changed the binding from exchange docs to queue pdf',
+      );
+      // Not the same ends: it is two things.
+      expect(describeCommand({ type: 'batch', commands: [unbind, toExchange] })).toBe('2 changes');
+      expect(
+        describeCommand({ type: 'batch', commands: [unbind, { ...bind, source: 'other' } as DocumentCommand] }),
+      ).toBe('2 changes');
+      expect(describeCommand({ type: 'batch', commands: [bind, unbind] })).toBe('2 changes');
+    });
+
     it('is a count of changes when the adding comes with something that is neither its place nor a link', () => {
       const rename: DocumentCommand = { type: 'rename', target: { kind: 'queue', name: 'billing' }, name: 'b2' };
 

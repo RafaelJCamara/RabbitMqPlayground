@@ -70,6 +70,18 @@ function describeBatch(batch: Batch): string {
   if (commands.every((command) => REMOVALS.has(command.type))) {
     return `deleted ${commands.length} items`;
   }
+  // A binding that is given another key or other conditions is taken off and made again (ADR-0044, ADR-0066), and is one thing to say.
+  const [off, on] = commands;
+  if (
+    commands.length === 2 &&
+    off?.type === 'unbind' &&
+    on?.type === 'bind' &&
+    off.source === on.source &&
+    off.destination.kind === on.destination.kind &&
+    off.destination.name === on.destination.name
+  ) {
+    return `changed the binding from exchange ${on.source} to ${on.destination.kind} ${on.destination.name}`;
+  }
   return `${commands.length} changes`;
 }
 

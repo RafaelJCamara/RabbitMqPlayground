@@ -2390,3 +2390,239 @@ describe('Editor', () => {
     });
   });
 });
+
+describe('the conditions of a headers binding (ADR-0066)', () => {
+  async function openEditor(flags: string | null, ...items: string[]) {
+    const view = await renderEditor([
+      ...harness().providers,
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+    ]);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+    const user = userEvent.setup();
+    for (const item of items) {
+      await user.click(screen.getByRole('button', { name: item }));
+    }
+    view.fixture.detectChanges();
+    const idOf = (kind: string) =>
+      canvas()
+        .model()
+        .nodes.find((node) => node.kind === kind)!.id;
+    const store = view.fixture.debugElement.injector.get(DocumentStore);
+    const link = (): void => {
+      canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+      view.fixture.detectChanges();
+    };
+    return { ...view, canvas, user, idOf, store, link };
+  }
+
+  const POPOVER = 'Conditions for the binding from exchange exchange1 to queue queue1';
+  const bindings = (store: DocumentStore) => Object.values(store.document().bindings);
+
+  it('asks for the conditions of a link to a headers exchange in a popover with the cursor in the first row, and makes nothing until they are given', async () => {
+    const { link, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+
+    link();
+
+    const popover = await screen.findByRole('group', { name: POPOVER });
+    expect(popover).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    expect(bindings(store)).toEqual([]);
+    expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
+  });
+
+  it('binds with the conditions that are typed, the mode that is chosen, and the types that they are written with, and gives the focus back to the canvas', async () => {
+    const { canvas, user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    canvas().calls.length = 0;
+
+    await user.click(screen.getByRole('radio', { name: 'any' }));
+    await user.type(screen.getByRole('textbox', { name: 'Name of condition 1' }), 'n');
+    await user.type(screen.getByRole('textbox', { name: 'Value of condition 1' }), '"1"{Enter}');
+    fixture.detectChanges();
+
+    expect(bindings(store).map(({ headers }) => headers)).toEqual([
+      { xMatch: 'any', args: [{ key: 'n', value: { t: 'string', v: '1' } }] },
+    ]);
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(canvas().calls).toContain('focus');
+    expect(screen.getByTestId('status-message')).toHaveTextContent('Bound exchange exchange1 to queue queue1.');
+  });
+
+  it('keeps the popover open with the reason when the domain refuses, and the status line does not say it twice', async () => {
+    const { user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    const bus = fixture.debugElement.injector.get(CommandBus);
+    const apply = bus.apply.bind(bus);
+    vi.spyOn(bus, 'apply').mockReturnValueOnce({
+      ok: false,
+      error: { kind: 'canvas-full', message: 'This canvas has all the edges it can hold.' },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Name of condition 1' }), 'a');
+    await user.type(screen.getByRole('textbox', { name: 'Value of condition 1' }), '1{Enter}');
+    fixture.detectChanges();
+
+    expect(screen.getByTestId('binding-conditions')).toBeInTheDocument();
+    expect(screen.getByTestId('conditions-refusal')).toHaveTextContent('This canvas has all the edges it can hold.');
+    expect(bindings(store)).toEqual([]);
+
+    vi.spyOn(bus, 'apply').mockImplementation(apply);
+    await user.click(screen.getByRole('button', { name: 'Bind' }));
+    fixture.detectChanges();
+
+    expect(bindings(store)).toHaveLength(1);
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+  });
+
+  it('gives the link up on Escape, says so, makes nothing, and gives the focus back to the canvas', async () => {
+    const { canvas, user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    canvas().calls.length = 0;
+
+    await user.keyboard('abc{Escape}');
+    fixture.detectChanges();
+
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(bindings(store)).toEqual([]);
+    expect(screen.getByTestId('status-message')).toHaveTextContent('Link cancelled.');
+    expect(canvas().calls).toContain('focus');
+  });
+
+  it('gives the link up with the button, and when the focus goes elsewhere, which leaves the focus where the learner put it', async () => {
+    const { canvas, user, link, fixture } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    canvas().calls.length = 0;
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    fixture.detectChanges();
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(canvas().calls).toContain('focus');
+
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+    canvas().calls.length = 0;
+    await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+    fixture.detectChanges();
+
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(canvas().calls).not.toContain('focus');
+  });
+
+  it('does not give the link up when the learner clicks on a sentence of the popover', async () => {
+    const { link, fixture, user } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
+
+    await user.click(screen.getByTestId('conditions-sentence'));
+    fixture.detectChanges();
+
+    expect(screen.getByTestId('binding-conditions')).toBeInTheDocument();
+  });
+
+  it('shows one popover at a time: a second link replaces the first, and the key popover with it', async () => {
+    const { link, fixture } = await openEditor('headers', 'Headers exchange', 'Queue');
+    link();
+    link();
+    fixture.detectChanges();
+
+    expect(screen.getAllByTestId('binding-conditions')).toHaveLength(1);
+  });
+
+  it('asks for a key, and not for conditions, from a direct exchange, with the flag on', async () => {
+    const { link } = await openEditor('headers', 'Direct exchange', 'Queue');
+
+    link();
+
+    expect(await screen.findByTestId('binding-key')).toBeInTheDocument();
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+  });
+
+  it('binds at once with no conditions, and asks for nothing, without the flag', async () => {
+    const { link, store, fixture } = await openEditor(null, 'Headers exchange', 'Queue');
+
+    link();
+    fixture.detectChanges();
+
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(bindings(store)).toHaveLength(1);
+    expect(bindings(store)[0]?.headers).toBeUndefined();
+  });
+});
+
+describe('the card of a headers binding that was cut (ADR-0070)', () => {
+  async function openEditorWithConditions(flags: string | null) {
+    const view = await renderEditor([
+      ...harness().providers,
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+    ]);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
+    view.fixture.debugElement.injector.get(CommandBus).apply(
+      {
+        type: 'batch',
+        commands: [
+          {
+            type: 'declare-exchange',
+            name: 'docs',
+            exchangeType: 'headers',
+            durable: true,
+            autoDelete: false,
+            internal: false,
+          },
+          { type: 'declare-queue', name: 'archive', durable: true },
+          {
+            type: 'bind',
+            source: 'docs',
+            destination: { kind: 'queue', name: 'archive' },
+            key: '',
+            headers: {
+              xMatch: 'all',
+              args: ['a', 'b', 'c', 'd', 'e'].map((key, index) => ({ key, value: { t: 'integer', v: index + 1 } })),
+            },
+          },
+        ],
+      },
+      'typed',
+    );
+    view.fixture.detectChanges();
+    const [edge] = canvas().model().edges;
+    return { ...view, canvas, edge: edge! };
+  }
+
+  it('is given to the canvas as a chip that says how many conditions it left out, and a card that has them all', async () => {
+    const { edge } = await openEditorWithConditions('headers');
+
+    expect(edge.chips).toEqual(['all · a=1 · b=2 · c=3 · +2 more']);
+    expect(edge.cards).toEqual(['all · a=1 · b=2 · c=3 · d=4 · e=5']);
+    expect(edge.cut).toBe(true);
+    expect(edge.label).toBe('Binding from exchange docs to queue archive, x-match all: a=1, b=2, c=3, d=4, e=5');
+  });
+
+  it('lists the whole of the chip in the card while a pointer is over the label, though no chip was left out', async () => {
+    const { canvas, fixture, edge } = await openEditorWithConditions('headers');
+
+    canvas().intent.emit({ type: 'peek', key: edge.id, rect: { x: 100, y: 100, width: 60, height: 20 } });
+    fixture.detectChanges();
+
+    const card = screen.getByRole('group', { name: 'Bindings from exchange docs to queue archive' });
+    expect(
+      within(card)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['all · a=1 · b=2 · c=3 · d=4 · e=5']);
+  });
+
+  it('is the old chip, and a label that says only that there are arguments, without the flag', async () => {
+    const { edge } = await openEditorWithConditions(null);
+
+    expect(edge.chips).toEqual(['headers']);
+    expect(edge.cards).toEqual(['headers']);
+    expect(edge.cut).toBe(false);
+    expect(edge.label).toBe('Binding from exchange docs to queue archive, with header arguments');
+  });
+});

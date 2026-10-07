@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { kindOf, linkRules, type Id, type Issue } from '@rmq/domain';
+import type { HeaderArguments } from '@rmq/engine';
 import { FlowCanvas } from '../canvas/flow/flow-canvas';
 import { buildCanvasVm, EMPTY_VM } from '../canvas/model/canvas-vm';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -44,6 +45,7 @@ import { MessageInspector } from '../explain/message-inspector';
 import { WhatIfTester } from '../explain/what-if-tester';
 import { WhyCard } from '../explain/why-card';
 import { EditorActions, type ActionSurface } from './actions';
+import { BindingConditions } from './binding-conditions';
 import { BindingKey, type GiveUp } from './binding-key';
 import { CheatSheetService } from './cheat-sheet';
 import { contextItems, ContextMenu, type MenuChoice } from './context-menu';
@@ -53,7 +55,14 @@ import { Inspector } from './inspector';
 import { IntentHandler, type IntentSurface } from './intents';
 import { KeyboardService, keysFor } from './keyboard';
 import { LabelCard } from './label-card';
-import { LinkFlow, type CreateAsk, type KeyAsk, type LinkSurface, type TargetAsk } from './link-flow';
+import {
+  LinkFlow,
+  type ConditionsAsk,
+  type CreateAsk,
+  type KeyAsk,
+  type LinkSurface,
+  type TargetAsk,
+} from './link-flow';
 import { LinkPicker } from './link-picker';
 import { NewNodeFocus } from './new-node-focus';
 import { RenameField, type RenameBy } from './rename-field';
@@ -70,6 +79,8 @@ const INTENT_LOG_LIMIT = 200;
 const KEY_SIZE: Size = { width: 288, height: 190 };
 /** The popover of a topic key is taller with the tester of the key in it (ADR-0064), which is the keys that it matches and does not, a few of each. */
 const KEY_TOPIC_SIZE: Size = { width: 288, height: 480 };
+/** The popover of the conditions of a headers binding (ADR-0066) is wider than the one for a key, and as tall as the canvas lets it be: it scrolls inside itself when it is taller. */
+const CONDITIONS_SIZE: Size = { width: 448, height: 480 };
 const PICKER_SIZE: Size = { width: 320, height: 320 };
 
 /** How long the card of a label waits, when the pointer has left the label, for the pointer to arrive on the card. */
@@ -113,6 +124,7 @@ interface Peek {
     ContextMenu,
     HintBar,
     BindingKey,
+    BindingConditions,
     LinkPicker,
     LabelCard,
     CommandBar,
@@ -206,6 +218,18 @@ interface Peek {
               (cancelled)="onKeyGivenUp($event)"
             />
           }
+          @if (conditionsAsk(); as open) {
+            <rmq-binding-conditions
+              purpose="new"
+              [title]="open.ask.title"
+              [exchange]="open.ask.exchange"
+              [destination]="open.ask.destination"
+              [placement]="open.at"
+              [error]="conditionsError()"
+              (confirm)="onConditionsGiven($event)"
+              (cancelled)="onConditionsGivenUp($event)"
+            />
+          }
           @if (picker(); as open) {
             <rmq-link-picker
               [title]="open.ask.title"
@@ -259,6 +283,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly simulation = inject(Simulation);
   /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flags `explain` and `simulation`. */
   protected readonly explain = inject(ExplainState);
+  /** With the flag `headers`, the chips and the label of a headers binding say its conditions (ADR-0069, ADR-0070). */
+  private readonly conditionsUi = inject(FeatureFlags).isEnabled('headers');
   /** Whether the tools of the explanation that need no events are there: the what-if tester, the topic tester, and the card that says what the tester lights. They need the flag `explain` alone (ADR-0064). */
   protected readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   private readonly eventLog = inject(EventLog);
@@ -277,7 +303,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
 
   protected readonly ready = computed(() => this.session.save().kind !== 'opening');
   private drawn = EMPTY_VM;
-  protected readonly model = computed(() => (this.drawn = buildCanvasVm(this.store.document(), this.drawn)));
+  protected readonly model = computed(
+    () => (this.drawn = buildCanvasVm(this.store.document(), this.drawn, { conditions: this.conditionsUi })),
+  );
   protected readonly rules = computed(() => linkRules(this.store.document()));
   /** Whether a press on a message that is drawn on the canvas is taken: with the explanation, while the clock is stopped, which is when a message holds still (ADR-0063). */
   protected readonly markersPressable = computed(() => this.explain.enabled && !this.simulation.running());
@@ -291,6 +319,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   /** The popover that asks for a key, the picker of "Link to…" and the card of a label, whichever is open. */
   protected readonly keyAsk = signal<{ readonly ask: KeyAsk; readonly at: Point; readonly test: boolean } | null>(null);
   protected readonly keyError = signal<Issue | null>(null);
+  /** The popover that asks for the conditions of a headers binding (ADR-0066), and why the last ones were refused. */
+  protected readonly conditionsAsk = signal<{ readonly ask: ConditionsAsk; readonly at: Point } | null>(null);
+  protected readonly conditionsError = signal<Issue | null>(null);
   protected readonly picker = signal<{ readonly ask: TargetAsk; readonly at: Point } | null>(null);
   protected readonly peek = signal<Peek | null>(null);
   private peekTimer: ReturnType<typeof setTimeout> | undefined;
@@ -499,6 +530,13 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     this.keyAsk.set({ ask, at: this.placed(ask.anchor, test ? KEY_TOPIC_SIZE : KEY_SIZE), test });
   }
 
+  /** Opens the popover that asks for the conditions of a headers binding, by the node that it goes to, with the cursor in the first row. */
+  askConditions(ask: ConditionsAsk): void {
+    this.closeAsks();
+    this.conditionsError.set(null);
+    this.conditionsAsk.set({ ask, at: this.placed(ask.anchor, CONDITIONS_SIZE) });
+  }
+
   /** Opens the picker of "Link to…", by the node that the link starts from. */
   askTarget(ask: TargetAsk): void {
     this.closeAsks();
@@ -549,6 +587,38 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     }
   }
 
+  /** The conditions were given: the binding is made, and the popover goes. Arguments that are refused keep it open, with the reason. */
+  protected onConditionsGiven(headers: HeaderArguments): void {
+    const open = this.conditionsAsk();
+    if (open === null) {
+      return;
+    }
+    const result = open.ask.submit(headers);
+    if (result.ok) {
+      this.conditionsAsk.set(null);
+      this.conditionsError.set(null);
+      this.viewport.focus();
+    } else {
+      // The reason is in the popover, so it is not also on the status line, and the bus has said it aloud.
+      this.status.clearRefusalFrom(open.ask.origin);
+      this.conditionsError.set(result.error);
+    }
+  }
+
+  /** The popover of the conditions was given up, as the one for a key is. */
+  protected onConditionsGivenUp(how: GiveUp): void {
+    const open = this.conditionsAsk();
+    if (open === null) {
+      return;
+    }
+    this.conditionsAsk.set(null);
+    this.conditionsError.set(null);
+    open.ask.cancel();
+    if (how !== 'blur') {
+      this.viewport.focus();
+    }
+  }
+
   /** The popover was given up. Escape and the button give the focus back to the canvas, and the focus going elsewhere leaves it where the learner put it. */
   protected onKeyGivenUp(how: GiveUp): void {
     const open = this.keyAsk();
@@ -585,6 +655,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
 
   private closeAsks(): void {
     this.keyAsk.set(null);
+    this.conditionsAsk.set(null);
     this.picker.set(null);
   }
 
@@ -615,7 +686,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     const document = this.store.document();
     const from = describeNode(document, ends.from) ?? ends.from;
     const to = describeNode(document, ends.to) ?? ends.to;
-    this.peek.set({ title: `Bindings from ${from} to ${to}`, items: [...edge.chips, ...edge.more], at });
+    this.peek.set({ title: `Bindings from ${from} to ${to}`, items: edge.cards, at });
   }
 
   /** The pointer is on the card, which keeps it, or has left it, which takes it away shortly. */

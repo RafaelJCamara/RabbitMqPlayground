@@ -48,6 +48,7 @@ import { blocksFoblex, CONNECT_KEYS, GRAB_KEYS } from '../model/guard';
 import { nodeIdAt, nodeIdOfTarget } from '../model/hit-test';
 import type { CanvasIntent, LinkVia } from '../model/intents';
 import { labelPlaces, samePlaces } from '../model/label-layout';
+import { isConditionsChip } from '../model/labels';
 import { armedTargets } from '../model/link-targets';
 import { RMQ_A11Y_MESSAGES } from '../model/messages';
 import { closestFraction, polylineOf } from '../model/path';
@@ -324,12 +325,22 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Whether a label has more to say than it shows: more chips than fit, or a chip whose conditions were cut (ADR-0070). */
+  private hasMore(edge: EdgeVm): boolean {
+    return edge.more.length > 0 || edge.cut;
+  }
+
+  /** The chip of a headers binding is wider than a key, because it names a mode and conditions (ADR-0070). */
+  protected isConditions(chip: string): boolean {
+    return isConditionsChip(chip);
+  }
+
   /**
    * A pointer that hovers over a label that has more than it shows asks for the list; a touch has no hover, and the inspector has the list. A press on a label does
    * not meet this: the pointer is over the label before it presses, and is captured by it after, so it enters no other.
    */
   protected onLabelEnter(event: PointerEvent, edge: EdgeVm): void {
-    if (event.pointerType === 'touch' || edge.more.length === 0) {
+    if (event.pointerType === 'touch' || !this.hasMore(edge)) {
       return;
     }
     const { left, top, width, height } = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -337,7 +348,7 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
   }
 
   protected onLabelLeave(event: PointerEvent, edge: EdgeVm): void {
-    if (event.pointerType !== 'touch' && edge.more.length > 0) {
+    if (event.pointerType !== 'touch' && this.hasMore(edge)) {
       this.intent.emit({ type: 'peek', key: null });
     }
   }

@@ -161,6 +161,15 @@ describe('estimateLabelSize', () => {
     expect(estimateLabelSize(['x'.repeat(200)], 0).width).toBeLessThanOrEqual(180);
   });
 
+  it('lets the chip of a headers binding grow to 300, which the stylesheet does, and a chip of a key to 160 (ADR-0070)', () => {
+    const conditions = 'all · ' + 'x'.repeat(100);
+
+    expect(estimateLabelSize([conditions], 0).width).toBe(300);
+    expect(estimateLabelSize([conditions.repeat(2)], 0).width).toBe(300);
+    expect(estimateLabelSize(['x'.repeat(100)], 0).width).toBe(160);
+    expect(estimateLabelSize(['all · a=1'], 0).width).toBeCloseTo('all · a=1'.length * 6.6 + 16, 5);
+  });
+
   it('is a little for a label with no chip', () => {
     expect(estimateLabelSize([], 0).height).toBeGreaterThan(0);
   });

@@ -1,4 +1,5 @@
 import { applyCommand, type CanvasDocument } from '@rmq/domain';
+import type { HeaderArguments } from '@rmq/engine';
 import {
   entry,
   exchangeRecord,
@@ -10,7 +11,7 @@ import {
   str,
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { bindingRows, rebindCommand, unbindCommand } from './binding-commands';
+import { bindingRows, rebindCommand, rebindHeadersCommand, unbindCommand } from './binding-commands';
 
 const ids = { newId: () => 'scratch1' };
 const orders = (): CanvasDocument =>
@@ -34,7 +35,21 @@ describe('bindingRows (ADR-0044)', () => {
   });
 
   it('says which of them has header arguments', () => {
-    expect(bindingRows(orders(), 'y>q')).toEqual([{ id: 'b3', key: '', hasArguments: true }]);
+    expect(bindingRows(orders(), 'y>q')).toEqual([
+      {
+        id: 'b3',
+        key: '',
+        hasArguments: true,
+        headers: headerArguments('any', entry('format', str('pdf'))),
+      },
+    ]);
+  });
+
+  it('carries the arguments of each, for the editor of the conditions, and nothing for a binding that has none (ADR-0066)', () => {
+    const [keyed] = bindingRows(orders(), 'x>q');
+
+    expect(keyed?.headers).toBeUndefined();
+    expect(Object.hasOwn(keyed ?? {}, 'headers')).toBe(true);
   });
 
   it('lists the bindings between two exchanges as well', () => {
@@ -136,5 +151,121 @@ describe('rebindCommand', () => {
 
     expect(result.ok).toBe(false);
     expect(!result.ok && result.error.kind).toBe('topic-wildcards');
+  });
+});
+
+describe('rebindHeadersCommand (ADR-0066)', () => {
+  const OTHER: HeaderArguments = headerArguments('all', entry('format', str('doc')), entry('n', str('1')));
+
+  it('is an unbind and a bind, in one batch, which is one step of undo, with the other arguments and the same key', () => {
+    expect(rebindHeadersCommand(orders(), 'b3', OTHER)).toEqual({
+      type: 'batch',
+      commands: [
+        {
+          type: 'unbind',
+          source: 'docs',
+          destination: { kind: 'queue', name: 'billing' },
+          key: '',
+          headers: headerArguments('any', entry('format', str('pdf'))),
+        },
+        { type: 'bind', source: 'docs', destination: { kind: 'queue', name: 'billing' }, key: '', headers: OTHER },
+      ],
+    });
+  });
+
+  it('gives the binding its other arguments when it is applied, last among the bindings, and keeps its ends', () => {
+    const document = orders();
+
+    const result = applyCommand(document, rebindHeadersCommand(document, 'b3', OTHER)!, ids);
+
+    const bindings = result.ok ? Object.values(result.value.bindings) : [];
+    expect(bindings.map(({ key }) => key)).toEqual(['order.*', 'invoice.#', '#', '']);
+    expect(bindings.at(-1)).toMatchObject({ dest: { kind: 'queue' }, headers: OTHER });
+  });
+
+  it('keeps the key of a binding that has one, which a headers exchange does not read', () => {
+    const document = documentOf({
+      exchanges: { y: exchangeRecord('docs', 'headers') },
+      queues: { q: queueRecord('billing') },
+      bindings: { b: bindingRecord('y', { kind: 'queue', id: 'q' }, 'order.*', headerArguments('all')) },
+    });
+
+    expect(rebindHeadersCommand(document, 'b', OTHER)).toMatchObject({
+      commands: [
+        { type: 'unbind', key: 'order.*' },
+        { type: 'bind', key: 'order.*' },
+      ],
+    });
+  });
+
+  it('makes a binding that has no arguments out of arguments that say nothing, and takes the arguments off the command', () => {
+    const command = rebindHeadersCommand(orders(), 'b3', undefined);
+
+    expect(command).toMatchObject({ commands: [{ type: 'unbind' }, { type: 'bind', key: '' }] });
+    expect(command && command.type === 'batch' && 'headers' in command.commands[1]!).toBe(false);
+  });
+
+  it('is nothing when the arguments are the ones that the binding has, in any order, because it would change nothing', () => {
+    const same = headerArguments('any', entry('format', str('pdf')));
+
+    expect(rebindHeadersCommand(orders(), 'b3', same)).toBeUndefined();
+    const two = documentOf({
+      exchanges: { y: exchangeRecord('docs', 'headers') },
+      queues: { q: queueRecord('billing') },
+      bindings: {
+        b: bindingRecord(
+          'y',
+          { kind: 'queue', id: 'q' },
+          '',
+          headerArguments('all', entry('a', str('1')), entry('b', str('2'))),
+        ),
+      },
+    });
+    expect(
+      rebindHeadersCommand(two, 'b', headerArguments('all', entry('b', str('2')), entry('a', str('1')))),
+    ).toBeUndefined();
+  });
+
+  it('is something when only the mode differs, or when a mode that was left out is written', () => {
+    expect(rebindHeadersCommand(orders(), 'b3', headerArguments('all', entry('format', str('pdf'))))).toBeDefined();
+    const left = documentOf({
+      exchanges: { y: exchangeRecord('docs', 'headers') },
+      queues: { q: queueRecord('billing') },
+      bindings: { b: bindingRecord('y', { kind: 'queue', id: 'q' }, '', headerArguments(null, entry('a', str('1')))) },
+    });
+    expect(rebindHeadersCommand(left, 'b', headerArguments('all', entry('a', str('1'))))).toBeDefined();
+  });
+
+  it('is nothing for a binding that is not there', () => {
+    expect(rebindHeadersCommand(orders(), 'gone', OTHER)).toBeUndefined();
+  });
+
+  it('is refused by the domain when the arguments are not allowed, and the batch changes nothing', () => {
+    const document = orders();
+    const twice = headerArguments('all', entry('a', str('1')), entry('a', str('2')));
+
+    const result = applyCommand(document, rebindHeadersCommand(document, 'b3', twice)!, ids);
+
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.error.message).toMatch(/there twice/u);
+  });
+
+  it('is one binding, and not two, when the new arguments are another binding’s between the same ends', () => {
+    const document = documentOf({
+      exchanges: { y: exchangeRecord('docs', 'headers') },
+      queues: { q: queueRecord('billing') },
+      bindings: {
+        a: bindingRecord('y', { kind: 'queue', id: 'q' }, '', headerArguments('all', entry('a', str('1')))),
+        b: bindingRecord('y', { kind: 'queue', id: 'q' }, '', headerArguments('all', entry('b', str('2')))),
+      },
+    });
+
+    const result = applyCommand(
+      document,
+      rebindHeadersCommand(document, 'a', headerArguments('all', entry('b', str('2'))))!,
+      ids,
+    );
+
+    expect(result.ok && Object.keys(result.value.bindings)).toEqual(['b']);
   });
 });

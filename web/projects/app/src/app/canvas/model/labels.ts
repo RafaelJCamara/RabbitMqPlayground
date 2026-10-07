@@ -1,5 +1,5 @@
-import type { ElementKind } from '@rmq/domain';
-import type { ExchangeType } from '@rmq/engine';
+import { BINDING_OPTION_NAMES, formatCondition, type ElementKind } from '@rmq/domain';
+import type { ExchangeType, HeaderArguments } from '@rmq/engine';
 
 /**
  * Our own names for what is on the canvas (ADR-0017, section 5). Foblex's are poor ("order-eventsqueue"), and it keeps a label
@@ -32,19 +32,73 @@ export interface BindingEnds {
   readonly keys: readonly string[];
   /** Whether a binding between them has header arguments. */
   readonly hasArguments: boolean;
+  /** What each headers binding between them asks, in words (`x-match all: format=pdf`), with the flag `headers` (ADR-0070). Without it, the label says only that there are arguments. */
+  readonly conditions?: readonly string[];
 }
 
 /** `Binding from exchange orders to queue billing, keys order.*, invoice.#`. */
-export function bindingLabel({ from, to, toKind, keys, hasArguments }: BindingEnds): string {
+export function bindingLabel({ from, to, toKind, keys, hasArguments, conditions = [] }: BindingEnds): string {
   const named = [...new Set(keys.filter((key) => key !== ''))];
   const parts = [`Binding from exchange ${from} to ${toKind} ${to}`];
   if (named.length > 0) {
     parts.push(`${named.length === 1 ? 'key' : 'keys'} ${named.join(', ')}`);
   }
-  if (hasArguments) {
+  if (conditions.length > 0) {
+    parts.push(conditions.join('; '));
+  } else if (hasArguments) {
     parts.push('with header arguments');
   }
   return parts.join(', ');
+}
+
+/** What joins the mode and the conditions in the chip of a headers binding (ADR-0070). */
+export const CHIP_SEPARATOR = ' · ';
+
+/** How many conditions the chip of a binding names before it says how many more there are. */
+export const MAX_CONDITIONS = 3;
+
+/** The text of a chip as it is drawn, and as the card shows it whole. */
+export interface ChipText {
+  readonly short: string;
+  readonly full: string;
+}
+
+/** Whether a chip is the conditions of a headers binding, which is wider than a key (ADR-0070). */
+export const isConditionsChip = (chip: string): boolean => chip.includes(CHIP_SEPARATOR);
+
+/** The conditions of a binding as a chip writes them: as the grammar writes them (`n=1`, `s="1"`, `exists(f)`), and `(ignored)` after one that the mode does not count. */
+function conditionTexts(headers: HeaderArguments | undefined): string[] {
+  const counts = headers?.xMatch === 'all-with-x' || headers?.xMatch === 'any-with-x';
+  return (headers?.args ?? []).map(
+    ({ key, value }) =>
+      `${formatCondition(key, value, BINDING_OPTION_NAMES)}${!counts && key.startsWith('x-') ? ' (ignored)' : ''}`,
+  );
+}
+
+/**
+ * The chip of a headers binding (ADR-0070): the mode first, written out also when the binding left it out, and then its conditions, three at most and then `+N more`, so that the count of what is not
+ * shown is in the text and not in what a cut takes away. The full text has them all.
+ */
+export function headersChip(headers: HeaderArguments | undefined): ChipText {
+  const mode = headers?.xMatch ?? 'all';
+  const conditions = conditionTexts(headers);
+  if (conditions.length === 0) {
+    const text = [mode, 'no conditions'].join(CHIP_SEPARATOR);
+    return { short: text, full: text };
+  }
+  const shown = conditions.slice(0, MAX_CONDITIONS);
+  const hidden = conditions.length - shown.length;
+  return {
+    short: [mode, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join(CHIP_SEPARATOR),
+    full: [mode, ...conditions].join(CHIP_SEPARATOR),
+  };
+}
+
+/** What a headers binding asks, as the label of an edge says it (ADR-0070): `x-match all: format=pdf, n=1`. */
+export function headersSentence(headers: HeaderArguments | undefined): string {
+  const mode = `x-match ${headers?.xMatch ?? 'all'}`;
+  const conditions = conditionTexts(headers);
+  return conditions.length === 0 ? `${mode}, no conditions` : `${mode}: ${conditions.join(', ')}`;
 }
 
 export const linkLabel = (producer: string, kind: 'exchange' | 'queue', target: string, viaDefault = false): string =>
@@ -64,29 +118,52 @@ export const MAX_CHIPS = 3;
 export interface BindingFacts {
   readonly key: string;
   readonly hasArguments: boolean;
+  /** Its arguments, for the chip that names its conditions. */
+  readonly headers?: HeaderArguments;
 }
 
 /**
  * What an edge between an exchange and what it is bound to says, as chips (ADR-0044): the key of each binding, in the order that they were made, and
  * the same text once. An empty key is said where it matters, which is for a direct or a topic exchange, and is nothing for one that ignores the key. A
- * binding that has header arguments is a chip `headers`, once, after the keys.
+ * binding that has header arguments is a chip `headers`, once, after the keys. With `conditions`, a binding of a headers exchange is a chip of its own that
+ * says its mode and its first conditions, after its key (ADR-0070).
  */
-export function chipsOf(type: ExchangeType | undefined, bindings: readonly BindingFacts[]): string[] {
-  const texts: string[] = [];
-  for (const { key } of bindings) {
+export function chipsOf(
+  type: ExchangeType | undefined,
+  bindings: readonly BindingFacts[],
+  conditions = false,
+): ChipText[] {
+  const detailed = conditions && type === 'headers';
+  const texts: ChipText[] = [];
+  for (const { key, headers } of bindings) {
     if (key !== '') {
-      texts.push(key);
+      texts.push({ short: key, full: key });
     } else if (type === 'direct' || type === 'topic') {
-      texts.push('(empty key)');
+      texts.push({ short: '(empty key)', full: '(empty key)' });
+    }
+    if (detailed) {
+      texts.push(headersChip(headers));
     }
   }
-  if (bindings.some(({ hasArguments }) => hasArguments)) {
-    texts.push('headers');
+  if (!detailed && bindings.some(({ hasArguments }) => hasArguments)) {
+    texts.push({ short: 'headers', full: 'headers' });
   }
-  return [...new Set(texts)];
+  const seen = new Set<string>();
+  return texts.filter(({ short, full }) => !seen.has(`${short}\n${full}`) && seen.add(`${short}\n${full}`));
 }
 
-/** The chips that are shown, and the ones that "+N more" stands for. */
-export function splitChips(all: readonly string[]): { readonly chips: string[]; readonly more: string[] } {
-  return { chips: all.slice(0, MAX_CHIPS), more: all.slice(MAX_CHIPS) };
+/** The chips that are shown, the ones that "+N more" stands for, and the whole text of all of them for the card, which says whether a chip was cut. */
+export function splitChips(all: readonly ChipText[]): {
+  readonly chips: string[];
+  readonly more: string[];
+  readonly cards: string[];
+  readonly cut: boolean;
+} {
+  const shorts = all.map(({ short }) => short);
+  return {
+    chips: shorts.slice(0, MAX_CHIPS),
+    more: shorts.slice(MAX_CHIPS),
+    cards: all.map(({ full }) => full),
+    cut: all.some(({ short, full }) => short !== full),
+  };
 }

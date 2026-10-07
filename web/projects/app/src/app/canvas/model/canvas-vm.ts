@@ -14,12 +14,14 @@ import { DEFAULT_EXCHANGE_ID, defaultExchangePosition, implicitEdgeId } from '..
 import {
   bindingLabel,
   chipsOf,
+  headersSentence,
   implicitLabel,
   linkLabel,
   nodeLabel,
   splitChips,
   subscriptionLabel,
   type BindingFacts,
+  type ChipText,
 } from './labels';
 import { frameOf, shapePath } from './shapes';
 
@@ -67,6 +69,9 @@ export interface EdgeVm {
   /** What the label of the edge says, three at most (ADR-0044), and what "+N more" stands for. */
   readonly chips: readonly string[];
   readonly more: readonly string[];
+  /** Every chip in full, for the card that a hover opens, and whether any of them is shown cut (ADR-0070). */
+  readonly cards: readonly string[];
+  readonly cut: boolean;
   /** Where along the edge the document keeps its label, from 0 to 1. Left out when the document has no place for it. */
   readonly labelAt?: number;
   /** What is wrong with it that a broker would accept. */
@@ -79,6 +84,11 @@ export interface CanvasVm {
 }
 
 export const EMPTY_VM: CanvasVm = { nodes: [], edges: [] };
+
+/** What the view model of the canvas is made with (ADR-0069): the flag `headers` draws the conditions of a headers binding, and without it the arguments are `headers`. */
+export interface VmOptions {
+  readonly conditions?: boolean;
+}
 
 /** Whether two values are the same for the view: the same value, or lists that hold the same values in the same order. */
 function sameValue(a: unknown, b: unknown): boolean {
@@ -183,6 +193,8 @@ interface BindingGroup {
   readonly toKind: 'queue' | 'exchange';
   readonly keys: string[];
   readonly facts: BindingFacts[];
+  /** What each headers binding asks, in words, when the conditions are drawn. */
+  readonly conditions: string[];
   hasArguments: boolean;
 }
 
@@ -190,18 +202,23 @@ function edgesOf(
   document: CanvasDocument,
   previous: ReadonlyMap<string, EdgeVm>,
   warnings: ReadonlyMap<string, readonly string[]>,
+  conditions: boolean,
 ): EdgeVm[] {
   const edges: EdgeVm[] = [];
   const name = (kind: ElementKind, id: Id): string => nameOf(document, kind, id) ?? id;
   const add = (
-    edge: Omit<EdgeVm, 'chips' | 'more' | 'warnings' | 'labelAt'> & { readonly all?: readonly string[] },
+    edge: Omit<EdgeVm, 'chips' | 'more' | 'cards' | 'cut' | 'warnings' | 'labelAt'> & {
+      readonly all?: readonly (ChipText | string)[];
+    },
   ) => {
     const { all = [], ...rest } = edge;
     const at = lookup(document.layout.labels, edge.id)?.at;
-    const { chips, more } = splitChips(all);
+    const { chips, more, cards, cut } = splitChips(
+      all.map((chip) => (typeof chip === 'string' ? { short: chip, full: chip } : chip)),
+    );
     edges.push(
       reuse<EdgeVm>(
-        { ...rest, chips, more, labelAt: at, warnings: warnings.get(edge.id) ?? [] },
+        { ...rest, chips, more, cards, cut, labelAt: at, warnings: warnings.get(edge.id) ?? [] },
         previous.get(edge.id),
       ),
     );
@@ -218,21 +235,32 @@ function edgesOf(
       toKind: dest.kind,
       keys: [],
       facts: [],
+      conditions: [],
       hasArguments: false,
     };
     group.keys.push(key);
-    group.facts.push({ key, hasArguments: headers !== undefined });
+    group.facts.push({ key, hasArguments: headers !== undefined, ...(headers === undefined ? {} : { headers }) });
+    if (conditions && lookup(document.exchanges, source)?.type === 'headers') {
+      group.conditions.push(headersSentence(headers));
+    }
     group.hasArguments ||= headers !== undefined;
     bindings.set(id, group);
   }
-  for (const [id, { from, to, toKind, keys, facts, hasArguments }] of bindings) {
+  for (const [id, { from, to, toKind, keys, facts, hasArguments, conditions: asked }] of bindings) {
     add({
       id,
       source: from,
       target: to,
       kind: 'binding',
-      label: bindingLabel({ from: name('exchange', from), to: name(toKind, to), toKind, keys, hasArguments }),
-      all: chipsOf(lookup(document.exchanges, from)?.type, facts),
+      label: bindingLabel({
+        from: name('exchange', from),
+        to: name(toKind, to),
+        toKind,
+        keys,
+        hasArguments,
+        conditions: asked,
+      }),
+      all: chipsOf(lookup(document.exchanges, from)?.type, facts, conditions),
     });
   }
   for (const [id, { name: producer, target }] of Object.entries(document.producers)) {
@@ -285,10 +313,19 @@ const sameItems = <T>(a: readonly T[], b: readonly T[]): boolean =>
  * The view model of a document. `previous` is the one that was drawn before, so that what did not change is the same object,
  * and when nothing at all changed, the same view model.
  */
-export function buildCanvasVm(document: CanvasDocument, previous: CanvasVm = EMPTY_VM): CanvasVm {
+export function buildCanvasVm(
+  document: CanvasDocument,
+  previous: CanvasVm = EMPTY_VM,
+  options: VmOptions = {},
+): CanvasVm {
   const warnings = warningsOf(document);
   const nodes = nodesOf(document, new Map(previous.nodes.map((node) => [node.id, node])), warnings.nodes);
-  const edges = edgesOf(document, new Map(previous.edges.map((edge) => [edge.id, edge])), warnings.edges);
+  const edges = edgesOf(
+    document,
+    new Map(previous.edges.map((edge) => [edge.id, edge])),
+    warnings.edges,
+    options.conditions === true,
+  );
   const sameNodes = sameItems(nodes, previous.nodes);
   const sameEdges = sameItems(edges, previous.edges);
   return sameNodes && sameEdges

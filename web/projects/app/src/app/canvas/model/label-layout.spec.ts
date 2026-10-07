@@ -11,6 +11,8 @@ const edge = (id: string, extra: Partial<EdgeVm> = {}): EdgeVm => ({
   label: id,
   chips: ['a.b'],
   more: [],
+  cards: ['a.b'],
+  cut: false,
   warnings: [],
   ...extra,
 });

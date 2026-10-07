@@ -1,23 +1,46 @@
 import { TestBed } from '@angular/core/testing';
 import { NODE_SIZE, type CanvasDocument } from '@rmq/domain';
-import { documentOf, exchangeRecord, producerRecord, queueRecord, sampleDocument } from '@rmq/testing';
+import type { HeaderArguments } from '@rmq/engine';
+import {
+  documentOf,
+  entry,
+  exchangeRecord,
+  headerArguments,
+  int,
+  producerRecord,
+  queueRecord,
+  sampleDocument,
+  str,
+} from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CommandBus, type Applied } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
-import { LinkFlow, type CreateAsk, type KeyAsk, type LinkSurface, type TargetAsk } from './link-flow';
+import {
+  LinkFlow,
+  type ConditionsAsk,
+  type CreateAsk,
+  type KeyAsk,
+  type LinkSurface,
+  type TargetAsk,
+} from './link-flow';
 import { NewNodeFocus } from './new-node-focus';
 
 /** What the editor would show, written down: the last of each thing that `LinkFlow` asked it to show. */
 class FakeSurface implements LinkSurface {
   key: KeyAsk | undefined;
+  conditions: ConditionsAsk | undefined;
   target: TargetAsk | undefined;
   create: CreateAsk | undefined;
   askKey(ask: KeyAsk): void {
     this.key = ask;
+  }
+  askConditions(ask: ConditionsAsk): void {
+    this.conditions = ask;
   }
   askTarget(ask: TargetAsk): void {
     this.target = ask;
@@ -459,5 +482,196 @@ describe('LinkFlow (ADR-0041, ADR-0042)', () => {
 
       expect(applied).toEqual([]);
     });
+  });
+});
+
+describe('LinkFlow with the flag headers (ADR-0066)', () => {
+  let flow: LinkFlow;
+  let store: DocumentStore;
+  let status: StatusStore;
+  let surface: FakeSurface;
+  let applied: Applied[];
+  let announcer: Announcer;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        DocumentStore,
+        SelectionStore,
+        StatusStore,
+        CommandBus,
+        FlowViewport,
+        NewNodeFocus,
+        LinkFlow,
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'headers' } },
+      ],
+    });
+    flow = TestBed.inject(LinkFlow);
+    store = TestBed.inject(DocumentStore);
+    status = TestBed.inject(StatusStore);
+    announcer = TestBed.inject(Announcer);
+    vi.spyOn(announcer, 'announce');
+    surface = new FakeSurface();
+    flow.surface = surface;
+    applied = [];
+    TestBed.inject(CommandBus).onApplied((change) => applied.push(change));
+    store.load(sampleDocument());
+  });
+
+  const ARGUMENTS = headerArguments('all', entry('format', str('pdf')), entry('n', int(1)));
+
+  it('asks for the conditions when a headers exchange is linked to a queue, by whichever way, and makes nothing until they are given', () => {
+    flow.request('E2', 'Q1', 'key');
+
+    expect(applied).toEqual([]);
+    expect(surface.key).toBeUndefined();
+    expect(surface.conditions).toMatchObject({
+      title: 'Conditions for the binding from exchange docs to queue billing',
+      exchange: 'docs',
+      destination: { kind: 'queue', name: 'billing' },
+      origin: 'key',
+    });
+    expect(Object.keys(store.document().bindings)).toHaveLength(3);
+  });
+
+  it('asks for them when the exchange is linked to another exchange', () => {
+    flow.request('E2', 'E3', 'gesture');
+
+    expect(surface.conditions).toMatchObject({
+      title: 'Conditions for the binding from exchange docs to exchange hidden',
+      destination: { kind: 'exchange', name: 'hidden' },
+    });
+  });
+
+  it('makes one bind with the conditions that are given, with the origin of the way that was used, and no key', () => {
+    flow.request('E2', 'Q1', 'menu');
+
+    const result = surface.conditions?.submit(ARGUMENTS);
+
+    expect(result?.ok).toBe(true);
+    expect(applied).toHaveLength(1);
+    expect(applied[0]).toMatchObject({
+      origin: 'menu',
+      command: {
+        type: 'bind',
+        source: 'docs',
+        destination: { kind: 'queue', name: 'billing' },
+        key: '',
+        headers: ARGUMENTS,
+      },
+    });
+    expect(
+      Object.values(store.document().bindings).find(({ source, dest }) => source === 'E2' && dest.id === 'Q1'),
+    ).toMatchObject({
+      source: 'E2',
+      headers: ARGUMENTS,
+    });
+  });
+
+  it('makes a binding with no conditions when none are typed, which is a binding that matches every message with all', () => {
+    flow.request('E2', 'Q1', 'gesture');
+
+    surface.conditions?.submit(headerArguments('all'));
+
+    const made = Object.values(store.document().bindings).find(
+      ({ source, dest }) => source === 'E2' && dest.id === 'Q1',
+    );
+    expect(made?.headers).toEqual(headerArguments('all'));
+  });
+
+  it('is one step of undo, and its line is the one that a learner would type', () => {
+    flow.request('E2', 'Q1', 'gesture');
+    surface.conditions?.submit(ARGUMENTS);
+
+    expect(store.canUndo()).toBe(true);
+    expect(status.notice()).toEqual({ kind: 'message', text: 'Bound exchange docs to queue billing.' });
+  });
+
+  it('answers a refusal, and makes nothing, so that the popover stays open with the reason', () => {
+    flow.request('E2', 'Q1', 'gesture');
+
+    const result = surface.conditions?.submit(headerArguments('all', entry('a', int(1)), entry('a', int(2))));
+
+    expect(result?.ok).toBe(false);
+    expect(result?.ok ? '' : result?.error.message).toMatch(/there twice/u);
+    expect(applied).toEqual([]);
+  });
+
+  it('says that a binding with those conditions is there already, and changes nothing', () => {
+    flow.request('E2', 'Q2', 'gesture');
+    const bound = store.document().bindings['B2']?.headers;
+
+    const result = surface.conditions?.submit(bound as HeaderArguments);
+
+    expect(result?.ok).toBe(true);
+    expect(applied).toEqual([]);
+    expect(status.notice()).toEqual({ kind: 'message', text: 'Already bound with those conditions.' });
+    expect(announcer.announce).toHaveBeenCalledWith('Already bound with those conditions.');
+  });
+
+  it('says that a link was cancelled, and makes nothing, when the popover is given up', () => {
+    flow.request('E2', 'Q1', 'gesture');
+
+    surface.conditions?.cancel();
+
+    expect(applied).toEqual([]);
+    expect(status.notice()).toEqual({ kind: 'message', text: 'Link cancelled.' });
+  });
+
+  it('still asks for a key, and not for conditions, from a topic exchange', () => {
+    flow.request('E1', 'Q2', 'gesture');
+
+    expect(surface.key).toBeDefined();
+    expect(surface.conditions).toBeUndefined();
+  });
+
+  it('binds at once from a fanout exchange, which ignores the key and has no conditions', () => {
+    flow.request('E3', 'Q2', 'gesture');
+
+    expect(surface.conditions).toBeUndefined();
+    expect(applied).toHaveLength(1);
+  });
+
+  it('asks again, and replaces the first, when another link is made while one is waiting', () => {
+    flow.request('E2', 'Q1', 'gesture');
+    const first = surface.conditions;
+
+    flow.request('E2', 'E3', 'gesture');
+
+    expect(surface.conditions).not.toBe(first);
+    expect(surface.conditions?.destination.name).toBe('hidden');
+  });
+
+  it('asks for the conditions of a link that was let go on nothing, near the node that is to be made, and makes the node and the binding as one step', () => {
+    flow.dropOnNothing('E2', { x: 400, y: 300 }, { x: 640, y: 480 }, 'gesture');
+
+    surface.create?.choose({ kind: 'queue' });
+
+    expect(applied).toEqual([]);
+    expect(surface.conditions).toMatchObject({
+      title: 'Conditions for the binding from exchange docs to queue queue1',
+      exchange: 'docs',
+      destination: { kind: 'queue', name: 'queue1' },
+    });
+
+    surface.conditions?.submit(ARGUMENTS);
+
+    expect(applied).toHaveLength(1);
+    expect(applied[0]?.command.type).toBe('batch');
+    const queue = Object.entries(store.document().queues).find(([, { name }]) => name === 'queue1');
+    expect(queue).toBeDefined();
+    expect(Object.values(store.document().bindings).find(({ dest }) => dest.id === queue?.[0])?.headers).toEqual(
+      ARGUMENTS,
+    );
+  });
+
+  it('makes nothing of a link let go on nothing when the conditions are given up', () => {
+    flow.dropOnNothing('E2', { x: 400, y: 300 }, { x: 640, y: 480 }, 'gesture');
+    surface.create?.choose({ kind: 'queue' });
+
+    surface.conditions?.cancel();
+
+    expect(applied).toEqual([]);
+    expect(Object.keys(store.document().queues)).toHaveLength(2);
   });
 });

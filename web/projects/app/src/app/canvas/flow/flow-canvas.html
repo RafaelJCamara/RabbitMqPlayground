@@ -63,7 +63,7 @@
             (pointerleave)="onLabelLeave($event, edge)"
           >
             @for (chip of edge.chips; track $index) {
-              <span class="rmq-chip">{{ chip }}</span>
+              <span class="rmq-chip" [class.rmq-chip-wide]="isConditions(chip)">{{ chip }}</span>
             }
             @if (edge.more.length > 0) {
               <span class="rmq-chip rmq-more">+{{ edge.more.length }} more</span>

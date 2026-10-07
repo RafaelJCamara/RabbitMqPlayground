@@ -15,11 +15,12 @@ import {
   type Id,
   type Result,
 } from '@rmq/domain';
-import type { ExchangeType } from '@rmq/engine';
+import type { ExchangeType, HeaderArguments } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { NewNode } from '../canvas/model/new-node';
 import { frameOf } from '../canvas/model/shapes';
 import type { Point, Size } from '../canvas/model/transform';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { CommandBus } from '../core/state/command-bus';
 import { DEFAULT_EXCHANGE_ID } from '../core/state/default-exchange';
 import { DocumentStore } from '../core/state/document-store';
@@ -44,6 +45,21 @@ export interface KeyAsk {
   readonly anchor: HostRect | null;
   /** Makes the binding with this key. An answer that is not `ok` keeps the popover open, with the reason. */
   readonly submit: (key: string) => Result<CanvasDocument>;
+  readonly cancel: () => void;
+}
+
+/** What the editor shows to ask for the conditions of a headers binding (ADR-0066): a popover at a node, which answers by `submit` or by `cancel`. */
+export interface ConditionsAsk {
+  /** What it is for, in words: `Conditions for the binding from exchange docs to queue pdf`. */
+  readonly title: string;
+  /** The exchange that the binding starts from and what it goes to, by name. */
+  readonly exchange: string;
+  readonly destination: BindCommand['destination'];
+  /** What started the link, so that a refusal that the popover shows is not also shown on the status line. */
+  readonly origin: CommandOrigin;
+  readonly anchor: HostRect | null;
+  /** Makes the binding with these arguments. An answer that is not `ok` keeps the popover open, with the reason. */
+  readonly submit: (headers: HeaderArguments) => Result<CanvasDocument>;
   readonly cancel: () => void;
 }
 
@@ -78,6 +94,7 @@ export interface CreateAsk {
 /** What the editor shows on behalf of `LinkFlow`. */
 export interface LinkSurface {
   askKey(ask: KeyAsk): void;
+  askConditions(ask: ConditionsAsk): void;
   askTarget(ask: TargetAsk): void;
   askNew(ask: CreateAsk): void;
 }
@@ -88,7 +105,7 @@ const KEY_HELP: Readonly<Partial<Record<ExchangeType, string>>> = {
     'A topic key is words separated by dots. * matches one word and # matches zero or more words, as in order.* or #.created.',
 };
 
-/** Only a direct and a topic exchange read the key of a binding. A fanout ignores it, and a headers exchange reads conditions, which are S8's. */
+/** Only a direct and a topic exchange read the key of a binding. A fanout ignores it, and a headers exchange reads conditions, which have a popover of their own with the flag `headers` (ADR-0066). */
 const keyMatters = (type: ExchangeType | undefined): boolean => type === 'direct' || type === 'topic';
 
 /** The commands that a link makes. */
@@ -127,6 +144,8 @@ export class LinkFlow {
   private readonly store = inject(DocumentStore);
   private readonly viewport = inject(FlowViewport);
   private readonly focus = inject(NewNodeFocus);
+  /** With the flag, a link to a headers exchange asks for its conditions before it is made. Without it, the binding has none, as before (ADR-0066). */
+  private readonly asksConditions = inject(FeatureFlags).isEnabled('headers');
 
   /** Set by the editor, which owns the popover, the picker and the menu. */
   surface: LinkSurface | undefined;
@@ -142,6 +161,17 @@ export class LinkFlow {
     const command = made.value;
     if (command.type === 'bind') {
       const type = lookup(document.exchanges, source)?.type;
+      if (type === 'headers' && this.asksConditions && this.surface !== undefined) {
+        this.askConditions(
+          command,
+          describeNode(document, source) as string,
+          describeNode(document, target) as string,
+          this.anchorOf(document, target),
+          origin,
+          (bound) => this.apply(bound, origin),
+        );
+        return;
+      }
       if (type !== undefined && keyMatters(type) && this.surface !== undefined) {
         this.askKey(
           command,
@@ -248,6 +278,18 @@ export class LinkFlow {
     };
     if (made.value.type === 'bind') {
       const type = lookup(document.exchanges, source)?.type;
+      if (type === 'headers' && this.asksConditions && this.surface !== undefined) {
+        const { width, height } = frameOf(addition.kind);
+        this.askConditions(
+          made.value,
+          describeNode(document, source) as string,
+          `${addition.kind} ${addition.name}`,
+          this.viewport.onHost({ x: at.x - width / 2, y: at.y - height / 2, width, height }),
+          origin,
+          make,
+        );
+        return;
+      }
       if (type !== undefined && keyMatters(type) && this.surface !== undefined) {
         const { width, height } = frameOf(addition.kind);
         this.askKey(
@@ -285,12 +327,35 @@ export class LinkFlow {
     });
   }
 
+  private askConditions(
+    command: BindCommand,
+    from: string,
+    to: string,
+    anchor: HostRect | null,
+    origin: CommandOrigin,
+    make: (command: BindCommand) => Result<CanvasDocument>,
+  ): void {
+    this.surface?.askConditions({
+      title: `Conditions for the binding from ${from} to ${to}`,
+      exchange: command.source,
+      destination: command.destination,
+      origin,
+      anchor,
+      submit: (headers) => make({ ...command, headers }),
+      cancel: () => this.bus.say('Link cancelled.'),
+    });
+  }
+
   /** Applies a command, and says so when it changed nothing, because what it makes is there already, which would otherwise be silent. */
   private apply(command: LinkingCommand, origin: CommandOrigin): Result<CanvasDocument> {
     const before = this.store.document();
     const result = this.bus.apply(command, origin);
     if (result.ok && result.value === before) {
-      this.bus.say(NOTHING_NEW[command.type]);
+      this.bus.say(
+        command.type === 'bind' && command.headers !== undefined
+          ? 'Already bound with those conditions.'
+          : NOTHING_NEW[command.type],
+      );
     }
     return result;
   }

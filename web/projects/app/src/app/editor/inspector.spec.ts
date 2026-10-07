@@ -1106,3 +1106,242 @@ describe('Inspector', () => {
     });
   });
 });
+
+describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () => {
+  const rows = () => screen.getAllByRole('group', { name: /^Binding \d+ of \d+$/ });
+  const editorOf = (row: HTMLElement) => within(row).getByTestId('binding-conditions');
+  const bus = () => TestBed.inject(CommandBus);
+  const SECOND = {
+    type: 'bind',
+    source: 'docs',
+    destination: { kind: 'queue', name: 'archive' },
+    key: '',
+    headers: { xMatch: 'any', args: [{ key: 'format', value: { t: 'string', v: 'doc' } }] },
+  } as const;
+
+  it('puts the editor of the conditions in the place of the key field, for a binding from a headers exchange', async () => {
+    await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+
+    const [only] = rows() as [HTMLElement];
+    expect(within(only).queryByRole('textbox', { name: 'Key' })).not.toBeInTheDocument();
+    expect(within(only).queryByTestId('binding-headers')).not.toBeInTheDocument();
+    expect(within(only).getByRole('radio', { name: 'any' })).toBeChecked();
+    expect(within(only).getByRole('textbox', { name: 'Name of condition 1' })).toHaveValue('format');
+    expect(within(only).getByRole('textbox', { name: 'Value of condition 1' })).toHaveValue('pdf');
+    expect(within(only).getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+    expect(within(only).getByRole('button', { name: 'Revert' })).toBeInTheDocument();
+    expect(within(only).getByRole('button', { name: 'Delete binding 1 of 1' })).toBeInTheDocument();
+    // The line is what a learner would type, with the names that the canvas has.
+    expect(within(only).getByTestId('conditions-line')).toHaveTextContent(
+      'bind docs -> archive x-match=any format=pdf',
+    );
+  });
+
+  it('says in the label of the edge what the conditions are, which is what the canvas says of it', async () => {
+    await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+
+    expect(screen.getByTestId('inspector-edge')).toHaveTextContent(
+      'Binding from exchange docs to queue archive, x-match any: format=pdf',
+    );
+  });
+
+  it('is not there without the flag: the key field and the note that the arguments are written with the command bar', async () => {
+    await renderInspector({ edges: ['E2>Q2'] });
+
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(within(rows()[0]!).getByRole('textbox', { name: 'Key' })).toBeInTheDocument();
+    expect(within(rows()[0]!).getByTestId('binding-headers')).toBeInTheDocument();
+  });
+
+  it('is not there for a binding from an exchange that is not a headers exchange, which keeps its key field', async () => {
+    await renderInspector({ edges: ['E1>Q1'] }, 'headers');
+
+    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
+    expect(within(rows()[0]!).getByRole('textbox', { name: 'Key' })).toHaveValue('order.*');
+  });
+
+  it('is there for a binding to an exchange, as well as to a queue', async () => {
+    const { choose } = await renderInspector({}, 'headers');
+    bus().apply(
+      {
+        type: 'bind',
+        source: 'docs',
+        destination: { kind: 'exchange', name: 'hidden' },
+        key: '',
+        headers: { xMatch: 'all', args: [] },
+      },
+      'toolbar',
+    );
+
+    choose([], ['E2>E3']);
+
+    expect(within(rows()[0]!).getByRole('radio', { name: 'all' })).toBeChecked();
+    expect(within(rows()[0]!).getByTestId('conditions-line')).toHaveTextContent('bind docs -> hidden x-match=all');
+  });
+
+  it('gives a binding other conditions when Apply is pressed, as an unbind and a bind in one step, with the inspector as the origin', async () => {
+    const { user, document, store } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const applied: { origin: string; type: string }[] = [];
+    bus().onApplied(({ origin, command }) => applied.push({ origin, type: command.type }));
+    const editor = editorOf(rows()[0]!);
+
+    await user.clear(within(editor).getByRole('textbox', { name: 'Value of condition 1' }));
+    await user.type(within(editor).getByRole('textbox', { name: 'Value of condition 1' }), 'doc');
+    await user.click(within(editor).getByRole('button', { name: 'Apply' }));
+
+    expect(applied).toEqual([{ origin: 'inspector', type: 'batch' }]);
+    expect(Object.values(document().bindings).find(({ dest }) => dest.id === 'Q2')?.headers).toEqual({
+      xMatch: 'any',
+      args: [{ key: 'format', value: { t: 'string', v: 'doc' } }],
+    });
+    expect(TestBed.inject(StatusStore).notice()).toEqual({
+      kind: 'message',
+      text: 'Changed the binding from exchange docs to queue archive.',
+    });
+    expect(store.canUndo()).toBe(true);
+  });
+
+  it('is one step of undo, which gives the binding back as it was', async () => {
+    const { user, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const before = document().bindings['B2'];
+
+    await user.type(within(rows()[0]!).getByRole('textbox', { name: 'Value of condition 1' }), 'x');
+    await user.click(within(rows()[0]!).getByRole('button', { name: 'Apply' }));
+    expect(document().bindings['B2']).toBeUndefined();
+    bus().undo('toolbar');
+
+    expect(document().bindings['B2']).toEqual(before);
+  });
+
+  it('shows the binding that came of an edit, with the draft that it has, and not what was typed before', async () => {
+    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    await user.click(within(rows()[0]!).getByRole('radio', { name: 'all' }));
+    await user.click(within(rows()[0]!).getByRole('button', { name: 'Apply' }));
+
+    const [edited] = rows() as [HTMLElement];
+    expect(within(edited).getByRole('radio', { name: 'all' })).toBeChecked();
+    expect(within(edited).getByRole('textbox', { name: 'Value of condition 1' })).toHaveValue('pdf');
+  });
+
+  it('applies nothing, and says so, when nothing was changed', async () => {
+    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const applied: string[] = [];
+    bus().onApplied(({ command }) => applied.push(command.type));
+
+    await user.click(within(rows()[0]!).getByRole('button', { name: 'Apply' }));
+
+    expect(applied).toEqual([]);
+  });
+
+  it('applies nothing when the arguments are the ones that the binding has, even if the editor sent them', async () => {
+    const { fixture } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const applied: string[] = [];
+    bus().onApplied(({ command }) => applied.push(command.type));
+    const inspector = fixture.componentInstance as unknown as {
+      applyConditions(row: unknown, headers: unknown): void;
+    };
+
+    inspector.applyConditions(
+      { id: 'B2' },
+      { xMatch: 'any', args: [{ key: 'format', value: { t: 'string', v: 'pdf' } }] },
+    );
+
+    expect(applied).toEqual([]);
+  });
+
+  it('shows the refusal of the domain in the editor, and changes nothing', async () => {
+    const { user, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    vi.spyOn(bus(), 'apply').mockReturnValue({
+      ok: false,
+      error: { kind: 'canvas-full', message: 'This canvas has all the edges it can hold.' },
+    });
+    await user.type(within(rows()[0]!).getByRole('textbox', { name: 'Value of condition 1' }), 'x');
+
+    await user.click(within(rows()[0]!).getByRole('button', { name: 'Apply' }));
+
+    expect(within(rows()[0]!).getByTestId('conditions-refusal')).toHaveTextContent(
+      'This canvas has all the edges it can hold.',
+    );
+    expect(document().bindings['B2']?.headers?.args[0]?.value).toEqual({ t: 'string', v: 'pdf' });
+  });
+
+  it('says that two bindings are one when the conditions that were typed are those of another binding between the same two', async () => {
+    const { user, document, choose } = await renderInspector({}, 'headers');
+    bus().apply(SECOND, 'toolbar');
+    choose([], ['E2>Q2']);
+    expect(rows()).toHaveLength(2);
+    const second = rows()[1] as HTMLElement;
+
+    await user.clear(within(second).getByRole('textbox', { name: 'Value of condition 1' }));
+    await user.type(within(second).getByRole('textbox', { name: 'Value of condition 1' }), 'pdf');
+    await user.click(within(second).getByRole('button', { name: 'Apply' }));
+
+    expect(Object.values(document().bindings).filter(({ dest }) => dest.id === 'Q2')).toHaveLength(1);
+    expect(TestBed.inject(StatusStore).notice()).toEqual({
+      kind: 'message',
+      text: 'That is the same as another binding between these nodes, so there is one now.',
+    });
+  });
+
+  it('takes a binding off with its own button, which says which, and leaves the others', async () => {
+    const { user, document, choose } = await renderInspector({}, 'headers');
+    bus().apply(SECOND, 'toolbar');
+    choose([], ['E2>Q2']);
+
+    await user.click(screen.getByRole('button', { name: 'Delete binding 2 of 2' }));
+
+    expect(Object.values(document().bindings).filter(({ dest }) => dest.id === 'Q2')).toHaveLength(1);
+    expect(document().bindings['B2']).toBeDefined();
+  });
+
+  it('opens the popover of the conditions for another binding between the same two, with the inspector as the origin', async () => {
+    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const request = vi.spyOn(TestBed.inject(LinkFlow), 'request');
+
+    await user.click(screen.getByRole('button', { name: 'Add another binding' }));
+
+    expect(request).toHaveBeenCalledWith('E2', 'Q2', 'inspector');
+  });
+
+  it('gives the focus to the mode that is chosen, for the key that edits what is selected', async () => {
+    const { fixture } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+
+    expect((fixture.componentInstance as Inspector).focusFirst()).toBe(true);
+
+    expect(screen.getByRole('radio', { name: 'any' })).toHaveFocus();
+  });
+
+  it('leaves for the canvas on Escape, and what was typed and not applied stays out of the document', async () => {
+    const { user, viewport, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const focus = vi.spyOn(viewport, 'focus');
+
+    await user.type(within(rows()[0]!).getByRole('textbox', { name: 'Value of condition 1' }), 'xyz');
+    await user.keyboard('{Escape}');
+
+    expect(focus).toHaveBeenCalledOnce();
+    expect(document().bindings['B2']?.headers?.args[0]?.value).toEqual({ t: 'string', v: 'pdf' });
+  });
+
+  it('says the lint of the binding in the inspector as well, as it did, and in the editor as the draft is typed', async () => {
+    const { user, choose } = await renderInspector({}, 'headers');
+    bus().apply(
+      {
+        type: 'bind',
+        source: 'docs',
+        destination: { kind: 'queue', name: 'billing' },
+        key: '',
+        headers: { xMatch: 'any', args: [] },
+      },
+      'toolbar',
+    );
+    choose([], ['E2>Q1']);
+
+    expect(screen.getByTestId('inspector-warnings')).toHaveTextContent('x-match=any');
+    expect(within(rows()[0]!).getByTestId('conditions-lint')).toHaveTextContent(
+      'x-match=any and no condition that counts',
+    );
+
+    await user.click(within(rows()[0]!).getByRole('radio', { name: 'all' }));
+    expect(within(rows()[0]!).queryByTestId('conditions-lint')).not.toBeInTheDocument();
+  });
+});

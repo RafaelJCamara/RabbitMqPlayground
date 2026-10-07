@@ -228,6 +228,7 @@ describe('IntentHandler', () => {
       const asked: { client: unknown; nodes: number }[] = [];
       TestBed.inject(LinkFlow).surface = {
         askKey: vi.fn(),
+        askConditions: vi.fn(),
         askTarget: vi.fn(),
         askNew: (ask) => asked.push({ client: ask.client, nodes: ask.nodes.length }),
       };
@@ -251,7 +252,12 @@ describe('IntentHandler', () => {
     });
 
     it('says that a link from a key was a key, for a link let go on nothing as for any other', () => {
-      TestBed.inject(LinkFlow).surface = { askKey: vi.fn(), askTarget: vi.fn(), askNew: vi.fn() };
+      TestBed.inject(LinkFlow).surface = {
+        askKey: vi.fn(),
+        askConditions: vi.fn(),
+        askTarget: vi.fn(),
+        askNew: vi.fn(),
+      };
 
       handler.handle({
         type: 'link-to-empty',

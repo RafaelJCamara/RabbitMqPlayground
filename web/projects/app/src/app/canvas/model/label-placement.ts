@@ -1,3 +1,4 @@
+import { isConditionsChip } from './labels';
 import { pointAtFraction, type Polyline } from './path';
 import type { Point, Size } from './transform';
 
@@ -28,6 +29,8 @@ export type Rect = Point & Size;
 const CHARACTER = 6.6;
 const PADDING = 16;
 const MAX_CHIP_WIDTH = 160;
+/** The chip of a headers binding is wider than a key (ADR-0070): the same number as the stylesheet. */
+const MAX_CONDITIONS_CHIP_WIDTH = 300;
 const ROW = 20;
 const GAP = 2;
 
@@ -35,7 +38,9 @@ const GAP = 2;
 export function estimateLabelSize(chips: readonly string[], more: number): Size {
   const texts = more > 0 ? [...chips, `+${more} more`] : chips;
   const rows = Math.max(1, texts.length);
-  const widths = texts.map((text) => Math.min(MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING));
+  const widths = texts.map((text) =>
+    Math.min(isConditionsChip(text) ? MAX_CONDITIONS_CHIP_WIDTH : MAX_CHIP_WIDTH, text.length * CHARACTER + PADDING),
+  );
   return { width: Math.max(PADDING, ...widths), height: rows * ROW + (rows - 1) * GAP };
 }
 

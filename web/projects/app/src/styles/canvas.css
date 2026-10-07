@@ -230,6 +230,11 @@ rmq-flow-canvas .rmq-chip {
   white-space: nowrap;
 }
 
+/* The chip of a headers binding names a mode and its conditions, and is wider than a key (ADR-0070). */
+rmq-flow-canvas .rmq-chip-wide {
+  max-width: 300px;
+}
+
 rmq-flow-canvas .rmq-more {
   color: var(--rmq-muted);
 }

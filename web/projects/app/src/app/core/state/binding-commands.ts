@@ -2,11 +2,13 @@ import {
   edgeKey,
   lookup,
   nameOf,
+  sameHeaders,
   type CanvasDocument,
   type DocumentCommand,
   type Id,
   type UnbindCommand,
 } from '@rmq/domain';
+import type { HeaderArguments } from '@rmq/engine';
 
 /**
  * What the inspector does to the bindings of an edge (ADR-0044), as commands. A binding is named exactly as the document has it, by the names of its two ends, its key and
@@ -17,15 +19,22 @@ import {
 export interface BindingRow {
   readonly id: Id;
   readonly key: string;
-  /** It has header arguments, which the inspector does not edit yet. */
+  /** It has header arguments, which the editor of the conditions edits (ADR-0066), and without the flag the inspector does not. */
   readonly hasArguments: boolean;
+  /** Its arguments, for the editor of the conditions. */
+  readonly headers: HeaderArguments | undefined;
 }
 
 /** The bindings between the two ends of an edge, in the order that they were made. */
 export function bindingRows(document: CanvasDocument, key: string): BindingRow[] {
   return Object.entries(document.bindings)
     .filter(([, binding]) => edgeKey(binding.source, binding.dest.id) === key)
-    .map(([id, binding]) => ({ id, key: binding.key, hasArguments: binding.headers !== undefined }));
+    .map(([id, binding]) => ({
+      id,
+      key: binding.key,
+      hasArguments: binding.headers !== undefined,
+      headers: binding.headers,
+    }));
 }
 
 /** The `unbind` that takes one binding off, or nothing if the document has no such binding. */
@@ -58,6 +67,26 @@ export function rebindCommand(document: CanvasDocument, id: Id, key: string): Do
     return undefined;
   }
   const { source, destination, headers } = unbind;
+  return {
+    type: 'batch',
+    commands: [unbind, { type: 'bind', source, destination, key, ...(headers === undefined ? {} : { headers }) }],
+  };
+}
+
+/**
+ * Gives a binding other arguments: an `unbind` and a `bind` in one batch, so that it is one step of undo and the line of the log is both commands (ADR-0066). Nothing for a binding that is not there, and for the arguments
+ * that it has, which would change nothing. The key stays, because a headers exchange does not read it and the binding is still the one with that key.
+ */
+export function rebindHeadersCommand(
+  document: CanvasDocument,
+  id: Id,
+  headers: HeaderArguments | undefined,
+): DocumentCommand | undefined {
+  const unbind = unbindCommand(document, id);
+  if (unbind === undefined || sameHeaders(unbind.headers, headers)) {
+    return undefined;
+  }
+  const { source, destination, key } = unbind;
   return {
     type: 'batch',
     commands: [unbind, { type: 'bind', source, destination, key, ...(headers === undefined ? {} : { headers }) }],
