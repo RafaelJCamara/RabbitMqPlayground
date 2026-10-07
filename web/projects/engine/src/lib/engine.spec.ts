@@ -316,6 +316,19 @@ describe('what a message does on the way, as the screen reads it', () => {
     expect(engine.flights()).toEqual([]);
   });
 
+  it('says which producer sent a message on its leg in the broker, and none for a message that a command published', () => {
+    const engine = orders();
+    send(engine);
+    engine.advanceTo(400);
+    run(engine, publish('e', 'k', 'by hand'));
+    engine.advanceTo(500);
+
+    expect(engine.flights()).toMatchObject([
+      { leg: 'broker', message: 2, producer: null, from: 400, to: 700 },
+      { leg: 'broker', message: 1, producer: 'p', from: 500, to: 800 },
+    ]);
+  });
+
   it('is the same list until something changes, and a new one after', () => {
     const engine = orders();
     send(engine);

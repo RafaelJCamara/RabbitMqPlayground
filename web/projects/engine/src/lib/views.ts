@@ -109,6 +109,7 @@ export function buildFlights(state: State): Flight[] {
         leg: 'broker',
         message: message.id,
         key: message.key,
+        producer: message.producer,
         exchange: message.exchange,
         paths: task.paths,
         from: task.routedAt,

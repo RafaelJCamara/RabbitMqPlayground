@@ -94,6 +94,8 @@ export type Flight =
       readonly leg: 'broker';
       readonly message: number;
       readonly key: string;
+      /** The producer that sent it, or `null` for a message that a command published, which has no link to wait at when the hops of its path are not drawn. */
+      readonly producer: string | null;
       readonly exchange: string;
       readonly paths: readonly RoutePath[];
       readonly from: number;
