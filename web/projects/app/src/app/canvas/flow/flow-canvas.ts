@@ -32,6 +32,8 @@ import {
   withConnectionFlow,
 } from '@foblex/flow';
 import type { Id, LinkRules } from '@rmq/domain';
+import { FeatureFlags } from '../../core/flags/feature-flags';
+import { NodeStatsView } from '../overlay/node-stats';
 import { isVirtual } from '../../core/state/default-exchange';
 import { Icon } from '../../core/ui/icon';
 import { NOTHING_SELECTED, type Selection } from '../../core/state/selection-store';
@@ -84,7 +86,7 @@ const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
  */
 @Component({
   selector: 'rmq-flow-canvas',
-  imports: [FFlowModule, FlowBridge, Icon],
+  imports: [FFlowModule, FlowBridge, Icon, NodeStatsView],
   providers: [
     provideFFlow(
       withA11y({
@@ -105,6 +107,8 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
 
   private readonly page = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  /** What the simulation says about each node is under it, with the flag (ADR-0056). */
+  protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   private readonly injector = inject(Injector);
   private readonly changes = inject(ChangeDetectorRef);
   private readonly viewport = inject(FlowViewport);
@@ -196,19 +200,15 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     };
     this.cleanups.push(
       this.viewport.attach(driver),
+      this.watchTransform(canvas.hostElement),
       watchDrawnEdges(canvas.fConnectionsContainer().nativeElement, {
         drawn: (ids) => this.viewport.markDrawn(ids),
         gone: (ids) => this.viewport.markGone(ids),
         geometry: () => this.placeLabelsSoon(),
-      this.watchTransform(canvas.hostElement),
       }),
     );
   }
 
-  /** Works out where the labels go from the paths that are drawn, a moment after the last thing moved, and not while it still is moving. */
-  private placeLabelsSoon(): void {
-    clearTimeout(this.placementTimer);
-    this.placementTimer = setTimeout(() => {
   /**
    * Tells the rest of the app when the canvas moves, while it moves: the library says so only when a gesture ends, and what is laid over the canvas, which
    * follows the live transform on every frame, has to be drawn again when the canvas is panned or zoomed while the clock is stopped (ADR-0055).
@@ -222,6 +222,10 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
     return () => observer.disconnect();
   }
 
+  /** Works out where the labels go from the paths that are drawn, a moment after the last thing moved, and not while it still is moving. */
+  private placeLabelsSoon(): void {
+    clearTimeout(this.placementTimer);
+    this.placementTimer = setTimeout(() => {
       const next = labelPlaces(this.model(), (key) => this.viewport.edgePath(key));
       if (!samePlaces(next, this.placed())) {
         this.placed.set(next);
