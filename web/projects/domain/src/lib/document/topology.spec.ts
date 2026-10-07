@@ -14,7 +14,7 @@ import {
   str,
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { edgeKey, edgeKeys, toTopology } from './topology';
+import { bindingIds, edgeKey, edgeKeys, toTopology } from './topology';
 
 describe('toTopology', () => {
   const document = deepFreeze(
@@ -103,6 +103,49 @@ describe('toTopology', () => {
 
     expect(result).toMatchObject({ ok: true, queues: ['last'] });
     expect(route(toTopology(document), message('first'))).toMatchObject({ ok: false, code: 403 });
+  });
+});
+
+describe('bindingIds', () => {
+  const document = documentOf({
+    exchanges: { e2: exchangeRecord('second', 'topic'), e1: exchangeRecord('first', 'fanout') },
+    queues: { q1: queueRecord('q') },
+    bindings: {
+      b3: bindingRecord('e2', { kind: 'queue', id: 'q1' }, 'a.#'),
+      b1: bindingRecord('e1', { kind: 'exchange', id: 'e2' }),
+      b2: bindingRecord('e1', { kind: 'queue', id: 'q1' }),
+    },
+  });
+
+  it('gives the id of each binding in the order of the bindings of the topology, so that an index in a trace is a binding of the canvas', () => {
+    const { bindings } = toTopology(document);
+
+    expect(bindingIds(document)).toEqual(['b3', 'b1', 'b2']);
+    bindingIds(document).forEach((id, index) => {
+      const record = document.bindings[id];
+      expect(bindings[index]?.destination.kind).toBe(record?.dest.kind);
+      expect(bindings[index]?.key).toBe(record?.key);
+    });
+  });
+
+  it('leaves out what the topology leaves out, so that the two never go out of step', () => {
+    const broken = documentOf({
+      exchanges: { e1: exchangeRecord('a') },
+      queues: { q1: queueRecord('q') },
+      bindings: {
+        first: bindingRecord('e1', { kind: 'queue', id: 'q1' }),
+        noSource: bindingRecord('gone', { kind: 'queue', id: 'q1' }),
+        noQueue: bindingRecord('e1', { kind: 'queue', id: 'gone' }),
+        last: bindingRecord('e1', { kind: 'queue', id: 'q1' }, 'k'),
+      },
+    });
+
+    expect(bindingIds(broken)).toEqual(['first', 'last']);
+    expect(bindingIds(broken)).toHaveLength(toTopology(broken).bindings.length);
+  });
+
+  it('is empty for an empty canvas', () => {
+    expect(bindingIds(documentOf())).toEqual([]);
   });
 });
 

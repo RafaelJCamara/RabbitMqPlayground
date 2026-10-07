@@ -15,7 +15,8 @@ import { wordText } from '../words';
 export const SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 export const SPEED_RANGE = { min: 0.25, max: 4 } as const;
 
-const MESSAGE_OPTIONS: readonly OptionSpec[] = [KEY_OPTION, PAYLOAD_OPTION];
+/** The options of a message that is written in words: its key and its payload. The headers are `header:name=value`. */
+export const MESSAGE_OPTIONS: readonly OptionSpec[] = [KEY_OPTION, PAYLOAD_OPTION];
 
 const SOURCES = ['producer', 'exchange'] as const;
 

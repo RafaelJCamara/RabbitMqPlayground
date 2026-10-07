@@ -2,6 +2,27 @@ import type { Binding, Topology } from '@rmq/engine';
 import { lookup } from './elements';
 import type { CanvasDocument, Id } from './schema';
 
+/** The bindings that name two things that are on the canvas, with their ids, in the order they were made. A valid document has no other. */
+function presentBindings(document: CanvasDocument): { readonly id: Id; readonly binding: Binding }[] {
+  const bindings: { readonly id: Id; readonly binding: Binding }[] = [];
+  for (const [id, { source, dest, key, headers }] of Object.entries(document.bindings)) {
+    const from = lookup(document.exchanges, source);
+    const to = lookup(dest.kind === 'queue' ? document.queues : document.exchanges, dest.id);
+    if (from !== undefined && to !== undefined) {
+      bindings.push({
+        id,
+        binding: {
+          source: from.name,
+          destination: { kind: dest.kind, name: to.name },
+          key,
+          ...(headers ? { headers } : {}),
+        },
+      });
+    }
+  }
+  return bindings;
+}
+
 /**
  * The document as the engine sees it (ADR-0007, ADR-0018): the names of the exchanges and queues, and the bindings between
  * them, in the order they were made. It is what `route()` reads, so the what-if tester and the Why? overlay route through
@@ -12,26 +33,19 @@ import type { CanvasDocument, Id } from './schema';
  * what says that one does.
  */
 export function toTopology(document: CanvasDocument): Topology {
-  const bindings: Binding[] = [];
-  for (const { source, dest, key, headers } of Object.values(document.bindings)) {
-    const from = lookup(document.exchanges, source);
-    const to = lookup(dest.kind === 'queue' ? document.queues : document.exchanges, dest.id);
-    if (from !== undefined && to !== undefined) {
-      bindings.push({
-        source: from.name,
-        destination: { kind: dest.kind, name: to.name },
-        key,
-        ...(headers ? { headers } : {}),
-      });
-    }
-  }
   return {
     vhost: document.vhost,
     exchanges: Object.values(document.exchanges).map(({ name, type, internal }) => ({ name, type, internal })),
     queues: Object.values(document.queues).map(({ name }) => name),
-    bindings,
+    bindings: presentBindings(document).map(({ binding }) => binding),
   };
 }
+
+/**
+ * The ids of the bindings, in the order of `toTopology(document).bindings` (ADR-0060): an index in a trace is a binding of the canvas, and a binding of the canvas is an edge. The two are made from
+ * the same list, so they never go out of step.
+ */
+export const bindingIds = (document: CanvasDocument): Id[] => presentBindings(document).map(({ id }) => id);
 
 /** The key of the edge from one element to another, which is also the key of its label in the layout. */
 export const edgeKey = (from: Id, to: Id): string => `${from}>${to}`;

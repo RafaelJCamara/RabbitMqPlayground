@@ -105,7 +105,24 @@ export {
   type ProducerRecord,
   type QueueRecord,
 } from './lib/document/schema';
-export { edgeKey, edgeKeys, toTopology } from './lib/document/topology';
+export { bindingIds, edgeKey, edgeKeys, toTopology } from './lib/document/topology';
+export type { ConditionLine } from './lib/explain/headers-words';
+export { explainQueue } from './lib/explain/queue';
+export { explainRoute, messageIssue, refusalText } from './lib/explain/route';
+export { alignmentLines, explanationText } from './lib/explain/text';
+export { topicWords, type TopicWords } from './lib/explain/topic-words';
+export type {
+  BindingDetail,
+  BindingNode,
+  ExchangeNode,
+  InvalidExplanation,
+  QueueExplanation,
+  ReasonNode,
+  RefusedExplanation,
+  RoutedExplanation,
+  RouteExplanation,
+} from './lib/explain/types';
+export { SHORT_MOST, typeText, valueText } from './lib/explain/words';
 export { History, HISTORY_LIMIT } from './lib/history';
 export { autoLayout, COLUMN_SEPARATION, NODE_SEPARATION, NODE_SIZE } from './lib/layout';
 export {
@@ -122,6 +139,7 @@ export { reconcile } from './lib/reconcile';
 export { editDistance, suggest } from './lib/suggest';
 export { completeCommand, type Completion, type CompletionItem } from './lib/syntax/complete';
 export { formatCommand } from './lib/syntax/format';
+export { parseMessageText, type MessageText } from './lib/syntax/message';
 export { parseCommand } from './lib/syntax/parse';
 export { SPECS } from './lib/syntax/registry';
 export { wordText } from './lib/syntax/words';
