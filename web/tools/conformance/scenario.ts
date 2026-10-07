@@ -220,11 +220,9 @@ export function validateScenario(scenario: Scenario): void {
           if (step.name === '' || step.name.startsWith('amq.')) {
             fail(`${at}: "${step.name}" is not a name a client may declare`);
           }
-          if (!declared) {
-            exchanges.add(step.name);
-            if (step.internal === true) {
-              internalExchanges.add(step.name);
-            }
+          exchanges.add(step.name);
+          if (step.internal === true) {
+            internalExchanges.add(step.name);
           }
         }
         break;
