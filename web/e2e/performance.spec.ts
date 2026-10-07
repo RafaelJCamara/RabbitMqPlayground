@@ -1,5 +1,6 @@
 import { edgeKeys } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
+import { TesterPage } from './pages/tester-page';
 import { BIG_CANVAS, BIG_EDGES, BIG_NODES } from './support/big-canvas';
 import { seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
@@ -158,6 +159,35 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
       description: `${elapsed} ms for the card and the marks of a message on a big canvas`,
     });
     expect(elapsed, `lighting a message took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
+  });
+
+  test('answers a what-if on a big canvas within the budget, lights it, and says it in a card', async ({ page }) => {
+    await seedCanvas(page, BIG_CANVAS, 'Big canvas');
+    const editor = new EditorPage(page);
+    await editor.goto('?ff=editor,explain');
+    await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
+      timeout: 30_000,
+    });
+    await editor.settled();
+    const tester = new TesterPage(editor);
+    await tester.show();
+    await tester.exchange.selectOption({ label: 'x2 (topic)' });
+    const started = await page.evaluate(() => performance.now());
+
+    await tester.message.fill('key=key.2');
+
+    await expect(tester.answer).toContainText('Would reach');
+    await expect(tester.card).toBeVisible();
+    await expect
+      .poll(async () => (await page.evaluate(() => window.__rmq?.explainEmphasis()))?.nodes.length)
+      .toBeGreaterThan(0);
+    const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
+
+    test.info().annotations.push({
+      type: 'what-if',
+      description: `${elapsed} ms for the answer, the card and the marks of a message on a big canvas`,
+    });
+    expect(elapsed, `a what-if took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
   });
 
   test('keeps a burst on a big canvas to a few shapes: a thousand messages are grouped, and the page goes on', async ({

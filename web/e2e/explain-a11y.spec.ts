@@ -1,7 +1,8 @@
 import { ExplainPage } from './pages/explain-page';
+import { TesterPage } from './pages/tester-page';
 import { expectNoAxeViolations } from './support/axe';
 import type { CanvasDocument } from '@rmq/domain';
-import { HEADERS, TOPICS, WITH_ARCHIVE } from './support/orders';
+import { HEADERS, TOPICS, UNLINKED, WITH_ARCHIVE } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
@@ -183,6 +184,136 @@ const states: readonly {
   },
 ];
 
+/**
+ * The testers (ADR-0064), which need the flag `explain` and not the simulation, so they are opened without it unless a state says that it has the log beside it: the what-if tester shut, open, with
+ * an answer that lights the canvas and puts a card in it, with an answer that says that nothing would get the message, with its route open, with a message that cannot be read and with headers; the
+ * topic tester in the popover that asks for a key, empty, with keys that match and keys that do not, and with a key that cannot be one; and under the key field of a binding in the inspector.
+ */
+const testerStates: readonly {
+  readonly name: string;
+  readonly enter: (tester: TesterPage) => Promise<void>;
+  readonly document?: CanvasDocument;
+  /** The feature flags, as the address says them: the explanation alone unless a state says more. */
+  readonly flags?: string;
+}[] = [
+  {
+    name: 'with the what-if tester shut',
+    enter: async (tester) => {
+      await expect(tester.toggle).toHaveAttribute('aria-expanded', 'false');
+    },
+  },
+  {
+    name: 'with the what-if tester open and nothing written in it',
+    enter: async (tester) => {
+      await tester.show();
+    },
+  },
+  {
+    name: 'with the what-if tester saying which queue would get a message, the canvas lit and its card in it',
+    enter: async (tester) => {
+      await tester.ask('key=order.new', 'orders (direct)');
+      await expect(tester.card).toBeVisible();
+      await expect.poll(() => tester.reasonOn('x1>q2')).toMatch(/^✗ /);
+      // The lit look is reached by a transition of a tenth of a second, and axe reads the colours that the page has at the moment.
+      await expect
+        .poll(async () => (await tester.edgeLook('x1>q1')).stroke)
+        .toBe(await tester.tokenColour('--rmq-explain-hit'));
+    },
+  },
+  {
+    name: 'with the what-if tester saying that no queue would get the message',
+    enter: async (tester) => {
+      await tester.ask('key=nobody.wants.this', 'orders (direct)');
+      await expect(tester.answer).toHaveText('No queue would get it.');
+      await expect(tester.card).toBeVisible();
+    },
+  },
+  {
+    name: 'with the what-if tester and the route of its answer open',
+    enter: async (tester) => {
+      await tester.ask('key=order.new', 'orders (direct)');
+      await tester.route.getByText('The route').click();
+      await expect(tester.route.getByTestId('route-summary')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the what-if tester saying that a message cannot be read',
+    enter: async (tester) => {
+      await tester.ask('keyy=order.new', 'orders (direct)');
+      await expect(tester.problem).toBeVisible();
+    },
+  },
+  {
+    name: 'with the what-if tester answering a message with headers, and the route of a headers exchange open',
+    document: HEADERS,
+    enter: async (tester) => {
+      await tester.ask('header:format=pdf header:big=false', 'files (headers)');
+      await tester.route.getByText('The route').click();
+      await expect(tester.route.getByTestId('header-conditions').first()).toBeVisible();
+    },
+  },
+  {
+    name: 'with the what-if tester answering, and the event log open beside it, with the simulation on',
+    flags: 'editor,simulation,explain',
+    enter: async (tester) => {
+      await tester.ask('key=order.new', 'orders (direct)');
+      await tester.editor.flow.focus();
+      await tester.page.keyboard.press('e');
+      await expect(tester.page.getByRole('region', { name: 'Event log' })).toBeVisible();
+      await expect(tester.card).toBeVisible();
+    },
+  },
+  {
+    name: 'with the topic tester in the popover that asks for a key, inviting one to be typed',
+    document: UNLINKED,
+    enter: async (tester) => {
+      await tester.editor.dragLinkTo('x1', await tester.editor.centre(tester.editor.nodeById('q1')));
+      await expect(tester.topicTester.getByTestId('topic-tester-empty')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the topic tester in the popover listing the keys that a key matches and the keys that it does not',
+    document: UNLINKED,
+    enter: async (tester) => {
+      await tester.editor.dragLinkTo('x1', await tester.editor.centre(tester.editor.nodeById('q1')));
+      await expect(tester.page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+      await tester.page.keyboard.type('*.error');
+      await expect(tester.topicTester.getByTestId('topic-missing')).toBeVisible();
+      await expect(tester.topicTester.getByTestId('topic-note')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the topic tester in the popover saying that a key cannot be a binding key',
+    document: UNLINKED,
+    enter: async (tester) => {
+      await tester.editor.dragLinkTo('x1', await tester.editor.centre(tester.editor.nodeById('q1')));
+      await expect(tester.page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+      await tester.page.keyboard.type('a.#.b.#.c.#');
+      await expect(tester.topicTester.getByTestId('topic-tester-refusal')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the topic tester and the refusal of the binding together, under the field of the popover',
+    document: UNLINKED,
+    enter: async (tester) => {
+      await tester.editor.dragLinkTo('x1', await tester.editor.centre(tester.editor.nodeById('q1')));
+      await expect(tester.page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+      await tester.page.keyboard.type('a.#.b.#.c.#');
+      await tester.page.keyboard.press('Enter');
+      await expect(tester.keyPopover('exchange logs', 'queue errors').getByTestId('refusal-message')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the topic tester under the key field of a binding in the inspector, with keys that match and keys that do not',
+    document: TOPICS,
+    enter: async (tester) => {
+      await tester.selectBinding('x1>q1');
+      await tester.page.getByRole('group', { name: 'Binding 1 of 1' }).getByRole('textbox', { name: 'Key' }).click();
+      await expect(tester.topicTester.getByTestId('topic-missing')).toBeVisible();
+    },
+  },
+];
+
 for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`accessibility of the explanation in the ${colorScheme} theme`, () => {
     test.use({ colorScheme });
@@ -191,6 +322,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
       test(`has no axe violations ${state.name}`, async ({ page }) => {
         const explain = await ExplainPage.open(page, state.document ?? WITH_ARCHIVE, { stop: state.fresh !== true });
         await state.enter(explain);
+
+        await expectNoAxeViolations(page);
+      });
+    }
+
+    for (const state of testerStates) {
+      test(`has no axe violations ${state.name}`, async ({ page }) => {
+        const tester = await TesterPage.open(page, state.document ?? WITH_ARCHIVE, {
+          ...(state.flags === undefined ? {} : { flags: state.flags }),
+        });
+        await state.enter(tester);
 
         await expectNoAxeViolations(page);
       });
