@@ -462,7 +462,8 @@ are, in a line of the status strip, with the reason that nothing was changed, an
   one more name to remember.
 - **The log keeps the last 5,000 events and says how many it dropped** (`LOG_CAP`, [ADR-0061](docs/adr/0061-the-event-log-is-a-ring-of-rows-that-puts-a-command-before-what-it-made-and-a-row-selects-what-it-explains.md)), and the
   inspector keeps the route of the last 2,000 messages (`HELD_LIMIT`), and says that a message's route is not kept when it is older ([ADR-0063](docs/adr/0063-the-message-inspector-opens-from-a-row-a-list-or-a-marker-and-says-so-when-its-route-is-gone.md)).
-  A burst of thousands takes the first message's row and route with it. Both are constants, and neither has been tried on a slow machine; S12 measures on hardware.
+  A burst of thousands takes the first message's row and route with it. Both are constants, and neither has been tried on a slow machine; S12 measures on hardware. The log is an array that is trimmed at the end of a turn, and not a ring that is
+  written in place, as ADR-0061 says: a splice of the rows that went, at most once a frame, which nothing has yet shown to matter, and a ring is the change if it does.
 - **While the clock is stopped, the canvas lights the Why? of the message that was routed last, without being asked.** A learner who steps sees the answer at once. One who wants to look at the canvas lets go of it with the button of the card, and it comes back
   with the next message. If that is too much it can wait until the log is open or a row is chosen, which is a condition in `ExplainState.shown`.
 - **A queue that is selected while a message is open is the question "why didn't it get here?"**, answered in the card, on the canvas and in the inspector of the queue, and the message inspector lists the queues that did not get it with a button each. Two doors to one answer.
