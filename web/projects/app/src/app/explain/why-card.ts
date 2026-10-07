@@ -1,11 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
+import { legendOf } from '../core/explain/emphasis';
 import { ExplainState } from '../core/explain/explain-state';
-
-/** What each look means, in the words that the card uses. The look of a line is a shape as well as a colour: thick for where a message went, dimmed and dashed for where it did not, dotted for what is asked about. */
-interface Legend {
-  readonly id: 'hit' | 'miss' | 'asked';
-  readonly text: string;
-}
 
 /**
  * The card of Why? (ADR-0062): over the canvas, in its corner, while something is lit, it says what it is in words, what the lines mean, and how many parts of what was chosen are not on the canvas any more, and has a
@@ -85,27 +80,9 @@ export class WhyCard {
   protected readonly explain = inject(ExplainState);
 
   /** What the lines on the canvas mean now, for the looks that are there, or `null` when none is. */
-  protected readonly legend = computed<readonly Legend[] | null>(() => {
+  protected readonly legend = computed(() => {
     const shown = this.explain.shown();
-    if (shown === null) {
-      return null;
-    }
-    const edges = [...shown.emphasis.edges.values()].map(({ mark }) => mark);
-    const nodes = [...shown.emphasis.nodes.values()];
-    const items: Legend[] = [];
-    if (
-      edges.some((mark) => mark === 'path' || mark === 'matched') ||
-      nodes.some((mark) => mark === 'reached' || mark === 'visited')
-    ) {
-      items.push({ id: 'hit', text: 'went this way, or got a copy' });
-    }
-    if (edges.includes('missed') || nodes.includes('missed')) {
-      items.push({ id: 'miss', text: 'did not match, and why' });
-    }
-    if (edges.includes('asked') || nodes.includes('asked')) {
-      items.push({ id: 'asked', text: 'asked about' });
-    }
-    return items.length === 0 ? null : items;
+    return shown === null ? null : legendOf(shown.emphasis);
   });
 
   /** What the button says, for what it does: a queue that is asked about is let go of by asking no more, and the tester by shutting it. */

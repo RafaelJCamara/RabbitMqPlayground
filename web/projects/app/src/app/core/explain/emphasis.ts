@@ -31,6 +31,32 @@ export const NO_EMPHASIS: Emphasis = { edges: new Map(), nodes: new Map(), gone:
 /** Whether anything is lit. */
 export const isLit = (emphasis: Emphasis): boolean => emphasis.edges.size + emphasis.nodes.size > 0;
 
+/** What each look means, in the words that the card uses. The look of a line is a shape as well as a colour: thick for where a message went, dimmed and dashed for where it did not, dotted for what is asked about. */
+export interface Legend {
+  readonly id: 'hit' | 'miss' | 'asked';
+  readonly text: string;
+}
+
+/** What the looks that are lit mean, in the order that the card has them, or `null` when nothing that has a meaning is lit. */
+export function legendOf(emphasis: Emphasis): readonly Legend[] | null {
+  const edges = [...emphasis.edges.values()].map(({ mark }) => mark);
+  const nodes = [...emphasis.nodes.values()];
+  const items: Legend[] = [];
+  if (
+    edges.some((mark) => mark === 'path' || mark === 'matched') ||
+    nodes.some((mark) => mark === 'reached' || mark === 'visited')
+  ) {
+    items.push({ id: 'hit', text: 'went this way, or got a copy' });
+  }
+  if (edges.includes('missed') || nodes.includes('missed')) {
+    items.push({ id: 'miss', text: 'did not match, and why' });
+  }
+  if (edges.includes('asked') || nodes.includes('asked')) {
+    items.push({ id: 'asked', text: 'asked about' });
+  }
+  return items.length === 0 ? null : items;
+}
+
 const EDGE_STRENGTH: Readonly<Record<EdgeMark, number>> = { missed: 1, matched: 2, path: 3, asked: 4 };
 const NODE_STRENGTH: Readonly<Record<NodeMark, number>> = { missed: 1, visited: 2, reached: 3, asked: 4 };
 
