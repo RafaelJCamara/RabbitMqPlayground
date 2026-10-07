@@ -124,12 +124,10 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
       .toBeGreaterThanOrEqual(1_000);
     const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
 
-    test
-      .info()
-      .annotations.push({
-        type: 'burst',
-        description: `${elapsed} ms from the command to the thousandth event in the log`,
-      });
+    test.info().annotations.push({
+      type: 'burst',
+      description: `${elapsed} ms from the command to the thousandth event in the log`,
+    });
     expect(elapsed, `a burst of a thousand messages took ${elapsed} ms with the log open`).toBeLessThan(BUDGET_MS);
     expect(await page.getByTestId('event-log-row').count()).toBeLessThan(30);
     expect((await page.evaluate(() => window.__rmq?.simulationState()))?.view.travelling).toBe(1_000);
@@ -155,12 +153,10 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
       .toBeGreaterThan(0);
     const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
 
-    test
-      .info()
-      .annotations.push({
-        type: 'lit',
-        description: `${elapsed} ms for the card and the marks of a message on a big canvas`,
-      });
+    test.info().annotations.push({
+      type: 'lit',
+      description: `${elapsed} ms for the card and the marks of a message on a big canvas`,
+    });
     expect(elapsed, `lighting a message took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
   });
 
