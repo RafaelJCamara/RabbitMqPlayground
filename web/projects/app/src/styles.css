@@ -70,6 +70,21 @@
   --rmq-queue-fill: light-dark(#e1f3ef, #0c3a31);
   --rmq-consumer: light-dark(#a8527f, #d98cb4);
   --rmq-consumer-fill: light-dark(#f6e6ee, #3b1c2c);
+
+  /*
+   * The colours of a message on its way (ADR-0055): the colour of its routing key, one of eight, and the one of a crowd with no key in common. Each is held to 3:1 against the
+   * canvas and against the outline that sets a message apart from the edge that it is on. Colour is never the only sign of a message: see ADR-0010.
+   */
+  --rmq-message-blue: light-dark(#0072b2, #56b4e9);
+  --rmq-message-orange: light-dark(#c24f00, #e69f00);
+  --rmq-message-green: light-dark(#00806a, #00b58a);
+  --rmq-message-pink: light-dark(#a8527f, #d98cb4);
+  --rmq-message-gold: light-dark(#8a6d00, #f0e442);
+  --rmq-message-gray: light-dark(#374151, #e5e7eb);
+  --rmq-message-violet: light-dark(#6d28d9, #a78bfa);
+  --rmq-message-cyan: light-dark(#0e7490, #22d3ee);
+  --rmq-message-mixed: light-dark(#6b7280, #9ca3af);
+  --rmq-message-outline: light-dark(#ffffff, #0b1020);
 }
 
 :root[data-theme='light'] {

@@ -41,6 +41,12 @@ const colour = (name: string, theme: Theme): string => {
 const TEXT = 4.5;
 const GRAPHIC = 3;
 const KINDS = ['producer', 'exchange', 'queue', 'consumer'] as const;
+/**
+ * The colours of a message on its way (ADR-0055): the eight of a routing key, and the one of a crowd that has no key in common. The app has the same eight in
+ * canvas/overlay/colors.ts, and its own spec says so, so that neither list can change without the other.
+ */
+const MESSAGE_COLORS = ['blue', 'orange', 'green', 'pink', 'gold', 'gray', 'violet', 'cyan'] as const;
+const MESSAGES = [...MESSAGE_COLORS, 'mixed'] as const;
 
 /** [what, foreground, background, the contrast that it needs] */
 const PAIRS: readonly (readonly [string, string, string, number])[] = [
@@ -63,6 +69,16 @@ const PAIRS: readonly (readonly [string, string, string, number])[] = [
   ['a refusal on its background', 'danger', 'danger-bg', TEXT],
   ['a warning on its background', 'warning', 'warning-bg', TEXT],
   ['a success on a panel', 'success', 'panel', TEXT],
+  ...MESSAGES.flatMap((name) => [
+    [`a message of the colour ${name} on the canvas`, `message-${name}`, 'canvas', GRAPHIC] as const,
+    [
+      `a message of the colour ${name} against the outline that sets it apart from an edge`,
+      `message-${name}`,
+      'message-outline',
+      GRAPHIC,
+    ] as const,
+  ]),
+  ['the ring of a message that is redelivered, on the canvas', 'warning', 'canvas', GRAPHIC],
   ...KINDS.flatMap((kind) => [
     [`the outline of a ${kind} on the canvas`, kind, 'canvas', GRAPHIC] as const,
     [`the outline of a ${kind} on its fill`, kind, `${kind}-fill`, GRAPHIC] as const,
@@ -97,6 +113,24 @@ describe('the colour tokens of styles.css', () => {
       for (const kind of KINDS) {
         expect(colour(`${kind}-fill`, theme)).not.toBe(colour(kind, theme));
       }
+    }
+  });
+
+  it('have a colour for each of the eight that a message can be and for a crowd, and none that the painter does not use', () => {
+    const defined = Object.keys(tokens)
+      .filter((name) => name.startsWith('message-') && name !== 'message-outline')
+      .map((name) => name.slice('message-'.length))
+      .sort();
+
+    expect(defined).toEqual([...MESSAGES].sort());
+    expect(tokens['message-outline']).toBeDefined();
+  });
+
+  it('tell the eight colours of a message apart, in each theme', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      expect(new Set(MESSAGE_COLORS.map((name) => colour(`message-${name}`, theme))).size, theme).toBe(
+        MESSAGE_COLORS.length,
+      );
     }
   });
 
