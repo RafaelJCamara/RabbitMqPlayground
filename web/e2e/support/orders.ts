@@ -53,3 +53,13 @@ export const DIRECT_TO_QUEUE = buildDocument([
   { type: 'set', kind: 'producer', name: 'sender', changes: { payload: 'hello' } },
   { type: 'set', kind: 'consumer', name: 'worker', changes: { ack: 'manual', prefetch: 1, processingMs: 1_000 } },
 ]);
+
+/**
+ * `ORDERS`, and a second queue, `archive`, bound to `orders` with the key `order.cancelled`, which `order.new` does not match: a message that `sender` sends goes to `billing` and
+ * not to `archive`, so that there is a binding that misses. The ids are `q2` and `b2`, and the edge `x1>q2`.
+ */
+export const WITH_ARCHIVE = buildDocument([
+  ...orders,
+  { type: 'declare-queue', name: 'archive', durable: true },
+  { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'archive' }, key: 'order.cancelled' },
+]);

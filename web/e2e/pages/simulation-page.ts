@@ -48,7 +48,14 @@ export class SimulationPage {
   static async open(
     page: Page,
     document: CanvasDocument,
-    options: { readonly reducedMotion?: boolean; readonly theme?: 'light' | 'dark' } = {},
+    options: {
+      readonly reducedMotion?: boolean;
+      readonly theme?: 'light' | 'dark';
+      /** The feature flags, as the address says them. The explanation is `editor,simulation,explain`. */
+      readonly flags?: string;
+      /** Whether the clock is stopped, which it is unless a test says that it is not: a canvas that has not been touched has nothing in its log. */
+      readonly stop?: boolean;
+    } = {},
   ): Promise<SimulationPage> {
     if (options.reducedMotion === true) {
       await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -61,7 +68,7 @@ export class SimulationPage {
     }
     await seedCanvas(page, document, 'Simulated canvas');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor,simulation');
+    await editor.goto(`?ff=${options.flags ?? 'editor,simulation'}`);
     const simulation = new SimulationPage(editor);
     await simulation.bar.waitFor();
     const edges =
@@ -72,7 +79,9 @@ export class SimulationPage {
       timeout: 15_000,
     });
     await editor.settled();
-    await simulation.stop();
+    if (options.stop !== false) {
+      await simulation.stop();
+    }
     return simulation;
   }
 

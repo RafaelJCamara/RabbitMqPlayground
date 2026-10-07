@@ -1,0 +1,142 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+import type { CanvasDocument } from '@rmq/domain';
+import { EditorPage } from './editor-page';
+import { SimulationPage } from './simulation-page';
+
+/** What the event log holds, as the end-to-end build reads it (ADR-0061). */
+export type EventLogState = NonNullable<Awaited<ReturnType<ExplainPage['eventLog']>>>;
+
+/** What Why? lights, as the end-to-end build reads it (ADR-0062). */
+export type EmphasisState = NonNullable<Awaited<ReturnType<ExplainPage['emphasis']>>>;
+
+/**
+ * The explanation in a real browser (ADR-0059 to ADR-0064), behind the flags `editor`, `simulation` and `explain`: the event log, what is lit on the canvas and the card that says why,
+ * and what a message is in the inspector. Everything that a test needs to know of what is lit it reads from the page itself, from the attribute and the style that a person sees it by, and
+ * from the debug handle for what the page does not show (the rows that the scroll does not draw). The clock moves when the test steps it, as it does for the simulation.
+ */
+export class ExplainPage {
+  readonly toggle: Locator;
+  readonly log: Locator;
+  readonly list: Locator;
+  readonly rows: Locator;
+  readonly card: Locator;
+
+  constructor(readonly simulation: SimulationPage) {
+    const page = simulation.page;
+    this.toggle = simulation.bar.getByRole('button', { name: 'Event log' });
+    this.log = page.getByRole('region', { name: 'Event log' });
+    this.list = this.log.getByRole('listbox', { name: 'Events' });
+    this.rows = this.log.getByTestId('event-log-row');
+    this.card = page.getByTestId('why-card');
+  }
+
+  get page(): Page {
+    return this.simulation.page;
+  }
+
+  get editor(): EditorPage {
+    return this.simulation.editor;
+  }
+
+  /** Opens the editor with the simulation and the explanation on, on this canvas, with the clock stopped. */
+  static async open(
+    page: Page,
+    document: CanvasDocument,
+    options: { readonly reducedMotion?: boolean; readonly theme?: 'light' | 'dark'; readonly stop?: boolean } = {},
+  ): Promise<ExplainPage> {
+    const simulation = await SimulationPage.open(page, document, { ...options, flags: 'editor,simulation,explain' });
+    return new ExplainPage(simulation);
+  }
+
+  /** What the event log holds: how many rows, how many went, and each row as it was said. */
+  eventLog() {
+    return this.page.evaluate(() => window.__rmq?.explainEventLog() ?? null);
+  }
+
+  /** The sentences of the rows of the log, oldest first, which are what a learner reads. */
+  async texts(): Promise<string[]> {
+    return ((await this.eventLog())?.rows ?? []).map(({ text }) => text);
+  }
+
+  /** What is lit on the canvas, and what the card says of it, or `null` when nothing is. */
+  emphasis() {
+    return this.page.evaluate(() => window.__rmq?.explainEmphasis() ?? null);
+  }
+
+  /** Opens the log with the key that is for it, from the canvas, and waits for the list to have the keyboard. */
+  async openByKey(): Promise<void> {
+    await this.editor.flow.focus();
+    await this.page.keyboard.press('e');
+    await expect(this.log).toBeVisible();
+  }
+
+  /** Publishes from the producer with the key that is for it. */
+  async publish(producer = 'Producer sender'): Promise<void> {
+    await this.editor.select(producer);
+    await this.page.keyboard.press('p');
+  }
+
+  /** The row of the log with this number, as a locator. */
+  row(seq: number): Locator {
+    return this.rows.and(this.page.locator(`[data-seq="${seq}"]`));
+  }
+
+  /** The rows of the log that are of this kind of event, as they are drawn. */
+  rowsOfKind(kind: string): Locator {
+    return this.log.locator(`[data-testid="event-log-row"][data-kind="${kind}"]`);
+  }
+
+  /** How an edge is lit, by the attribute that the canvas sets on it, or `null`. */
+  edgeMark(key: string): Promise<string | null> {
+    return this.page.locator(`[data-edge="${key}"]`).getAttribute('data-emphasis');
+  }
+
+  /** How a node is lit, by the attribute that the canvas sets on it, or `null`. */
+  nodeMark(id: string): Promise<string | null> {
+    return this.page.locator(`[data-node-id="${id}"]`).getAttribute('data-emphasis');
+  }
+
+  /** The stroke and the width of the path that the library drew for an edge, as the browser computes them. */
+  edgeLook(key: string): Promise<{ stroke: string; width: string; opacity: string; dasharray: string }> {
+    return this.page.locator(`[data-edge="${key}"] path.f-connection-path`).evaluate((path) => {
+      const style = getComputedStyle(path);
+      return {
+        stroke: style.stroke,
+        width: style.strokeWidth,
+        opacity: style.strokeOpacity,
+        dasharray: style.strokeDasharray,
+      };
+    });
+  }
+
+  /** The stroke and the width of the outline of a node, as the browser computes them. */
+  nodeLook(id: string): Promise<{ stroke: string; width: string; opacity: string; dasharray: string }> {
+    return this.page.locator(`[data-node-id="${id}"] .rmq-node-outline`).evaluate((outline) => {
+      const style = getComputedStyle(outline);
+      return {
+        stroke: style.stroke,
+        width: style.strokeWidth,
+        opacity: style.strokeOpacity,
+        dasharray: style.strokeDasharray,
+      };
+    });
+  }
+
+  /** The reason that is written on the label of an edge that missed, or `null` when it has none. */
+  async reasonOn(key: string): Promise<string | null> {
+    const reason = this.page.locator(`[data-edge="${key}"] [data-testid="edge-reason"]`);
+    return (await reason.count()) === 0 ? null : ((await reason.textContent()) ?? '').trim();
+  }
+
+  /** A colour of the stylesheet, as the browser computes it in the theme that is on, read through an element that has it as its colour. */
+  tokenColour(token: string): Promise<string> {
+    return this.page.evaluate((name) => {
+      const probe = document.createElement('span');
+      probe.style.color = `var(${name})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    }, token);
+  }
+}

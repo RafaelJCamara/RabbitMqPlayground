@@ -23,6 +23,29 @@ interface Window {
         readonly redelivered: boolean;
       }[];
     } | null;
+    /** The rows of the event log, as they were said: how many are kept, how many went, and each row. `null` without the flags `explain` and `simulation`. */
+    readonly explainEventLog: () => {
+      readonly count: number;
+      readonly dropped: number;
+      readonly rows: readonly {
+        readonly seq: number;
+        readonly at: number;
+        readonly family: string;
+        readonly kind: string;
+        readonly text: string;
+        readonly message: number | null;
+      }[];
+    } | null;
+    /** What Why? lights, as marks of the edges and the nodes, and what its card says. `null` when nothing is lit. */
+    readonly explainEmphasis: () => {
+      readonly source: 'row' | 'why' | 'queue' | 'auto' | 'what-if';
+      readonly message: number | null;
+      readonly title: string;
+      readonly text: string;
+      readonly edges: readonly { readonly key: string; readonly mark: string; readonly reason?: string }[];
+      readonly nodes: readonly { readonly id: string; readonly mark: string }[];
+      readonly gone: number;
+    } | null;
     /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` without the flag. */
     readonly simulationState: () => {
       readonly now: number;
