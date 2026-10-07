@@ -120,6 +120,8 @@ export function applyEngineCommand(state: BrokerState, command: EngineCommand): 
       }
       return { ...state, bindings: state.bindings.filter((binding) => bindingKey(binding) !== key) };
     }
+    default:
+      return fail('the oracle holds the topology and nothing that runs on it: the engine does that');
   }
 }
 

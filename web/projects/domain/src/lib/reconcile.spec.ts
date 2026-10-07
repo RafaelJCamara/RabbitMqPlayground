@@ -49,6 +49,8 @@ const brief = (commands: readonly EngineCommand[]): string[] =>
       case 'bind':
       case 'unbind':
         return `${command.op} ${command.source}>${command.destination.kind[0]}:${command.destination.name}${command.key === '' ? '' : ` '${command.key}'`}`;
+      default:
+        return command.op;
     }
   });
 

@@ -97,3 +97,11 @@ export function inequivalentReply(
     text: `PRECONDITION_FAILED - inequivalent arg '${attribute}' for ${kind} '${name}' in vhost '${vhost}': received '${received}' but current is '${current}'`,
   };
 }
+
+/**
+ * `406`: an ack of a delivery that the channel does not hold (ADR-0050). The broker names the delivery tag, which the engine writes as the number
+ * of the message, or 0 when the ack did not name one. It closes the channel, as every refusal of a command on a channel does.
+ */
+export function unknownDeliveryTagReply(message: number): BrokerReply<406> {
+  return { code: 406, text: `PRECONDITION_FAILED - unknown delivery tag ${message}` };
+}

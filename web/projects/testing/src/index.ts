@@ -59,3 +59,20 @@ export {
   topology,
 } from './lib/topology';
 export { arbHeaderArguments, arbHeaderCondition, arbHeaderValue, arbMessageFor, arbTopology } from './lib/arbitraries';
+export {
+  bindQueue,
+  CANVAS_TIMING,
+  consume,
+  declareExchange,
+  declareQueue,
+  newEngine,
+  only,
+  openChannel,
+  producer,
+  publish,
+  run,
+  runAll,
+  settle,
+  types,
+  ZERO_TIMING,
+} from './lib/engine';
