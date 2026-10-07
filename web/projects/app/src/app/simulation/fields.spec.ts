@@ -49,11 +49,14 @@ describe('Fields (ADR-0056)', () => {
       fields.number('burst', 'The burst', given('0').event, 1, burst());
       expect(Object.keys(fields.problems())).toEqual(['burst']);
 
+      expect(status.refusal()).not.toBeNull();
+
       const { event } = given('1');
       fields.number('burst', 'The burst', event, 1, burst());
 
       expect(store.canUndo()).toBe(false);
       expect(fields.problems()).toEqual({});
+      expect(status.refusal()).toBeNull();
     });
 
     it('says nothing, and asks for nothing, for the number that the document has', () => {

@@ -66,7 +66,7 @@ export class Fields {
       return;
     }
     if (value === current) {
-      this.refused.set({});
+      this.reset();
       return;
     }
     if (!this.apply(field, command(value))) {

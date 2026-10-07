@@ -187,6 +187,19 @@ describe('ProducerComposer (ADR-0056)', () => {
     expect(status.notice()).toBeNull();
   });
 
+  it('forgets the refusal, under the field and on the status line, when the learner gives what the document has again', async () => {
+    const { give, status } = await renderComposer();
+    const key = screen.getByRole('textbox', { name: 'Routing key' });
+    give(key, 'k'.repeat(300));
+    expect(screen.getByTestId('refusal')).toBeVisible();
+    expect(status.refusal()).not.toBeNull();
+
+    give(key, 'new');
+
+    expect(screen.queryByTestId('refusal')).toBeNull();
+    expect(status.refusal()).toBeNull();
+  });
+
   it('does nothing for a number that is the one that the document has, and says nothing', async () => {
     const { give, log, status } = await renderComposer();
 
