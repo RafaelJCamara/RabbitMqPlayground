@@ -1,0 +1,132 @@
+# routing/a-cycle-of-direct-and-topic-exchanges-matches-at-every-hop
+# A cycle through a direct and a topic exchange matches the key at every hop, so it is only gone round while the key matches (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 5: "m1" (step 9)
+broker: reached from-d, from-t
+message: published to "d" with key "a.b"
+outcome: routed
+reached: from-d, from-t
+summary: Reached from-d and from-t.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ d -> exchange t ("a.b") [key matches]
+    The key "a.b" is the binding key, letter for letter. The message goes on to the exchange t.
+    exchange t (topic): t is a topic exchange, and the message came to it from d. 2 of its 2 bindings matched.
+      ✓ t -> exchange d ("a.*") [matches]
+        The pattern "a.*" matches the key "a.b": * took "b". The exchange d had been reached already, and an exchange is visited once.
+        pattern  a   | *
+        key      a ✓ | b ✓
+      ✓ t -> queue from-t ("#") [matches]
+        The pattern "#" matches the key "a.b": # took "a.b". The queue from-t gets its first copy.
+        pattern  #
+        key      a.b ✓
+  ✓ d -> queue from-d ("a.b") [key matches]
+    The key "a.b" is the binding key, letter for letter. The queue from-d gets its first copy.
+
+queue from-d: reached through ✓ d -> queue from-d ("a.b") [key matches]
+
+queue from-t: reached through ✓ d -> exchange t ("a.b") [key matches] ; ✓ t -> queue from-t ("#") [matches]
+
+## publish 2 of 5: "m2" (step 10)
+broker: returned, no queue got it
+message: published to "d" with key "a.c"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached d, and none of its 2 bindings matched.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 0 of its 2 bindings matched.
+  ✗ d -> exchange t ("a.b") [key is not "a.b"]
+    The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ d -> queue from-d ("a.b") [key is not "a.b"]
+    The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue from-d: not reached
+  The queue from-d did not get the message.
+  - The binding from d to queue from-d ("a.b") was tried, and it did not match. The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue from-t: not reached
+  The queue from-t did not get the message.
+  - t is bound to queue from-t ("#"), but the message never reached t.
+    - The binding from d to exchange t ("a.b") was tried, and it did not match. The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+## publish 3 of 5: "m3" (step 11)
+broker: reached from-d, from-t
+message: published to "t" with key "a.b"
+outcome: routed
+reached: from-t, from-d
+summary: Reached from-t and from-d.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ t -> exchange d ("a.*") [matches]
+    The pattern "a.*" matches the key "a.b": * took "b". The message goes on to the exchange d.
+    pattern  a   | *
+    key      a ✓ | b ✓
+    exchange d (direct): d is a direct exchange, and the message came to it from t. 2 of its 2 bindings matched.
+      ✓ d -> exchange t ("a.b") [key matches]
+        The key "a.b" is the binding key, letter for letter. The exchange t had been reached already, and an exchange is visited once.
+      ✓ d -> queue from-d ("a.b") [key matches]
+        The key "a.b" is the binding key, letter for letter. The queue from-d gets its first copy.
+  ✓ t -> queue from-t ("#") [matches]
+    The pattern "#" matches the key "a.b": # took "a.b". The queue from-t gets its first copy.
+    pattern  #
+    key      a.b ✓
+
+queue from-d: reached through ✓ t -> exchange d ("a.*") [matches] ; ✓ d -> queue from-d ("a.b") [key matches]
+
+queue from-t: reached through ✓ t -> queue from-t ("#") [matches]
+
+## publish 4 of 5: "m4" (step 12)
+broker: reached from-t
+message: published to "t" with key "a.c"
+outcome: routed
+reached: from-t
+summary: Reached from-t.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ t -> exchange d ("a.*") [matches]
+    The pattern "a.*" matches the key "a.c": * took "c". The message goes on to the exchange d.
+    pattern  a   | *
+    key      a ✓ | c ✓
+    exchange d (direct): d is a direct exchange, and the message came to it from t. 0 of its 2 bindings matched.
+      ✗ d -> exchange t ("a.b") [key is not "a.b"]
+        The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+      ✗ d -> queue from-d ("a.b") [key is not "a.b"]
+        The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✓ t -> queue from-t ("#") [matches]
+    The pattern "#" matches the key "a.c": # took "a.c". The queue from-t gets its first copy.
+    pattern  #
+    key      a.c ✓
+
+queue from-d: not reached
+  The queue from-d did not get the message.
+  - The binding from d to queue from-d ("a.b") was tried, and it did not match. The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue from-t: reached through ✓ t -> queue from-t ("#") [matches]
+
+## publish 5 of 5: "m5" (step 13)
+broker: reached from-t
+message: published to "t" with key "b"
+outcome: routed
+reached: from-t
+summary: Reached from-t.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ t -> exchange d ("a.*") [only word is "b", not "a"]
+    The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | - ✗
+  ✓ t -> queue from-t ("#") [matches]
+    The pattern "#" matches the key "b": # took "b". The queue from-t gets its first copy.
+    pattern  #
+    key      b ✓
+
+queue from-d: not reached
+  The queue from-d did not get the message.
+  - d is bound to queue from-d ("a.b"), but the message never reached d.
+    - The binding from t to exchange d ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+
+queue from-t: reached through ✓ t -> queue from-t ("#") [matches]

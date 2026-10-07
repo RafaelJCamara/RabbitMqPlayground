@@ -1,0 +1,240 @@
+# routing/random-topology-29
+# A random topology made from seed 29 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 8: "m1" (step 12)
+broker: reached q3
+message: published to "x2" with key "b.a", headers a=2 b=1
+outcome: routed
+reached: q3
+summary: Reached q3.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 3 of its 3 bindings matched.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q3 gets its first copy.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (direct): x1 is a direct exchange, and the message came to it from x2. 0 of its 3 bindings matched.
+      ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+        The key is "b.a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+      ✗ x1 -> queue q1 ("a") [key is not "a"]
+        The key is "b.a", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+      ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+        The key is "b.a", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x1 to queue q1 ("a") was tried, and it did not match. The key is "b.a", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q1 ("c.b") was tried, and it did not match. The key is "b.a", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: reached through ✓ x2 -> queue q3 (any key) [fanout: always matches]
+
+## publish 2 of 8: "m2" (step 13)
+broker: reached q3
+message: published to "x2" with key "b"
+outcome: routed
+reached: q3
+summary: Reached q3.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 3 of its 3 bindings matched.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q3 gets its first copy.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (direct): x1 is a direct exchange, and the message came to it from x2. 0 of its 3 bindings matched.
+      ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+        The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+      ✗ x1 -> queue q1 ("a") [key is not "a"]
+        The key is "b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+      ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+        The key is "b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x1 to queue q1 ("a") was tried, and it did not match. The key is "b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q1 ("c.b") was tried, and it did not match. The key is "b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: reached through ✓ x2 -> queue q3 (any key) [fanout: always matches]
+
+## publish 3 of 8: "m3" (step 14)
+broker: returned, no queue got it
+message: published to "x1" with the empty key, headers b=2 x-c=true
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 1 of its 3 bindings matched, but none of them led to a queue.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 1 of its 3 bindings matched.
+  ✓ x1 -> exchange x1 (the empty key) [key matches]
+    The key the empty key is the binding key, letter for letter. The exchange x1 had been reached already, and an exchange is visited once.
+  ✗ x1 -> queue q1 ("a") [key is not "a"]
+    The key is the empty key, and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+    The key is the empty key, and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x1 to queue q1 ("a") was tried, and it did not match. The key is the empty key, and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q1 ("c.b") was tried, and it did not match. The key is the empty key, and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 4 of 8: "m4" (step 15)
+broker: returned, no queue got it
+message: published to "x1" with key "b", headers a=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q1 ("a") [key is not "a"]
+    The key is "b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+    The key is "b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x1 to queue q1 ("a") was tried, and it did not match. The key is "b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q1 ("c.b") was tried, and it did not match. The key is "b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 5 of 8: "m5" (step 16)
+broker: reached q1
+message: published to "x1" with key "a", headers a=true b="1"
+outcome: routed
+reached: q1
+summary: Reached q1.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 1 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✓ x1 -> queue q1 ("a") [key matches]
+    The key "a" is the binding key, letter for letter. The queue q1 gets its first copy.
+  ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+    The key is "a", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: reached through ✓ x1 -> queue q1 ("a") [key matches]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 6 of 8: "m6" (step 17)
+broker: reached q2
+message: published to the default exchange with key "q2"
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q2". 1 of its 3 bindings matched.
+  ✗ the default exchange -> queue q1 (the queue that is named by the key) [not named by the key]
+    The key is "q2", and the queue q1 is named "q1": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue q2 (the queue that is named by the key) [named by the key]
+    The key is "q2", and the default exchange sends a message to the queue that has that name: q2. The queue q2 gets its first copy.
+  ✗ the default exchange -> queue q3 (the queue that is named by the key) [not named by the key]
+    The key is "q2", and the queue q3 is named "q3": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q2", and not to q1.
+
+queue q2: reached through ✓ the default exchange -> queue q2 (the queue that is named by the key) [named by the key]
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q2", and not to q3.
+
+## publish 7 of 8: "m7" (step 18)
+broker: returned, no queue got it
+message: published to "x1" with key "b.b", headers a=1.0 b=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q1 ("a") [key is not "a"]
+    The key is "b.b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+    The key is "b.b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x1 to queue q1 ("a") was tried, and it did not match. The key is "b.b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q1 ("c.b") was tried, and it did not match. The key is "b.b", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 8 of 8: "m8" (step 19)
+broker: reached q1, q3
+message: published to "x2" with key "a", headers b=true
+outcome: routed
+reached: q3, q1
+summary: Reached q3 and q1.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 3 of its 3 bindings matched.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q3 gets its first copy.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (direct): x1 is a direct exchange, and the message came to it from x2. 1 of its 3 bindings matched.
+      ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+        The key is "a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+      ✓ x1 -> queue q1 ("a") [key matches]
+        The key "a" is the binding key, letter for letter. The queue q1 gets its first copy.
+      ✗ x1 -> queue q1 ("c.b") [key is not "c.b"]
+        The key is "a", and this binding wants "c.b": a direct exchange compares the whole key, letter for letter.
+
+queue q1: reached through ✓ x2 -> exchange x1 (any key) [fanout: always matches] ; ✓ x1 -> queue q1 ("a") [key matches]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: reached through ✓ x2 -> queue q3 (any key) [fanout: always matches]

@@ -1,0 +1,205 @@
+# routing/random-topology-22
+# A random topology made from seed 22 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 7: "m1" (step 13)
+broker: returned, no queue got it
+message: published to "x4" with key "a"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x4, which has no bindings.
+
+exchange x4 (fanout): x4 is a fanout exchange, and the message was published to it. It has no bindings.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - Nothing is bound to the queue q3, so no message can get there by a binding.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - Nothing is bound to the queue q4, so no message can get there by a binding.
+
+## publish 2 of 7: "m2" (step 14)
+broker: returned, no queue got it
+message: published to "x2" with key "b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2 and x1, and 1 of their 2 bindings matched, but none of them led to a queue.
+
+exchange x2 (direct): x2 is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x2 -> exchange x1 ("b") [key matches]
+    The key "b" is the binding key, letter for letter. The message goes on to the exchange x1.
+    exchange x1 (direct): x1 is a direct exchange, and the message came to it from x2. 0 of its 1 binding matched.
+      ✗ x1 -> exchange x1 ("a") [key is not "a"]
+        The key is "b", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - Nothing is bound to the queue q3, so no message can get there by a binding.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - Nothing is bound to the queue q4, so no message can get there by a binding.
+
+## publish 3 of 7: "m3" (step 15)
+broker: reached q1
+message: published to the default exchange with key "q1"
+outcome: routed
+reached: q1
+summary: Reached q1.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q1". 1 of its 4 bindings matched.
+  ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+    The key is "q1", and the default exchange sends a message to the queue that has that name: q1. The queue q1 gets its first copy.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q3 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q3 is named "q3": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q4 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q4 is named "q4": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: reached through ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q2.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q3.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q4.
+
+## publish 4 of 7: "m4" (step 16)
+broker: returned, no queue got it
+message: published to "x1" with key "a.b.c", headers b="1" x-c=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and its only binding did not match.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ x1 -> exchange x1 ("a") [key is not "a"]
+    The key is "a.b.c", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - Nothing is bound to the queue q3, so no message can get there by a binding.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - Nothing is bound to the queue q4, so no message can get there by a binding.
+
+## publish 5 of 7: "m5" (step 17)
+broker: returned, no queue got it
+message: published to "x4" with key "a.b.c", headers a=1.0 b="1" x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x4, which has no bindings.
+
+exchange x4 (fanout): x4 is a fanout exchange, and the message was published to it. It has no bindings.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - Nothing is bound to the queue q3, so no message can get there by a binding.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - Nothing is bound to the queue q4, so no message can get there by a binding.
+
+## publish 6 of 7: "m6" (step 18)
+broker: reached q1
+message: published to the default exchange with key "q1"
+outcome: routed
+reached: q1
+summary: Reached q1.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q1". 1 of its 4 bindings matched.
+  ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+    The key is "q1", and the default exchange sends a message to the queue that has that name: q1. The queue q1 gets its first copy.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q3 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q3 is named "q3": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q4 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q4 is named "q4": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: reached through ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q2.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q3.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q4.
+
+## publish 7 of 7: "m7" (step 19)
+broker: returned, no queue got it
+message: published to "x4" with key "b.b", headers b=1 x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x4, which has no bindings.
+
+exchange x4 (fanout): x4 is a fanout exchange, and the message was published to it. It has no bindings.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - Nothing is bound to the queue q2, so no message can get there by a binding.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - Nothing is bound to the queue q3, so no message can get there by a binding.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - Nothing is bound to the queue q4, so no message can get there by a binding.

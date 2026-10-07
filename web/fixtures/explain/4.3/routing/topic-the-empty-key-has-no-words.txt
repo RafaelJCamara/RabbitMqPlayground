@@ -1,0 +1,355 @@
+# routing/topic-the-empty-key-has-no-words
+# The empty routing key has zero words: # matches it and * does not, and "." is two empty words (ADR-0008, rule 4)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "k:" (step 32)
+broker: reached p:, p:#, p:#.#
+message: published to "t" with the empty key
+outcome: routed
+reached: p:, p:#, p:#.#
+summary: Reached p:, p:# and p:#.#.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 3 of its 15 bindings matched.
+  ✓ t -> queue p: (the empty key) [matches]
+    The empty pattern is the empty key, word for word. The queue p: gets its first copy.
+    pattern
+    key
+  ✓ t -> queue p:# ("#") [matches]
+    The pattern "#" matches the empty key: # took no words. The queue p:# gets its first copy.
+    pattern  #
+    key      - ✓
+  ✗ t -> queue p:* ("*") [needs 1 words, has 0]
+    The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *
+    key      - ✗
+  ✓ t -> queue p:#.# ("#.#") [matches]
+    The pattern "#.#" matches the empty key: # took no words; # took no words. The queue p:#.# gets its first copy.
+    pattern  #   | #
+    key      - ✓ | - ✓
+  ✗ t -> queue p:*.# ("*.#") [needs 1 or more words, has 0]
+    The pattern "*.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *   | #
+    key      - ✗ | - ✓
+  ✗ t -> queue p:#.* ("#.*") [needs 1 or more words, has 0]
+    The pattern "#.*" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  #   | *
+    key      - ✓ | - ✗
+  ✗ t -> queue p:*.* ("*.*") [needs 2 words, has 0]
+    The pattern "*.*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *   | *
+    key      - ✗ | - ✗
+  ✗ t -> queue p:a ("a") [needs 1 words, has 0]
+    The pattern "a" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+    pattern  a
+    key      - ✗
+  ✗ t -> queue p:a.# ("a.#") [needs 1 or more words, has 0]
+    The pattern "a.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  a   | #
+    key      - ✗ | - ✓
+  ✗ t -> queue p:#.a ("#.a") [needs 1 or more words, has 0]
+    The pattern "#.a" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  #   | a
+    key      - ✓ | - ✗
+  ✗ t -> queue p:. (".") [needs 2 words, has 0]
+    The pattern "." does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0.
+    pattern  ""  | ""
+    key      - ✗ | - ✗
+  ✗ t -> queue p:.# (".#") [needs 1 or more words, has 0]
+    The pattern ".#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  ""  | #
+    key      - ✗ | - ✓
+  ✗ t -> queue p:#. ("#.") [needs 1 or more words, has 0]
+    The pattern "#." does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  #   | ""
+    key      - ✓ | - ✗
+  ✗ t -> queue p:*. ("*.") [needs 2 words, has 0]
+    The pattern "*." does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *   | ""
+    key      - ✗ | - ✗
+  ✗ t -> queue p:.* (".*") [needs 2 words, has 0]
+    The pattern ".*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  ""  | *
+    key      - ✗ | - ✗
+
+queue p:: reached through ✓ t -> queue p: (the empty key) [matches]
+
+queue p:#: reached through ✓ t -> queue p:# ("#") [matches]
+
+queue p:*: not reached
+  The queue p:* did not get the message.
+  - The binding from t to queue p:* ("*") was tried, and it did not match. The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue p:#.#: reached through ✓ t -> queue p:#.# ("#.#") [matches]
+
+queue p:*.#: not reached
+  The queue p:*.# did not get the message.
+  - The binding from t to queue p:*.# ("*.#") was tried, and it did not match. The pattern "*.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue p:#.*: not reached
+  The queue p:#.* did not get the message.
+  - The binding from t to queue p:#.* ("#.*") was tried, and it did not match. The pattern "#.*" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue p:*.*: not reached
+  The queue p:*.* did not get the message.
+  - The binding from t to queue p:*.* ("*.*") was tried, and it did not match. The pattern "*.*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue p:a: not reached
+  The queue p:a did not get the message.
+  - The binding from t to queue p:a ("a") was tried, and it did not match. The pattern "a" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+
+queue p:a.#: not reached
+  The queue p:a.# did not get the message.
+  - The binding from t to queue p:a.# ("a.#") was tried, and it did not match. The pattern "a.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue p:#.a: not reached
+  The queue p:#.a did not get the message.
+  - The binding from t to queue p:#.a ("#.a") was tried, and it did not match. The pattern "#.a" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue p:.: not reached
+  The queue p:. did not get the message.
+  - The binding from t to queue p:. (".") was tried, and it did not match. The pattern "." does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0.
+
+queue p:.#: not reached
+  The queue p:.# did not get the message.
+  - The binding from t to queue p:.# (".#") was tried, and it did not match. The pattern ".#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue p:#.: not reached
+  The queue p:#. did not get the message.
+  - The binding from t to queue p:#. ("#.") was tried, and it did not match. The pattern "#." does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue p:*.: not reached
+  The queue p:*. did not get the message.
+  - The binding from t to queue p:*. ("*.") was tried, and it did not match. The pattern "*." does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue p:.*: not reached
+  The queue p:.* did not get the message.
+  - The binding from t to queue p:.* (".*") was tried, and it did not match. The pattern ".*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+## publish 2 of 3: "k:." (step 33)
+broker: reached p:#, p:#., p:#.#, p:#.*, p:*., p:*.#, p:*.*, p:., p:.#, p:.*
+message: published to "t" with key "."
+outcome: routed
+reached: p:#, p:#.#, p:*.#, p:#.*, p:*.*, p:., p:.#, p:#., p:*., p:.*
+summary: Reached p:#, p:#.#, p:*.#, p:#.*, p:*.*, p:., p:.#, p:#., p:*. and p:.*.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 10 of its 15 bindings matched.
+  ✗ t -> queue p: (the empty key) [key has 2 words, pattern 0]
+    The empty pattern does not match the key ".": the pattern has 0 words and the key has 2, and without a "#" the key has to have as many words as the pattern.
+    pattern  -    | -
+    key      "" ✗ | "" ✗
+  ✓ t -> queue p:# ("#") [matches]
+    The pattern "#" matches the key ".": # took ".". The queue p:# gets its first copy.
+    pattern  #
+    key      ""."" ✓
+  ✗ t -> queue p:* ("*") [key has 2 words, pattern 1]
+    The pattern "*" does not match the key ".": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+    pattern  *    | -
+    key      "" ✓ | "" ✗
+  ✓ t -> queue p:#.# ("#.#") [matches]
+    The pattern "#.#" matches the key ".": # took no words; # took ".". The queue p:#.# gets its first copy.
+    pattern  #   | #
+    key      - ✓ | ""."" ✓
+  ✓ t -> queue p:*.# ("*.#") [matches]
+    The pattern "*.#" matches the key ".": * took an empty word; # took "". The queue p:*.# gets its first copy.
+    pattern  *    | #
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:#.* ("#.*") [matches]
+    The pattern "#.*" matches the key ".": # took ""; * took an empty word. The queue p:#.* gets its first copy.
+    pattern  #    | *
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:*.* ("*.*") [matches]
+    The pattern "*.*" matches the key ".": * took an empty word; * took an empty word. The queue p:*.* gets its first copy.
+    pattern  *    | *
+    key      "" ✓ | "" ✓
+  ✗ t -> queue p:a ("a") [first word is an empty word, not "a"]
+    The pattern "a" does not match the key ".": the first word of the key is an empty word, and the pattern asks for "a".
+    pattern  a
+    key      "" ✗
+  ✗ t -> queue p:a.# ("a.#") [first word is an empty word, not "a"]
+    The pattern "a.#" does not match the key ".": the first word of the key is an empty word, and the pattern asks for "a".
+    pattern  a    | #
+    key      "" ✗ | "" ✓
+  ✗ t -> queue p:#.a ("#.a") [last word is an empty word, not "a"]
+    The pattern "#.a" does not match the key ".": the last word of the key is an empty word, and the pattern asks for "a".
+    pattern  #    | a
+    key      "" ✓ | "" ✗
+  ✓ t -> queue p:. (".") [matches]
+    The pattern "." is the key ".", word for word. The queue p:. gets its first copy.
+    pattern  ""   | ""
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:.# (".#") [matches]
+    The pattern ".#" matches the key ".": # took "". The queue p:.# gets its first copy.
+    pattern  ""   | #
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:#. ("#.") [matches]
+    The pattern "#." matches the key ".": # took "". The queue p:#. gets its first copy.
+    pattern  #    | ""
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:*. ("*.") [matches]
+    The pattern "*." matches the key ".": * took an empty word. The queue p:*. gets its first copy.
+    pattern  *    | ""
+    key      "" ✓ | "" ✓
+  ✓ t -> queue p:.* (".*") [matches]
+    The pattern ".*" matches the key ".": * took an empty word. The queue p:.* gets its first copy.
+    pattern  ""   | *
+    key      "" ✓ | "" ✓
+
+queue p:: not reached
+  The queue p: did not get the message.
+  - The binding from t to queue p: (the empty key) was tried, and it did not match. The empty pattern does not match the key ".": the pattern has 0 words and the key has 2, and without a "#" the key has to have as many words as the pattern.
+
+queue p:#: reached through ✓ t -> queue p:# ("#") [matches]
+
+queue p:*: not reached
+  The queue p:* did not get the message.
+  - The binding from t to queue p:* ("*") was tried, and it did not match. The pattern "*" does not match the key ".": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+
+queue p:#.#: reached through ✓ t -> queue p:#.# ("#.#") [matches]
+
+queue p:*.#: reached through ✓ t -> queue p:*.# ("*.#") [matches]
+
+queue p:#.*: reached through ✓ t -> queue p:#.* ("#.*") [matches]
+
+queue p:*.*: reached through ✓ t -> queue p:*.* ("*.*") [matches]
+
+queue p:a: not reached
+  The queue p:a did not get the message.
+  - The binding from t to queue p:a ("a") was tried, and it did not match. The pattern "a" does not match the key ".": the first word of the key is an empty word, and the pattern asks for "a".
+
+queue p:a.#: not reached
+  The queue p:a.# did not get the message.
+  - The binding from t to queue p:a.# ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key ".": the first word of the key is an empty word, and the pattern asks for "a".
+
+queue p:#.a: not reached
+  The queue p:#.a did not get the message.
+  - The binding from t to queue p:#.a ("#.a") was tried, and it did not match. The pattern "#.a" does not match the key ".": the last word of the key is an empty word, and the pattern asks for "a".
+
+queue p:.: reached through ✓ t -> queue p:. (".") [matches]
+
+queue p:.#: reached through ✓ t -> queue p:.# (".#") [matches]
+
+queue p:#.: reached through ✓ t -> queue p:#. ("#.") [matches]
+
+queue p:*.: reached through ✓ t -> queue p:*. ("*.") [matches]
+
+queue p:.*: reached through ✓ t -> queue p:.* (".*") [matches]
+
+## publish 3 of 3: "k:.." (step 34)
+broker: reached p:#, p:#., p:#.#, p:#.*, p:*.#, p:.#
+message: published to "t" with key ".."
+outcome: routed
+reached: p:#, p:#.#, p:*.#, p:#.*, p:.#, p:#.
+summary: Reached p:#, p:#.#, p:*.#, p:#.*, p:.# and p:#..
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 6 of its 15 bindings matched.
+  ✗ t -> queue p: (the empty key) [key has 3 words, pattern 0]
+    The empty pattern does not match the key "..": the pattern has 0 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  -    | -    | -
+    key      "" ✗ | "" ✗ | "" ✗
+  ✓ t -> queue p:# ("#") [matches]
+    The pattern "#" matches the key "..": # took "..". The queue p:# gets its first copy.
+    pattern  #
+    key      "".""."" ✓
+  ✗ t -> queue p:* ("*") [key has 3 words, pattern 1]
+    The pattern "*" does not match the key "..": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  *    | -    | -
+    key      "" ✓ | "" ✗ | "" ✗
+  ✓ t -> queue p:#.# ("#.#") [matches]
+    The pattern "#.#" matches the key "..": # took no words; # took "..". The queue p:#.# gets its first copy.
+    pattern  #   | #
+    key      - ✓ | "".""."" ✓
+  ✓ t -> queue p:*.# ("*.#") [matches]
+    The pattern "*.#" matches the key "..": * took an empty word; # took ".". The queue p:*.# gets its first copy.
+    pattern  *    | #
+    key      "" ✓ | ""."" ✓
+  ✓ t -> queue p:#.* ("#.*") [matches]
+    The pattern "#.*" matches the key "..": # took "."; * took an empty word. The queue p:#.* gets its first copy.
+    pattern  #       | *
+    key      ""."" ✓ | "" ✓
+  ✗ t -> queue p:*.* ("*.*") [key has 3 words, pattern 2]
+    The pattern "*.*" does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  *    | *    | -
+    key      "" ✓ | "" ✓ | "" ✗
+  ✗ t -> queue p:a ("a") [first word is an empty word, not "a"]
+    The pattern "a" does not match the key "..": the first word of the key is an empty word, and the pattern asks for "a".
+    pattern  a
+    key      "" ✗
+  ✗ t -> queue p:a.# ("a.#") [first word is an empty word, not "a"]
+    The pattern "a.#" does not match the key "..": the first word of the key is an empty word, and the pattern asks for "a".
+    pattern  a    | #
+    key      "" ✗ | ""."" ✓
+  ✗ t -> queue p:#.a ("#.a") [last word is an empty word, not "a"]
+    The pattern "#.a" does not match the key "..": the last word of the key is an empty word, and the pattern asks for "a".
+    pattern  #       | a
+    key      ""."" ✓ | "" ✗
+  ✗ t -> queue p:. (".") [key has 3 words, pattern 2]
+    The pattern "." does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  ""   | ""   | -
+    key      "" ✓ | "" ✓ | "" ✗
+  ✓ t -> queue p:.# (".#") [matches]
+    The pattern ".#" matches the key "..": # took ".". The queue p:.# gets its first copy.
+    pattern  ""   | #
+    key      "" ✓ | ""."" ✓
+  ✓ t -> queue p:#. ("#.") [matches]
+    The pattern "#." matches the key "..": # took ".". The queue p:#. gets its first copy.
+    pattern  #       | ""
+    key      ""."" ✓ | "" ✓
+  ✗ t -> queue p:*. ("*.") [key has 3 words, pattern 2]
+    The pattern "*." does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  *    | ""   | -
+    key      "" ✓ | "" ✓ | "" ✗
+  ✗ t -> queue p:.* (".*") [key has 3 words, pattern 2]
+    The pattern ".*" does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  ""   | *    | -
+    key      "" ✓ | "" ✓ | "" ✗
+
+queue p:: not reached
+  The queue p: did not get the message.
+  - The binding from t to queue p: (the empty key) was tried, and it did not match. The empty pattern does not match the key "..": the pattern has 0 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue p:#: reached through ✓ t -> queue p:# ("#") [matches]
+
+queue p:*: not reached
+  The queue p:* did not get the message.
+  - The binding from t to queue p:* ("*") was tried, and it did not match. The pattern "*" does not match the key "..": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue p:#.#: reached through ✓ t -> queue p:#.# ("#.#") [matches]
+
+queue p:*.#: reached through ✓ t -> queue p:*.# ("*.#") [matches]
+
+queue p:#.*: reached through ✓ t -> queue p:#.* ("#.*") [matches]
+
+queue p:*.*: not reached
+  The queue p:*.* did not get the message.
+  - The binding from t to queue p:*.* ("*.*") was tried, and it did not match. The pattern "*.*" does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue p:a: not reached
+  The queue p:a did not get the message.
+  - The binding from t to queue p:a ("a") was tried, and it did not match. The pattern "a" does not match the key "..": the first word of the key is an empty word, and the pattern asks for "a".
+
+queue p:a.#: not reached
+  The queue p:a.# did not get the message.
+  - The binding from t to queue p:a.# ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "..": the first word of the key is an empty word, and the pattern asks for "a".
+
+queue p:#.a: not reached
+  The queue p:#.a did not get the message.
+  - The binding from t to queue p:#.a ("#.a") was tried, and it did not match. The pattern "#.a" does not match the key "..": the last word of the key is an empty word, and the pattern asks for "a".
+
+queue p:.: not reached
+  The queue p:. did not get the message.
+  - The binding from t to queue p:. (".") was tried, and it did not match. The pattern "." does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue p:.#: reached through ✓ t -> queue p:.# (".#") [matches]
+
+queue p:#.: reached through ✓ t -> queue p:#. ("#.") [matches]
+
+queue p:*.: not reached
+  The queue p:*. did not get the message.
+  - The binding from t to queue p:*. ("*.") was tried, and it did not match. The pattern "*." does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue p:.*: not reached
+  The queue p:.* did not get the message.
+  - The binding from t to queue p:.* (".*") was tried, and it did not match. The pattern ".*" does not match the key "..": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.

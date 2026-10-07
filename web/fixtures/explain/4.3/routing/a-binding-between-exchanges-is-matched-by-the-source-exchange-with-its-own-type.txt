@@ -1,0 +1,124 @@
+# routing/a-binding-between-exchanges-is-matched-by-the-source-exchange-with-its-own-type
+# The key of a binding between exchanges is matched by the exchange it starts from, and the next exchange matches the same message again with its own bindings (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 5: "m1" (step 11)
+broker: reached fanned
+message: published to "src-direct" with key "k"
+outcome: routed
+reached: fanned
+summary: Reached fanned.
+
+exchange src-direct (direct): src-direct is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ src-direct -> exchange dst-fanout ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The message goes on to the exchange dst-fanout.
+    exchange dst-fanout (fanout): dst-fanout is a fanout exchange, and the message came to it from src-direct. 1 of its 1 binding matched.
+      ✓ dst-fanout -> queue fanned (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue fanned gets its first copy.
+
+queue fanned: reached through ✓ src-direct -> exchange dst-fanout ("k") [key matches] ; ✓ dst-fanout -> queue fanned (any key) [fanout: always matches]
+
+queue exact: not reached
+  The queue exact did not get the message.
+  - dst-direct is bound to queue exact ("a.b"), but the message never reached dst-direct.
+    - src-topic is bound to exchange dst-direct ("a.*"), but the message never reached src-topic.
+      - Nothing is bound to the exchange src-topic, so nothing leads into it and the message cannot reach it.
+
+## publish 2 of 5: "m2" (step 12)
+broker: returned, no queue got it
+message: published to "src-direct" with key "other"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached src-direct, and its only binding did not match.
+
+exchange src-direct (direct): src-direct is a direct exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ src-direct -> exchange dst-fanout ("k") [key is not "k"]
+    The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue fanned: not reached
+  The queue fanned did not get the message.
+  - dst-fanout is bound to queue fanned (any key), but the message never reached dst-fanout.
+    - The binding from src-direct to exchange dst-fanout ("k") was tried, and it did not match. The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue exact: not reached
+  The queue exact did not get the message.
+  - dst-direct is bound to queue exact ("a.b"), but the message never reached dst-direct.
+    - src-topic is bound to exchange dst-direct ("a.*"), but the message never reached src-topic.
+      - Nothing is bound to the exchange src-topic, so nothing leads into it and the message cannot reach it.
+
+## publish 3 of 5: "m3" (step 13)
+broker: reached exact
+message: published to "src-topic" with key "a.b"
+outcome: routed
+reached: exact
+summary: Reached exact.
+
+exchange src-topic (topic): src-topic is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ src-topic -> exchange dst-direct ("a.*") [matches]
+    The pattern "a.*" matches the key "a.b": * took "b". The message goes on to the exchange dst-direct.
+    pattern  a   | *
+    key      a ✓ | b ✓
+    exchange dst-direct (direct): dst-direct is a direct exchange, and the message came to it from src-topic. 1 of its 1 binding matched.
+      ✓ dst-direct -> queue exact ("a.b") [key matches]
+        The key "a.b" is the binding key, letter for letter. The queue exact gets its first copy.
+
+queue fanned: not reached
+  The queue fanned did not get the message.
+  - dst-fanout is bound to queue fanned (any key), but the message never reached dst-fanout.
+    - src-direct is bound to exchange dst-fanout ("k"), but the message never reached src-direct.
+      - Nothing is bound to the exchange src-direct, so nothing leads into it and the message cannot reach it.
+
+queue exact: reached through ✓ src-topic -> exchange dst-direct ("a.*") [matches] ; ✓ dst-direct -> queue exact ("a.b") [key matches]
+
+## publish 4 of 5: "m4" (step 14)
+broker: returned, no queue got it
+message: published to "src-topic" with key "a.c"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached src-topic and dst-direct, and 1 of their 2 bindings matched, but none of them led to a queue.
+
+exchange src-topic (topic): src-topic is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ src-topic -> exchange dst-direct ("a.*") [matches]
+    The pattern "a.*" matches the key "a.c": * took "c". The message goes on to the exchange dst-direct.
+    pattern  a   | *
+    key      a ✓ | c ✓
+    exchange dst-direct (direct): dst-direct is a direct exchange, and the message came to it from src-topic. 0 of its 1 binding matched.
+      ✗ dst-direct -> queue exact ("a.b") [key is not "a.b"]
+        The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue fanned: not reached
+  The queue fanned did not get the message.
+  - dst-fanout is bound to queue fanned (any key), but the message never reached dst-fanout.
+    - src-direct is bound to exchange dst-fanout ("k"), but the message never reached src-direct.
+      - Nothing is bound to the exchange src-direct, so nothing leads into it and the message cannot reach it.
+
+queue exact: not reached
+  The queue exact did not get the message.
+  - The binding from dst-direct to queue exact ("a.b") was tried, and it did not match. The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+## publish 5 of 5: "m5" (step 15)
+broker: returned, no queue got it
+message: published to "src-topic" with key "b.b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached src-topic, and its only binding did not match.
+
+exchange src-topic (topic): src-topic is a topic exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ src-topic -> exchange dst-direct ("a.*") [first word is "b", not "a"]
+    The pattern "a.*" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | b ✓
+
+queue fanned: not reached
+  The queue fanned did not get the message.
+  - dst-fanout is bound to queue fanned (any key), but the message never reached dst-fanout.
+    - src-direct is bound to exchange dst-fanout ("k"), but the message never reached src-direct.
+      - Nothing is bound to the exchange src-direct, so nothing leads into it and the message cannot reach it.
+
+queue exact: not reached
+  The queue exact did not get the message.
+  - dst-direct is bound to queue exact ("a.b"), but the message never reached dst-direct.
+    - The binding from src-topic to exchange dst-direct ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".

@@ -28,7 +28,9 @@
     "test:conformance": "vitest run --config vitest.conformance.config.ts",
     "bench": "vitest bench --run --config vitest.bench.config.ts --reporter=default --reporter=./tools/bench/summary-reporter.ts",
     "docs:generate": "tsx tools/docs/generate-commands.ts",
-    "docs:check": "tsx tools/docs/generate-commands.ts --check"
+    "docs:check": "tsx tools/docs/generate-commands.ts --check",
+    "explain:generate": "tsx tools/explain/render-fixtures.ts",
+    "explain:check": "tsx tools/explain/render-fixtures.ts --check"
   },
   "dependencies": {
     "@angular/cdk": "^22.2.1",

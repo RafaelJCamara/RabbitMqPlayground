@@ -1,0 +1,148 @@
+# routing/a-wide-set-of-exchanges-reaches-each-queue-once
+# One exchange that passes a message on to eight exchanges, which all share a queue and each have one of their own, reaches every queue once (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 2: "m1" (step 43)
+broker: reached own-1, own-2, own-3, own-4, own-5, own-6, own-7, own-8, shared
+message: published to "root" with the empty key
+outcome: routed
+reached: shared, own-1, own-2, own-3, own-4, own-5, own-6, own-7, own-8
+summary: Reached shared, own-1, own-2, own-3, own-4, own-5, own-6, own-7 and own-8.
+
+exchange root (fanout): root is a fanout exchange, and the message was published to it. 8 of its 8 bindings matched.
+  ✓ root -> exchange x01 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x01.
+    exchange x01 (fanout): x01 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x01 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared gets its first copy.
+      ✓ x01 -> queue own-1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-1 gets its first copy.
+  ✓ root -> exchange x02 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x02.
+    exchange x02 (fanout): x02 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x02 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x02 -> queue own-2 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-2 gets its first copy.
+  ✓ root -> exchange x03 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x03.
+    exchange x03 (fanout): x03 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x03 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x03 -> queue own-3 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-3 gets its first copy.
+  ✓ root -> exchange x04 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x04.
+    exchange x04 (fanout): x04 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x04 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x04 -> queue own-4 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-4 gets its first copy.
+  ✓ root -> exchange x05 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x05.
+    exchange x05 (fanout): x05 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x05 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x05 -> queue own-5 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-5 gets its first copy.
+  ✓ root -> exchange x06 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x06.
+    exchange x06 (fanout): x06 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x06 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x06 -> queue own-6 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-6 gets its first copy.
+  ✓ root -> exchange x07 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x07.
+    exchange x07 (fanout): x07 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x07 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x07 -> queue own-7 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-7 gets its first copy.
+  ✓ root -> exchange x08 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x08.
+    exchange x08 (fanout): x08 is a fanout exchange, and the message came to it from root. 2 of its 2 bindings matched.
+      ✓ x08 -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ x08 -> queue own-8 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-8 gets its first copy.
+
+queue shared: reached through ✓ root -> exchange x01 (any key) [fanout: always matches] ; ✓ x01 -> queue shared (any key) [fanout: always matches]
+
+queue own-1: reached through ✓ root -> exchange x01 (any key) [fanout: always matches] ; ✓ x01 -> queue own-1 (any key) [fanout: always matches]
+
+queue own-2: reached through ✓ root -> exchange x02 (any key) [fanout: always matches] ; ✓ x02 -> queue own-2 (any key) [fanout: always matches]
+
+queue own-3: reached through ✓ root -> exchange x03 (any key) [fanout: always matches] ; ✓ x03 -> queue own-3 (any key) [fanout: always matches]
+
+queue own-4: reached through ✓ root -> exchange x04 (any key) [fanout: always matches] ; ✓ x04 -> queue own-4 (any key) [fanout: always matches]
+
+queue own-5: reached through ✓ root -> exchange x05 (any key) [fanout: always matches] ; ✓ x05 -> queue own-5 (any key) [fanout: always matches]
+
+queue own-6: reached through ✓ root -> exchange x06 (any key) [fanout: always matches] ; ✓ x06 -> queue own-6 (any key) [fanout: always matches]
+
+queue own-7: reached through ✓ root -> exchange x07 (any key) [fanout: always matches] ; ✓ x07 -> queue own-7 (any key) [fanout: always matches]
+
+queue own-8: reached through ✓ root -> exchange x08 (any key) [fanout: always matches] ; ✓ x08 -> queue own-8 (any key) [fanout: always matches]
+
+## publish 2 of 2: "m2" (step 44)
+broker: reached own-3, shared
+message: published to "x03" with the empty key
+outcome: routed
+reached: shared, own-3
+summary: Reached shared and own-3.
+
+exchange x03 (fanout): x03 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x03 -> queue shared (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared gets its first copy.
+  ✓ x03 -> queue own-3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue own-3 gets its first copy.
+
+queue shared: reached through ✓ x03 -> queue shared (any key) [fanout: always matches]
+
+queue own-1: not reached
+  The queue own-1 did not get the message.
+  - x01 is bound to queue own-1 (any key), but the message never reached x01.
+    - root is bound to exchange x01 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-2: not reached
+  The queue own-2 did not get the message.
+  - x02 is bound to queue own-2 (any key), but the message never reached x02.
+    - root is bound to exchange x02 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-3: reached through ✓ x03 -> queue own-3 (any key) [fanout: always matches]
+
+queue own-4: not reached
+  The queue own-4 did not get the message.
+  - x04 is bound to queue own-4 (any key), but the message never reached x04.
+    - root is bound to exchange x04 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-5: not reached
+  The queue own-5 did not get the message.
+  - x05 is bound to queue own-5 (any key), but the message never reached x05.
+    - root is bound to exchange x05 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-6: not reached
+  The queue own-6 did not get the message.
+  - x06 is bound to queue own-6 (any key), but the message never reached x06.
+    - root is bound to exchange x06 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-7: not reached
+  The queue own-7 did not get the message.
+  - x07 is bound to queue own-7 (any key), but the message never reached x07.
+    - root is bound to exchange x07 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.
+
+queue own-8: not reached
+  The queue own-8 did not get the message.
+  - x08 is bound to queue own-8 (any key), but the message never reached x08.
+    - root is bound to exchange x08 (any key), but the message never reached root.
+      - Nothing is bound to the exchange root, so nothing leads into it and the message cannot reach it.

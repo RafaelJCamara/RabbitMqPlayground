@@ -1,0 +1,19 @@
+# routing/declaring-a-queue-that-is-there-as-not-durable-is-refused-as-another-attribute
+# A queue that is there and is declared again as not durable is refused with 406 and the durable flag, and not with the 541 of a new transient queue (ADR-0051, ADR-0021)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 1: "m1" (step 5)
+broker: reached inbox
+message: published to "e" with the empty key
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange e (fanout): e is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ e -> queue inbox (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue inbox gets its first copy.
+
+queue inbox: reached through ✓ e -> queue inbox (any key) [fanout: always matches]

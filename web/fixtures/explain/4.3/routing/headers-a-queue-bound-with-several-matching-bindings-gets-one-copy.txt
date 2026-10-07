@@ -1,0 +1,85 @@
+# routing/headers-a-queue-bound-with-several-matching-bindings-gets-one-copy
+# A queue that is bound with several bindings that all match, or with the same binding twice, still gets one copy (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "a=1" (step 9)
+broker: reached one, two
+message: published to "h" with the empty key, headers a=1
+outcome: routed
+reached: one, two
+summary: Reached one and two.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 4 of its 4 bindings matched.
+  ✓ h -> queue one (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue one gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue one (x-match=any a=1 b=1) [1 of 2 hold]
+    x-match=any: a holds, and one is enough. The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    ✓ The header a is 1, as the binding asks.
+    ✗ The header b is missing from the message.
+  ✓ h -> queue one (x-match=all) [no conditions: matches all]
+    x-match=all (left out, so all) and no condition counts, so it matches every message. The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+  ✓ h -> queue two (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue two gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+
+queue one: reached through ✓ h -> queue one (x-match=all a=1) [1 of 1 hold]
+
+queue two: reached through ✓ h -> queue two (x-match=all a=1) [1 of 1 hold]
+
+## publish 2 of 3: "b=1" (step 10)
+broker: reached one
+message: published to "h" with the empty key, headers b=1
+outcome: routed
+reached: one
+summary: Reached one.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 4 bindings matched.
+  ✗ h -> queue one (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✓ h -> queue one (x-match=any a=1 b=1) [1 of 2 hold]
+    x-match=any: b holds, and one is enough. The queue one gets its first copy.
+    ✗ The header a is missing from the message.
+    ✓ The header b is 1, as the binding asks.
+  ✓ h -> queue one (x-match=all) [no conditions: matches all]
+    x-match=all (left out, so all) and no condition counts, so it matches every message. The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+  ✗ h -> queue two (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+
+queue one: reached through ✓ h -> queue one (x-match=any a=1 b=1) [1 of 2 hold]
+
+queue two: not reached
+  The queue two did not get the message.
+  - The binding from h to queue two (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+## publish 3 of 3: "none" (step 11)
+broker: reached one
+message: published to "h" with the empty key
+outcome: routed
+reached: one
+summary: Reached one.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 4 bindings matched.
+  ✗ h -> queue one (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue one (x-match=any a=1 b=1) [none of 2 hold]
+    x-match=any: at least one condition has to hold, and none of the 2 does.
+    ✗ The header a is missing from the message.
+    ✗ The header b is missing from the message.
+  ✓ h -> queue one (x-match=all) [no conditions: matches all]
+    x-match=all (left out, so all) and no condition counts, so it matches every message. The queue one gets its first copy.
+  ✗ h -> queue two (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+
+queue one: reached through ✓ h -> queue one (x-match=all) [no conditions: matches all]
+
+queue two: not reached
+  The queue two did not get the message.
+  - The binding from h to queue two (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.

@@ -1,0 +1,93 @@
+# routing/a-cycle-that-leads-to-the-queue-only-by-going-round
+# A queue that hangs off the last exchange of a cycle is reached once, from any exchange of the cycle, and the cycle is gone round once (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 4: "m1" (step 11)
+broker: reached only
+message: published to "x1" with the empty key
+outcome: routed
+reached: only
+summary: Reached only.
+
+exchange x1 (fanout): x1 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x1 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x2.
+    exchange x2 (fanout): x2 is a fanout exchange, and the message came to it from x1. 1 of its 1 binding matched.
+      ✓ x2 -> exchange x3 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x3.
+        exchange x3 (fanout): x3 is a fanout exchange, and the message came to it from x2. 2 of its 2 bindings matched.
+          ✓ x3 -> exchange x1 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+          ✓ x3 -> queue only (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue only gets its first copy.
+
+queue only: reached through ✓ x1 -> exchange x2 (any key) [fanout: always matches] ; ✓ x2 -> exchange x3 (any key) [fanout: always matches] ; ✓ x3 -> queue only (any key) [fanout: always matches]
+
+## publish 2 of 4: "m2" (step 12)
+broker: reached only
+message: published to "x2" with the empty key
+outcome: routed
+reached: only
+summary: Reached only.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x2 -> exchange x3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x3.
+    exchange x3 (fanout): x3 is a fanout exchange, and the message came to it from x2. 2 of its 2 bindings matched.
+      ✓ x3 -> exchange x1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+        exchange x1 (fanout): x1 is a fanout exchange, and the message came to it from x3. 1 of its 1 binding matched.
+          ✓ x1 -> exchange x2 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+      ✓ x3 -> queue only (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue only gets its first copy.
+
+queue only: reached through ✓ x2 -> exchange x3 (any key) [fanout: always matches] ; ✓ x3 -> queue only (any key) [fanout: always matches]
+
+## publish 3 of 4: "m3" (step 13)
+broker: reached only
+message: published to "x3" with the empty key
+outcome: routed
+reached: only
+summary: Reached only.
+
+exchange x3 (fanout): x3 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x3 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (fanout): x1 is a fanout exchange, and the message came to it from x3. 1 of its 1 binding matched.
+      ✓ x1 -> exchange x2 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x2.
+        exchange x2 (fanout): x2 is a fanout exchange, and the message came to it from x1. 1 of its 1 binding matched.
+          ✓ x2 -> exchange x3 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x3 had been reached already, and an exchange is visited once.
+  ✓ x3 -> queue only (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue only gets its first copy.
+
+queue only: reached through ✓ x3 -> queue only (any key) [fanout: always matches]
+
+## publish 4 of 4: "m4" (step 14)
+broker: reached only
+message: published to "x4" with the empty key
+outcome: routed
+reached: only
+summary: Reached only.
+
+exchange x4 (fanout): x4 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x4 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x2.
+    exchange x2 (fanout): x2 is a fanout exchange, and the message came to it from x4. 1 of its 1 binding matched.
+      ✓ x2 -> exchange x3 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x3.
+        exchange x3 (fanout): x3 is a fanout exchange, and the message came to it from x2. 2 of its 2 bindings matched.
+          ✓ x3 -> exchange x1 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+            exchange x1 (fanout): x1 is a fanout exchange, and the message came to it from x3. 1 of its 1 binding matched.
+              ✓ x1 -> exchange x2 (any key) [fanout: always matches]
+                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+          ✓ x3 -> queue only (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue only gets its first copy.
+
+queue only: reached through ✓ x4 -> exchange x2 (any key) [fanout: always matches] ; ✓ x2 -> exchange x3 (any key) [fanout: always matches] ; ✓ x3 -> queue only (any key) [fanout: always matches]

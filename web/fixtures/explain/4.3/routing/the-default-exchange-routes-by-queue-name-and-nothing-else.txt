@@ -1,0 +1,451 @@
+# routing/the-default-exchange-routes-by-queue-name-and-nothing-else
+# The default exchange routes by the exact name of a queue: case, spaces and dots count, a pattern is not one, and a binding elsewhere does not change it (ADR-0008, rule 6)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 15: "m1" (step 11)
+broker: reached alpha
+message: published to the default exchange with key "alpha"
+outcome: routed
+reached: alpha
+summary: Reached alpha.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha". 1 of its 7 bindings matched.
+  ✓ the default exchange -> queue alpha (the queue that is named by the key) [named by the key]
+    The key is "alpha", and the default exchange sends a message to the queue that has that name: alpha. The queue alpha gets its first copy.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "alpha", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: reached through ✓ the default exchange -> queue alpha (the queue that is named by the key) [named by the key]
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "alpha", and not to é.
+
+## publish 2 of 15: "m2" (step 12)
+broker: reached ALPHA
+message: published to the default exchange with key "ALPHA"
+outcome: routed
+reached: ALPHA
+summary: Reached ALPHA.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA". 1 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue ALPHA (the queue that is named by the key) [named by the key]
+    The key is "ALPHA", and the default exchange sends a message to the queue that has that name: ALPHA. The queue ALPHA gets its first copy.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "ALPHA", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to alpha.
+
+queue ALPHA: reached through ✓ the default exchange -> queue ALPHA (the queue that is named by the key) [named by the key]
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "ALPHA", and not to é.
+
+## publish 3 of 15: "m3" (step 13)
+broker: reached a.b
+message: published to the default exchange with key "a.b"
+outcome: routed
+reached: a.b
+summary: Reached a.b.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b". 1 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue a.b (the queue that is named by the key) [named by the key]
+    The key is "a.b", and the default exchange sends a message to the queue that has that name: a.b. The queue a.b gets its first copy.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "a.b", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to ALPHA.
+
+queue a.b: reached through ✓ the default exchange -> queue a.b (the queue that is named by the key) [named by the key]
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.b", and not to é.
+
+## publish 4 of 15: "m4" (step 14)
+broker: reached a.*
+message: published to the default exchange with key "a.*"
+outcome: routed
+reached: a.*
+summary: Reached a.*.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*". 1 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue a.* (the queue that is named by the key) [named by the key]
+    The key is "a.*", and the default exchange sends a message to the queue that has that name: a.*. The queue a.* gets its first copy.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "a.*", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to a.b.
+
+queue a.*: reached through ✓ the default exchange -> queue a.* (the queue that is named by the key) [named by the key]
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.*", and not to é.
+
+## publish 5 of 15: "m5" (step 15)
+broker: returned, no queue got it
+message: published to the default exchange with key "a.x"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "a.x".
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x". 0 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "a.x", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "a.x", and not to é.
+
+## publish 6 of 15: "m6" (step 16)
+broker: reached #
+message: published to the default exchange with key "#"
+outcome: routed
+reached: #
+summary: Reached #.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "#". 1 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue # (the queue that is named by the key) [named by the key]
+    The key is "#", and the default exchange sends a message to the queue that has that name: #. The queue # gets its first copy.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "#", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to a.*.
+
+queue #: reached through ✓ the default exchange -> queue # (the queue that is named by the key) [named by the key]
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "#", and not to é.
+
+## publish 7 of 15: "m7" (step 17)
+broker: returned, no queue got it
+message: published to the default exchange with key "anything"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "anything".
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "anything". 0 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue with space (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue with space is named "with space": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "anything", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to #.
+
+queue with space: not reached
+  The queue with space did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to with space.
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "anything", and not to é.
+
+## publish 8 of 15: "m8" (step 18)
+broker: reached with space
+message: published to the default exchange with key "with space"
+outcome: routed
+reached: with space
+summary: Reached with space.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "with space". 1 of its 7 bindings matched.
+  ✗ the default exchange -> queue alpha (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue alpha is named "alpha": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue ALPHA (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue ALPHA is named "ALPHA": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.b (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue a.b is named "a.b": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue a.* (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue a.* is named "a.*": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue # (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue # is named "#": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue with space (the queue that is named by the key) [named by the key]
+    The key is "with space", and the default exchange sends a message to the queue that has that name: with space. The queue with space gets its first copy.
+  ✗ the default exchange -> queue é (the queue that is named by the key) [not named by the key]
+    The key is "with space", and the queue é is named "é": the default exchange only sends a message to the queue that is named by its key.
+
+queue alpha: not reached
+  The queue alpha did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to alpha.
+
+queue ALPHA: not reached
+  The queue ALPHA did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to ALPHA.
+
+queue a.b: not reached
+  The queue a.b did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to a.b.
+
+queue a.*: not reached
+  The queue a.* did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to a.*.
+
+queue #: not reached
+  The queue # did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to #.
+
+queue with space: reached through ✓ the default exchange -> queue with space (the queue that is named by the key) [named by the key]
+
+queue é: not reached
+  The queue é did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "with space", and not to é.
+
+## publish 9 of 15: "m9" (step 19)
+broker: returned, no queue got it
+message: published to the default exchange with key "with  space"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "with  space".
+
+## publish 10 of 15: "m10" (step 20)
+broker: reached é
+message: published to the default exchange with key "é"
+outcome: routed
+reached: é
+summary: Reached é.
+
+## publish 11 of 15: "m11" (step 21)
+broker: returned, no queue got it
+message: published to the default exchange with key "é"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "é".
+
+## publish 12 of 15: "m12" (step 22)
+broker: returned, no queue got it
+message: published to the default exchange with key "other"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "other".
+
+## publish 13 of 15: "m13" (step 23)
+broker: returned, no queue got it
+message: published to "alpha" with key "alpha"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached alpha, which has no bindings.
+
+## publish 14 of 15: "m14" (step 24)
+broker: reached alpha
+message: published to "elsewhere" with key "other"
+outcome: routed
+reached: alpha
+summary: Reached alpha.
+
+## publish 15 of 15: "m15" (step 25)
+broker: reached alpha
+message: published to the default exchange with key "alpha", headers a=1
+outcome: routed
+reached: alpha
+summary: Reached alpha.

@@ -1,0 +1,716 @@
+# routing/topic-matching-is-case-sensitive-and-compares-bytes
+# Words are compared byte for byte: case, a composed and a decomposed é, and spaces all count (ADR-0008, rule 4)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 10: "k:a.b" (step 22)
+broker: reached p:a.b
+message: published to "t" with key "a.b"
+outcome: routed
+reached: p:a.b
+summary: Reached p:a.b.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✓ t -> queue p:a.b ("a.b") [matches]
+    The pattern "a.b" is the key "a.b", word for word. The queue p:a.b gets its first copy.
+    pattern  a   | b
+    key      a ✓ | b ✓
+  ✗ t -> queue p:A.b ("A.b") [first word is "a", not "A"]
+    The pattern "A.b" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "A".
+    pattern  A   | b
+    key      a ✗ | b ✓
+  ✗ t -> queue p:a.B ("a.B") [last word is "b", not "B"]
+    The pattern "a.B" does not match the key "a.b": the last word of the key is "b", and the pattern asks for "B".
+    pattern  a   | B
+    key      a ✓ | b ✗
+  ✗ t -> queue p:A.B ("A.B") [first word is "a", not "A"]
+    The pattern "A.B" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "A".
+    pattern  A   | B
+    key      a ✗ | b ✗
+  ✗ t -> queue p:é ("é") [first word is "a", not "é"]
+    The pattern "é" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é
+    key      a ✗
+  ✗ t -> queue p:é ("é") [first word is "a", not "é"]
+    The pattern "é" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é
+    key      a ✗
+  ✗ t -> queue p:é.* ("é.*") [first word is "a", not "é"]
+    The pattern "é.*" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é   | *
+    key      a ✗ | b ✓
+  ✗ t -> queue p:*.é ("*.é") [last word is "b", not "é"]
+    The pattern "*.é" does not match the key "a.b": the last word of the key is "b", and the pattern asks for "é".
+    pattern  *   | é
+    key      a ✓ | b ✗
+  ✗ t -> queue p:a. b ("a. b") [last word is "b", not " b"]
+    The pattern "a. b" does not match the key "a.b": the last word of the key is "b", and the pattern asks for " b".
+    pattern  a   |  b
+    key      a ✓ | b ✗
+  ✗ t -> queue p:a.b  ("a.b ") [last word is "b", not "b "]
+    The pattern "a.b " does not match the key "a.b": the last word of the key is "b", and the pattern asks for "b ".
+    pattern  a   | b
+    key      a ✓ | b ✗
+
+queue p:a.b: reached through ✓ t -> queue p:a.b ("a.b") [matches]
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "A".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "a.b": the last word of the key is "b", and the pattern asks for "B".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "A".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "a.b": the last word of the key is "b", and the pattern asks for "é".
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "a.b": the last word of the key is "b", and the pattern asks for " b".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "a.b": the last word of the key is "b", and the pattern asks for "b ".
+
+## publish 2 of 10: "k:A.b" (step 23)
+broker: reached p:A.b
+message: published to "t" with key "A.b"
+outcome: routed
+reached: p:A.b
+summary: Reached p:A.b.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [first word is "A", not "a"]
+    The pattern "a.b" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | b
+    key      A ✗ | b ✓
+  ✓ t -> queue p:A.b ("A.b") [matches]
+    The pattern "A.b" is the key "A.b", word for word. The queue p:A.b gets its first copy.
+    pattern  A   | b
+    key      A ✓ | b ✓
+  ✗ t -> queue p:a.B ("a.B") [first word is "A", not "a"]
+    The pattern "a.B" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | B
+    key      A ✗ | b ✗
+  ✗ t -> queue p:A.B ("A.B") [last word is "b", not "B"]
+    The pattern "A.B" does not match the key "A.b": the last word of the key is "b", and the pattern asks for "B".
+    pattern  A   | B
+    key      A ✓ | b ✗
+  ✗ t -> queue p:é ("é") [first word is "A", not "é"]
+    The pattern "é" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é
+    key      A ✗
+  ✗ t -> queue p:é ("é") [first word is "A", not "é"]
+    The pattern "é" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é
+    key      A ✗
+  ✗ t -> queue p:é.* ("é.*") [first word is "A", not "é"]
+    The pattern "é.*" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é   | *
+    key      A ✗ | b ✓
+  ✗ t -> queue p:*.é ("*.é") [last word is "b", not "é"]
+    The pattern "*.é" does not match the key "A.b": the last word of the key is "b", and the pattern asks for "é".
+    pattern  *   | é
+    key      A ✓ | b ✗
+  ✗ t -> queue p:a. b ("a. b") [first word is "A", not "a"]
+    The pattern "a. b" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   |  b
+    key      A ✗ | b ✗
+  ✗ t -> queue p:a.b  ("a.b ") [first word is "A", not "a"]
+    The pattern "a.b " does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | b
+    key      A ✗ | b ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:A.b: reached through ✓ t -> queue p:A.b ("A.b") [matches]
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "A.b": the last word of the key is "b", and the pattern asks for "B".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "A.b": the last word of the key is "b", and the pattern asks for "é".
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "A.b": the first word of the key is "A", and the pattern asks for "a".
+
+## publish 3 of 10: "k:a.B" (step 24)
+broker: reached p:a.B
+message: published to "t" with key "a.B"
+outcome: routed
+reached: p:a.B
+summary: Reached p:a.B.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [last word is "B", not "b"]
+    The pattern "a.b" does not match the key "a.B": the last word of the key is "B", and the pattern asks for "b".
+    pattern  a   | b
+    key      a ✓ | B ✗
+  ✗ t -> queue p:A.b ("A.b") [first word is "a", not "A"]
+    The pattern "A.b" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "A".
+    pattern  A   | b
+    key      a ✗ | B ✗
+  ✓ t -> queue p:a.B ("a.B") [matches]
+    The pattern "a.B" is the key "a.B", word for word. The queue p:a.B gets its first copy.
+    pattern  a   | B
+    key      a ✓ | B ✓
+  ✗ t -> queue p:A.B ("A.B") [first word is "a", not "A"]
+    The pattern "A.B" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "A".
+    pattern  A   | B
+    key      a ✗ | B ✓
+  ✗ t -> queue p:é ("é") [first word is "a", not "é"]
+    The pattern "é" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é
+    key      a ✗
+  ✗ t -> queue p:é ("é") [first word is "a", not "é"]
+    The pattern "é" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é
+    key      a ✗
+  ✗ t -> queue p:é.* ("é.*") [first word is "a", not "é"]
+    The pattern "é.*" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+    pattern  é   | *
+    key      a ✗ | B ✓
+  ✗ t -> queue p:*.é ("*.é") [last word is "B", not "é"]
+    The pattern "*.é" does not match the key "a.B": the last word of the key is "B", and the pattern asks for "é".
+    pattern  *   | é
+    key      a ✓ | B ✗
+  ✗ t -> queue p:a. b ("a. b") [last word is "B", not " b"]
+    The pattern "a. b" does not match the key "a.B": the last word of the key is "B", and the pattern asks for " b".
+    pattern  a   |  b
+    key      a ✓ | B ✗
+  ✗ t -> queue p:a.b  ("a.b ") [last word is "B", not "b "]
+    The pattern "a.b " does not match the key "a.B": the last word of the key is "B", and the pattern asks for "b ".
+    pattern  a   | b
+    key      a ✓ | B ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "a.B": the last word of the key is "B", and the pattern asks for "b".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "A".
+
+queue p:a.B: reached through ✓ t -> queue p:a.B ("a.B") [matches]
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "A".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "a.B": the first word of the key is "a", and the pattern asks for "é".
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "a.B": the last word of the key is "B", and the pattern asks for "é".
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "a.B": the last word of the key is "B", and the pattern asks for " b".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "a.B": the last word of the key is "B", and the pattern asks for "b ".
+
+## publish 4 of 10: "k:A.B" (step 25)
+broker: reached p:A.B
+message: published to "t" with key "A.B"
+outcome: routed
+reached: p:A.B
+summary: Reached p:A.B.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [first word is "A", not "a"]
+    The pattern "a.b" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | b
+    key      A ✗ | B ✗
+  ✗ t -> queue p:A.b ("A.b") [last word is "B", not "b"]
+    The pattern "A.b" does not match the key "A.B": the last word of the key is "B", and the pattern asks for "b".
+    pattern  A   | b
+    key      A ✓ | B ✗
+  ✗ t -> queue p:a.B ("a.B") [first word is "A", not "a"]
+    The pattern "a.B" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | B
+    key      A ✗ | B ✓
+  ✓ t -> queue p:A.B ("A.B") [matches]
+    The pattern "A.B" is the key "A.B", word for word. The queue p:A.B gets its first copy.
+    pattern  A   | B
+    key      A ✓ | B ✓
+  ✗ t -> queue p:é ("é") [first word is "A", not "é"]
+    The pattern "é" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é
+    key      A ✗
+  ✗ t -> queue p:é ("é") [first word is "A", not "é"]
+    The pattern "é" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é
+    key      A ✗
+  ✗ t -> queue p:é.* ("é.*") [first word is "A", not "é"]
+    The pattern "é.*" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+    pattern  é   | *
+    key      A ✗ | B ✓
+  ✗ t -> queue p:*.é ("*.é") [last word is "B", not "é"]
+    The pattern "*.é" does not match the key "A.B": the last word of the key is "B", and the pattern asks for "é".
+    pattern  *   | é
+    key      A ✓ | B ✗
+  ✗ t -> queue p:a. b ("a. b") [first word is "A", not "a"]
+    The pattern "a. b" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   |  b
+    key      A ✗ | B ✗
+  ✗ t -> queue p:a.b  ("a.b ") [first word is "A", not "a"]
+    The pattern "a.b " does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+    pattern  a   | b
+    key      A ✗ | B ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "A.B": the last word of the key is "B", and the pattern asks for "b".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:A.B: reached through ✓ t -> queue p:A.B ("A.B") [matches]
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "é".
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "A.B": the last word of the key is "B", and the pattern asks for "é".
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "A.B": the first word of the key is "A", and the pattern asks for "a".
+
+## publish 5 of 10: "k:é" (step 26)
+broker: reached p:é
+message: published to "t" with key "é"
+outcome: routed
+reached: p:é
+summary: Reached p:é.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [only word is "é", not "a"]
+    The pattern "a.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a   | b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:A.b ("A.b") [only word is "é", not "A"]
+    The pattern "A.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+    pattern  A   | b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:a.B ("a.B") [only word is "é", not "a"]
+    The pattern "a.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a   | B
+    key      é ✗ | - ✗
+  ✗ t -> queue p:A.B ("A.B") [only word is "é", not "A"]
+    The pattern "A.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+    pattern  A   | B
+    key      é ✗ | - ✗
+  ✓ t -> queue p:é ("é") [matches]
+    The pattern "é" is the key "é", word for word. The queue p:é gets its first copy.
+    pattern  é
+    key      é ✓
+  ✗ t -> queue p:é ("é") [only word is "é", not "é"]
+    The pattern "é" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+    pattern  é
+    key      é ✗
+  ✗ t -> queue p:é.* ("é.*") [needs 2 words, has 1]
+    The pattern "é.*" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  é   | *
+    key      é ✓ | - ✗
+  ✗ t -> queue p:*.é ("*.é") [needs 2 words, has 1]
+    The pattern "*.é" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  *   | é
+    key      é ✓ | - ✗
+  ✗ t -> queue p:a. b ("a. b") [only word is "é", not "a"]
+    The pattern "a. b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a   |  b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:a.b  ("a.b ") [only word is "é", not "a"]
+    The pattern "a.b " does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a   | b
+    key      é ✗ | - ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+
+queue p:é: reached through ✓ t -> queue p:é ("é") [matches]
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+## publish 6 of 10: "k:é" (step 27)
+broker: reached p:é
+message: published to "t" with key "é"
+outcome: routed
+reached: p:é
+summary: Reached p:é.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [only word is "é", not "a"]
+    The pattern "a.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a    | b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:A.b ("A.b") [only word is "é", not "A"]
+    The pattern "A.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+    pattern  A    | b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:a.B ("a.B") [only word is "é", not "a"]
+    The pattern "a.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a    | B
+    key      é ✗ | - ✗
+  ✗ t -> queue p:A.B ("A.B") [only word is "é", not "A"]
+    The pattern "A.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+    pattern  A    | B
+    key      é ✗ | - ✗
+  ✗ t -> queue p:é ("é") [only word is "é", not "é"]
+    The pattern "é" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+    pattern  é
+    key      é ✗
+  ✓ t -> queue p:é ("é") [matches]
+    The pattern "é" is the key "é", word for word. The queue p:é gets its first copy.
+    pattern  é
+    key      é ✓
+  ✗ t -> queue p:é.* ("é.*") [only word is "é", not "é"]
+    The pattern "é.*" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+    pattern  é    | *
+    key      é ✗ | - ✗
+  ✗ t -> queue p:*.é ("*.é") [needs 2 words, has 1]
+    The pattern "*.é" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  *    | é
+    key      é ✓ | - ✗
+  ✗ t -> queue p:a. b ("a. b") [only word is "é", not "a"]
+    The pattern "a. b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a    |  b
+    key      é ✗ | - ✗
+  ✗ t -> queue p:a.b  ("a.b ") [only word is "é", not "a"]
+    The pattern "a.b " does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+    pattern  a    | b
+    key      é ✗ | - ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "é": the only word of the key is "é", and the pattern asks for "A".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+
+queue p:é: reached through ✓ t -> queue p:é ("é") [matches]
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "é": the only word of the key is "é", and the pattern asks for "é".
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "é": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "é": the only word of the key is "é", and the pattern asks for "a".
+
+## publish 7 of 10: "k:é.x" (step 28)
+broker: reached p:é.*
+message: published to "t" with key "é.x"
+outcome: routed
+reached: p:é.*
+summary: Reached p:é.*.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [first word is "é", not "a"]
+    The pattern "a.b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+    pattern  a   | b
+    key      é ✗ | x ✗
+  ✗ t -> queue p:A.b ("A.b") [first word is "é", not "A"]
+    The pattern "A.b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "A".
+    pattern  A   | b
+    key      é ✗ | x ✗
+  ✗ t -> queue p:a.B ("a.B") [first word is "é", not "a"]
+    The pattern "a.B" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+    pattern  a   | B
+    key      é ✗ | x ✗
+  ✗ t -> queue p:A.B ("A.B") [first word is "é", not "A"]
+    The pattern "A.B" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "A".
+    pattern  A   | B
+    key      é ✗ | x ✗
+  ✗ t -> queue p:é ("é") [key has 2 words, pattern 1]
+    The pattern "é" does not match the key "é.x": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+    pattern  é   | -
+    key      é ✓ | x ✗
+  ✗ t -> queue p:é ("é") [first word is "é", not "é"]
+    The pattern "é" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "é".
+    pattern  é
+    key      é ✗
+  ✓ t -> queue p:é.* ("é.*") [matches]
+    The pattern "é.*" matches the key "é.x": * took "x". The queue p:é.* gets its first copy.
+    pattern  é   | *
+    key      é ✓ | x ✓
+  ✗ t -> queue p:*.é ("*.é") [last word is "x", not "é"]
+    The pattern "*.é" does not match the key "é.x": the last word of the key is "x", and the pattern asks for "é".
+    pattern  *   | é
+    key      é ✓ | x ✗
+  ✗ t -> queue p:a. b ("a. b") [first word is "é", not "a"]
+    The pattern "a. b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+    pattern  a   |  b
+    key      é ✗ | x ✗
+  ✗ t -> queue p:a.b  ("a.b ") [first word is "é", not "a"]
+    The pattern "a.b " does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+    pattern  a   | b
+    key      é ✗ | x ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "A".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "A".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "é.x": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "é".
+
+queue p:é.*: reached through ✓ t -> queue p:é.* ("é.*") [matches]
+
+queue p:*.é: not reached
+  The queue p:*.é did not get the message.
+  - The binding from t to queue p:*.é ("*.é") was tried, and it did not match. The pattern "*.é" does not match the key "é.x": the last word of the key is "x", and the pattern asks for "é".
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "é.x": the first word of the key is "é", and the pattern asks for "a".
+
+## publish 8 of 10: "k:x.é" (step 29)
+broker: reached p:*.é
+message: published to "t" with key "x.é"
+outcome: routed
+reached: p:*.é
+summary: Reached p:*.é.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a.b ("a.b") [first word is "x", not "a"]
+    The pattern "a.b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+    pattern  a   | b
+    key      x ✗ | é ✗
+  ✗ t -> queue p:A.b ("A.b") [first word is "x", not "A"]
+    The pattern "A.b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "A".
+    pattern  A   | b
+    key      x ✗ | é ✗
+  ✗ t -> queue p:a.B ("a.B") [first word is "x", not "a"]
+    The pattern "a.B" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+    pattern  a   | B
+    key      x ✗ | é ✗
+  ✗ t -> queue p:A.B ("A.B") [first word is "x", not "A"]
+    The pattern "A.B" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "A".
+    pattern  A   | B
+    key      x ✗ | é ✗
+  ✗ t -> queue p:é ("é") [first word is "x", not "é"]
+    The pattern "é" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+    pattern  é
+    key      x ✗
+  ✗ t -> queue p:é ("é") [first word is "x", not "é"]
+    The pattern "é" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+    pattern  é
+    key      x ✗
+  ✗ t -> queue p:é.* ("é.*") [first word is "x", not "é"]
+    The pattern "é.*" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+    pattern  é   | *
+    key      x ✗ | é ✓
+  ✓ t -> queue p:*.é ("*.é") [matches]
+    The pattern "*.é" matches the key "x.é": * took "x". The queue p:*.é gets its first copy.
+    pattern  *   | é
+    key      x ✓ | é ✓
+  ✗ t -> queue p:a. b ("a. b") [first word is "x", not "a"]
+    The pattern "a. b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+    pattern  a   |  b
+    key      x ✗ | é ✗
+  ✗ t -> queue p:a.b  ("a.b ") [first word is "x", not "a"]
+    The pattern "a.b " does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+    pattern  a   | b
+    key      x ✗ | é ✗
+
+queue p:a.b: not reached
+  The queue p:a.b did not get the message.
+  - The binding from t to queue p:a.b ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+
+queue p:A.b: not reached
+  The queue p:A.b did not get the message.
+  - The binding from t to queue p:A.b ("A.b") was tried, and it did not match. The pattern "A.b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "A".
+
+queue p:a.B: not reached
+  The queue p:a.B did not get the message.
+  - The binding from t to queue p:a.B ("a.B") was tried, and it did not match. The pattern "a.B" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+
+queue p:A.B: not reached
+  The queue p:A.B did not get the message.
+  - The binding from t to queue p:A.B ("A.B") was tried, and it did not match. The pattern "A.B" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "A".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+
+queue p:é: not reached
+  The queue p:é did not get the message.
+  - The binding from t to queue p:é ("é") was tried, and it did not match. The pattern "é" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+
+queue p:é.*: not reached
+  The queue p:é.* did not get the message.
+  - The binding from t to queue p:é.* ("é.*") was tried, and it did not match. The pattern "é.*" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "é".
+
+queue p:*.é: reached through ✓ t -> queue p:*.é ("*.é") [matches]
+
+queue p:a. b: not reached
+  The queue p:a. b did not get the message.
+  - The binding from t to queue p:a. b ("a. b") was tried, and it did not match. The pattern "a. b" does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+
+queue p:a.b : not reached
+  The queue p:a.b  did not get the message.
+  - The binding from t to queue p:a.b  ("a.b ") was tried, and it did not match. The pattern "a.b " does not match the key "x.é": the first word of the key is "x", and the pattern asks for "a".
+
+## publish 9 of 10: "k:a. b" (step 30)
+broker: reached p:a. b
+message: published to "t" with key "a. b"
+outcome: routed
+reached: p:a. b
+summary: Reached p:a. b.
+
+## publish 10 of 10: "k:a.b " (step 31)
+broker: reached p:a.b 
+message: published to "t" with key "a.b "
+outcome: routed
+reached: p:a.b 
+summary: Reached p:a.b .

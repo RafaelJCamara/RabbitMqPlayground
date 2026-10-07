@@ -1,0 +1,139 @@
+# routing/topic-a-queue-gets-one-copy-however-many-patterns-match
+# A queue that is bound with several patterns that all match still gets one copy of the message (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "m1" (step 13)
+broker: reached one, three, two
+message: published to "t" with key "a.b"
+outcome: routed
+reached: one, two, three
+summary: Reached one, two and three.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 7 of its 7 bindings matched.
+  ✓ t -> queue one ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The queue one gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b ✓
+  ✓ t -> queue one ("#") [matches]
+    The pattern "#" matches the key "a.b": # took "a.b". The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  #
+    key      a.b ✓
+  ✓ t -> queue one ("a.b") [matches]
+    The pattern "a.b" is the key "a.b", word for word. The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  a   | b
+    key      a ✓ | b ✓
+  ✓ t -> queue one ("*.b") [matches]
+    The pattern "*.b" matches the key "a.b": * took "a". The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  *   | b
+    key      a ✓ | b ✓
+  ✓ t -> queue one ("*.*") [matches]
+    The pattern "*.*" matches the key "a.b": * took "a"; * took "b". The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  *   | *
+    key      a ✓ | b ✓
+  ✓ t -> queue two ("a.b") [matches]
+    The pattern "a.b" is the key "a.b", word for word. The queue two gets its first copy.
+    pattern  a   | b
+    key      a ✓ | b ✓
+  ✓ t -> queue three ("#") [matches]
+    The pattern "#" matches the key "a.b": # took "a.b". The queue three gets its first copy.
+    pattern  #
+    key      a.b ✓
+
+queue one: reached through ✓ t -> queue one ("a.#") [matches]
+
+queue two: reached through ✓ t -> queue two ("a.b") [matches]
+
+queue three: reached through ✓ t -> queue three ("#") [matches]
+
+## publish 2 of 3: "m2" (step 14)
+broker: reached one, three
+message: published to "t" with key "x"
+outcome: routed
+reached: one, three
+summary: Reached one and three.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 7 bindings matched.
+  ✗ t -> queue one ("a.#") [only word is "x", not "a"]
+    The pattern "a.#" does not match the key "x": the only word of the key is "x", and the pattern asks for "a".
+    pattern  a   | #
+    key      x ✗ | - ✓
+  ✓ t -> queue one ("#") [matches]
+    The pattern "#" matches the key "x": # took "x". The queue one gets its first copy.
+    pattern  #
+    key      x ✓
+  ✗ t -> queue one ("a.b") [only word is "x", not "a"]
+    The pattern "a.b" does not match the key "x": the only word of the key is "x", and the pattern asks for "a".
+    pattern  a   | b
+    key      x ✗ | - ✗
+  ✗ t -> queue one ("*.b") [needs 2 words, has 1]
+    The pattern "*.b" does not match the key "x": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  *   | b
+    key      x ✓ | - ✗
+  ✗ t -> queue one ("*.*") [needs 2 words, has 1]
+    The pattern "*.*" does not match the key "x": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  *   | *
+    key      x ✓ | - ✗
+  ✗ t -> queue two ("a.b") [only word is "x", not "a"]
+    The pattern "a.b" does not match the key "x": the only word of the key is "x", and the pattern asks for "a".
+    pattern  a   | b
+    key      x ✗ | - ✗
+  ✓ t -> queue three ("#") [matches]
+    The pattern "#" matches the key "x": # took "x". The queue three gets its first copy.
+    pattern  #
+    key      x ✓
+
+queue one: reached through ✓ t -> queue one ("#") [matches]
+
+queue two: not reached
+  The queue two did not get the message.
+  - The binding from t to queue two ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "x": the only word of the key is "x", and the pattern asks for "a".
+
+queue three: reached through ✓ t -> queue three ("#") [matches]
+
+## publish 3 of 3: "m3" (step 15)
+broker: reached one, three
+message: published to "t" with key "a.c"
+outcome: routed
+reached: one, three
+summary: Reached one and three.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 4 of its 7 bindings matched.
+  ✓ t -> queue one ("a.#") [matches]
+    The pattern "a.#" matches the key "a.c": # took "c". The queue one gets its first copy.
+    pattern  a   | #
+    key      a ✓ | c ✓
+  ✓ t -> queue one ("#") [matches]
+    The pattern "#" matches the key "a.c": # took "a.c". The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  #
+    key      a.c ✓
+  ✗ t -> queue one ("a.b") [last word is "c", not "b"]
+    The pattern "a.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  a   | b
+    key      a ✓ | c ✗
+  ✗ t -> queue one ("*.b") [last word is "c", not "b"]
+    The pattern "*.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  *   | b
+    key      a ✓ | c ✗
+  ✓ t -> queue one ("*.*") [matches]
+    The pattern "*.*" matches the key "a.c": * took "a"; * took "c". The queue one had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  *   | *
+    key      a ✓ | c ✓
+  ✗ t -> queue two ("a.b") [last word is "c", not "b"]
+    The pattern "a.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  a   | b
+    key      a ✓ | c ✗
+  ✓ t -> queue three ("#") [matches]
+    The pattern "#" matches the key "a.c": # took "a.c". The queue three gets its first copy.
+    pattern  #
+    key      a.c ✓
+
+queue one: reached through ✓ t -> queue one ("a.#") [matches]
+
+queue two: not reached
+  The queue two did not get the message.
+  - The binding from t to queue two ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+
+queue three: reached through ✓ t -> queue three ("#") [matches]

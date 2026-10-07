@@ -1,0 +1,351 @@
+# routing/headers-keys-are-case-sensitive-and-compared-exactly
+# Header keys are compared exactly: case, trailing spaces and a composed against a decomposed é all count (ADR-0009)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 7: "a" (step 14)
+broker: reached a
+message: published to "h" with the empty key, headers a=1
+outcome: routed
+reached: a
+summary: Reached a.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✓ h -> queue a (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue a gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: reached through ✓ h -> queue a (x-match=all a=1) [1 of 1 hold]
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 2 of 7: "A" (step 15)
+broker: reached A
+message: published to "h" with the empty key, headers A=1
+outcome: routed
+reached: A
+summary: Reached A.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✓ h -> queue A (x-match=all A=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue A gets its first copy.
+    ✓ The header A is 1, as the binding asks.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: reached through ✓ h -> queue A (x-match=all A=1) [1 of 1 hold]
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 3 of 7: "a with a space" (step 16)
+broker: reached a with a space
+message: published to "h" with the empty key, headers a =1
+outcome: routed
+reached: a with a space
+summary: Reached a with a space.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✓ h -> queue a with a space (x-match=all "a "=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue a with a space gets its first copy.
+    ✓ The header "a " is 1, as the binding asks.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: reached through ✓ h -> queue a with a space (x-match=all "a "=1) [1 of 1 hold]
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 4 of 7: "composed e acute" (step 17)
+broker: reached composed e acute
+message: published to "h" with the empty key, headers é=1
+outcome: routed
+reached: composed e acute
+summary: Reached composed e acute.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✓ h -> queue composed e acute (x-match=all é=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue composed e acute gets its first copy.
+    ✓ The header é is 1, as the binding asks.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: reached through ✓ h -> queue composed e acute (x-match=all é=1) [1 of 1 hold]
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 5 of 7: "decomposed e acute" (step 18)
+broker: reached decomposed e acute
+message: published to "h" with the empty key, headers é=1
+outcome: routed
+reached: decomposed e acute
+summary: Reached decomposed e acute.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✓ h -> queue decomposed e acute (x-match=all é=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue decomposed e acute gets its first copy.
+    ✓ The header é is 1, as the binding asks.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: reached through ✓ h -> queue decomposed e acute (x-match=all é=1) [1 of 1 hold]
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 6 of 7: "x-a" (step 19)
+broker: returned, no queue got it
+message: published to "h" with the empty key, headers x-a=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h, and none of its 6 bindings matched.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 0 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue x-A with x (x-match=all-with-x x-A=1) [0 of 1 hold, all needed]
+    x-match=all-with-x: every condition has to hold, and x-A does not.
+    ✗ The header x-A is missing from the message.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: not reached
+  The queue x-A with x did not get the message.
+  - The binding from h to queue x-A with x (x-match=all-with-x x-A=1) was tried, and it did not match. x-match=all-with-x: every condition has to hold, and x-A does not.
+
+## publish 7 of 7: "x-A" (step 20)
+broker: reached x-A with x
+message: published to "h" with the empty key, headers x-A=1
+outcome: routed
+reached: x-A with x
+summary: Reached x-A with x.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ h -> queue a (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue A (x-match=all A=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and A does not.
+    ✗ The header A is missing from the message.
+  ✗ h -> queue a with a space (x-match=all "a "=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and "a " does not.
+    ✗ The header "a " is missing from the message.
+  ✗ h -> queue composed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✗ h -> queue decomposed e acute (x-match=all é=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and é does not.
+    ✗ The header é is missing from the message.
+  ✓ h -> queue x-A with x (x-match=all-with-x x-A=1) [1 of 1 hold]
+    x-match=all-with-x: its one condition holds. The queue x-A with x gets its first copy.
+    ✓ The header x-A is 1, as the binding asks.
+
+queue a: not reached
+  The queue a did not get the message.
+  - The binding from h to queue a (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue A: not reached
+  The queue A did not get the message.
+  - The binding from h to queue A (x-match=all A=1) was tried, and it did not match. x-match=all: every condition has to hold, and A does not.
+
+queue a with a space: not reached
+  The queue a with a space did not get the message.
+  - The binding from h to queue a with a space (x-match=all "a "=1) was tried, and it did not match. x-match=all: every condition has to hold, and "a " does not.
+
+queue composed e acute: not reached
+  The queue composed e acute did not get the message.
+  - The binding from h to queue composed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue decomposed e acute: not reached
+  The queue decomposed e acute did not get the message.
+  - The binding from h to queue decomposed e acute (x-match=all é=1) was tried, and it did not match. x-match=all: every condition has to hold, and é does not.
+
+queue x-A with x: reached through ✓ h -> queue x-A with x (x-match=all-with-x x-A=1) [1 of 1 hold]

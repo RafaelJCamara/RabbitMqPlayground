@@ -1,0 +1,35 @@
+# routing/declaring-an-exchange-again-with-the-same-attributes-changes-nothing
+# Declaring an exchange that is there, with every attribute the same, is accepted and changes nothing: the bindings stay (ADR-0051)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 2: "m1" (step 5)
+broker: reached inbox
+message: published to "e" with key "k"
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ e -> queue inbox ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The queue inbox gets its first copy.
+
+queue inbox: reached through ✓ e -> queue inbox ("k") [key matches]
+
+## publish 2 of 2: "m2" (step 9)
+broker: reached inbox
+message: published to "e" with key "k"
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ e -> queue inbox ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The queue inbox gets its first copy.
+  ✓ e -> exchange f ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The message goes on to the exchange f.
+    exchange f (topic): f is a topic exchange, and the message came to it from e. It has no bindings.
+
+queue inbox: reached through ✓ e -> queue inbox ("k") [key matches]

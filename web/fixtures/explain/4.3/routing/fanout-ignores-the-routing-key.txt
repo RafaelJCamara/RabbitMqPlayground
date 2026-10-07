@@ -1,0 +1,40 @@
+# routing/fanout-ignores-the-routing-key
+# A fanout exchange sends every message to every bound queue, whatever the routing key (ADR-0008, rule 3)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 2: "m1" (step 6)
+broker: reached first, second
+message: published to "broadcast" with key "zzz"
+outcome: routed
+reached: first, second
+summary: Reached first and second.
+
+exchange broadcast (fanout): broadcast is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ broadcast -> queue first (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue first gets its first copy.
+  ✓ broadcast -> queue second (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue second gets its first copy.
+
+queue first: reached through ✓ broadcast -> queue first (any key) [fanout: always matches]
+
+queue second: reached through ✓ broadcast -> queue second (any key) [fanout: always matches]
+
+## publish 2 of 2: "m2" (step 7)
+broker: reached first, second
+message: published to "broadcast" with the empty key
+outcome: routed
+reached: first, second
+summary: Reached first and second.
+
+exchange broadcast (fanout): broadcast is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ broadcast -> queue first (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue first gets its first copy.
+  ✓ broadcast -> queue second (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue second gets its first copy.
+
+queue first: reached through ✓ broadcast -> queue first (any key) [fanout: always matches]
+
+queue second: reached through ✓ broadcast -> queue second (any key) [fanout: always matches]

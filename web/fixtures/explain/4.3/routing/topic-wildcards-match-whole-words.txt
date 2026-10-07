@@ -1,0 +1,424 @@
+# routing/topic-wildcards-match-whole-words
+# A topic exchange splits keys into words: * is one word (possibly empty), # is zero or more (ADR-0008, rule 4)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 8: "m1" (step 14)
+broker: reached everything, hash
+message: published to "events" with key "a"
+outcome: routed
+reached: hash, everything
+summary: Reached hash and everything.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 2 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [needs 2 words, has 1]
+    The pattern "a.*" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  a   | *
+    key      a ✓ | - ✗
+  ✓ events -> queue hash ("a.#") [matches]
+    The pattern "a.#" matches the key "a": # took no words. The queue hash gets its first copy.
+    pattern  a   | #
+    key      a ✓ | - ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a": # took "a". The queue everything gets its first copy.
+    pattern  #
+    key      a ✓
+  ✗ events -> queue middle ("a.#.b") [needs 2 or more words, has 1]
+    The pattern "a.#.b" does not match the key "a": it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 1.
+    pattern  a   | #   | b
+    key      a ✓ | - ✓ | - ✗
+  ✗ events -> queue between ("a.*.b") [needs 3 words, has 1]
+    The pattern "a.*.b" does not match the key "a": the pattern has 3 words, so the key needs 3, and it has 1.
+    pattern  a   | *   | b
+    key      a ✓ | - ✗ | - ✗
+  ✗ events -> queue literal ("a*") [only word is "a", not "a*"]
+    The pattern "a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue hash: reached through ✓ events -> queue hash ("a.#") [matches]
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: not reached
+  The queue middle did not get the message.
+  - The binding from events to queue middle ("a.#.b") was tried, and it did not match. The pattern "a.#.b" does not match the key "a": it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 1.
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "a": the pattern has 3 words, so the key needs 3, and it has 1.
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+
+## publish 2 of 8: "m2" (step 15)
+broker: reached everything, hash, middle, star
+message: published to "events" with key "a.b"
+outcome: routed
+reached: star, hash, everything, middle
+summary: Reached star, hash, everything and middle.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 4 of its 6 bindings matched.
+  ✓ events -> queue star ("a.*") [matches]
+    The pattern "a.*" matches the key "a.b": * took "b". The queue star gets its first copy.
+    pattern  a   | *
+    key      a ✓ | b ✓
+  ✓ events -> queue hash ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The queue hash gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a.b": # took "a.b". The queue everything gets its first copy.
+    pattern  #
+    key      a.b ✓
+  ✓ events -> queue middle ("a.#.b") [matches]
+    The pattern "a.#.b" matches the key "a.b": # took no words. The queue middle gets its first copy.
+    pattern  a   | #   | b
+    key      a ✓ | - ✓ | b ✓
+  ✗ events -> queue between ("a.*.b") [needs 3 words, has 2]
+    The pattern "a.*.b" does not match the key "a.b": the pattern has 3 words, so the key needs 3, and it has 2.
+    pattern  a   | *   | b
+    key      a ✓ | b ✓ | - ✗
+  ✗ events -> queue literal ("a*") [first word is "a", not "a*"]
+    The pattern "a*" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+
+queue star: reached through ✓ events -> queue star ("a.*") [matches]
+
+queue hash: reached through ✓ events -> queue hash ("a.#") [matches]
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: reached through ✓ events -> queue middle ("a.#.b") [matches]
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "a.b": the pattern has 3 words, so the key needs 3, and it has 2.
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a.b": the first word of the key is "a", and the pattern asks for "a*".
+
+## publish 3 of 8: "m3" (step 16)
+broker: reached everything, hash
+message: published to "events" with key "a.b.c"
+outcome: routed
+reached: hash, everything
+summary: Reached hash and everything.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 2 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [key has 3 words, pattern 2]
+    The pattern "a.*" does not match the key "a.b.c": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  a   | *   | -
+    key      a ✓ | b ✓ | c ✗
+  ✓ events -> queue hash ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b.c": # took "b.c". The queue hash gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b.c ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a.b.c": # took "a.b.c". The queue everything gets its first copy.
+    pattern  #
+    key      a.b.c ✓
+  ✗ events -> queue middle ("a.#.b") [last word is "c", not "b"]
+    The pattern "a.#.b" does not match the key "a.b.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  a   | #   | b
+    key      a ✓ | b ✓ | c ✗
+  ✗ events -> queue between ("a.*.b") [last word is "c", not "b"]
+    The pattern "a.*.b" does not match the key "a.b.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  a   | *   | b
+    key      a ✓ | b ✓ | c ✗
+  ✗ events -> queue literal ("a*") [first word is "a", not "a*"]
+    The pattern "a*" does not match the key "a.b.c": the first word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a.b.c": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue hash: reached through ✓ events -> queue hash ("a.#") [matches]
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: not reached
+  The queue middle did not get the message.
+  - The binding from events to queue middle ("a.#.b") was tried, and it did not match. The pattern "a.#.b" does not match the key "a.b.c": the last word of the key is "c", and the pattern asks for "b".
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "a.b.c": the last word of the key is "c", and the pattern asks for "b".
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a.b.c": the first word of the key is "a", and the pattern asks for "a*".
+
+## publish 4 of 8: "m4" (step 17)
+broker: reached between, everything, hash, middle
+message: published to "events" with key "a..b"
+outcome: routed
+reached: hash, everything, middle, between
+summary: Reached hash, everything, middle and between.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 4 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [key has 3 words, pattern 2]
+    The pattern "a.*" does not match the key "a..b": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  a   | *    | -
+    key      a ✓ | "" ✓ | b ✗
+  ✓ events -> queue hash ("a.#") [matches]
+    The pattern "a.#" matches the key "a..b": # took ".b". The queue hash gets its first copy.
+    pattern  a   | #
+    key      a ✓ | "".b ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a..b": # took "a..b". The queue everything gets its first copy.
+    pattern  #
+    key      a."".b ✓
+  ✓ events -> queue middle ("a.#.b") [matches]
+    The pattern "a.#.b" matches the key "a..b": # took "". The queue middle gets its first copy.
+    pattern  a   | #    | b
+    key      a ✓ | "" ✓ | b ✓
+  ✓ events -> queue between ("a.*.b") [matches]
+    The pattern "a.*.b" matches the key "a..b": * took an empty word. The queue between gets its first copy.
+    pattern  a   | *    | b
+    key      a ✓ | "" ✓ | b ✓
+  ✗ events -> queue literal ("a*") [first word is "a", not "a*"]
+    The pattern "a*" does not match the key "a..b": the first word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a..b": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue hash: reached through ✓ events -> queue hash ("a.#") [matches]
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: reached through ✓ events -> queue middle ("a.#.b") [matches]
+
+queue between: reached through ✓ events -> queue between ("a.*.b") [matches]
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a..b": the first word of the key is "a", and the pattern asks for "a*".
+
+## publish 5 of 8: "m5" (step 18)
+broker: reached everything
+message: published to "events" with the empty key
+outcome: routed
+reached: everything
+summary: Reached everything.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [needs 2 words, has 0]
+    The pattern "a.*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  a   | *
+    key      - ✗ | - ✗
+  ✗ events -> queue hash ("a.#") [needs 1 or more words, has 0]
+    The pattern "a.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  a   | #
+    key      - ✗ | - ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the empty key: # took no words. The queue everything gets its first copy.
+    pattern  #
+    key      - ✓
+  ✗ events -> queue middle ("a.#.b") [needs 2 or more words, has 0]
+    The pattern "a.#.b" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  a   | #   | b
+    key      - ✗ | - ✓ | - ✗
+  ✗ events -> queue between ("a.*.b") [needs 3 words, has 0]
+    The pattern "a.*.b" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  a   | *   | b
+    key      - ✗ | - ✗ | - ✗
+  ✗ events -> queue literal ("a*") [needs 1 words, has 0]
+    The pattern "a*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+    pattern  a*
+    key      - ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue hash: not reached
+  The queue hash did not get the message.
+  - The binding from events to queue hash ("a.#") was tried, and it did not match. The pattern "a.#" does not match the empty key: it needs at least 1 word, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: not reached
+  The queue middle did not get the message.
+  - The binding from events to queue middle ("a.#.b") was tried, and it did not match. The pattern "a.#.b" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+
+## publish 6 of 8: "m6" (step 19)
+broker: reached everything, hash, middle
+message: published to "events" with key "a.x.y.b"
+outcome: routed
+reached: hash, everything, middle
+summary: Reached hash, everything and middle.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 3 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [key has 4 words, pattern 2]
+    The pattern "a.*" does not match the key "a.x.y.b": the pattern has 2 words and the key has 4, and without a "#" the key has to have as many words as the pattern.
+    pattern  a   | *   | -   | -
+    key      a ✓ | x ✓ | y ✗ | b ✗
+  ✓ events -> queue hash ("a.#") [matches]
+    The pattern "a.#" matches the key "a.x.y.b": # took "x.y.b". The queue hash gets its first copy.
+    pattern  a   | #
+    key      a ✓ | x.y.b ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a.x.y.b": # took "a.x.y.b". The queue everything gets its first copy.
+    pattern  #
+    key      a.x.y.b ✓
+  ✓ events -> queue middle ("a.#.b") [matches]
+    The pattern "a.#.b" matches the key "a.x.y.b": # took "x.y". The queue middle gets its first copy.
+    pattern  a   | #     | b
+    key      a ✓ | x.y ✓ | b ✓
+  ✗ events -> queue between ("a.*.b") [word 3 is "y", not "b"]
+    The pattern "a.*.b" does not match the key "a.x.y.b": word 3 of the key is "y", and the pattern asks for "b".
+    pattern  a   | *   | b
+    key      a ✓ | x ✓ | y ✗
+  ✗ events -> queue literal ("a*") [first word is "a", not "a*"]
+    The pattern "a*" does not match the key "a.x.y.b": the first word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a.x.y.b": the pattern has 2 words and the key has 4, and without a "#" the key has to have as many words as the pattern.
+
+queue hash: reached through ✓ events -> queue hash ("a.#") [matches]
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: reached through ✓ events -> queue middle ("a.#.b") [matches]
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "a.x.y.b": word 3 of the key is "y", and the pattern asks for "b".
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a.x.y.b": the first word of the key is "a", and the pattern asks for "a*".
+
+## publish 7 of 8: "m7" (step 20)
+broker: reached everything, literal
+message: published to "events" with key "a*"
+outcome: routed
+reached: everything, literal
+summary: Reached everything and literal.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 2 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [only word is "a*", not "a"]
+    The pattern "a.*" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+    pattern  a    | *
+    key      a* ✗ | - ✗
+  ✗ events -> queue hash ("a.#") [only word is "a*", not "a"]
+    The pattern "a.#" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+    pattern  a    | #
+    key      a* ✗ | - ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "a*": # took "a*". The queue everything gets its first copy.
+    pattern  #
+    key      a* ✓
+  ✗ events -> queue middle ("a.#.b") [only word is "a*", not "a"]
+    The pattern "a.#.b" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+    pattern  a    | #   | b
+    key      a* ✗ | - ✓ | - ✗
+  ✗ events -> queue between ("a.*.b") [only word is "a*", not "a"]
+    The pattern "a.*.b" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+    pattern  a    | *   | b
+    key      a* ✗ | - ✗ | - ✗
+  ✓ events -> queue literal ("a*") [matches]
+    The pattern "a*" is the key "a*", word for word. The queue literal gets its first copy.
+    pattern  a*
+    key      a* ✓
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+
+queue hash: not reached
+  The queue hash did not get the message.
+  - The binding from events to queue hash ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: not reached
+  The queue middle did not get the message.
+  - The binding from events to queue middle ("a.#.b") was tried, and it did not match. The pattern "a.#.b" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+
+queue literal: reached through ✓ events -> queue literal ("a*") [matches]
+
+## publish 8 of 8: "m8" (step 21)
+broker: reached everything
+message: published to "events" with key "b"
+outcome: routed
+reached: everything
+summary: Reached everything.
+
+exchange events (topic): events is a topic exchange, and the message was published to it. 1 of its 6 bindings matched.
+  ✗ events -> queue star ("a.*") [only word is "b", not "a"]
+    The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | - ✗
+  ✗ events -> queue hash ("a.#") [only word is "b", not "a"]
+    The pattern "a.#" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | #
+    key      b ✗ | - ✓
+  ✓ events -> queue everything ("#") [matches]
+    The pattern "#" matches the key "b": # took "b". The queue everything gets its first copy.
+    pattern  #
+    key      b ✓
+  ✗ events -> queue middle ("a.#.b") [only word is "b", not "a"]
+    The pattern "a.#.b" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | #   | b
+    key      b ✗ | - ✓ | - ✗
+  ✗ events -> queue between ("a.*.b") [only word is "b", not "a"]
+    The pattern "a.*.b" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *   | b
+    key      b ✗ | - ✗ | - ✗
+  ✗ events -> queue literal ("a*") [only word is "b", not "a*"]
+    The pattern "a*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a*".
+    pattern  a*
+    key      b ✗
+
+queue star: not reached
+  The queue star did not get the message.
+  - The binding from events to queue star ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+
+queue hash: not reached
+  The queue hash did not get the message.
+  - The binding from events to queue hash ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+
+queue everything: reached through ✓ events -> queue everything ("#") [matches]
+
+queue middle: not reached
+  The queue middle did not get the message.
+  - The binding from events to queue middle ("a.#.b") was tried, and it did not match. The pattern "a.#.b" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+
+queue between: not reached
+  The queue between did not get the message.
+  - The binding from events to queue between ("a.*.b") was tried, and it did not match. The pattern "a.*.b" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from events to queue literal ("a*") was tried, and it did not match. The pattern "a*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a*".

@@ -42,6 +42,9 @@ jobs:
       - name: Command reference is up to date
         working-directory: web
         run: npm run docs:check
+      - name: Golden explanations are up to date
+        working-directory: web
+        run: npm run explain:check
       - name: Production build for GitHub Pages (budgets are errors)
         working-directory: web
         run: npm run build:pages

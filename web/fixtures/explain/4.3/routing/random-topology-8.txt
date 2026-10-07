@@ -1,0 +1,371 @@
+# routing/random-topology-8
+# A random topology made from seed 8 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 11: "m1" (step 14)
+broker: reached q2, q3, q4
+message: published to "x1" with key "a", headers a=1
+outcome: routed
+reached: q3, q2, q4
+summary: Reached q3, q2 and q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 3 of its 5 bindings matched.
+  ✓ x1 -> queue q3 ("a") [matches]
+    The pattern "a" is the key "a", word for word. The queue q3 gets its first copy.
+    pattern  a
+    key      a ✓
+  ✗ x1 -> queue q2 ("*.a.*") [needs 3 words, has 1]
+    The pattern "*.a.*" does not match the key "a": the pattern has 3 words, so the key needs 3, and it has 1.
+    pattern  *   | a   | *
+    key      a ✓ | - ✗ | - ✗
+  ✓ x1 -> queue q2 ("a.#") [matches]
+    The pattern "a.#" matches the key "a": # took no words. The queue q2 gets its first copy.
+    pattern  a   | #
+    key      a ✓ | - ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "a": # took no words; * took "a". The queue q4 gets its first copy.
+    pattern  #   | *
+    key      - ✓ | a ✓
+  ✗ x1 -> queue q3 ("a.*") [needs 2 words, has 1]
+    The pattern "a.*" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  a   | *
+    key      a ✓ | - ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: reached through ✓ x1 -> queue q2 ("a.#") [matches]
+
+queue q3: reached through ✓ x1 -> queue q3 ("a") [matches]
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 2 of 11: "m2" (step 15)
+broker: returned, no queue got it
+message: published to the default exchange with key "nobody"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "nobody".
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody". 0 of its 4 bindings matched.
+  ✗ the default exchange -> queue q1 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q1 is named "q1": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q3 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q3 is named "q3": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q4 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q4 is named "q4": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q1.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q2.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q3.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q4.
+
+## publish 3 of 11: "m3" (step 16)
+broker: reached q4
+message: published to "x1" with key "b.c.b"
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 1 of its 5 bindings matched.
+  ✗ x1 -> queue q3 ("a") [first word is "b", not "a"]
+    The pattern "a" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a
+    key      b ✗
+  ✗ x1 -> queue q2 ("*.a.*") [word 2 is "c", not "a"]
+    The pattern "*.a.*" does not match the key "b.c.b": word 2 of the key is "c", and the pattern asks for "a".
+    pattern  *   | a   | *
+    key      b ✓ | c ✗ | b ✓
+  ✗ x1 -> queue q2 ("a.#") [first word is "b", not "a"]
+    The pattern "a.#" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | #
+    key      b ✗ | c.b ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "b.c.b": # took "b.c"; * took "b". The queue q4 gets its first copy.
+    pattern  #     | *
+    key      b.c ✓ | b ✓
+  ✗ x1 -> queue q3 ("a.*") [first word is "b", not "a"]
+    The pattern "a.*" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | c ✓
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 ("*.a.*") was tried, and it did not match. The pattern "*.a.*" does not match the key "b.c.b": word 2 of the key is "c", and the pattern asks for "a".
+  - The binding from x1 to queue q2 ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b.c.b": the first word of the key is "b", and the pattern asks for "a".
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 4 of 11: "m4" (step 17)
+broker: reached q4
+message: published to "x1" with key "c", headers a=1.0 x-c=2
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 1 of its 5 bindings matched.
+  ✗ x1 -> queue q3 ("a") [only word is "c", not "a"]
+    The pattern "a" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a
+    key      c ✗
+  ✗ x1 -> queue q2 ("*.a.*") [needs 3 words, has 1]
+    The pattern "*.a.*" does not match the key "c": the pattern has 3 words, so the key needs 3, and it has 1.
+    pattern  *   | a   | *
+    key      c ✓ | - ✗ | - ✗
+  ✗ x1 -> queue q2 ("a.#") [only word is "c", not "a"]
+    The pattern "a.#" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a   | #
+    key      c ✗ | - ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "c": # took no words; * took "c". The queue q4 gets its first copy.
+    pattern  #   | *
+    key      - ✓ | c ✓
+  ✗ x1 -> queue q3 ("a.*") [only word is "c", not "a"]
+    The pattern "a.*" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a   | *
+    key      c ✗ | - ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 ("*.a.*") was tried, and it did not match. The pattern "*.a.*" does not match the key "c": the pattern has 3 words, so the key needs 3, and it has 1.
+  - The binding from x1 to queue q2 ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 5 of 11: "m5" (step 18)
+broker: reached q4
+message: published to "x2" with key "b.b", headers x-c=1
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (topic): x1 is a topic exchange, and the message came to it from x2. 1 of its 5 bindings matched.
+      ✗ x1 -> queue q3 ("a") [first word is "b", not "a"]
+        The pattern "a" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+        pattern  a
+        key      b ✗
+      ✗ x1 -> queue q2 ("*.a.*") [last word is "b", not "a"]
+        The pattern "*.a.*" does not match the key "b.b": the last word of the key is "b", and the pattern asks for "a".
+        pattern  *   | a   | *
+        key      b ✓ | b ✗ | - ✗
+      ✗ x1 -> queue q2 ("a.#") [first word is "b", not "a"]
+        The pattern "a.#" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+        pattern  a   | #
+        key      b ✗ | b ✓
+      ✓ x1 -> queue q4 ("#.*") [matches]
+        The pattern "#.*" matches the key "b.b": # took "b"; * took "b". The queue q4 gets its first copy.
+        pattern  #   | *
+        key      b ✓ | b ✓
+      ✗ x1 -> queue q3 ("a.*") [first word is "b", not "a"]
+        The pattern "a.*" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+        pattern  a   | *
+        key      b ✗ | b ✓
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 ("*.a.*") was tried, and it did not match. The pattern "*.a.*" does not match the key "b.b": the last word of the key is "b", and the pattern asks for "a".
+  - The binding from x1 to queue q2 ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+
+queue q4: reached through ✓ x2 -> exchange x1 (any key) [fanout: always matches] ; ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 6 of 11: "m6" (step 19)
+broker: reached q4
+message: published to "x1" with key "b.c", headers a="1"
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 1 of its 5 bindings matched.
+  ✗ x1 -> queue q3 ("a") [first word is "b", not "a"]
+    The pattern "a" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a
+    key      b ✗
+  ✗ x1 -> queue q2 ("*.a.*") [last word is "c", not "a"]
+    The pattern "*.a.*" does not match the key "b.c": the last word of the key is "c", and the pattern asks for "a".
+    pattern  *   | a   | *
+    key      b ✓ | c ✗ | - ✗
+  ✗ x1 -> queue q2 ("a.#") [first word is "b", not "a"]
+    The pattern "a.#" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | #
+    key      b ✗ | c ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "b.c": # took "b"; * took "c". The queue q4 gets its first copy.
+    pattern  #   | *
+    key      b ✓ | c ✓
+  ✗ x1 -> queue q3 ("a.*") [first word is "b", not "a"]
+    The pattern "a.*" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | c ✓
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 ("*.a.*") was tried, and it did not match. The pattern "*.a.*" does not match the key "b.c": the last word of the key is "c", and the pattern asks for "a".
+  - The binding from x1 to queue q2 ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b.c": the first word of the key is "b", and the pattern asks for "a".
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 7 of 11: "m7" (step 20)
+broker: reached q2, q4
+message: published to "x1" with key "a.b.b", headers b=1.0 x-c=2
+outcome: routed
+reached: q2, q4
+summary: Reached q2 and q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 2 of its 5 bindings matched.
+  ✗ x1 -> queue q3 ("a") [key has 3 words, pattern 1]
+    The pattern "a" does not match the key "a.b.b": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  a   | -   | -
+    key      a ✓ | b ✗ | b ✗
+  ✗ x1 -> queue q2 ("*.a.*") [word 2 is "b", not "a"]
+    The pattern "*.a.*" does not match the key "a.b.b": word 2 of the key is "b", and the pattern asks for "a".
+    pattern  *   | a   | *
+    key      a ✓ | b ✗ | b ✓
+  ✓ x1 -> queue q2 ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b.b": # took "b.b". The queue q2 gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b.b ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "a.b.b": # took "a.b"; * took "b". The queue q4 gets its first copy.
+    pattern  #     | *
+    key      a.b ✓ | b ✓
+  ✗ x1 -> queue q3 ("a.*") [key has 3 words, pattern 2]
+    The pattern "a.*" does not match the key "a.b.b": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  a   | *   | -
+    key      a ✓ | b ✓ | b ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: reached through ✓ x1 -> queue q2 ("a.#") [matches]
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "a.b.b": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "a.b.b": the pattern has 2 words and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 8 of 11: "m8" (step 21)
+broker: reached q4
+message: published to "x1" with key "c"
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x1 (topic): x1 is a topic exchange, and the message was published to it. 1 of its 5 bindings matched.
+  ✗ x1 -> queue q3 ("a") [only word is "c", not "a"]
+    The pattern "a" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a
+    key      c ✗
+  ✗ x1 -> queue q2 ("*.a.*") [needs 3 words, has 1]
+    The pattern "*.a.*" does not match the key "c": the pattern has 3 words, so the key needs 3, and it has 1.
+    pattern  *   | a   | *
+    key      c ✓ | - ✗ | - ✗
+  ✗ x1 -> queue q2 ("a.#") [only word is "c", not "a"]
+    The pattern "a.#" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a   | #
+    key      c ✗ | - ✓
+  ✓ x1 -> queue q4 ("#.*") [matches]
+    The pattern "#.*" matches the key "c": # took no words; * took "c". The queue q4 gets its first copy.
+    pattern  #   | *
+    key      - ✓ | c ✓
+  ✗ x1 -> queue q3 ("a.*") [only word is "c", not "a"]
+    The pattern "a.*" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+    pattern  a   | *
+    key      c ✗ | - ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 ("*.a.*") was tried, and it did not match. The pattern "*.a.*" does not match the key "c": the pattern has 3 words, so the key needs 3, and it has 1.
+  - The binding from x1 to queue q2 ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 ("a") was tried, and it did not match. The pattern "a" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+  - The binding from x1 to queue q3 ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "c": the only word of the key is "c", and the pattern asks for "a".
+
+queue q4: reached through ✓ x1 -> queue q4 ("#.*") [matches]
+
+## publish 9 of 11: "m9" (step 22)
+broker: reached q2, q3, q4
+message: published to "x1" with key "a", headers a=2 x-c="1"
+outcome: routed
+reached: q3, q2, q4
+summary: Reached q3, q2 and q4.
+
+## publish 10 of 11: "m10" (step 23)
+broker: reached q4
+message: published to "x1" with key "b.b.b", headers a=1 b="1"
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+## publish 11 of 11: "m11" (step 24)
+broker: reached q4
+message: published to "x1" with key "c.b.b", headers x-c=2
+outcome: routed
+reached: q4
+summary: Reached q4.

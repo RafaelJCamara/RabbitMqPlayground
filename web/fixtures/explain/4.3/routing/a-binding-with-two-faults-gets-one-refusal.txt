@@ -1,0 +1,21 @@
+# routing/a-binding-with-two-faults-gets-one-refusal
+# A binding that has two faults is refused with one reply, the one for the fault that the broker checks first: the default exchange, then the source, then the destination, then the key (M1 plan, S2)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 1: "m1" (step 11)
+broker: reached inbox
+message: published to "t" with key "a.b"
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> queue inbox ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The queue inbox gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b ✓
+
+queue inbox: reached through ✓ t -> queue inbox ("a.#") [matches]

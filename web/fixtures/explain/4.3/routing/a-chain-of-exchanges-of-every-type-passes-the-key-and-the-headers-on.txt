@@ -1,0 +1,232 @@
+# routing/a-chain-of-exchanges-of-every-type-passes-the-key-and-the-headers-on
+# A message goes through a topic, a headers, a direct and a fanout exchange in a row with the key and the headers it was published with, and each one applies its own type (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 9: "m1" (step 12)
+broker: reached end
+message: published to "t" with key "a.b", headers n=1
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> exchange h ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The message goes on to the exchange h.
+    pattern  a   | #
+    key      a ✓ | b ✓
+    exchange h (headers): h is a headers exchange, and the message came to it from t. 1 of its 1 binding matched.
+      ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold]
+        x-match=all: its one condition holds. The message goes on to the exchange d.
+        ✓ The header n is 1, as the binding asks.
+        exchange d (direct): d is a direct exchange, and the message came to it from h. 1 of its 2 bindings matched.
+          ✓ d -> exchange f ("a.b") [key matches]
+            The key "a.b" is the binding key, letter for letter. The message goes on to the exchange f.
+            exchange f (fanout): f is a fanout exchange, and the message came to it from d. 1 of its 1 binding matched.
+              ✓ f -> queue end (any key) [fanout: always matches]
+                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+          ✗ d -> queue side ("a.c") [key is not "a.c"]
+            The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+queue end: reached through ✓ t -> exchange h ("a.#") [matches] ; ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold] ; ✓ d -> exchange f ("a.b") [key matches] ; ✓ f -> queue end (any key) [fanout: always matches]
+
+queue side: not reached
+  The queue side did not get the message.
+  - The binding from d to queue side ("a.c") was tried, and it did not match. The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+## publish 2 of 9: "m2" (step 13)
+broker: reached side
+message: published to "t" with key "a.c", headers n=1
+outcome: routed
+reached: side
+summary: Reached side.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> exchange h ("a.#") [matches]
+    The pattern "a.#" matches the key "a.c": # took "c". The message goes on to the exchange h.
+    pattern  a   | #
+    key      a ✓ | c ✓
+    exchange h (headers): h is a headers exchange, and the message came to it from t. 1 of its 1 binding matched.
+      ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold]
+        x-match=all: its one condition holds. The message goes on to the exchange d.
+        ✓ The header n is 1, as the binding asks.
+        exchange d (direct): d is a direct exchange, and the message came to it from h. 1 of its 2 bindings matched.
+          ✗ d -> exchange f ("a.b") [key is not "a.b"]
+            The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+          ✓ d -> queue side ("a.c") [key matches]
+            The key "a.c" is the binding key, letter for letter. The queue side gets its first copy.
+
+queue end: not reached
+  The queue end did not get the message.
+  - f is bound to queue end (any key), but the message never reached f.
+    - The binding from d to exchange f ("a.b") was tried, and it did not match. The key is "a.c", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue side: reached through ✓ t -> exchange h ("a.#") [matches] ; ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold] ; ✓ d -> queue side ("a.c") [key matches]
+
+## publish 3 of 9: "m3" (step 14)
+broker: returned, no queue got it
+message: published to "t" with key "a.b", headers n=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t and h, and 1 of their 2 bindings matched, but none of them led to a queue.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> exchange h ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The message goes on to the exchange h.
+    pattern  a   | #
+    key      a ✓ | b ✓
+    exchange h (headers): h is a headers exchange, and the message came to it from t. 0 of its 1 binding matched.
+      ✗ h -> exchange d (x-match=all n=1) [0 of 1 hold, all needed]
+        x-match=all: every condition has to hold, and n does not.
+        ✗ The header n is 2, and the binding asks for 1.
+
+queue end: not reached
+  The queue end did not get the message.
+  - f is bound to queue end (any key), but the message never reached f.
+    - d is bound to exchange f ("a.b"), but the message never reached d.
+      - The binding from h to exchange d (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue side: not reached
+  The queue side did not get the message.
+  - d is bound to queue side ("a.c"), but the message never reached d.
+    - The binding from h to exchange d (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+## publish 4 of 9: "m4" (step 15)
+broker: returned, no queue got it
+message: published to "t" with key "b.b", headers n=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and its only binding did not match.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ t -> exchange h ("a.#") [first word is "b", not "a"]
+    The pattern "a.#" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+    pattern  a   | #
+    key      b ✗ | b ✓
+
+queue end: not reached
+  The queue end did not get the message.
+  - f is bound to queue end (any key), but the message never reached f.
+    - d is bound to exchange f ("a.b"), but the message never reached d.
+      - h is bound to exchange d (x-match=all n=1), but the message never reached h.
+        - The binding from t to exchange h ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+
+queue side: not reached
+  The queue side did not get the message.
+  - d is bound to queue side ("a.c"), but the message never reached d.
+    - h is bound to exchange d (x-match=all n=1), but the message never reached h.
+      - The binding from t to exchange h ("a.#") was tried, and it did not match. The pattern "a.#" does not match the key "b.b": the first word of the key is "b", and the pattern asks for "a".
+
+## publish 5 of 9: "m5" (step 16)
+broker: returned, no queue got it
+message: published to "t" with key "a.x", headers n=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, h and d, and 2 of their 4 bindings matched, but none of them led to a queue.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> exchange h ("a.#") [matches]
+    The pattern "a.#" matches the key "a.x": # took "x". The message goes on to the exchange h.
+    pattern  a   | #
+    key      a ✓ | x ✓
+    exchange h (headers): h is a headers exchange, and the message came to it from t. 1 of its 1 binding matched.
+      ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold]
+        x-match=all: its one condition holds. The message goes on to the exchange d.
+        ✓ The header n is 1, as the binding asks.
+        exchange d (direct): d is a direct exchange, and the message came to it from h. 0 of its 2 bindings matched.
+          ✗ d -> exchange f ("a.b") [key is not "a.b"]
+            The key is "a.x", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+          ✗ d -> queue side ("a.c") [key is not "a.c"]
+            The key is "a.x", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+queue end: not reached
+  The queue end did not get the message.
+  - f is bound to queue end (any key), but the message never reached f.
+    - The binding from d to exchange f ("a.b") was tried, and it did not match. The key is "a.x", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue side: not reached
+  The queue side did not get the message.
+  - The binding from d to queue side ("a.c") was tried, and it did not match. The key is "a.x", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+## publish 6 of 9: "m6" (step 17)
+broker: returned, no queue got it
+message: published to "h" with key "whatever", headers n=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h and d, and 1 of their 3 bindings matched, but none of them led to a queue.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The message goes on to the exchange d.
+    ✓ The header n is 1, as the binding asks.
+    exchange d (direct): d is a direct exchange, and the message came to it from h. 0 of its 2 bindings matched.
+      ✗ d -> exchange f ("a.b") [key is not "a.b"]
+        The key is "whatever", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+      ✗ d -> queue side ("a.c") [key is not "a.c"]
+        The key is "whatever", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+queue end: not reached
+  The queue end did not get the message.
+  - f is bound to queue end (any key), but the message never reached f.
+    - The binding from d to exchange f ("a.b") was tried, and it did not match. The key is "whatever", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue side: not reached
+  The queue side did not get the message.
+  - The binding from d to queue side ("a.c") was tried, and it did not match. The key is "whatever", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+## publish 7 of 9: "m7" (step 18)
+broker: reached end
+message: published to "h" with key "a.b", headers n=1
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The message goes on to the exchange d.
+    ✓ The header n is 1, as the binding asks.
+    exchange d (direct): d is a direct exchange, and the message came to it from h. 1 of its 2 bindings matched.
+      ✓ d -> exchange f ("a.b") [key matches]
+        The key "a.b" is the binding key, letter for letter. The message goes on to the exchange f.
+        exchange f (fanout): f is a fanout exchange, and the message came to it from d. 1 of its 1 binding matched.
+          ✓ f -> queue end (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+      ✗ d -> queue side ("a.c") [key is not "a.c"]
+        The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+queue end: reached through ✓ h -> exchange d (x-match=all n=1) [1 of 1 hold] ; ✓ d -> exchange f ("a.b") [key matches] ; ✓ f -> queue end (any key) [fanout: always matches]
+
+queue side: not reached
+  The queue side did not get the message.
+  - The binding from d to queue side ("a.c") was tried, and it did not match. The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+## publish 8 of 9: "m8" (step 19)
+broker: reached end
+message: published to "d" with key "a.b"
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✓ d -> exchange f ("a.b") [key matches]
+    The key "a.b" is the binding key, letter for letter. The message goes on to the exchange f.
+    exchange f (fanout): f is a fanout exchange, and the message came to it from d. 1 of its 1 binding matched.
+      ✓ f -> queue end (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+  ✗ d -> queue side ("a.c") [key is not "a.c"]
+    The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+queue end: reached through ✓ d -> exchange f ("a.b") [key matches] ; ✓ f -> queue end (any key) [fanout: always matches]
+
+queue side: not reached
+  The queue side did not get the message.
+  - The binding from d to queue side ("a.c") was tried, and it did not match. The key is "a.b", and this binding wants "a.c": a direct exchange compares the whole key, letter for letter.
+
+## publish 9 of 9: "m9" (step 20)
+broker: reached end
+message: published to "f" with key "x"
+outcome: routed
+reached: end
+summary: Reached end.

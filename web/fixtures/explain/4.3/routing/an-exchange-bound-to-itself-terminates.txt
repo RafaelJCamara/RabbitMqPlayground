@@ -1,0 +1,143 @@
+# routing/an-exchange-bound-to-itself-terminates
+# An exchange that is bound to itself passes a message on to itself once, and still delivers it (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 5: "m1" (step 13)
+broker: reached qf
+message: published to "f" with the empty key
+outcome: routed
+reached: qf
+summary: Reached qf.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ f -> exchange f (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange f had been reached already, and an exchange is visited once.
+  ✓ f -> queue qf (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue qf gets its first copy.
+
+queue qf: reached through ✓ f -> queue qf (any key) [fanout: always matches]
+
+queue qd: not reached
+  The queue qd did not get the message.
+  - d is bound to queue qd ("k"), but the message never reached d.
+    - The exchange d is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qt: not reached
+  The queue qt did not get the message.
+  - t is bound to queue qt ("a.*"), but the message never reached t.
+    - The exchange t is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 2 of 5: "m2" (step 14)
+broker: reached qd
+message: published to "d" with key "k"
+outcome: routed
+reached: qd
+summary: Reached qd.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ d -> exchange d ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The exchange d had been reached already, and an exchange is visited once.
+  ✓ d -> queue qd ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The queue qd gets its first copy.
+
+queue qf: not reached
+  The queue qf did not get the message.
+  - f is bound to queue qf (any key), but the message never reached f.
+    - The exchange f is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qd: reached through ✓ d -> queue qd ("k") [key matches]
+
+queue qt: not reached
+  The queue qt did not get the message.
+  - t is bound to queue qt ("a.*"), but the message never reached t.
+    - The exchange t is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 3 of 5: "m3" (step 15)
+broker: returned, no queue got it
+message: published to "d" with key "other"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached d, and none of its 2 bindings matched.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 0 of its 2 bindings matched.
+  ✗ d -> exchange d ("k") [key is not "k"]
+    The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+  ✗ d -> queue qd ("k") [key is not "k"]
+    The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue qf: not reached
+  The queue qf did not get the message.
+  - f is bound to queue qf (any key), but the message never reached f.
+    - The exchange f is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qd: not reached
+  The queue qd did not get the message.
+  - The binding from d to queue qd ("k") was tried, and it did not match. The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue qt: not reached
+  The queue qt did not get the message.
+  - t is bound to queue qt ("a.*"), but the message never reached t.
+    - The exchange t is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 4 of 5: "m4" (step 16)
+broker: reached qt
+message: published to "t" with key "a.b"
+outcome: routed
+reached: qt
+summary: Reached qt.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ t -> exchange t ("#") [matches]
+    The pattern "#" matches the key "a.b": # took "a.b". The exchange t had been reached already, and an exchange is visited once.
+    pattern  #
+    key      a.b ✓
+  ✓ t -> queue qt ("a.*") [matches]
+    The pattern "a.*" matches the key "a.b": * took "b". The queue qt gets its first copy.
+    pattern  a   | *
+    key      a ✓ | b ✓
+
+queue qf: not reached
+  The queue qf did not get the message.
+  - f is bound to queue qf (any key), but the message never reached f.
+    - The exchange f is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qd: not reached
+  The queue qd did not get the message.
+  - d is bound to queue qd ("k"), but the message never reached d.
+    - The exchange d is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qt: reached through ✓ t -> queue qt ("a.*") [matches]
+
+## publish 5 of 5: "m5" (step 17)
+broker: returned, no queue got it
+message: published to "t" with key "b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and 1 of its 2 bindings matched, but none of them led to a queue.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✓ t -> exchange t ("#") [matches]
+    The pattern "#" matches the key "b": # took "b". The exchange t had been reached already, and an exchange is visited once.
+    pattern  #
+    key      b ✓
+  ✗ t -> queue qt ("a.*") [only word is "b", not "a"]
+    The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".
+    pattern  a   | *
+    key      b ✗ | - ✗
+
+queue qf: not reached
+  The queue qf did not get the message.
+  - f is bound to queue qf (any key), but the message never reached f.
+    - The exchange f is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qd: not reached
+  The queue qd did not get the message.
+  - d is bound to queue qd ("k"), but the message never reached d.
+    - The exchange d is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue qt: not reached
+  The queue qt did not get the message.
+  - The binding from t to queue qt ("a.*") was tried, and it did not match. The pattern "a.*" does not match the key "b": the only word of the key is "b", and the pattern asks for "a".

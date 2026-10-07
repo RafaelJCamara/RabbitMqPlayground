@@ -1,0 +1,171 @@
+# routing/headers-the-routing-key-is-ignored
+# A headers exchange does not look at the routing key: any key on the binding or on the message, and the same message reaches a queue once per queue (ADR-0009)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 5: "key foo" (step 10)
+broker: reached key bar, key foo, no key
+message: published to "h" with key "foo", headers a=1
+outcome: routed
+reached: key foo, key bar, no key
+summary: Reached key foo, key bar and no key.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 3 of its 4 bindings matched.
+  ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key foo gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key bar gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue no key gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✗ h -> queue other args (x-match=all a=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 1, and the binding asks for 2.
+
+queue key foo: reached through ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+
+queue key bar: reached through ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+
+queue no key: reached through ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+
+queue other args: not reached
+  The queue other args did not get the message.
+  - The binding from h to queue other args (x-match=all a=2) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+## publish 2 of 5: "key bar" (step 11)
+broker: reached key bar, key foo, no key
+message: published to "h" with key "bar", headers a=1
+outcome: routed
+reached: key foo, key bar, no key
+summary: Reached key foo, key bar and no key.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 3 of its 4 bindings matched.
+  ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key foo gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key bar gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue no key gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✗ h -> queue other args (x-match=all a=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 1, and the binding asks for 2.
+
+queue key foo: reached through ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+
+queue key bar: reached through ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+
+queue no key: reached through ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+
+queue other args: not reached
+  The queue other args did not get the message.
+  - The binding from h to queue other args (x-match=all a=2) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+## publish 3 of 5: "no key" (step 12)
+broker: reached key bar, key foo, no key
+message: published to "h" with the empty key, headers a=1
+outcome: routed
+reached: key foo, key bar, no key
+summary: Reached key foo, key bar and no key.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 3 of its 4 bindings matched.
+  ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key foo gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue key bar gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue no key gets its first copy.
+    ✓ The header a is 1, as the binding asks.
+  ✗ h -> queue other args (x-match=all a=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 1, and the binding asks for 2.
+
+queue key foo: reached through ✓ h -> queue key foo (x-match=all a=1) [1 of 1 hold]
+
+queue key bar: reached through ✓ h -> queue key bar (x-match=all a=1) [1 of 1 hold]
+
+queue no key: reached through ✓ h -> queue no key (x-match=all a=1) [1 of 1 hold]
+
+queue other args: not reached
+  The queue other args did not get the message.
+  - The binding from h to queue other args (x-match=all a=2) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+## publish 4 of 5: "key foo, a=2" (step 13)
+broker: reached other args
+message: published to "h" with key "foo", headers a=2
+outcome: routed
+reached: other args
+summary: Reached other args.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 4 bindings matched.
+  ✗ h -> queue key foo (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 2, and the binding asks for 1.
+  ✗ h -> queue key bar (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 2, and the binding asks for 1.
+  ✗ h -> queue no key (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is 2, and the binding asks for 1.
+  ✓ h -> queue other args (x-match=all a=2) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue other args gets its first copy.
+    ✓ The header a is 2, as the binding asks.
+
+queue key foo: not reached
+  The queue key foo did not get the message.
+  - The binding from h to queue key foo (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue key bar: not reached
+  The queue key bar did not get the message.
+  - The binding from h to queue key bar (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue no key: not reached
+  The queue no key did not get the message.
+  - The binding from h to queue no key (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue other args: reached through ✓ h -> queue other args (x-match=all a=2) [1 of 1 hold]
+
+## publish 5 of 5: "key foo, no headers" (step 14)
+broker: returned, no queue got it
+message: published to "h" with key "foo"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h, and none of its 4 bindings matched.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 0 of its 4 bindings matched.
+  ✗ h -> queue key foo (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue key bar (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue no key (x-match=all a=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+  ✗ h -> queue other args (x-match=all a=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and a does not.
+    ✗ The header a is missing from the message.
+
+queue key foo: not reached
+  The queue key foo did not get the message.
+  - The binding from h to queue key foo (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue key bar: not reached
+  The queue key bar did not get the message.
+  - The binding from h to queue key bar (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue no key: not reached
+  The queue no key did not get the message.
+  - The binding from h to queue no key (x-match=all a=1) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.
+
+queue other args: not reached
+  The queue other args did not get the message.
+  - The binding from h to queue other args (x-match=all a=2) was tried, and it did not match. x-match=all: every condition has to hold, and a does not.

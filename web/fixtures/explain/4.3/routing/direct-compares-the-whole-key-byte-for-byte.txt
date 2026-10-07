@@ -1,0 +1,742 @@
+# routing/direct-compares-the-whole-key-byte-for-byte
+# A direct exchange routes on the whole key: case, spaces, a composed and a decomposed é, and the empty key all count, and # and * are ordinary characters (ADR-0008, rule 2)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 16: "m:a" (step 28)
+broker: reached k:a
+message: published to "e" with key "a"
+outcome: routed
+reached: k:a
+summary: Reached k:a.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✓ e -> queue k:a ("a") [key matches]
+    The key "a" is the binding key, letter for letter. The queue k:a gets its first copy.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is "a", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is "a", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "a", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is "a", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "a", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "a", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "a", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "a", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: reached through ✓ e -> queue k:a ("a") [key matches]
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is "a", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is "a", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "a", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is "a", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "a", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "a", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "a", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "a", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 2 of 16: "m:A" (step 29)
+broker: reached k:A
+message: published to "e" with key "A"
+outcome: routed
+reached: k:A
+summary: Reached k:A.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is "A", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k:A ("A") [key matches]
+    The key "A" is the binding key, letter for letter. The queue k:A gets its first copy.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is "A", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "A", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "A", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "A", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "A", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is "A", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "A", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "A", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "A", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "A", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "A", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is "A", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: reached through ✓ e -> queue k:A ("A") [key matches]
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is "A", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "A", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "A", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "A", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "A", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is "A", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "A", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "A", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "A", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "A", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "A", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 3 of 16: "m:a " (step 30)
+broker: reached k:a 
+message: published to "e" with key "a "
+outcome: routed
+reached: k:a 
+summary: Reached k:a .
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is "a ", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is "a ", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k:a  ("a ") [key matches]
+    The key "a " is the binding key, letter for letter. The queue k:a  gets its first copy.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "a ", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "a ", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "a ", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "a ", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is "a ", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "a ", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "a ", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "a ", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "a ", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "a ", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is "a ", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is "a ", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : reached through ✓ e -> queue k:a  ("a ") [key matches]
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "a ", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "a ", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "a ", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "a ", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is "a ", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "a ", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "a ", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "a ", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "a ", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "a ", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 4 of 16: "m: a" (step 31)
+broker: reached k: a
+message: published to "e" with key " a"
+outcome: routed
+reached: k: a
+summary: Reached k: a.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is " a", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is " a", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is " a", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k: a (" a") [key matches]
+    The key " a" is the binding key, letter for letter. The queue k: a gets its first copy.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is " a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is " a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is " a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is " a", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is " a", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is " a", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is " a", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is " a", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is " a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is " a", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is " a", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is " a", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: reached through ✓ e -> queue k: a (" a") [key matches]
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is " a", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is " a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is " a", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is " a", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is " a", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is " a", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is " a", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is " a", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is " a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 5 of 16: "m:" (step 32)
+broker: reached k:
+message: published to "e" with the empty key
+outcome: routed
+reached: k:
+summary: Reached k:.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is the empty key, and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is the empty key, and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is the empty key, and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is the empty key, and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k: (the empty key) [key matches]
+    The key the empty key is the binding key, letter for letter. The queue k: gets its first copy.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is the empty key, and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is the empty key, and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is the empty key, and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is the empty key, and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is the empty key, and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is the empty key, and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is the empty key, and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is the empty key, and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is the empty key, and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is the empty key, and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is the empty key, and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is the empty key, and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: reached through ✓ e -> queue k: (the empty key) [key matches]
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is the empty key, and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is the empty key, and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is the empty key, and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is the empty key, and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is the empty key, and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is the empty key, and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is the empty key, and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is the empty key, and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 6 of 16: "m:é" (step 33)
+broker: reached k:é
+message: published to "e" with key "é"
+outcome: routed
+reached: k:é
+summary: Reached k:é.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is "é", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is "é", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is "é", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "é", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "é", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k:é ("é") [key matches]
+    The key "é" is the binding key, letter for letter. The queue k:é gets its first copy.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "é", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is "é", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "é", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "é", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "é", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "é", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "é", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is "é", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is "é", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is "é", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "é", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "é", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: reached through ✓ e -> queue k:é ("é") [key matches]
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "é", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is "é", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "é", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "é", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "é", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "é", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "é", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 7 of 16: "m:é" (step 34)
+broker: reached k:é
+message: published to "e" with key "é"
+outcome: routed
+reached: k:é
+summary: Reached k:é.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is "é", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is "é", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is "é", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "é", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "é", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "é", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k:é ("é") [key matches]
+    The key "é" is the binding key, letter for letter. The queue k:é gets its first copy.
+  ✗ e -> queue k:# ("#") [key is not "#"]
+    The key is "é", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "é", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "é", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "é", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "é", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "é", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is "é", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is "é", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is "é", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "é", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "é", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "é", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: reached through ✓ e -> queue k:é ("é") [key matches]
+
+queue k:#: not reached
+  The queue k:# did not get the message.
+  - The binding from e to queue k:# ("#") was tried, and it did not match. The key is "é", and this binding wants "#": a direct exchange compares the whole key, letter for letter.
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "é", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "é", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "é", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "é", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "é", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 8 of 16: "m:#" (step 35)
+broker: reached k:#
+message: published to "e" with key "#"
+outcome: routed
+reached: k:#
+summary: Reached k:#.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 13 bindings matched.
+  ✗ e -> queue k:a ("a") [key is not "a"]
+    The key is "#", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:A ("A") [key is not "A"]
+    The key is "#", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a  ("a ") [key is not "a "]
+    The key is "#", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: a (" a") [key is not " a"]
+    The key is "#", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k: (the empty key) [key is not the empty key]
+    The key is "#", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "#", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:é ("é") [key is not "é"]
+    The key is "#", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+  ✓ e -> queue k:# ("#") [key matches]
+    The key "#" is the binding key, letter for letter. The queue k:# gets its first copy.
+  ✗ e -> queue k:* ("*") [key is not "*"]
+    The key is "#", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.# ("a.#") [key is not "a.#"]
+    The key is "#", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.* ("a.*") [key is not "a.*"]
+    The key is "#", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:a.b ("a.b") [key is not "a.b"]
+    The key is "#", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+  ✗ e -> queue k:#.#.# ("#.#.#") [key is not "#.#.#"]
+    The key is "#", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a: not reached
+  The queue k:a did not get the message.
+  - The binding from e to queue k:a ("a") was tried, and it did not match. The key is "#", and this binding wants "a": a direct exchange compares the whole key, letter for letter.
+
+queue k:A: not reached
+  The queue k:A did not get the message.
+  - The binding from e to queue k:A ("A") was tried, and it did not match. The key is "#", and this binding wants "A": a direct exchange compares the whole key, letter for letter.
+
+queue k:a : not reached
+  The queue k:a  did not get the message.
+  - The binding from e to queue k:a  ("a ") was tried, and it did not match. The key is "#", and this binding wants "a ": a direct exchange compares the whole key, letter for letter.
+
+queue k: a: not reached
+  The queue k: a did not get the message.
+  - The binding from e to queue k: a (" a") was tried, and it did not match. The key is "#", and this binding wants " a": a direct exchange compares the whole key, letter for letter.
+
+queue k:: not reached
+  The queue k: did not get the message.
+  - The binding from e to queue k: (the empty key) was tried, and it did not match. The key is "#", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "#", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:é: not reached
+  The queue k:é did not get the message.
+  - The binding from e to queue k:é ("é") was tried, and it did not match. The key is "#", and this binding wants "é": a direct exchange compares the whole key, letter for letter.
+
+queue k:#: reached through ✓ e -> queue k:# ("#") [key matches]
+
+queue k:*: not reached
+  The queue k:* did not get the message.
+  - The binding from e to queue k:* ("*") was tried, and it did not match. The key is "#", and this binding wants "*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.#: not reached
+  The queue k:a.# did not get the message.
+  - The binding from e to queue k:a.# ("a.#") was tried, and it did not match. The key is "#", and this binding wants "a.#": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.*: not reached
+  The queue k:a.* did not get the message.
+  - The binding from e to queue k:a.* ("a.*") was tried, and it did not match. The key is "#", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue k:a.b: not reached
+  The queue k:a.b did not get the message.
+  - The binding from e to queue k:a.b ("a.b") was tried, and it did not match. The key is "#", and this binding wants "a.b": a direct exchange compares the whole key, letter for letter.
+
+queue k:#.#.#: not reached
+  The queue k:#.#.# did not get the message.
+  - The binding from e to queue k:#.#.# ("#.#.#") was tried, and it did not match. The key is "#", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+## publish 9 of 16: "m:*" (step 36)
+broker: reached k:*
+message: published to "e" with key "*"
+outcome: routed
+reached: k:*
+summary: Reached k:*.
+
+## publish 10 of 16: "m:a.#" (step 37)
+broker: reached k:a.#
+message: published to "e" with key "a.#"
+outcome: routed
+reached: k:a.#
+summary: Reached k:a.#.
+
+## publish 11 of 16: "m:a.*" (step 38)
+broker: reached k:a.*
+message: published to "e" with key "a.*"
+outcome: routed
+reached: k:a.*
+summary: Reached k:a.*.
+
+## publish 12 of 16: "m:a.b" (step 39)
+broker: reached k:a.b
+message: published to "e" with key "a.b"
+outcome: routed
+reached: k:a.b
+summary: Reached k:a.b.
+
+## publish 13 of 16: "m:#.#.#" (step 40)
+broker: reached k:#.#.#
+message: published to "e" with key "#.#.#"
+outcome: routed
+reached: k:#.#.#
+summary: Reached k:#.#.#.
+
+## publish 14 of 16: "m:a.x" (step 41)
+broker: returned, no queue got it
+message: published to "e" with key "a.x"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached e, and none of its 13 bindings matched.
+
+## publish 15 of 16: "m:x" (step 42)
+broker: returned, no queue got it
+message: published to "e" with key "x"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached e, and none of its 13 bindings matched.
+
+## publish 16 of 16: "m:a.b.c" (step 43)
+broker: returned, no queue got it
+message: published to "e" with key "a.b.c"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached e, and none of its 13 bindings matched.

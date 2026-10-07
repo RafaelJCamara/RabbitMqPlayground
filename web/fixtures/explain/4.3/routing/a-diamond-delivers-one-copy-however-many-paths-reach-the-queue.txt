@@ -1,0 +1,83 @@
+# routing/a-diamond-delivers-one-copy-however-many-paths-reach-the-queue
+# A queue that three paths reach, two through exchanges and one directly, gets one copy, and the exchange that two paths reach is visited once (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "m1" (step 14)
+broker: reached left-only, right-only, shared
+message: published to "top" with the empty key
+outcome: routed
+reached: shared, left-only, right-only
+summary: Reached shared, left-only and right-only.
+
+exchange top (fanout): top is a fanout exchange, and the message was published to it. 3 of its 3 bindings matched.
+  ✓ top -> exchange left (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange left.
+    exchange left (fanout): left is a fanout exchange, and the message came to it from top. 2 of its 2 bindings matched.
+      ✓ left -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ left -> queue left-only (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue left-only gets its first copy.
+  ✓ top -> exchange right (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange right.
+    exchange right (fanout): right is a fanout exchange, and the message came to it from top. 2 of its 2 bindings matched.
+      ✓ right -> queue shared (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared had a copy already, and a queue gets one copy of a message however many bindings match.
+      ✓ right -> queue right-only (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue right-only gets its first copy.
+  ✓ top -> queue shared (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared gets its first copy.
+
+queue shared: reached through ✓ top -> queue shared (any key) [fanout: always matches]
+
+queue left-only: reached through ✓ top -> exchange left (any key) [fanout: always matches] ; ✓ left -> queue left-only (any key) [fanout: always matches]
+
+queue right-only: reached through ✓ top -> exchange right (any key) [fanout: always matches] ; ✓ right -> queue right-only (any key) [fanout: always matches]
+
+## publish 2 of 3: "m2" (step 15)
+broker: reached left-only, shared
+message: published to "left" with the empty key
+outcome: routed
+reached: shared, left-only
+summary: Reached shared and left-only.
+
+exchange left (fanout): left is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ left -> queue shared (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared gets its first copy.
+  ✓ left -> queue left-only (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue left-only gets its first copy.
+
+queue shared: reached through ✓ left -> queue shared (any key) [fanout: always matches]
+
+queue left-only: reached through ✓ left -> queue left-only (any key) [fanout: always matches]
+
+queue right-only: not reached
+  The queue right-only did not get the message.
+  - right is bound to queue right-only (any key), but the message never reached right.
+    - top is bound to exchange right (any key), but the message never reached top.
+      - Nothing is bound to the exchange top, so nothing leads into it and the message cannot reach it.
+
+## publish 3 of 3: "m3" (step 16)
+broker: reached right-only, shared
+message: published to "right" with the empty key
+outcome: routed
+reached: shared, right-only
+summary: Reached shared and right-only.
+
+exchange right (fanout): right is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ right -> queue shared (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue shared gets its first copy.
+  ✓ right -> queue right-only (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue right-only gets its first copy.
+
+queue shared: reached through ✓ right -> queue shared (any key) [fanout: always matches]
+
+queue left-only: not reached
+  The queue left-only did not get the message.
+  - left is bound to queue left-only (any key), but the message never reached left.
+    - top is bound to exchange left (any key), but the message never reached top.
+      - Nothing is bound to the exchange top, so nothing leads into it and the message cannot reach it.
+
+queue right-only: reached through ✓ right -> queue right-only (any key) [fanout: always matches]

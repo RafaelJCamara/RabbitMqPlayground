@@ -1,0 +1,102 @@
+# routing/a-topic-binding-key-with-three-hash-wildcards-is-refused
+# A topic binding key may have at most two # words: a third is refused with 406, and only a topic exchange minds (ADR-0022)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 4: "m1" (step 14)
+broker: reached wild
+message: published to "t" with key "a.b.c"
+outcome: routed
+reached: wild
+summary: Reached wild.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 3 bindings matched.
+  ✓ t -> queue wild ("#.#") [matches]
+    The pattern "#.#" matches the key "a.b.c": # took no words; # took "a.b.c". The queue wild gets its first copy.
+    pattern  #   | #
+    key      - ✓ | a.b.c ✓
+  ✓ t -> queue wild ("a.#.b.#.c") [matches]
+    The pattern "a.#.b.#.c" matches the key "a.b.c": # took no words; # took no words. The queue wild had a copy already, and a queue gets one copy of a message however many bindings match.
+    pattern  a   | #   | b   | #   | c
+    key      a ✓ | - ✓ | b ✓ | - ✓ | c ✓
+  ✗ t -> queue literal ("##.#.#") [first word is "a", not "##"]
+    The pattern "##.#.#" does not match the key "a.b.c": the first word of the key is "a", and the pattern asks for "##".
+    pattern  ##  | #   | #
+    key      a ✗ | - ✓ | b.c ✓
+
+queue wild: reached through ✓ t -> queue wild ("#.#") [matches]
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - The binding from t to queue literal ("##.#.#") was tried, and it did not match. The pattern "##.#.#" does not match the key "a.b.c": the first word of the key is "a", and the pattern asks for "##".
+  - d is bound to queue literal ("#.#.#"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+## publish 2 of 4: "m2" (step 15)
+broker: reached literal, wild
+message: published to "t" with key "##.x.y"
+outcome: routed
+reached: wild, literal
+summary: Reached wild and literal.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 3 bindings matched.
+  ✓ t -> queue wild ("#.#") [matches]
+    The pattern "#.#" matches the key "##.x.y": # took no words; # took "##.x.y". The queue wild gets its first copy.
+    pattern  #   | #
+    key      - ✓ | ##.x.y ✓
+  ✗ t -> queue wild ("a.#.b.#.c") [first word is "##", not "a"]
+    The pattern "a.#.b.#.c" does not match the key "##.x.y": the first word of the key is "##", and the pattern asks for "a".
+    pattern  a    | #   | b   | #   | c
+    key      ## ✗ | - ✓ | - ✗ | x ✓ | y ✗
+  ✓ t -> queue literal ("##.#.#") [matches]
+    The pattern "##.#.#" matches the key "##.x.y": # took no words; # took "x.y". The queue literal gets its first copy.
+    pattern  ##   | #   | #
+    key      ## ✓ | - ✓ | x.y ✓
+
+queue wild: reached through ✓ t -> queue wild ("#.#") [matches]
+
+queue literal: reached through ✓ t -> queue literal ("##.#.#") [matches]
+
+## publish 3 of 4: "m3" (step 16)
+broker: reached literal
+message: published to "d" with key "#.#.#"
+outcome: routed
+reached: literal
+summary: Reached literal.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ d -> queue literal ("#.#.#") [key matches]
+    The key "#.#.#" is the binding key, letter for letter. The queue literal gets its first copy.
+
+queue wild: not reached
+  The queue wild did not get the message.
+  - t is bound to queue wild ("#.#"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange t is given above, where it was first met.
+
+queue literal: reached through ✓ d -> queue literal ("#.#.#") [key matches]
+
+## publish 4 of 4: "m4" (step 17)
+broker: returned, no queue got it
+message: published to "d" with key "a"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached d, and its only binding did not match.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ d -> queue literal ("#.#.#") [key is not "#.#.#"]
+    The key is "a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.
+
+queue wild: not reached
+  The queue wild did not get the message.
+  - t is bound to queue wild ("#.#"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange t is given above, where it was first met.
+
+queue literal: not reached
+  The queue literal did not get the message.
+  - t is bound to queue literal ("##.#.#"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+  - The binding from d to queue literal ("#.#.#") was tried, and it did not match. The key is "a", and this binding wants "#.#.#": a direct exchange compares the whole key, letter for letter.

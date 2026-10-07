@@ -1,0 +1,21 @@
+# routing/unbinding-a-topic-key-that-no-binding-could-have-is-accepted
+# An unbind with a key that a topic exchange would refuse in a binding (more than two # words) is accepted: only a binding is checked for it (ADR-0051, ADR-0022)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 1: "m1" (step 5)
+broker: reached inbox
+message: published to "t" with key "a.b"
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> queue inbox ("a.#") [matches]
+    The pattern "a.#" matches the key "a.b": # took "b". The queue inbox gets its first copy.
+    pattern  a   | #
+    key      a ✓ | b ✓
+
+queue inbox: reached through ✓ t -> queue inbox ("a.#") [matches]

@@ -1,0 +1,347 @@
+# routing/random-topology-12
+# A random topology made from seed 12 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 8: "m1" (step 16)
+broker: returned, no queue got it
+message: published to "x1" with key "a.a.b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "a.a.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 (the empty key) [key is not the empty key]
+    The key is "a.a.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q2 (the empty key) [key is not the empty key]
+    The key is "a.a.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 ("c.*.*"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 (the empty key) was tried, and it did not match. The key is "a.a.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 (the empty key) was tried, and it did not match. The key is "a.a.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - x2 is bound to queue q4 ("b.c.#"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+## publish 2 of 8: "m2" (step 17)
+broker: returned, no queue got it
+message: published to "x1" with key "a.b.c", headers a="1" b=true
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "a.b.c", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 (the empty key) [key is not the empty key]
+    The key is "a.b.c", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q2 (the empty key) [key is not the empty key]
+    The key is "a.b.c", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 ("c.*.*"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 (the empty key) was tried, and it did not match. The key is "a.b.c", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 (the empty key) was tried, and it did not match. The key is "a.b.c", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - x2 is bound to queue q4 ("b.c.#"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+## publish 3 of 8: "m3" (step 18)
+broker: returned, no queue got it
+message: published to "x2" with key "a.c.a"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2, and none of its 5 bindings matched.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 0 of its 5 bindings matched.
+  ✗ x2 -> queue q1 ("c.*.*") [first word is "a", not "c"]
+    The pattern "c.*.*" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "c".
+    pattern  c   | *   | *
+    key      a ✗ | c ✓ | a ✓
+  ✗ x2 -> queue q4 ("b.c.#") [first word is "a", not "b"]
+    The pattern "b.c.#" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "b".
+    pattern  b   | c   | #
+    key      a ✗ | c ✓ | a ✓
+  ✗ x2 -> queue q1 ("c") [first word is "a", not "c"]
+    The pattern "c" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "c".
+    pattern  c
+    key      a ✗
+  ✗ x2 -> queue q1 ("*.b") [word 2 is "c", not "b"]
+    The pattern "*.b" does not match the key "a.c.a": word 2 of the key is "c", and the pattern asks for "b".
+    pattern  *   | b
+    key      a ✓ | c ✗
+  ✗ x2 -> queue q4 ("*") [key has 3 words, pattern 1]
+    The pattern "*" does not match the key "a.c.a": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  *   | -   | -
+    key      a ✓ | c ✗ | a ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x2 to queue q1 ("c.*.*") was tried, and it did not match. The pattern "c.*.*" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "c".
+  - The binding from x2 to queue q1 ("c") was tried, and it did not match. The pattern "c" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "c".
+  - The binding from x2 to queue q1 ("*.b") was tried, and it did not match. The pattern "*.b" does not match the key "a.c.a": word 2 of the key is "c", and the pattern asks for "b".
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x1 is bound to queue q2 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The binding from x2 to queue q4 ("b.c.#") was tried, and it did not match. The pattern "b.c.#" does not match the key "a.c.a": the first word of the key is "a", and the pattern asks for "b".
+  - The binding from x2 to queue q4 ("*") was tried, and it did not match. The pattern "*" does not match the key "a.c.a": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+
+## publish 4 of 8: "m4" (step 19)
+broker: reached q4
+message: published to "x2" with key "a"
+outcome: routed
+reached: q4
+summary: Reached q4.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 1 of its 5 bindings matched.
+  ✗ x2 -> queue q1 ("c.*.*") [only word is "a", not "c"]
+    The pattern "c.*.*" does not match the key "a": the only word of the key is "a", and the pattern asks for "c".
+    pattern  c   | *   | *
+    key      a ✗ | - ✗ | - ✗
+  ✗ x2 -> queue q4 ("b.c.#") [only word is "a", not "b"]
+    The pattern "b.c.#" does not match the key "a": the only word of the key is "a", and the pattern asks for "b".
+    pattern  b   | c   | #
+    key      a ✗ | - ✗ | - ✓
+  ✗ x2 -> queue q1 ("c") [only word is "a", not "c"]
+    The pattern "c" does not match the key "a": the only word of the key is "a", and the pattern asks for "c".
+    pattern  c
+    key      a ✗
+  ✗ x2 -> queue q1 ("*.b") [needs 2 words, has 1]
+    The pattern "*.b" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  *   | b
+    key      a ✓ | - ✗
+  ✓ x2 -> queue q4 ("*") [matches]
+    The pattern "*" matches the key "a": * took "a". The queue q4 gets its first copy.
+    pattern  *
+    key      a ✓
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x2 to queue q1 ("c.*.*") was tried, and it did not match. The pattern "c.*.*" does not match the key "a": the only word of the key is "a", and the pattern asks for "c".
+  - The binding from x2 to queue q1 ("c") was tried, and it did not match. The pattern "c" does not match the key "a": the only word of the key is "a", and the pattern asks for "c".
+  - The binding from x2 to queue q1 ("*.b") was tried, and it did not match. The pattern "*.b" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x1 is bound to queue q2 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q4: reached through ✓ x2 -> queue q4 ("*") [matches]
+
+## publish 5 of 8: "m5" (step 20)
+broker: returned, no queue got it
+message: published to "x1" with key "a.b.b", headers a=true
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "a.b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 (the empty key) [key is not the empty key]
+    The key is "a.b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q2 (the empty key) [key is not the empty key]
+    The key is "a.b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 ("c.*.*"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 (the empty key) was tried, and it did not match. The key is "a.b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 (the empty key) was tried, and it did not match. The key is "a.b.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - x2 is bound to queue q4 ("b.c.#"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+## publish 6 of 8: "m6" (step 21)
+broker: returned, no queue got it
+message: published to "x2" with the empty key, headers a=true b="1"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2, and none of its 5 bindings matched.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 0 of its 5 bindings matched.
+  ✗ x2 -> queue q1 ("c.*.*") [needs 3 words, has 0]
+    The pattern "c.*.*" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  c   | *   | *
+    key      - ✗ | - ✗ | - ✗
+  ✗ x2 -> queue q4 ("b.c.#") [needs 2 or more words, has 0]
+    The pattern "b.c.#" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  b   | c   | #
+    key      - ✗ | - ✗ | - ✓
+  ✗ x2 -> queue q1 ("c") [needs 1 words, has 0]
+    The pattern "c" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+    pattern  c
+    key      - ✗
+  ✗ x2 -> queue q1 ("*.b") [needs 2 words, has 0]
+    The pattern "*.b" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *   | b
+    key      - ✗ | - ✗
+  ✗ x2 -> queue q4 ("*") [needs 1 words, has 0]
+    The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *
+    key      - ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x2 to queue q1 ("c.*.*") was tried, and it did not match. The pattern "c.*.*" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+  - The binding from x2 to queue q1 ("c") was tried, and it did not match. The pattern "c" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+  - The binding from x2 to queue q1 ("*.b") was tried, and it did not match. The pattern "*.b" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x1 is bound to queue q2 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The binding from x2 to queue q4 ("b.c.#") was tried, and it did not match. The pattern "b.c.#" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+  - The binding from x2 to queue q4 ("*") was tried, and it did not match. The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+## publish 7 of 8: "m7" (step 22)
+broker: returned, no queue got it
+message: published to "x1" with key "b", headers a=1 b=1.0 x-c=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x1 (the empty key) [key is not the empty key]
+    The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 (the empty key) [key is not the empty key]
+    The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q2 (the empty key) [key is not the empty key]
+    The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 ("c.*.*"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x1 to queue q2 (the empty key) was tried, and it did not match. The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x1 to queue q3 (the empty key) was tried, and it did not match. The key is "b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - x2 is bound to queue q4 ("b.c.#"), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+## publish 8 of 8: "m8" (step 23)
+broker: returned, no queue got it
+message: published to "x2" with the empty key, headers a="1" x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2, and none of its 5 bindings matched.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 0 of its 5 bindings matched.
+  ✗ x2 -> queue q1 ("c.*.*") [needs 3 words, has 0]
+    The pattern "c.*.*" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  c   | *   | *
+    key      - ✗ | - ✗ | - ✗
+  ✗ x2 -> queue q4 ("b.c.#") [needs 2 or more words, has 0]
+    The pattern "b.c.#" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+    pattern  b   | c   | #
+    key      - ✗ | - ✗ | - ✓
+  ✗ x2 -> queue q1 ("c") [needs 1 words, has 0]
+    The pattern "c" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+    pattern  c
+    key      - ✗
+  ✗ x2 -> queue q1 ("*.b") [needs 2 words, has 0]
+    The pattern "*.b" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *   | b
+    key      - ✗ | - ✗
+  ✗ x2 -> queue q4 ("*") [needs 1 words, has 0]
+    The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+    pattern  *
+    key      - ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The binding from x2 to queue q1 ("c.*.*") was tried, and it did not match. The pattern "c.*.*" does not match the empty key: the pattern has 3 words, so the key needs 3, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+  - The binding from x2 to queue q1 ("c") was tried, and it did not match. The pattern "c" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0.
+  - The binding from x2 to queue q1 ("*.b") was tried, and it did not match. The pattern "*.b" does not match the empty key: the pattern has 2 words, so the key needs 2, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x1 is bound to queue q2 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q4: not reached
+  The queue q4 did not get the message.
+  - The binding from x2 to queue q4 ("b.c.#") was tried, and it did not match. The pattern "b.c.#" does not match the empty key: it needs at least 2 words, because a "#" can take any number of words but every other word of the pattern needs a word of the key, and the key has 0.
+  - The binding from x2 to queue q4 ("*") was tried, and it did not match. The pattern "*" does not match the empty key: the pattern has 1 word, so the key needs 1, and it has 0. An empty key has no words at all, and even a "*" needs a word (the key "a." has two, the second of them empty).

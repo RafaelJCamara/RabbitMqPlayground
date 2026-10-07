@@ -1,0 +1,135 @@
+# routing/direct-matches-the-whole-key-case-sensitively
+# A direct exchange routes on the whole routing key, and the comparison is case-sensitive (ADR-0008, rule 2)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 5: "m1" (step 8)
+broker: reached created, created-too
+message: published to "orders" with key "order.created"
+outcome: routed
+reached: created, created-too
+summary: Reached created and created-too.
+
+exchange orders (direct): orders is a direct exchange, and the message was published to it. 2 of its 3 bindings matched.
+  ✓ orders -> queue created ("order.created") [key matches]
+    The key "order.created" is the binding key, letter for letter. The queue created gets its first copy.
+  ✓ orders -> queue created-too ("order.created") [key matches]
+    The key "order.created" is the binding key, letter for letter. The queue created-too gets its first copy.
+  ✗ orders -> queue created-upper ("ORDER.CREATED") [key is not "ORDER.CREATED"]
+    The key is "order.created", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+queue created: reached through ✓ orders -> queue created ("order.created") [key matches]
+
+queue created-too: reached through ✓ orders -> queue created-too ("order.created") [key matches]
+
+queue created-upper: not reached
+  The queue created-upper did not get the message.
+  - The binding from orders to queue created-upper ("ORDER.CREATED") was tried, and it did not match. The key is "order.created", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+## publish 2 of 5: "m2" (step 9)
+broker: reached created-upper
+message: published to "orders" with key "ORDER.CREATED"
+outcome: routed
+reached: created-upper
+summary: Reached created-upper.
+
+exchange orders (direct): orders is a direct exchange, and the message was published to it. 1 of its 3 bindings matched.
+  ✗ orders -> queue created ("order.created") [key is not "order.created"]
+    The key is "ORDER.CREATED", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-too ("order.created") [key is not "order.created"]
+    The key is "ORDER.CREATED", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✓ orders -> queue created-upper ("ORDER.CREATED") [key matches]
+    The key "ORDER.CREATED" is the binding key, letter for letter. The queue created-upper gets its first copy.
+
+queue created: not reached
+  The queue created did not get the message.
+  - The binding from orders to queue created ("order.created") was tried, and it did not match. The key is "ORDER.CREATED", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-too: not reached
+  The queue created-too did not get the message.
+  - The binding from orders to queue created-too ("order.created") was tried, and it did not match. The key is "ORDER.CREATED", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-upper: reached through ✓ orders -> queue created-upper ("ORDER.CREATED") [key matches]
+
+## publish 3 of 5: "m3" (step 10)
+broker: returned, no queue got it
+message: published to "orders" with key "order"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached orders, and none of its 3 bindings matched.
+
+exchange orders (direct): orders is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ orders -> queue created ("order.created") [key is not "order.created"]
+    The key is "order", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-too ("order.created") [key is not "order.created"]
+    The key is "order", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-upper ("ORDER.CREATED") [key is not "ORDER.CREATED"]
+    The key is "order", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+queue created: not reached
+  The queue created did not get the message.
+  - The binding from orders to queue created ("order.created") was tried, and it did not match. The key is "order", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-too: not reached
+  The queue created-too did not get the message.
+  - The binding from orders to queue created-too ("order.created") was tried, and it did not match. The key is "order", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-upper: not reached
+  The queue created-upper did not get the message.
+  - The binding from orders to queue created-upper ("ORDER.CREATED") was tried, and it did not match. The key is "order", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+## publish 4 of 5: "m4" (step 11)
+broker: returned, no queue got it
+message: published to "orders" with key "order.created.eu"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached orders, and none of its 3 bindings matched.
+
+exchange orders (direct): orders is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ orders -> queue created ("order.created") [key is not "order.created"]
+    The key is "order.created.eu", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-too ("order.created") [key is not "order.created"]
+    The key is "order.created.eu", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-upper ("ORDER.CREATED") [key is not "ORDER.CREATED"]
+    The key is "order.created.eu", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+queue created: not reached
+  The queue created did not get the message.
+  - The binding from orders to queue created ("order.created") was tried, and it did not match. The key is "order.created.eu", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-too: not reached
+  The queue created-too did not get the message.
+  - The binding from orders to queue created-too ("order.created") was tried, and it did not match. The key is "order.created.eu", and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-upper: not reached
+  The queue created-upper did not get the message.
+  - The binding from orders to queue created-upper ("ORDER.CREATED") was tried, and it did not match. The key is "order.created.eu", and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+## publish 5 of 5: "m5" (step 12)
+broker: returned, no queue got it
+message: published to "orders" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached orders, and none of its 3 bindings matched.
+
+exchange orders (direct): orders is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ orders -> queue created ("order.created") [key is not "order.created"]
+    The key is the empty key, and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-too ("order.created") [key is not "order.created"]
+    The key is the empty key, and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+  ✗ orders -> queue created-upper ("ORDER.CREATED") [key is not "ORDER.CREATED"]
+    The key is the empty key, and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.
+
+queue created: not reached
+  The queue created did not get the message.
+  - The binding from orders to queue created ("order.created") was tried, and it did not match. The key is the empty key, and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-too: not reached
+  The queue created-too did not get the message.
+  - The binding from orders to queue created-too ("order.created") was tried, and it did not match. The key is the empty key, and this binding wants "order.created": a direct exchange compares the whole key, letter for letter.
+
+queue created-upper: not reached
+  The queue created-upper did not get the message.
+  - The binding from orders to queue created-upper ("ORDER.CREATED") was tried, and it did not match. The key is the empty key, and this binding wants "ORDER.CREATED": a direct exchange compares the whole key, letter for letter.

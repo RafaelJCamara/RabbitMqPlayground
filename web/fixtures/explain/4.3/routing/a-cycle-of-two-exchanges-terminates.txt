@@ -1,0 +1,50 @@
+# routing/a-cycle-of-two-exchanges-terminates
+# Two exchanges that are bound to each other pass a message on once and stop, whichever one is published to (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 2: "m1" (step 9)
+broker: reached qa, qb
+message: published to "a" with the empty key
+outcome: routed
+reached: qa, qb
+summary: Reached qa and qb.
+
+exchange a (fanout): a is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ a -> exchange b (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange b.
+    exchange b (fanout): b is a fanout exchange, and the message came to it from a. 2 of its 2 bindings matched.
+      ✓ b -> exchange a (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange a had been reached already, and an exchange is visited once.
+      ✓ b -> queue qb (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue qb gets its first copy.
+  ✓ a -> queue qa (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue qa gets its first copy.
+
+queue qa: reached through ✓ a -> queue qa (any key) [fanout: always matches]
+
+queue qb: reached through ✓ a -> exchange b (any key) [fanout: always matches] ; ✓ b -> queue qb (any key) [fanout: always matches]
+
+## publish 2 of 2: "m2" (step 10)
+broker: reached qa, qb
+message: published to "b" with the empty key
+outcome: routed
+reached: qb, qa
+summary: Reached qb and qa.
+
+exchange b (fanout): b is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ b -> exchange a (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange a.
+    exchange a (fanout): a is a fanout exchange, and the message came to it from b. 2 of its 2 bindings matched.
+      ✓ a -> exchange b (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange b had been reached already, and an exchange is visited once.
+      ✓ a -> queue qa (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue qa gets its first copy.
+  ✓ b -> queue qb (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue qb gets its first copy.
+
+queue qa: reached through ✓ b -> exchange a (any key) [fanout: always matches] ; ✓ a -> queue qa (any key) [fanout: always matches]
+
+queue qb: reached through ✓ b -> queue qb (any key) [fanout: always matches]

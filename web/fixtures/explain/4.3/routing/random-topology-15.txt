@@ -1,0 +1,221 @@
+# routing/random-topology-15
+# A random topology made from seed 15 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 12: "m1" (step 12)
+broker: returned, no queue got it
+message: published to the default exchange with key "nobody"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: the default exchange sends a message to the queue that is named by its key, and no queue is named "nobody".
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody". 0 of its 2 bindings matched.
+  ✗ the default exchange -> queue q1 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q1 is named "q1": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "nobody", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q1.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "nobody", and not to q2.
+
+## publish 2 of 12: "m2" (step 13)
+broker: returned, no queue got it
+message: published to "x1" with key "a", headers b=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 2 of its 2 bindings matched, but none of them led to a queue.
+
+exchange x1 (fanout): x1 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 3 of 12: "m3" (step 14)
+broker: reached q1, q2
+message: published to "x2" with key "c.b.a", headers a=1 x-c=2
+outcome: routed
+reached: q1, q2
+summary: Reached q1 and q2.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 5 of its 5 bindings matched.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (fanout): x1 is a fanout exchange, and the message came to it from x2. 2 of its 2 bindings matched.
+      ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+      ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q1 gets its first copy.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q1 had a copy already, and a queue gets one copy of a message however many bindings match.
+  ✓ x2 -> queue q2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q2 gets its first copy.
+
+queue q1: reached through ✓ x2 -> queue q1 (any key) [fanout: always matches]
+
+queue q2: reached through ✓ x2 -> queue q2 (any key) [fanout: always matches]
+
+## publish 4 of 12: "m4" (step 15)
+broker: returned, no queue got it
+message: published to "x1" with key "c"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 2 of its 2 bindings matched, but none of them led to a queue.
+
+exchange x1 (fanout): x1 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 5 of 12: "m5" (step 16)
+broker: reached q1, q2
+message: published to "x2" with key "a", headers b=true
+outcome: routed
+reached: q1, q2
+summary: Reached q1 and q2.
+
+exchange x2 (fanout): x2 is a fanout exchange, and the message was published to it. 5 of its 5 bindings matched.
+  ✓ x2 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x1.
+    exchange x1 (fanout): x1 is a fanout exchange, and the message came to it from x2. 2 of its 2 bindings matched.
+      ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+      ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q1 gets its first copy.
+  ✓ x2 -> exchange x2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x2 had been reached already, and an exchange is visited once.
+  ✓ x2 -> queue q1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q1 had a copy already, and a queue gets one copy of a message however many bindings match.
+  ✓ x2 -> queue q2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q2 gets its first copy.
+
+queue q1: reached through ✓ x2 -> queue q1 (any key) [fanout: always matches]
+
+queue q2: reached through ✓ x2 -> queue q2 (any key) [fanout: always matches]
+
+## publish 6 of 12: "m6" (step 17)
+broker: returned, no queue got it
+message: published to "x1" with the empty key, headers b="1" x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 2 of its 2 bindings matched, but none of them led to a queue.
+
+exchange x1 (fanout): x1 is a fanout exchange, and the message was published to it. 2 of its 2 bindings matched.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+  ✓ x1 -> exchange x1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x1 had been reached already, and an exchange is visited once.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x2 is bound to queue q1 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x2 is given above, where it was first met.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - The exchange x2 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+## publish 7 of 12: "m7" (step 18)
+broker: reached q1
+message: published to the default exchange with key "q1"
+outcome: routed
+reached: q1
+summary: Reached q1.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q1". 1 of its 2 bindings matched.
+  ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+    The key is "q1", and the default exchange sends a message to the queue that has that name: q1. The queue q1 gets its first copy.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: reached through ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q2.
+
+## publish 8 of 12: "m8" (step 19)
+broker: reached q1
+message: published to the default exchange with key "q1"
+outcome: routed
+reached: q1
+summary: Reached q1.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q1". 1 of its 2 bindings matched.
+  ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+    The key is "q1", and the default exchange sends a message to the queue that has that name: q1. The queue q1 gets its first copy.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "q1", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: reached through ✓ the default exchange -> queue q1 (the queue that is named by the key) [named by the key]
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q1", and not to q2.
+
+## publish 9 of 12: "m9" (step 20)
+broker: reached q2
+message: published to the default exchange with key "q2"
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+## publish 10 of 12: "m10" (step 21)
+broker: returned, no queue got it
+message: published to "x1" with the empty key, headers a=true x-c="1"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 2 of its 2 bindings matched, but none of them led to a queue.
+
+## publish 11 of 12: "m11" (step 22)
+broker: reached q1, q2
+message: published to "x2" with key "c.c", headers a=1.0 x-c=2
+outcome: routed
+reached: q1, q2
+summary: Reached q1 and q2.
+
+## publish 12 of 12: "m12" (step 23)
+broker: returned, no queue got it
+message: published to "x1" with the empty key, headers x-c="1"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and 2 of its 2 bindings matched, but none of them led to a queue.

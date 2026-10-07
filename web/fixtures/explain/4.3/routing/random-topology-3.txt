@@ -1,0 +1,274 @@
+# routing/random-topology-3
+# A random topology made from seed 3 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 11: "m1" (step 16)
+broker: returned, no queue got it
+message: published to "x3" with key "c.c", headers b=true
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+exchange x3 (headers): x3 is a headers exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ x3 -> queue q3 (x-match=any a=1.0 x-c=1.0) [none of 1 hold]
+    x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+    ✗ The header a is missing from the message.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x3 to queue q3 (x-match=any a=1.0 x-c=1.0) was tried, and it did not match. x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - Nothing is bound to the exchange x1, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x1 is given above, where it was first met.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+## publish 2 of 11: "m2" (step 17)
+broker: returned, no queue got it
+message: published to "x1" with key "c.b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x1, and none of its 3 bindings matched.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x1 -> exchange x3 ("c") [key is not "c"]
+    The key is "c.b", and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 (the empty key) [key is not the empty key]
+    The key is "c.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  ✗ x1 -> queue q3 ("c") [key is not "c"]
+    The key is "c.b", and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - x3 is bound to queue q3 (x-match=any a=1.0 x-c=1.0), but the message never reached x3.
+    - The binding from x1 to exchange x3 ("c") was tried, and it did not match. The key is "c.b", and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+    - x4 is bound to exchange x3 (any key), but the message never reached x4.
+      - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - The binding from x1 to queue q3 (the empty key) was tried, and it did not match. The key is "c.b", and this binding wants the empty key: a direct exchange compares the whole key, letter for letter.
+  - The binding from x1 to queue q3 ("c") was tried, and it did not match. The key is "c.b", and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+## publish 3 of 11: "m3" (step 18)
+broker: reached q3
+message: published to "x1" with the empty key, headers x-c=1.0
+outcome: routed
+reached: q3
+summary: Reached q3.
+
+exchange x1 (direct): x1 is a direct exchange, and the message was published to it. 1 of its 3 bindings matched.
+  ✗ x1 -> exchange x3 ("c") [key is not "c"]
+    The key is the empty key, and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+  ✓ x1 -> queue q3 (the empty key) [key matches]
+    The key the empty key is the binding key, letter for letter. The queue q3 gets its first copy.
+  ✗ x1 -> queue q3 ("c") [key is not "c"]
+    The key is the empty key, and this binding wants "c": a direct exchange compares the whole key, letter for letter.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: reached through ✓ x1 -> queue q3 (the empty key) [key matches]
+
+## publish 4 of 11: "m4" (step 19)
+broker: returned, no queue got it
+message: published to "x3" with key "b.c.c", headers b=1 x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+exchange x3 (headers): x3 is a headers exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ x3 -> queue q3 (x-match=any a=1.0 x-c=1.0) [none of 1 hold]
+    x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+    ✗ The header a is missing from the message.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x3 to queue q3 (x-match=any a=1.0 x-c=1.0) was tried, and it did not match. x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - Nothing is bound to the exchange x1, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x1 is given above, where it was first met.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+## publish 5 of 11: "m5" (step 20)
+broker: returned, no queue got it
+message: published to "x3" with key "b.b.a", headers x-c=1.0
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+exchange x3 (headers): x3 is a headers exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ x3 -> queue q3 (x-match=any a=1.0 x-c=1.0) [none of 1 hold]
+    x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+    ✗ The header a is missing from the message.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x3 to queue q3 (x-match=any a=1.0 x-c=1.0) was tried, and it did not match. x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - Nothing is bound to the exchange x1, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x1 is given above, where it was first met.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+## publish 6 of 11: "m6" (step 21)
+broker: returned, no queue got it
+message: published to "x3" with key "c", headers b=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+exchange x3 (headers): x3 is a headers exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ x3 -> queue q3 (x-match=any a=1.0 x-c=1.0) [none of 1 hold]
+    x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+    ✗ The header a is missing from the message.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - Nothing is bound to the queue q1, so no message can get there by a binding.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - x4 is bound to queue q2 (any key), but the message never reached x4.
+    - Nothing is bound to the exchange x4, so nothing leads into it and the message cannot reach it.
+  - x2 is bound to queue q2 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The binding from x3 to queue q3 (x-match=any a=1.0 x-c=1.0) was tried, and it did not match. x-match=any: at least one condition has to hold, and the one that counts does not. 1 argument starts with "x-" and is not counted.
+  - x1 is bound to queue q3 (the empty key), but the message never reached x1.
+    - Nothing is bound to the exchange x1, so nothing leads into it and the message cannot reach it.
+  - Why the message did not reach the exchange x1 is given above, where it was first met.
+  - x2 is bound to queue q3 (any key), but the message never reached x2.
+    - Nothing is bound to the exchange x2, so nothing leads into it and the message cannot reach it.
+
+## publish 7 of 11: "m7" (step 22)
+broker: reached q3
+message: published to the default exchange with key "q3"
+outcome: routed
+reached: q3
+summary: Reached q3.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q3". 1 of its 3 bindings matched.
+  ✗ the default exchange -> queue q1 (the queue that is named by the key) [not named by the key]
+    The key is "q3", and the queue q1 is named "q1": the default exchange only sends a message to the queue that is named by its key.
+  ✗ the default exchange -> queue q2 (the queue that is named by the key) [not named by the key]
+    The key is "q3", and the queue q2 is named "q2": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue q3 (the queue that is named by the key) [named by the key]
+    The key is "q3", and the default exchange sends a message to the queue that has that name: q3. The queue q3 gets its first copy.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q3", and not to q1.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q3", and not to q2.
+
+queue q3: reached through ✓ the default exchange -> queue q3 (the queue that is named by the key) [named by the key]
+
+## publish 8 of 11: "m8" (step 23)
+broker: reached q2
+message: published to the default exchange with key "q2"
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+the default exchange: The message was published to the default exchange, which sends it to the queue that is named by its key, "q2". 1 of its 3 bindings matched.
+  ✗ the default exchange -> queue q1 (the queue that is named by the key) [not named by the key]
+    The key is "q2", and the queue q1 is named "q1": the default exchange only sends a message to the queue that is named by its key.
+  ✓ the default exchange -> queue q2 (the queue that is named by the key) [named by the key]
+    The key is "q2", and the default exchange sends a message to the queue that has that name: q2. The queue q2 gets its first copy.
+  ✗ the default exchange -> queue q3 (the queue that is named by the key) [not named by the key]
+    The key is "q2", and the queue q3 is named "q3": the default exchange only sends a message to the queue that is named by its key.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q2", and not to q1.
+
+queue q2: reached through ✓ the default exchange -> queue q2 (the queue that is named by the key) [named by the key]
+
+queue q3: not reached
+  The queue q3 did not get the message.
+  - The message was published to the default exchange, which sends it to the queue that is named by its key, "q2", and not to q3.
+
+## publish 9 of 11: "m9" (step 24)
+broker: returned, no queue got it
+message: published to "x3" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+## publish 10 of 11: "m10" (step 25)
+broker: returned, no queue got it
+message: published to "x3" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x3, and its only binding did not match.
+
+## publish 11 of 11: "m11" (step 26)
+broker: reached q3
+message: published to "x1" with key "c"
+outcome: routed
+reached: q3
+summary: Reached q3.

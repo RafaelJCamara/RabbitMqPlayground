@@ -1,0 +1,746 @@
+# routing/topic-a-wildcard-inside-a-word-is-an-ordinary-character
+# A * or # is a wildcard only as a whole word: in a* it is an ordinary character (ADR-0008, rule 4)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 14: "k:a*" (step 22)
+broker: reached p:#.a*, p:a*
+message: published to "t" with key "a*"
+outcome: routed
+reached: p:a*, p:#.a*
+summary: Reached p:a* and p:#.a*.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 2 of its 10 bindings matched.
+  ✓ t -> queue p:a* ("a*") [matches]
+    The pattern "a*" is the key "a*", word for word. The queue p:a* gets its first copy.
+    pattern  a*
+    key      a* ✓
+  ✗ t -> queue p:*a ("*a") [only word is "a*", not "*a"]
+    The pattern "*a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "*a".
+    pattern  *a
+    key      a* ✗
+  ✗ t -> queue p:** ("**") [only word is "a*", not "**"]
+    The pattern "**" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "**".
+    pattern  **
+    key      a* ✗
+  ✗ t -> queue p:a# ("a#") [only word is "a*", not "a#"]
+    The pattern "a#" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a#".
+    pattern  a#
+    key      a* ✗
+  ✗ t -> queue p:#a ("#a") [only word is "a*", not "#a"]
+    The pattern "#a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "#a".
+    pattern  #a
+    key      a* ✗
+  ✗ t -> queue p:## ("##") [only word is "a*", not "##"]
+    The pattern "##" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "##".
+    pattern  ##
+    key      a* ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "a*", not "a"]
+    The pattern "a.b*" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+    pattern  a    | b*
+    key      a* ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "a*", not "*b"]
+    The pattern "*b.a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      a* ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [needs 2 words, has 1]
+    The pattern "a*.b" does not match the key "a*": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  a*   | b
+    key      a* ✓ | - ✗
+  ✓ t -> queue p:#.a* ("#.a*") [matches]
+    The pattern "#.a*" matches the key "a*": # took no words. The queue p:#.a* gets its first copy.
+    pattern  #   | a*
+    key      - ✓ | a* ✓
+
+queue p:a*: reached through ✓ t -> queue p:a* ("a*") [matches]
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "a*": the only word of the key is "a*", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "a*": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue p:#.a*: reached through ✓ t -> queue p:#.a* ("#.a*") [matches]
+
+## publish 2 of 14: "k:*a" (step 23)
+broker: reached p:*a
+message: published to "t" with key "*a"
+outcome: routed
+reached: p:*a
+summary: Reached p:*a.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "*a", not "a*"]
+    The pattern "a*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+    pattern  a*
+    key      *a ✗
+  ✓ t -> queue p:*a ("*a") [matches]
+    The pattern "*a" is the key "*a", word for word. The queue p:*a gets its first copy.
+    pattern  *a
+    key      *a ✓
+  ✗ t -> queue p:** ("**") [only word is "*a", not "**"]
+    The pattern "**" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "**".
+    pattern  **
+    key      *a ✗
+  ✗ t -> queue p:a# ("a#") [only word is "*a", not "a#"]
+    The pattern "a#" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a#".
+    pattern  a#
+    key      *a ✗
+  ✗ t -> queue p:#a ("#a") [only word is "*a", not "#a"]
+    The pattern "#a" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "#a".
+    pattern  #a
+    key      *a ✗
+  ✗ t -> queue p:## ("##") [only word is "*a", not "##"]
+    The pattern "##" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "##".
+    pattern  ##
+    key      *a ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "*a", not "a"]
+    The pattern "a.b*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a".
+    pattern  a    | b*
+    key      *a ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "*a", not "*b"]
+    The pattern "*b.a" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      *a ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "*a", not "a*"]
+    The pattern "a*.b" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      *a ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "*a", not "a*"]
+    The pattern "#.a*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | *a ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+
+queue p:*a: reached through ✓ t -> queue p:*a ("*a") [matches]
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "*a": the only word of the key is "*a", and the pattern asks for "a*".
+
+## publish 3 of 14: "k:**" (step 24)
+broker: reached p:**
+message: published to "t" with key "**"
+outcome: routed
+reached: p:**
+summary: Reached p:**.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "**", not "a*"]
+    The pattern "a*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+    pattern  a*
+    key      ** ✗
+  ✗ t -> queue p:*a ("*a") [only word is "**", not "*a"]
+    The pattern "*a" does not match the key "**": the only word of the key is "**", and the pattern asks for "*a".
+    pattern  *a
+    key      ** ✗
+  ✓ t -> queue p:** ("**") [matches]
+    The pattern "**" is the key "**", word for word. The queue p:** gets its first copy.
+    pattern  **
+    key      ** ✓
+  ✗ t -> queue p:a# ("a#") [only word is "**", not "a#"]
+    The pattern "a#" does not match the key "**": the only word of the key is "**", and the pattern asks for "a#".
+    pattern  a#
+    key      ** ✗
+  ✗ t -> queue p:#a ("#a") [only word is "**", not "#a"]
+    The pattern "#a" does not match the key "**": the only word of the key is "**", and the pattern asks for "#a".
+    pattern  #a
+    key      ** ✗
+  ✗ t -> queue p:## ("##") [only word is "**", not "##"]
+    The pattern "##" does not match the key "**": the only word of the key is "**", and the pattern asks for "##".
+    pattern  ##
+    key      ** ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "**", not "a"]
+    The pattern "a.b*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a".
+    pattern  a    | b*
+    key      ** ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "**", not "*b"]
+    The pattern "*b.a" does not match the key "**": the only word of the key is "**", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      ** ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "**", not "a*"]
+    The pattern "a*.b" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      ** ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "**", not "a*"]
+    The pattern "#.a*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | ** ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "**": the only word of the key is "**", and the pattern asks for "*a".
+
+queue p:**: reached through ✓ t -> queue p:** ("**") [matches]
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "**": the only word of the key is "**", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "**": the only word of the key is "**", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "**": the only word of the key is "**", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "**": the only word of the key is "**", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "**": the only word of the key is "**", and the pattern asks for "a*".
+
+## publish 4 of 14: "k:a#" (step 25)
+broker: reached p:a#
+message: published to "t" with key "a#"
+outcome: routed
+reached: p:a#
+summary: Reached p:a#.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "a#", not "a*"]
+    The pattern "a*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+    pattern  a*
+    key      a# ✗
+  ✗ t -> queue p:*a ("*a") [only word is "a#", not "*a"]
+    The pattern "*a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "*a".
+    pattern  *a
+    key      a# ✗
+  ✗ t -> queue p:** ("**") [only word is "a#", not "**"]
+    The pattern "**" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "**".
+    pattern  **
+    key      a# ✗
+  ✓ t -> queue p:a# ("a#") [matches]
+    The pattern "a#" is the key "a#", word for word. The queue p:a# gets its first copy.
+    pattern  a#
+    key      a# ✓
+  ✗ t -> queue p:#a ("#a") [only word is "a#", not "#a"]
+    The pattern "#a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "#a".
+    pattern  #a
+    key      a# ✗
+  ✗ t -> queue p:## ("##") [only word is "a#", not "##"]
+    The pattern "##" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "##".
+    pattern  ##
+    key      a# ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "a#", not "a"]
+    The pattern "a.b*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a".
+    pattern  a    | b*
+    key      a# ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "a#", not "*b"]
+    The pattern "*b.a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      a# ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "a#", not "a*"]
+    The pattern "a*.b" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      a# ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "a#", not "a*"]
+    The pattern "#.a*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | a# ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "**".
+
+queue p:a#: reached through ✓ t -> queue p:a# ("a#") [matches]
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "a#": the only word of the key is "a#", and the pattern asks for "a*".
+
+## publish 5 of 14: "k:#a" (step 26)
+broker: reached p:#a
+message: published to "t" with key "#a"
+outcome: routed
+reached: p:#a
+summary: Reached p:#a.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "#a", not "a*"]
+    The pattern "a*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+    pattern  a*
+    key      #a ✗
+  ✗ t -> queue p:*a ("*a") [only word is "#a", not "*a"]
+    The pattern "*a" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "*a".
+    pattern  *a
+    key      #a ✗
+  ✗ t -> queue p:** ("**") [only word is "#a", not "**"]
+    The pattern "**" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "**".
+    pattern  **
+    key      #a ✗
+  ✗ t -> queue p:a# ("a#") [only word is "#a", not "a#"]
+    The pattern "a#" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a#".
+    pattern  a#
+    key      #a ✗
+  ✓ t -> queue p:#a ("#a") [matches]
+    The pattern "#a" is the key "#a", word for word. The queue p:#a gets its first copy.
+    pattern  #a
+    key      #a ✓
+  ✗ t -> queue p:## ("##") [only word is "#a", not "##"]
+    The pattern "##" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "##".
+    pattern  ##
+    key      #a ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "#a", not "a"]
+    The pattern "a.b*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a".
+    pattern  a    | b*
+    key      #a ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "#a", not "*b"]
+    The pattern "*b.a" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      #a ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "#a", not "a*"]
+    The pattern "a*.b" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      #a ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "#a", not "a*"]
+    The pattern "#.a*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | #a ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a#".
+
+queue p:#a: reached through ✓ t -> queue p:#a ("#a") [matches]
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "#a": the only word of the key is "#a", and the pattern asks for "a*".
+
+## publish 6 of 14: "k:##" (step 27)
+broker: reached p:##
+message: published to "t" with key "##"
+outcome: routed
+reached: p:##
+summary: Reached p:##.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "##", not "a*"]
+    The pattern "a*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+    pattern  a*
+    key      ## ✗
+  ✗ t -> queue p:*a ("*a") [only word is "##", not "*a"]
+    The pattern "*a" does not match the key "##": the only word of the key is "##", and the pattern asks for "*a".
+    pattern  *a
+    key      ## ✗
+  ✗ t -> queue p:** ("**") [only word is "##", not "**"]
+    The pattern "**" does not match the key "##": the only word of the key is "##", and the pattern asks for "**".
+    pattern  **
+    key      ## ✗
+  ✗ t -> queue p:a# ("a#") [only word is "##", not "a#"]
+    The pattern "a#" does not match the key "##": the only word of the key is "##", and the pattern asks for "a#".
+    pattern  a#
+    key      ## ✗
+  ✗ t -> queue p:#a ("#a") [only word is "##", not "#a"]
+    The pattern "#a" does not match the key "##": the only word of the key is "##", and the pattern asks for "#a".
+    pattern  #a
+    key      ## ✗
+  ✓ t -> queue p:## ("##") [matches]
+    The pattern "##" is the key "##", word for word. The queue p:## gets its first copy.
+    pattern  ##
+    key      ## ✓
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "##", not "a"]
+    The pattern "a.b*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a".
+    pattern  a    | b*
+    key      ## ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "##", not "*b"]
+    The pattern "*b.a" does not match the key "##": the only word of the key is "##", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      ## ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "##", not "a*"]
+    The pattern "a*.b" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      ## ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "##", not "a*"]
+    The pattern "#.a*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | ## ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "##": the only word of the key is "##", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "##": the only word of the key is "##", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "##": the only word of the key is "##", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "##": the only word of the key is "##", and the pattern asks for "#a".
+
+queue p:##: reached through ✓ t -> queue p:## ("##") [matches]
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "##": the only word of the key is "##", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "##": the only word of the key is "##", and the pattern asks for "a*".
+
+## publish 7 of 14: "k:a" (step 28)
+broker: returned, no queue got it
+message: published to "t" with key "a"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and none of its 10 bindings matched.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 0 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "a", not "a*"]
+    The pattern "a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+    pattern  a*
+    key      a ✗
+  ✗ t -> queue p:*a ("*a") [only word is "a", not "*a"]
+    The pattern "*a" does not match the key "a": the only word of the key is "a", and the pattern asks for "*a".
+    pattern  *a
+    key      a ✗
+  ✗ t -> queue p:** ("**") [only word is "a", not "**"]
+    The pattern "**" does not match the key "a": the only word of the key is "a", and the pattern asks for "**".
+    pattern  **
+    key      a ✗
+  ✗ t -> queue p:a# ("a#") [only word is "a", not "a#"]
+    The pattern "a#" does not match the key "a": the only word of the key is "a", and the pattern asks for "a#".
+    pattern  a#
+    key      a ✗
+  ✗ t -> queue p:#a ("#a") [only word is "a", not "#a"]
+    The pattern "#a" does not match the key "a": the only word of the key is "a", and the pattern asks for "#a".
+    pattern  #a
+    key      a ✗
+  ✗ t -> queue p:## ("##") [only word is "a", not "##"]
+    The pattern "##" does not match the key "a": the only word of the key is "a", and the pattern asks for "##".
+    pattern  ##
+    key      a ✗
+  ✗ t -> queue p:a.b* ("a.b*") [needs 2 words, has 1]
+    The pattern "a.b*" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+    pattern  a   | b*
+    key      a ✓ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "a", not "*b"]
+    The pattern "*b.a" does not match the key "a": the only word of the key is "a", and the pattern asks for "*b".
+    pattern  *b  | a
+    key      a ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "a", not "a*"]
+    The pattern "a*.b" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+    pattern  a*  | b
+    key      a ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "a", not "a*"]
+    The pattern "#.a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | a ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "a": the only word of the key is "a", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "a": the only word of the key is "a", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "a": the only word of the key is "a", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "a": the only word of the key is "a", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "a": the only word of the key is "a", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "a": the pattern has 2 words, so the key needs 2, and it has 1.
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "a": the only word of the key is "a", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "a": the only word of the key is "a", and the pattern asks for "a*".
+
+## publish 8 of 14: "k:ab" (step 29)
+broker: returned, no queue got it
+message: published to "t" with key "ab"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and none of its 10 bindings matched.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 0 of its 10 bindings matched.
+  ✗ t -> queue p:a* ("a*") [only word is "ab", not "a*"]
+    The pattern "a*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+    pattern  a*
+    key      ab ✗
+  ✗ t -> queue p:*a ("*a") [only word is "ab", not "*a"]
+    The pattern "*a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "*a".
+    pattern  *a
+    key      ab ✗
+  ✗ t -> queue p:** ("**") [only word is "ab", not "**"]
+    The pattern "**" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "**".
+    pattern  **
+    key      ab ✗
+  ✗ t -> queue p:a# ("a#") [only word is "ab", not "a#"]
+    The pattern "a#" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a#".
+    pattern  a#
+    key      ab ✗
+  ✗ t -> queue p:#a ("#a") [only word is "ab", not "#a"]
+    The pattern "#a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "#a".
+    pattern  #a
+    key      ab ✗
+  ✗ t -> queue p:## ("##") [only word is "ab", not "##"]
+    The pattern "##" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "##".
+    pattern  ##
+    key      ab ✗
+  ✗ t -> queue p:a.b* ("a.b*") [only word is "ab", not "a"]
+    The pattern "a.b*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a".
+    pattern  a    | b*
+    key      ab ✗ | - ✗
+  ✗ t -> queue p:*b.a ("*b.a") [only word is "ab", not "*b"]
+    The pattern "*b.a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "*b".
+    pattern  *b   | a
+    key      ab ✗ | - ✗
+  ✗ t -> queue p:a*.b ("a*.b") [only word is "ab", not "a*"]
+    The pattern "a*.b" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+    pattern  a*   | b
+    key      ab ✗ | - ✗
+  ✗ t -> queue p:#.a* ("#.a*") [only word is "ab", not "a*"]
+    The pattern "#.a*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+    pattern  #   | a*
+    key      - ✓ | ab ✗
+
+queue p:a*: not reached
+  The queue p:a* did not get the message.
+  - The binding from t to queue p:a* ("a*") was tried, and it did not match. The pattern "a*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+
+queue p:*a: not reached
+  The queue p:*a did not get the message.
+  - The binding from t to queue p:*a ("*a") was tried, and it did not match. The pattern "*a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "*a".
+
+queue p:**: not reached
+  The queue p:** did not get the message.
+  - The binding from t to queue p:** ("**") was tried, and it did not match. The pattern "**" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "**".
+
+queue p:a#: not reached
+  The queue p:a# did not get the message.
+  - The binding from t to queue p:a# ("a#") was tried, and it did not match. The pattern "a#" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a#".
+
+queue p:#a: not reached
+  The queue p:#a did not get the message.
+  - The binding from t to queue p:#a ("#a") was tried, and it did not match. The pattern "#a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "#a".
+
+queue p:##: not reached
+  The queue p:## did not get the message.
+  - The binding from t to queue p:## ("##") was tried, and it did not match. The pattern "##" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "##".
+
+queue p:a.b*: not reached
+  The queue p:a.b* did not get the message.
+  - The binding from t to queue p:a.b* ("a.b*") was tried, and it did not match. The pattern "a.b*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a".
+
+queue p:*b.a: not reached
+  The queue p:*b.a did not get the message.
+  - The binding from t to queue p:*b.a ("*b.a") was tried, and it did not match. The pattern "*b.a" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "*b".
+
+queue p:a*.b: not reached
+  The queue p:a*.b did not get the message.
+  - The binding from t to queue p:a*.b ("a*.b") was tried, and it did not match. The pattern "a*.b" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+
+queue p:#.a*: not reached
+  The queue p:#.a* did not get the message.
+  - The binding from t to queue p:#.a* ("#.a*") was tried, and it did not match. The pattern "#.a*" does not match the key "ab": the only word of the key is "ab", and the pattern asks for "a*".
+
+## publish 9 of 14: "k:aa" (step 30)
+broker: returned, no queue got it
+message: published to "t" with key "aa"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and none of its 10 bindings matched.
+
+## publish 10 of 14: "k:a.b*" (step 31)
+broker: reached p:a.b*
+message: published to "t" with key "a.b*"
+outcome: routed
+reached: p:a.b*
+summary: Reached p:a.b*.
+
+## publish 11 of 14: "k:x.a*" (step 32)
+broker: reached p:#.a*
+message: published to "t" with key "x.a*"
+outcome: routed
+reached: p:#.a*
+summary: Reached p:#.a*.
+
+## publish 12 of 14: "k:ba" (step 33)
+broker: returned, no queue got it
+message: published to "t" with key "ba"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and none of its 10 bindings matched.
+
+## publish 13 of 14: "k:a.bb" (step 34)
+broker: returned, no queue got it
+message: published to "t" with key "a.bb"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and none of its 10 bindings matched.
+
+## publish 14 of 14: "k:a*.b" (step 35)
+broker: reached p:a*.b
+message: published to "t" with key "a*.b"
+outcome: routed
+reached: p:a*.b
+summary: Reached p:a*.b.

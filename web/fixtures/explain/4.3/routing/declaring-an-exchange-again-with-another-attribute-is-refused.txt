@@ -1,0 +1,34 @@
+# routing/declaring-an-exchange-again-with-another-attribute-is-refused
+# Declaring an exchange that is there with another type, or another durable, auto-delete or internal flag, is refused with 406 and the attribute that differs, and the exchange is as it was (ADR-0051)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 2: "m1" (step 8)
+broker: returned, no queue got it
+message: published to "e" with key "a.b"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached e, and its only binding did not match.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ e -> queue inbox ("a.*") [key is not "a.*"]
+    The key is "a.b", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+queue inbox: not reached
+  The queue inbox did not get the message.
+  - The binding from e to queue inbox ("a.*") was tried, and it did not match. The key is "a.b", and this binding wants "a.*": a direct exchange compares the whole key, letter for letter.
+
+## publish 2 of 2: "m2" (step 9)
+broker: reached inbox
+message: published to "e" with key "a.*"
+outcome: routed
+reached: inbox
+summary: Reached inbox.
+
+exchange e (direct): e is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ e -> queue inbox ("a.*") [key matches]
+    The key "a.*" is the binding key, letter for letter. The queue inbox gets its first copy.
+
+queue inbox: reached through ✓ e -> queue inbox ("a.*") [key matches]

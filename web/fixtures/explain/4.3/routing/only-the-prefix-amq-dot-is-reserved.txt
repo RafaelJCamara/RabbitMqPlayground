@@ -1,0 +1,75 @@
+# routing/only-the-prefix-amq-dot-is-reserved
+# Only a name that starts with amq. in lower case is reserved: amq, AMQ.x and amqp.x are ordinary names (ADR-0008, rule 9)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "m1" (step 10)
+broker: reached amq
+message: published to "amq" with the empty key
+outcome: routed
+reached: amq
+summary: Reached amq.
+
+exchange amq (fanout): amq is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ amq -> queue amq (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue amq gets its first copy.
+
+queue amq: reached through ✓ amq -> queue amq (any key) [fanout: always matches]
+
+queue AMQ.upper: not reached
+  The queue AMQ.upper did not get the message.
+  - AMQ.upper is bound to queue AMQ.upper (any key), but the message never reached AMQ.upper.
+    - Nothing is bound to the exchange AMQ.upper, so nothing leads into it and the message cannot reach it.
+
+queue amqp.x: not reached
+  The queue amqp.x did not get the message.
+  - amqp.x is bound to queue amqp.x (any key), but the message never reached amqp.x.
+    - Nothing is bound to the exchange amqp.x, so nothing leads into it and the message cannot reach it.
+
+## publish 2 of 3: "m2" (step 11)
+broker: reached AMQ.upper
+message: published to "AMQ.upper" with the empty key
+outcome: routed
+reached: AMQ.upper
+summary: Reached AMQ.upper.
+
+exchange AMQ.upper (fanout): AMQ.upper is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ AMQ.upper -> queue AMQ.upper (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue AMQ.upper gets its first copy.
+
+queue amq: not reached
+  The queue amq did not get the message.
+  - amq is bound to queue amq (any key), but the message never reached amq.
+    - Nothing is bound to the exchange amq, so nothing leads into it and the message cannot reach it.
+
+queue AMQ.upper: reached through ✓ AMQ.upper -> queue AMQ.upper (any key) [fanout: always matches]
+
+queue amqp.x: not reached
+  The queue amqp.x did not get the message.
+  - amqp.x is bound to queue amqp.x (any key), but the message never reached amqp.x.
+    - Nothing is bound to the exchange amqp.x, so nothing leads into it and the message cannot reach it.
+
+## publish 3 of 3: "m3" (step 12)
+broker: reached amqp.x
+message: published to "amqp.x" with the empty key
+outcome: routed
+reached: amqp.x
+summary: Reached amqp.x.
+
+exchange amqp.x (fanout): amqp.x is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ amqp.x -> queue amqp.x (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue amqp.x gets its first copy.
+
+queue amq: not reached
+  The queue amq did not get the message.
+  - amq is bound to queue amq (any key), but the message never reached amq.
+    - Nothing is bound to the exchange amq, so nothing leads into it and the message cannot reach it.
+
+queue AMQ.upper: not reached
+  The queue AMQ.upper did not get the message.
+  - AMQ.upper is bound to queue AMQ.upper (any key), but the message never reached AMQ.upper.
+    - Nothing is bound to the exchange AMQ.upper, so nothing leads into it and the message cannot reach it.
+
+queue amqp.x: reached through ✓ amqp.x -> queue amqp.x (any key) [fanout: always matches]

@@ -1,0 +1,1548 @@
+# routing/headers-every-type-and-width-of-a-value-against-every-other
+# A binding value against a message value, for strings, integers of every width, floats and booleans: 1 is not "1", is not 1.0, is not true, and 1 is 1 whatever its width (ADR-0009)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 26: "message string 1" (step 52)
+broker: reached binding exists, binding string 1
+message: published to "h" with the empty key, headers n="1"
+outcome: routed
+reached: binding string 1, binding exists
+summary: Reached binding string 1 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 25 bindings matched.
+  ✓ h -> queue binding string 1 (x-match=all n="1") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding string 1 gets its first copy.
+    ✓ The header n is "1", as the binding asks.
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", and the binding asks for "2".
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", and the binding asks for "".
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", and the binding asks for "true".
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", and the binding asks for "1.0".
+  ✗ h -> queue binding int 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int8 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int16 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 2, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 0, an integer: values of different types are never equal.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for -1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 128, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 2147483648, an integer: values of different types are never equal.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: reached through ✓ h -> queue binding string 1 (x-match=all n="1") [1 of 1 hold]
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: not reached
+  The queue binding int 1 did not get the message.
+  - The binding from h to queue binding int 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int8 1: not reached
+  The queue binding int8 1 did not get the message.
+  - The binding from h to queue binding int8 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int16 1: not reached
+  The queue binding int16 1 did not get the message.
+  - The binding from h to queue binding int16 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 1: not reached
+  The queue binding int32 1 did not get the message.
+  - The binding from h to queue binding int32 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 1: not reached
+  The queue binding int64 1 did not get the message.
+  - The binding from h to queue binding int64 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 2 of 26: "message string 2" (step 53)
+broker: reached binding exists, binding string 2
+message: published to "h" with the empty key, headers n="2"
+outcome: routed
+reached: binding string 2, binding exists
+summary: Reached binding string 2 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", and the binding asks for "1".
+  ✓ h -> queue binding string 2 (x-match=all n="2") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding string 2 gets its first copy.
+    ✓ The header n is "2", as the binding asks.
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", and the binding asks for "".
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", and the binding asks for "true".
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", and the binding asks for "1.0".
+  ✗ h -> queue binding int 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int8 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int16 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 2, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 0, an integer: values of different types are never equal.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for -1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 128, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 2147483648, an integer: values of different types are never equal.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "2", a string, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: reached through ✓ h -> queue binding string 2 (x-match=all n="2") [1 of 1 hold]
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: not reached
+  The queue binding int 1 did not get the message.
+  - The binding from h to queue binding int 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int8 1: not reached
+  The queue binding int8 1 did not get the message.
+  - The binding from h to queue binding int8 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int16 1: not reached
+  The queue binding int16 1 did not get the message.
+  - The binding from h to queue binding int16 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 1: not reached
+  The queue binding int32 1 did not get the message.
+  - The binding from h to queue binding int32 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 1: not reached
+  The queue binding int64 1 did not get the message.
+  - The binding from h to queue binding int64 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 3 of 26: "message string empty" (step 54)
+broker: reached binding exists, binding string empty
+message: published to "h" with the empty key, headers n=""
+outcome: routed
+reached: binding string empty, binding exists
+summary: Reached binding string empty and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", and the binding asks for "1".
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", and the binding asks for "2".
+  ✓ h -> queue binding string empty (x-match=all n="") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding string empty gets its first copy.
+    ✓ The header n is "", as the binding asks.
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", and the binding asks for "true".
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", and the binding asks for "1.0".
+  ✗ h -> queue binding int 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int8 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int16 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 2, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 0, an integer: values of different types are never equal.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for -1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 128, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 2147483648, an integer: values of different types are never equal.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "", a string, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: reached through ✓ h -> queue binding string empty (x-match=all n="") [1 of 1 hold]
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: not reached
+  The queue binding int 1 did not get the message.
+  - The binding from h to queue binding int 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int8 1: not reached
+  The queue binding int8 1 did not get the message.
+  - The binding from h to queue binding int8 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int16 1: not reached
+  The queue binding int16 1 did not get the message.
+  - The binding from h to queue binding int16 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 1: not reached
+  The queue binding int32 1 did not get the message.
+  - The binding from h to queue binding int32 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 1: not reached
+  The queue binding int64 1 did not get the message.
+  - The binding from h to queue binding int64 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 4 of 26: "message string true" (step 55)
+broker: reached binding exists, binding string true
+message: published to "h" with the empty key, headers n="true"
+outcome: routed
+reached: binding string true, binding exists
+summary: Reached binding string true and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", and the binding asks for "1".
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", and the binding asks for "2".
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", and the binding asks for "".
+  ✓ h -> queue binding string true (x-match=all n="true") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding string true gets its first copy.
+    ✓ The header n is "true", as the binding asks.
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", and the binding asks for "1.0".
+  ✗ h -> queue binding int 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int8 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int16 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 2, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 0, an integer: values of different types are never equal.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for -1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 128, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 2147483648, an integer: values of different types are never equal.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "true", a string, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: reached through ✓ h -> queue binding string true (x-match=all n="true") [1 of 1 hold]
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: not reached
+  The queue binding int 1 did not get the message.
+  - The binding from h to queue binding int 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int8 1: not reached
+  The queue binding int8 1 did not get the message.
+  - The binding from h to queue binding int8 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int16 1: not reached
+  The queue binding int16 1 did not get the message.
+  - The binding from h to queue binding int16 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 1: not reached
+  The queue binding int32 1 did not get the message.
+  - The binding from h to queue binding int32 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 1: not reached
+  The queue binding int64 1 did not get the message.
+  - The binding from h to queue binding int64 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 5 of 26: "message string 1.0" (step 56)
+broker: reached binding exists, binding string 1.0
+message: published to "h" with the empty key, headers n="1.0"
+outcome: routed
+reached: binding string 1.0, binding exists
+summary: Reached binding string 1.0 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 2 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", and the binding asks for "1".
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", and the binding asks for "2".
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", and the binding asks for "".
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", and the binding asks for "true".
+  ✓ h -> queue binding string 1.0 (x-match=all n="1.0") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding string 1.0 gets its first copy.
+    ✓ The header n is "1.0", as the binding asks.
+  ✗ h -> queue binding int 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int8 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int16 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 1 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 2, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 0, an integer: values of different types are never equal.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for -1, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 128, an integer: values of different types are never equal.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 70000, an integer: values of different types are never equal.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 2147483648, an integer: values of different types are never equal.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1.0", a string, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: reached through ✓ h -> queue binding string 1.0 (x-match=all n="1.0") [1 of 1 hold]
+
+queue binding int 1: not reached
+  The queue binding int 1 did not get the message.
+  - The binding from h to queue binding int 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int8 1: not reached
+  The queue binding int8 1 did not get the message.
+  - The binding from h to queue binding int8 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int16 1: not reached
+  The queue binding int16 1 did not get the message.
+  - The binding from h to queue binding int16 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 1: not reached
+  The queue binding int32 1 did not get the message.
+  - The binding from h to queue binding int32 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 1: not reached
+  The queue binding int64 1 did not get the message.
+  - The binding from h to queue binding int64 1 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 6 of 26: "message int 1" (step 57)
+broker: reached binding exists, binding int 1, binding int16 1, binding int32 1, binding int64 1, binding int8 1
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1, binding exists
+summary: Reached binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 6 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1", a string: values of different types are never equal.
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "2", a string: values of different types are never equal.
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "", a string: values of different types are never equal.
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "true", a string: values of different types are never equal.
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1.0", a string: values of different types are never equal.
+  ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int8 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int16 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int32 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int64 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 0.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for -1.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 128.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2147483648.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: reached through ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int8 1: reached through ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int16 1: reached through ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int32 1: reached through ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int64 1: reached through ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 7 of 26: "message int8 1" (step 58)
+broker: reached binding exists, binding int 1, binding int16 1, binding int32 1, binding int64 1, binding int8 1
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1, binding exists
+summary: Reached binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 6 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1", a string: values of different types are never equal.
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "2", a string: values of different types are never equal.
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "", a string: values of different types are never equal.
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "true", a string: values of different types are never equal.
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1.0", a string: values of different types are never equal.
+  ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int8 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int16 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int32 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int64 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 0.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for -1.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 128.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2147483648.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: reached through ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int8 1: reached through ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int16 1: reached through ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int32 1: reached through ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int64 1: reached through ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 8 of 26: "message int16 1" (step 59)
+broker: reached binding exists, binding int 1, binding int16 1, binding int32 1, binding int64 1, binding int8 1
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1, binding exists
+summary: Reached binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1 and binding exists.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 6 of its 25 bindings matched.
+  ✗ h -> queue binding string 1 (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1", a string: values of different types are never equal.
+  ✗ h -> queue binding string 2 (x-match=all n="2") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "2", a string: values of different types are never equal.
+  ✗ h -> queue binding string empty (x-match=all n="") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "", a string: values of different types are never equal.
+  ✗ h -> queue binding string true (x-match=all n="true") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "true", a string: values of different types are never equal.
+  ✗ h -> queue binding string 1.0 (x-match=all n="1.0") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1.0", a string: values of different types are never equal.
+  ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int8 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int16 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int32 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding int64 1 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ h -> queue binding int 2 (x-match=all n=2) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2.
+  ✗ h -> queue binding int 0 (x-match=all n=0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 0.
+  ✗ h -> queue binding int -1 (x-match=all n=-1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for -1.
+  ✗ h -> queue binding int 128 (x-match=all n=128) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 128.
+  ✗ h -> queue binding int 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int32 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 70000 (x-match=all n=70000) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 70000.
+  ✗ h -> queue binding int64 2147483648 (x-match=all n=2147483648) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, and the binding asks for 2147483648.
+  ✗ h -> queue binding float 1 (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float 1.5 (x-match=all n=1.5) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.5, a float: values of different types are never equal.
+  ✗ h -> queue binding float 0 (x-match=all n=0.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 0.0, a float: values of different types are never equal.
+  ✗ h -> queue binding float -1 (x-match=all n=-1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for -1.0, a float: values of different types are never equal.
+  ✗ h -> queue binding boolean true (x-match=all n=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for true, a boolean: values of different types are never equal.
+  ✗ h -> queue binding boolean false (x-match=all n=false) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for false, a boolean: values of different types are never equal.
+  ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue binding exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+
+queue binding string 1: not reached
+  The queue binding string 1 did not get the message.
+  - The binding from h to queue binding string 1 (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 2: not reached
+  The queue binding string 2 did not get the message.
+  - The binding from h to queue binding string 2 (x-match=all n="2") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string empty: not reached
+  The queue binding string empty did not get the message.
+  - The binding from h to queue binding string empty (x-match=all n="") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string true: not reached
+  The queue binding string true did not get the message.
+  - The binding from h to queue binding string true (x-match=all n="true") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding string 1.0: not reached
+  The queue binding string 1.0 did not get the message.
+  - The binding from h to queue binding string 1.0 (x-match=all n="1.0") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 1: reached through ✓ h -> queue binding int 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int8 1: reached through ✓ h -> queue binding int8 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int16 1: reached through ✓ h -> queue binding int16 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int32 1: reached through ✓ h -> queue binding int32 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int64 1: reached through ✓ h -> queue binding int64 1 (x-match=all n=1) [1 of 1 hold]
+
+queue binding int 2: not reached
+  The queue binding int 2 did not get the message.
+  - The binding from h to queue binding int 2 (x-match=all n=2) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 0: not reached
+  The queue binding int 0 did not get the message.
+  - The binding from h to queue binding int 0 (x-match=all n=0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int -1: not reached
+  The queue binding int -1 did not get the message.
+  - The binding from h to queue binding int -1 (x-match=all n=-1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 128: not reached
+  The queue binding int 128 did not get the message.
+  - The binding from h to queue binding int 128 (x-match=all n=128) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int 70000: not reached
+  The queue binding int 70000 did not get the message.
+  - The binding from h to queue binding int 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int32 70000: not reached
+  The queue binding int32 70000 did not get the message.
+  - The binding from h to queue binding int32 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 70000: not reached
+  The queue binding int64 70000 did not get the message.
+  - The binding from h to queue binding int64 70000 (x-match=all n=70000) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding int64 2147483648: not reached
+  The queue binding int64 2147483648 did not get the message.
+  - The binding from h to queue binding int64 2147483648 (x-match=all n=2147483648) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1: not reached
+  The queue binding float 1 did not get the message.
+  - The binding from h to queue binding float 1 (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 1.5: not reached
+  The queue binding float 1.5 did not get the message.
+  - The binding from h to queue binding float 1.5 (x-match=all n=1.5) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float 0: not reached
+  The queue binding float 0 did not get the message.
+  - The binding from h to queue binding float 0 (x-match=all n=0.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding float -1: not reached
+  The queue binding float -1 did not get the message.
+  - The binding from h to queue binding float -1 (x-match=all n=-1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean true: not reached
+  The queue binding boolean true did not get the message.
+  - The binding from h to queue binding boolean true (x-match=all n=true) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding boolean false: not reached
+  The queue binding boolean false did not get the message.
+  - The binding from h to queue binding boolean false (x-match=all n=false) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue binding exists: reached through ✓ h -> queue binding exists (x-match=all exists(n)) [1 of 1 hold]
+
+## publish 9 of 26: "message int32 1" (step 60)
+broker: reached binding exists, binding int 1, binding int16 1, binding int32 1, binding int64 1, binding int8 1
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1, binding exists
+summary: Reached binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1 and binding exists.
+
+## publish 10 of 26: "message int64 1" (step 61)
+broker: reached binding exists, binding int 1, binding int16 1, binding int32 1, binding int64 1, binding int8 1
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1, binding exists
+summary: Reached binding int 1, binding int8 1, binding int16 1, binding int32 1, binding int64 1 and binding exists.
+
+## publish 11 of 26: "message int 2" (step 62)
+broker: reached binding exists, binding int 2
+message: published to "h" with the empty key, headers n=2
+outcome: routed
+reached: binding int 2, binding exists
+summary: Reached binding int 2 and binding exists.
+
+## publish 12 of 26: "message int 0" (step 63)
+broker: reached binding exists, binding int 0
+message: published to "h" with the empty key, headers n=0
+outcome: routed
+reached: binding int 0, binding exists
+summary: Reached binding int 0 and binding exists.
+
+## publish 13 of 26: "message int -1" (step 64)
+broker: reached binding exists, binding int -1
+message: published to "h" with the empty key, headers n=-1
+outcome: routed
+reached: binding int -1, binding exists
+summary: Reached binding int -1 and binding exists.
+
+## publish 14 of 26: "message int 128" (step 65)
+broker: reached binding exists, binding int 128
+message: published to "h" with the empty key, headers n=128
+outcome: routed
+reached: binding int 128, binding exists
+summary: Reached binding int 128 and binding exists.
+
+## publish 15 of 26: "message int 70000" (step 66)
+broker: reached binding exists, binding int 70000, binding int32 70000, binding int64 70000
+message: published to "h" with the empty key, headers n=70000
+outcome: routed
+reached: binding int 70000, binding int32 70000, binding int64 70000, binding exists
+summary: Reached binding int 70000, binding int32 70000, binding int64 70000 and binding exists.
+
+## publish 16 of 26: "message int32 70000" (step 67)
+broker: reached binding exists, binding int 70000, binding int32 70000, binding int64 70000
+message: published to "h" with the empty key, headers n=70000
+outcome: routed
+reached: binding int 70000, binding int32 70000, binding int64 70000, binding exists
+summary: Reached binding int 70000, binding int32 70000, binding int64 70000 and binding exists.
+
+## publish 17 of 26: "message int64 70000" (step 68)
+broker: reached binding exists, binding int 70000, binding int32 70000, binding int64 70000
+message: published to "h" with the empty key, headers n=70000
+outcome: routed
+reached: binding int 70000, binding int32 70000, binding int64 70000, binding exists
+summary: Reached binding int 70000, binding int32 70000, binding int64 70000 and binding exists.
+
+## publish 18 of 26: "message int64 2147483648" (step 69)
+broker: reached binding exists, binding int64 2147483648
+message: published to "h" with the empty key, headers n=2147483648
+outcome: routed
+reached: binding int64 2147483648, binding exists
+summary: Reached binding int64 2147483648 and binding exists.
+
+## publish 19 of 26: "message float 1" (step 70)
+broker: reached binding exists, binding float 1
+message: published to "h" with the empty key, headers n=1.0
+outcome: routed
+reached: binding float 1, binding exists
+summary: Reached binding float 1 and binding exists.
+
+## publish 20 of 26: "message float 1.5" (step 71)
+broker: reached binding exists, binding float 1.5
+message: published to "h" with the empty key, headers n=1.5
+outcome: routed
+reached: binding float 1.5, binding exists
+summary: Reached binding float 1.5 and binding exists.
+
+## publish 21 of 26: "message float 0" (step 72)
+broker: reached binding exists, binding float 0
+message: published to "h" with the empty key, headers n=0.0
+outcome: routed
+reached: binding float 0, binding exists
+summary: Reached binding float 0 and binding exists.
+
+## publish 22 of 26: "message float -1" (step 73)
+broker: reached binding exists, binding float -1
+message: published to "h" with the empty key, headers n=-1.0
+outcome: routed
+reached: binding float -1, binding exists
+summary: Reached binding float -1 and binding exists.
+
+## publish 23 of 26: "message boolean true" (step 74)
+broker: reached binding boolean true, binding exists
+message: published to "h" with the empty key, headers n=true
+outcome: routed
+reached: binding boolean true, binding exists
+summary: Reached binding boolean true and binding exists.
+
+## publish 24 of 26: "message boolean false" (step 75)
+broker: reached binding boolean false, binding exists
+message: published to "h" with the empty key, headers n=false
+outcome: routed
+reached: binding boolean false, binding exists
+summary: Reached binding boolean false and binding exists.
+
+## publish 25 of 26: "message without n" (step 76)
+broker: returned, no queue got it
+message: published to "h" with the empty key, headers m=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h, and none of its 25 bindings matched.
+
+## publish 26 of 26: "message without headers" (step 77)
+broker: returned, no queue got it
+message: published to "h" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h, and none of its 25 bindings matched.

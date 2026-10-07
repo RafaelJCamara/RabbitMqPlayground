@@ -1,0 +1,106 @@
+# routing/fanout-ignores-the-key-and-the-headers-of-a-binding-and-of-a-message
+# A fanout exchange ignores the key and the headers, on the binding and on the message, even a key that no topic exchange would accept (ADR-0008, rule 3)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 4: "m1" (step 10)
+broker: reached hashes, headed, keyed, plain
+message: published to "f" with the empty key
+outcome: routed
+reached: plain, keyed, hashes, headed
+summary: Reached plain, keyed, hashes and headed.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 4 of its 4 bindings matched.
+  ✓ f -> queue plain (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue plain gets its first copy.
+  ✓ f -> queue keyed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue keyed gets its first copy.
+  ✓ f -> queue hashes (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue hashes gets its first copy.
+  ✓ f -> queue headed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue headed gets its first copy.
+
+queue plain: reached through ✓ f -> queue plain (any key) [fanout: always matches]
+
+queue keyed: reached through ✓ f -> queue keyed (any key) [fanout: always matches]
+
+queue hashes: reached through ✓ f -> queue hashes (any key) [fanout: always matches]
+
+queue headed: reached through ✓ f -> queue headed (any key) [fanout: always matches]
+
+## publish 2 of 4: "m2" (step 11)
+broker: reached hashes, headed, keyed, plain
+message: published to "f" with key "other.key"
+outcome: routed
+reached: plain, keyed, hashes, headed
+summary: Reached plain, keyed, hashes and headed.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 4 of its 4 bindings matched.
+  ✓ f -> queue plain (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue plain gets its first copy.
+  ✓ f -> queue keyed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue keyed gets its first copy.
+  ✓ f -> queue hashes (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue hashes gets its first copy.
+  ✓ f -> queue headed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue headed gets its first copy.
+
+queue plain: reached through ✓ f -> queue plain (any key) [fanout: always matches]
+
+queue keyed: reached through ✓ f -> queue keyed (any key) [fanout: always matches]
+
+queue hashes: reached through ✓ f -> queue hashes (any key) [fanout: always matches]
+
+queue headed: reached through ✓ f -> queue headed (any key) [fanout: always matches]
+
+## publish 3 of 4: "m3" (step 12)
+broker: reached hashes, headed, keyed, plain
+message: published to "f" with the empty key, headers a=2
+outcome: routed
+reached: plain, keyed, hashes, headed
+summary: Reached plain, keyed, hashes and headed.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 4 of its 4 bindings matched.
+  ✓ f -> queue plain (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue plain gets its first copy.
+  ✓ f -> queue keyed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue keyed gets its first copy.
+  ✓ f -> queue hashes (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue hashes gets its first copy.
+  ✓ f -> queue headed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue headed gets its first copy.
+
+queue plain: reached through ✓ f -> queue plain (any key) [fanout: always matches]
+
+queue keyed: reached through ✓ f -> queue keyed (any key) [fanout: always matches]
+
+queue hashes: reached through ✓ f -> queue hashes (any key) [fanout: always matches]
+
+queue headed: reached through ✓ f -> queue headed (any key) [fanout: always matches]
+
+## publish 4 of 4: "m4" (step 13)
+broker: reached hashes, headed, keyed, plain
+message: published to "f" with key "some.key", headers a="1" b=1
+outcome: routed
+reached: plain, keyed, hashes, headed
+summary: Reached plain, keyed, hashes and headed.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 4 of its 4 bindings matched.
+  ✓ f -> queue plain (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue plain gets its first copy.
+  ✓ f -> queue keyed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue keyed gets its first copy.
+  ✓ f -> queue hashes (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue hashes gets its first copy.
+  ✓ f -> queue headed (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue headed gets its first copy.
+
+queue plain: reached through ✓ f -> queue plain (any key) [fanout: always matches]
+
+queue keyed: reached through ✓ f -> queue keyed (any key) [fanout: always matches]
+
+queue hashes: reached through ✓ f -> queue hashes (any key) [fanout: always matches]
+
+queue headed: reached through ✓ f -> queue headed (any key) [fanout: always matches]

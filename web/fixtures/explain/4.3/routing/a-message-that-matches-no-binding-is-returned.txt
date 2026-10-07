@@ -1,0 +1,207 @@
+# routing/a-message-that-matches-no-binding-is-returned
+# A message that no binding matches is returned to the publisher, on every type of exchange, and so is one that is passed on to an exchange with no queues (ADR-0008, rules 10 and 12)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 8: "m1" (step 13)
+broker: returned, no queue got it
+message: published to "d" with key "other"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached d, and its only binding did not match.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ d -> queue dq ("k") [key is not "k"]
+    The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - The binding from d to queue dq ("k") was tried, and it did not match. The key is "other", and this binding wants "k": a direct exchange compares the whole key, letter for letter.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 2 of 8: "m2" (step 14)
+broker: returned, no queue got it
+message: published to "t" with key "a.c"
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached t, and its only binding did not match.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ t -> queue tq ("a.b") [last word is "c", not "b"]
+    The pattern "a.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+    pattern  a   | b
+    key      a ✓ | c ✗
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - The binding from t to queue tq ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "a.c": the last word of the key is "c", and the pattern asks for "b".
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 3 of 8: "m3" (step 15)
+broker: returned, no queue got it
+message: published to "h" with the empty key, headers n=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached h, and its only binding did not match.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 0 of its 1 binding matched.
+  ✗ h -> queue hq (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 2, and the binding asks for 1.
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - The binding from h to queue hq (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+## publish 4 of 8: "m4" (step 16)
+broker: returned, no queue got it
+message: published to "f" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached f and dead-end, and 1 of their 1 binding matched, but none of them led to a queue.
+
+exchange f (fanout): f is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ f -> exchange dead-end (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange dead-end.
+    exchange dead-end (fanout): dead-end is a fanout exchange, and the message came to it from f. It has no bindings.
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 5 of 8: "m5" (step 17)
+broker: returned, no queue got it
+message: published to "dead-end" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached dead-end, which has no bindings.
+
+exchange dead-end (fanout): dead-end is a fanout exchange, and the message was published to it. It has no bindings.
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 6 of 8: "m6" (step 18)
+broker: reached dq
+message: published to "d" with key "k"
+outcome: routed
+reached: dq
+summary: Reached dq.
+
+exchange d (direct): d is a direct exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ d -> queue dq ("k") [key matches]
+    The key "k" is the binding key, letter for letter. The queue dq gets its first copy.
+
+queue dq: reached through ✓ d -> queue dq ("k") [key matches]
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 7 of 8: "m7" (step 19)
+broker: reached tq
+message: published to "t" with key "a.b"
+outcome: routed
+reached: tq
+summary: Reached tq.
+
+exchange t (topic): t is a topic exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ t -> queue tq ("a.b") [matches]
+    The pattern "a.b" is the key "a.b", word for word. The queue tq gets its first copy.
+    pattern  a   | b
+    key      a ✓ | b ✓
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: reached through ✓ t -> queue tq ("a.b") [matches]
+
+queue hq: not reached
+  The queue hq did not get the message.
+  - h is bound to queue hq (x-match=all n=1), but the message never reached h.
+    - Nothing is bound to the exchange h, so nothing leads into it and the message cannot reach it.
+
+## publish 8 of 8: "m8" (step 20)
+broker: reached hq
+message: published to "h" with the empty key, headers n=1
+outcome: routed
+reached: hq
+summary: Reached hq.
+
+exchange h (headers): h is a headers exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ h -> queue hq (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue hq gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+
+queue dq: not reached
+  The queue dq did not get the message.
+  - d is bound to queue dq ("k"), but the message never reached d.
+    - Nothing is bound to the exchange d, so nothing leads into it and the message cannot reach it.
+
+queue tq: not reached
+  The queue tq did not get the message.
+  - t is bound to queue tq ("a.b"), but the message never reached t.
+    - Nothing is bound to the exchange t, so nothing leads into it and the message cannot reach it.
+
+queue hq: reached through ✓ h -> queue hq (x-match=all n=1) [1 of 1 hold]

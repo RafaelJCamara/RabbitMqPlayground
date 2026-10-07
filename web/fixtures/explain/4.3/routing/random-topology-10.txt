@@ -1,0 +1,240 @@
+# routing/random-topology-10
+# A random topology made from seed 10 with the engine's PRNG routes the way the broker does (ADR-0015)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 8: "m1" (step 19)
+broker: reached q1, q2
+message: published to "x3" with key "c.c.b", headers b=2 x-c=true
+outcome: routed
+reached: q1, q2
+summary: Reached q1 and q2.
+
+exchange x3 (fanout): x3 is a fanout exchange, and the message was published to it. 3 of its 3 bindings matched.
+  ✓ x3 -> queue q1 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q1 gets its first copy.
+  ✓ x3 -> exchange x3 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The exchange x3 had been reached already, and an exchange is visited once.
+  ✓ x3 -> queue q2 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue q2 gets its first copy.
+
+queue q1: reached through ✓ x3 -> queue q1 (any key) [fanout: always matches]
+
+queue q2: reached through ✓ x3 -> queue q2 (any key) [fanout: always matches]
+
+## publish 2 of 8: "m2" (step 20)
+broker: reached q2
+message: published to "x1" with key "c.c", headers b=1
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+exchange x1 (headers): x1 is a headers exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ x1 -> exchange x1 (x-match=all a="1" b=1.0) [0 of 2 hold, all needed]
+    x-match=all (left out, so all): every condition has to hold, and a and b do not.
+    ✗ The header a is missing from the message.
+    ✗ The header b is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+    x-match=all and no condition counts, so it matches every message. 1 argument starts with "x-" and is not counted. The queue q2 gets its first copy.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x2 is bound to queue q1 ("b.a"), but the message never reached x2.
+    - x4 is bound to exchange x2 ("b"), but the message never reached x4.
+      - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x4 is given above, where it was first met.
+
+queue q2: reached through ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+
+## publish 3 of 8: "m3" (step 21)
+broker: returned, no queue got it
+message: published to "x2" with key "a.c.b", headers b=2 x-c=1
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2, and none of its 3 bindings matched.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x2 -> queue q2 ("*") [key has 3 words, pattern 1]
+    The pattern "*" does not match the key "a.c.b": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+    pattern  *   | -   | -
+    key      a ✓ | c ✗ | b ✗
+  ✗ x2 -> queue q1 ("b.a") [first word is "a", not "b"]
+    The pattern "b.a" does not match the key "a.c.b": the first word of the key is "a", and the pattern asks for "b".
+    pattern  b   | a
+    key      a ✗ | c ✗
+  ✗ x2 -> queue q2 ("a.b") [word 2 is "c", not "b"]
+    The pattern "a.b" does not match the key "a.c.b": word 2 of the key is "c", and the pattern asks for "b".
+    pattern  a   | b
+    key      a ✓ | c ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - The binding from x2 to queue q1 ("b.a") was tried, and it did not match. The pattern "b.a" does not match the key "a.c.b": the first word of the key is "a", and the pattern asks for "b".
+  - x4 is bound to queue q1 (the empty key), but the message never reached x4.
+    - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x2 to queue q2 ("*") was tried, and it did not match. The pattern "*" does not match the key "a.c.b": the pattern has 1 word and the key has 3, and without a "#" the key has to have as many words as the pattern.
+  - x1 is bound to queue q2 (x-match=all x-c=true), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x3 is bound to queue q2 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x4 is bound to queue q2 ("a.a"), but the message never reached x4.
+    - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - The binding from x2 to queue q2 ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "a.c.b": word 2 of the key is "c", and the pattern asks for "b".
+
+## publish 4 of 8: "m4" (step 22)
+broker: reached q2
+message: published to "x1" with key "c.b", headers a=1.0 x-c=2
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+exchange x1 (headers): x1 is a headers exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ x1 -> exchange x1 (x-match=all a="1" b=1.0) [0 of 2 hold, all needed]
+    x-match=all (left out, so all): every condition has to hold, and a and b do not.
+    ✗ The header a is 1.0, a float, and the binding asks for "1", a string: values of different types are never equal.
+    ✗ The header b is missing from the message.
+  ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+    x-match=all and no condition counts, so it matches every message. 1 argument starts with "x-" and is not counted. The queue q2 gets its first copy.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x2 is bound to queue q1 ("b.a"), but the message never reached x2.
+    - x4 is bound to exchange x2 ("b"), but the message never reached x4.
+      - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x4 is given above, where it was first met.
+
+queue q2: reached through ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+
+## publish 5 of 8: "m5" (step 23)
+broker: reached q2
+message: published to "x1" with key "b.c.c"
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+exchange x1 (headers): x1 is a headers exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ x1 -> exchange x1 (x-match=all a="1" b=1.0) [0 of 2 hold, all needed]
+    x-match=all (left out, so all): every condition has to hold, and a and b do not.
+    ✗ The header a is missing from the message.
+    ✗ The header b is missing from the message.
+  ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+    x-match=all and no condition counts, so it matches every message. 1 argument starts with "x-" and is not counted. The queue q2 gets its first copy.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x2 is bound to queue q1 ("b.a"), but the message never reached x2.
+    - x4 is bound to exchange x2 ("b"), but the message never reached x4.
+      - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x4 is given above, where it was first met.
+
+queue q2: reached through ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+
+## publish 6 of 8: "m6" (step 24)
+broker: reached q2
+message: published to "x1" with key "c.c.b", headers a=2 x-c=1
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+exchange x1 (headers): x1 is a headers exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ x1 -> exchange x1 (x-match=all a="1" b=1.0) [0 of 2 hold, all needed]
+    x-match=all (left out, so all): every condition has to hold, and a and b do not.
+    ✗ The header a is 2, an integer, and the binding asks for "1", a string: values of different types are never equal.
+    ✗ The header b is missing from the message.
+  ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+    x-match=all and no condition counts, so it matches every message. 1 argument starts with "x-" and is not counted. The queue q2 gets its first copy.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x2 is bound to queue q1 ("b.a"), but the message never reached x2.
+    - x4 is bound to exchange x2 ("b"), but the message never reached x4.
+      - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x4 is given above, where it was first met.
+
+queue q2: reached through ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+
+## publish 7 of 8: "m7" (step 25)
+broker: returned, no queue got it
+message: published to "x2" with key "c.a", headers b="1" x-c=2
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached x2, and none of its 3 bindings matched.
+
+exchange x2 (topic): x2 is a topic exchange, and the message was published to it. 0 of its 3 bindings matched.
+  ✗ x2 -> queue q2 ("*") [key has 2 words, pattern 1]
+    The pattern "*" does not match the key "c.a": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+    pattern  *   | -
+    key      c ✓ | a ✗
+  ✗ x2 -> queue q1 ("b.a") [first word is "c", not "b"]
+    The pattern "b.a" does not match the key "c.a": the first word of the key is "c", and the pattern asks for "b".
+    pattern  b   | a
+    key      c ✗ | a ✓
+  ✗ x2 -> queue q2 ("a.b") [first word is "c", not "a"]
+    The pattern "a.b" does not match the key "c.a": the first word of the key is "c", and the pattern asks for "a".
+    pattern  a   | b
+    key      c ✗ | a ✗
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - The binding from x2 to queue q1 ("b.a") was tried, and it did not match. The pattern "b.a" does not match the key "c.a": the first word of the key is "c", and the pattern asks for "b".
+  - x4 is bound to queue q1 (the empty key), but the message never reached x4.
+    - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+
+queue q2: not reached
+  The queue q2 did not get the message.
+  - The binding from x2 to queue q2 ("*") was tried, and it did not match. The pattern "*" does not match the key "c.a": the pattern has 1 word and the key has 2, and without a "#" the key has to have as many words as the pattern.
+  - x1 is bound to queue q2 (x-match=all x-c=true), but the message never reached x1.
+    - The exchange x1 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x3 is bound to queue q2 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x4 is bound to queue q2 ("a.a"), but the message never reached x4.
+    - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - The binding from x2 to queue q2 ("a.b") was tried, and it did not match. The pattern "a.b" does not match the key "c.a": the first word of the key is "c", and the pattern asks for "a".
+
+## publish 8 of 8: "m8" (step 26)
+broker: reached q2
+message: published to "x1" with key "a"
+outcome: routed
+reached: q2
+summary: Reached q2.
+
+exchange x1 (headers): x1 is a headers exchange, and the message was published to it. 1 of its 2 bindings matched.
+  ✗ x1 -> exchange x1 (x-match=all a="1" b=1.0) [0 of 2 hold, all needed]
+    x-match=all (left out, so all): every condition has to hold, and a and b do not.
+    ✗ The header a is missing from the message.
+    ✗ The header b is missing from the message.
+  ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]
+    x-match=all and no condition counts, so it matches every message. 1 argument starts with "x-" and is not counted. The queue q2 gets its first copy.
+    - The header x-c is not counted: an argument that starts with "x-" is ignored unless x-match is all-with-x or any-with-x.
+
+queue q1: not reached
+  The queue q1 did not get the message.
+  - x3 is bound to queue q1 (any key), but the message never reached x3.
+    - The exchange x3 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - x2 is bound to queue q1 ("b.a"), but the message never reached x2.
+    - x4 is bound to exchange x2 ("b"), but the message never reached x4.
+      - The exchange x4 is part of a cycle that this explanation is already inside: the exchanges in it only lead into each other, and nothing that the message reached leads into them.
+  - Why the message did not reach the exchange x4 is given above, where it was first met.
+
+queue q2: reached through ✓ x1 -> queue q2 (x-match=all x-c=true) [no conditions: matches all]

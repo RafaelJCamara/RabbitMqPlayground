@@ -1,0 +1,177 @@
+# routing/a-long-chain-of-exchanges-reaches-its-queue
+# A chain of thirty exchanges carries a message from either end to the queue at the last one (ADR-0008, rule 7)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 3: "m1" (step 62)
+broker: reached end
+message: published to "x01" with the empty key
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange x01 (fanout): x01 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x01 -> exchange x02 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x02.
+    exchange x02 (fanout): x02 is a fanout exchange, and the message came to it from x01. 1 of its 1 binding matched.
+      ✓ x02 -> exchange x03 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x03.
+        exchange x03 (fanout): x03 is a fanout exchange, and the message came to it from x02. 1 of its 1 binding matched.
+          ✓ x03 -> exchange x04 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x04.
+            exchange x04 (fanout): x04 is a fanout exchange, and the message came to it from x03. 1 of its 1 binding matched.
+              ✓ x04 -> exchange x05 (any key) [fanout: always matches]
+                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x05.
+                exchange x05 (fanout): x05 is a fanout exchange, and the message came to it from x04. 1 of its 1 binding matched.
+                  ✓ x05 -> exchange x06 (any key) [fanout: always matches]
+                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x06.
+                    exchange x06 (fanout): x06 is a fanout exchange, and the message came to it from x05. 1 of its 1 binding matched.
+                      ✓ x06 -> exchange x07 (any key) [fanout: always matches]
+                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x07.
+                        exchange x07 (fanout): x07 is a fanout exchange, and the message came to it from x06. 1 of its 1 binding matched.
+                          ✓ x07 -> exchange x08 (any key) [fanout: always matches]
+                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x08.
+                            exchange x08 (fanout): x08 is a fanout exchange, and the message came to it from x07. 1 of its 1 binding matched.
+                              ✓ x08 -> exchange x09 (any key) [fanout: always matches]
+                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x09.
+                                exchange x09 (fanout): x09 is a fanout exchange, and the message came to it from x08. 1 of its 1 binding matched.
+                                  ✓ x09 -> exchange x10 (any key) [fanout: always matches]
+                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x10.
+                                    exchange x10 (fanout): x10 is a fanout exchange, and the message came to it from x09. 1 of its 1 binding matched.
+                                      ✓ x10 -> exchange x11 (any key) [fanout: always matches]
+                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x11.
+                                        exchange x11 (fanout): x11 is a fanout exchange, and the message came to it from x10. 1 of its 1 binding matched.
+                                          ✓ x11 -> exchange x12 (any key) [fanout: always matches]
+                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x12.
+                                            exchange x12 (fanout): x12 is a fanout exchange, and the message came to it from x11. 1 of its 1 binding matched.
+                                              ✓ x12 -> exchange x13 (any key) [fanout: always matches]
+                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x13.
+                                                exchange x13 (fanout): x13 is a fanout exchange, and the message came to it from x12. 1 of its 1 binding matched.
+                                                  ✓ x13 -> exchange x14 (any key) [fanout: always matches]
+                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x14.
+                                                    exchange x14 (fanout): x14 is a fanout exchange, and the message came to it from x13. 1 of its 1 binding matched.
+                                                      ✓ x14 -> exchange x15 (any key) [fanout: always matches]
+                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x15.
+                                                        exchange x15 (fanout): x15 is a fanout exchange, and the message came to it from x14. 1 of its 1 binding matched.
+                                                          ✓ x15 -> exchange x16 (any key) [fanout: always matches]
+                                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x16.
+                                                            exchange x16 (fanout): x16 is a fanout exchange, and the message came to it from x15. 1 of its 1 binding matched.
+                                                              ✓ x16 -> exchange x17 (any key) [fanout: always matches]
+                                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x17.
+                                                                exchange x17 (fanout): x17 is a fanout exchange, and the message came to it from x16. 1 of its 1 binding matched.
+                                                                  ✓ x17 -> exchange x18 (any key) [fanout: always matches]
+                                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x18.
+                                                                    exchange x18 (fanout): x18 is a fanout exchange, and the message came to it from x17. 1 of its 1 binding matched.
+                                                                      ✓ x18 -> exchange x19 (any key) [fanout: always matches]
+                                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x19.
+                                                                        exchange x19 (fanout): x19 is a fanout exchange, and the message came to it from x18. 1 of its 1 binding matched.
+                                                                          ✓ x19 -> exchange x20 (any key) [fanout: always matches]
+                                                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x20.
+                                                                            exchange x20 (fanout): x20 is a fanout exchange, and the message came to it from x19. 1 of its 1 binding matched.
+                                                                              ✓ x20 -> exchange x21 (any key) [fanout: always matches]
+                                                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x21.
+                                                                                exchange x21 (fanout): x21 is a fanout exchange, and the message came to it from x20. 1 of its 1 binding matched.
+                                                                                  ✓ x21 -> exchange x22 (any key) [fanout: always matches]
+                                                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x22.
+                                                                                    exchange x22 (fanout): x22 is a fanout exchange, and the message came to it from x21. 1 of its 1 binding matched.
+                                                                                      ✓ x22 -> exchange x23 (any key) [fanout: always matches]
+                                                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x23.
+                                                                                        exchange x23 (fanout): x23 is a fanout exchange, and the message came to it from x22. 1 of its 1 binding matched.
+                                                                                          ✓ x23 -> exchange x24 (any key) [fanout: always matches]
+                                                                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x24.
+                                                                                            exchange x24 (fanout): x24 is a fanout exchange, and the message came to it from x23. 1 of its 1 binding matched.
+                                                                                              ✓ x24 -> exchange x25 (any key) [fanout: always matches]
+                                                                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x25.
+                                                                                                exchange x25 (fanout): x25 is a fanout exchange, and the message came to it from x24. 1 of its 1 binding matched.
+                                                                                                  ✓ x25 -> exchange x26 (any key) [fanout: always matches]
+                                                                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x26.
+                                                                                                    exchange x26 (fanout): x26 is a fanout exchange, and the message came to it from x25. 1 of its 1 binding matched.
+                                                                                                      ✓ x26 -> exchange x27 (any key) [fanout: always matches]
+                                                                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x27.
+                                                                                                        exchange x27 (fanout): x27 is a fanout exchange, and the message came to it from x26. 1 of its 1 binding matched.
+                                                                                                          ✓ x27 -> exchange x28 (any key) [fanout: always matches]
+                                                                                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x28.
+                                                                                                            exchange x28 (fanout): x28 is a fanout exchange, and the message came to it from x27. 1 of its 1 binding matched.
+                                                                                                              ✓ x28 -> exchange x29 (any key) [fanout: always matches]
+                                                                                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x29.
+                                                                                                                exchange x29 (fanout): x29 is a fanout exchange, and the message came to it from x28. 1 of its 1 binding matched.
+                                                                                                                  ✓ x29 -> exchange x30 (any key) [fanout: always matches]
+                                                                                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x30.
+                                                                                                                    exchange x30 (fanout): x30 is a fanout exchange, and the message came to it from x29. 1 of its 1 binding matched.
+                                                                                                                      ✓ x30 -> queue end (any key) [fanout: always matches]
+                                                                                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+
+queue end: reached through ✓ x01 -> exchange x02 (any key) [fanout: always matches] ; ✓ x02 -> exchange x03 (any key) [fanout: always matches] ; ✓ x03 -> exchange x04 (any key) [fanout: always matches] ; ✓ x04 -> exchange x05 (any key) [fanout: always matches] ; ✓ x05 -> exchange x06 (any key) [fanout: always matches] ; ✓ x06 -> exchange x07 (any key) [fanout: always matches] ; ✓ x07 -> exchange x08 (any key) [fanout: always matches] ; ✓ x08 -> exchange x09 (any key) [fanout: always matches] ; ✓ x09 -> exchange x10 (any key) [fanout: always matches] ; ✓ x10 -> exchange x11 (any key) [fanout: always matches] ; ✓ x11 -> exchange x12 (any key) [fanout: always matches] ; ✓ x12 -> exchange x13 (any key) [fanout: always matches] ; ✓ x13 -> exchange x14 (any key) [fanout: always matches] ; ✓ x14 -> exchange x15 (any key) [fanout: always matches] ; ✓ x15 -> exchange x16 (any key) [fanout: always matches] ; ✓ x16 -> exchange x17 (any key) [fanout: always matches] ; ✓ x17 -> exchange x18 (any key) [fanout: always matches] ; ✓ x18 -> exchange x19 (any key) [fanout: always matches] ; ✓ x19 -> exchange x20 (any key) [fanout: always matches] ; ✓ x20 -> exchange x21 (any key) [fanout: always matches] ; ✓ x21 -> exchange x22 (any key) [fanout: always matches] ; ✓ x22 -> exchange x23 (any key) [fanout: always matches] ; ✓ x23 -> exchange x24 (any key) [fanout: always matches] ; ✓ x24 -> exchange x25 (any key) [fanout: always matches] ; ✓ x25 -> exchange x26 (any key) [fanout: always matches] ; ✓ x26 -> exchange x27 (any key) [fanout: always matches] ; ✓ x27 -> exchange x28 (any key) [fanout: always matches] ; ✓ x28 -> exchange x29 (any key) [fanout: always matches] ; ✓ x29 -> exchange x30 (any key) [fanout: always matches] ; ✓ x30 -> queue end (any key) [fanout: always matches]
+
+## publish 2 of 3: "m2" (step 63)
+broker: reached end
+message: published to "x15" with the empty key
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange x15 (fanout): x15 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x15 -> exchange x16 (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x16.
+    exchange x16 (fanout): x16 is a fanout exchange, and the message came to it from x15. 1 of its 1 binding matched.
+      ✓ x16 -> exchange x17 (any key) [fanout: always matches]
+        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x17.
+        exchange x17 (fanout): x17 is a fanout exchange, and the message came to it from x16. 1 of its 1 binding matched.
+          ✓ x17 -> exchange x18 (any key) [fanout: always matches]
+            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x18.
+            exchange x18 (fanout): x18 is a fanout exchange, and the message came to it from x17. 1 of its 1 binding matched.
+              ✓ x18 -> exchange x19 (any key) [fanout: always matches]
+                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x19.
+                exchange x19 (fanout): x19 is a fanout exchange, and the message came to it from x18. 1 of its 1 binding matched.
+                  ✓ x19 -> exchange x20 (any key) [fanout: always matches]
+                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x20.
+                    exchange x20 (fanout): x20 is a fanout exchange, and the message came to it from x19. 1 of its 1 binding matched.
+                      ✓ x20 -> exchange x21 (any key) [fanout: always matches]
+                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x21.
+                        exchange x21 (fanout): x21 is a fanout exchange, and the message came to it from x20. 1 of its 1 binding matched.
+                          ✓ x21 -> exchange x22 (any key) [fanout: always matches]
+                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x22.
+                            exchange x22 (fanout): x22 is a fanout exchange, and the message came to it from x21. 1 of its 1 binding matched.
+                              ✓ x22 -> exchange x23 (any key) [fanout: always matches]
+                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x23.
+                                exchange x23 (fanout): x23 is a fanout exchange, and the message came to it from x22. 1 of its 1 binding matched.
+                                  ✓ x23 -> exchange x24 (any key) [fanout: always matches]
+                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x24.
+                                    exchange x24 (fanout): x24 is a fanout exchange, and the message came to it from x23. 1 of its 1 binding matched.
+                                      ✓ x24 -> exchange x25 (any key) [fanout: always matches]
+                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x25.
+                                        exchange x25 (fanout): x25 is a fanout exchange, and the message came to it from x24. 1 of its 1 binding matched.
+                                          ✓ x25 -> exchange x26 (any key) [fanout: always matches]
+                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x26.
+                                            exchange x26 (fanout): x26 is a fanout exchange, and the message came to it from x25. 1 of its 1 binding matched.
+                                              ✓ x26 -> exchange x27 (any key) [fanout: always matches]
+                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x27.
+                                                exchange x27 (fanout): x27 is a fanout exchange, and the message came to it from x26. 1 of its 1 binding matched.
+                                                  ✓ x27 -> exchange x28 (any key) [fanout: always matches]
+                                                    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x28.
+                                                    exchange x28 (fanout): x28 is a fanout exchange, and the message came to it from x27. 1 of its 1 binding matched.
+                                                      ✓ x28 -> exchange x29 (any key) [fanout: always matches]
+                                                        A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x29.
+                                                        exchange x29 (fanout): x29 is a fanout exchange, and the message came to it from x28. 1 of its 1 binding matched.
+                                                          ✓ x29 -> exchange x30 (any key) [fanout: always matches]
+                                                            A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The message goes on to the exchange x30.
+                                                            exchange x30 (fanout): x30 is a fanout exchange, and the message came to it from x29. 1 of its 1 binding matched.
+                                                              ✓ x30 -> queue end (any key) [fanout: always matches]
+                                                                A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+
+queue end: reached through ✓ x15 -> exchange x16 (any key) [fanout: always matches] ; ✓ x16 -> exchange x17 (any key) [fanout: always matches] ; ✓ x17 -> exchange x18 (any key) [fanout: always matches] ; ✓ x18 -> exchange x19 (any key) [fanout: always matches] ; ✓ x19 -> exchange x20 (any key) [fanout: always matches] ; ✓ x20 -> exchange x21 (any key) [fanout: always matches] ; ✓ x21 -> exchange x22 (any key) [fanout: always matches] ; ✓ x22 -> exchange x23 (any key) [fanout: always matches] ; ✓ x23 -> exchange x24 (any key) [fanout: always matches] ; ✓ x24 -> exchange x25 (any key) [fanout: always matches] ; ✓ x25 -> exchange x26 (any key) [fanout: always matches] ; ✓ x26 -> exchange x27 (any key) [fanout: always matches] ; ✓ x27 -> exchange x28 (any key) [fanout: always matches] ; ✓ x28 -> exchange x29 (any key) [fanout: always matches] ; ✓ x29 -> exchange x30 (any key) [fanout: always matches] ; ✓ x30 -> queue end (any key) [fanout: always matches]
+
+## publish 3 of 3: "m3" (step 64)
+broker: reached end
+message: published to "x30" with the empty key
+outcome: routed
+reached: end
+summary: Reached end.
+
+exchange x30 (fanout): x30 is a fanout exchange, and the message was published to it. 1 of its 1 binding matched.
+  ✓ x30 -> queue end (any key) [fanout: always matches]
+    A fanout exchange sends every message to every queue and exchange that is bound to it, whatever the key. The queue end gets its first copy.
+
+queue end: reached through ✓ x30 -> queue end (any key) [fanout: always matches]

@@ -1,0 +1,332 @@
+# routing/headers-exchange-compares-typed-values
+# A headers exchange compares typed values: "1", 1, 1.0 and 64-bit 1 are tried against each other (ADR-0009)
+#
+# What a learner is told about each publish of this scenario, as `explanationText` writes it (ADR-0060).
+# The lines that start `broker:` are what RabbitMQ 4.3 recorded. A golden file is never regenerated to make a failure go away.
+# The first 8 publishes are written in full, and the others as their four lines: the spec holds all of them to the broker.
+
+## publish 1 of 6: "m1" (step 16)
+broker: reached q-exists, q-string
+message: published to "docs" with the empty key, headers n="1"
+outcome: routed
+reached: q-string, q-exists
+summary: Reached q-string and q-exists.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 2 of its 7 bindings matched.
+  ✓ docs -> queue q-string (x-match=all n="1") [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-string gets its first copy.
+    ✓ The header n is "1", as the binding asks.
+  ✗ docs -> queue q-int (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ docs -> queue q-float (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✗ docs -> queue q-int64 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ docs -> queue q-bool (x-match=all b=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and b does not.
+    ✗ The header b is missing from the message.
+  ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+  ✗ docs -> queue q-any (x-match=any n=1 b=true) [none of 2 hold]
+    x-match=any: at least one condition has to hold, and none of the 2 does.
+    ✗ The header n is "1", a string, and the binding asks for 1, an integer: values of different types are never equal.
+    ✗ The header b is missing from the message.
+
+queue q-string: reached through ✓ docs -> queue q-string (x-match=all n="1") [1 of 1 hold]
+
+queue q-int: not reached
+  The queue q-int did not get the message.
+  - The binding from docs to queue q-int (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-float: not reached
+  The queue q-float did not get the message.
+  - The binding from docs to queue q-float (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int64: not reached
+  The queue q-int64 did not get the message.
+  - The binding from docs to queue q-int64 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-bool: not reached
+  The queue q-bool did not get the message.
+  - The binding from docs to queue q-bool (x-match=all b=true) was tried, and it did not match. x-match=all: every condition has to hold, and b does not.
+
+queue q-exists: reached through ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+
+queue q-any: not reached
+  The queue q-any did not get the message.
+  - The binding from docs to queue q-any (x-match=any n=1 b=true) was tried, and it did not match. x-match=any: at least one condition has to hold, and none of the 2 does.
+
+## publish 2 of 6: "m2" (step 17)
+broker: reached q-any, q-exists, q-int, q-int64
+message: published to "docs" with the empty key, headers n=1
+outcome: routed
+reached: q-int, q-int64, q-exists, q-any
+summary: Reached q-int, q-int64, q-exists and q-any.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 4 of its 7 bindings matched.
+  ✗ docs -> queue q-string (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1", a string: values of different types are never equal.
+  ✓ docs -> queue q-int (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-int gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ docs -> queue q-float (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✓ docs -> queue q-int64 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-int64 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ docs -> queue q-bool (x-match=all b=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and b does not.
+    ✗ The header b is missing from the message.
+  ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+  ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+    x-match=any: n holds, and one is enough. The queue q-any gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+    ✗ The header b is missing from the message.
+
+queue q-string: not reached
+  The queue q-string did not get the message.
+  - The binding from docs to queue q-string (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int: reached through ✓ docs -> queue q-int (x-match=all n=1) [1 of 1 hold]
+
+queue q-float: not reached
+  The queue q-float did not get the message.
+  - The binding from docs to queue q-float (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int64: reached through ✓ docs -> queue q-int64 (x-match=all n=1) [1 of 1 hold]
+
+queue q-bool: not reached
+  The queue q-bool did not get the message.
+  - The binding from docs to queue q-bool (x-match=all b=true) was tried, and it did not match. x-match=all: every condition has to hold, and b does not.
+
+queue q-exists: reached through ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+
+queue q-any: reached through ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+
+## publish 3 of 6: "m3" (step 18)
+broker: reached q-exists, q-float
+message: published to "docs" with the empty key, headers n=1.0
+outcome: routed
+reached: q-float, q-exists
+summary: Reached q-float and q-exists.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 2 of its 7 bindings matched.
+  ✗ docs -> queue q-string (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1.0, a float, and the binding asks for "1", a string: values of different types are never equal.
+  ✗ docs -> queue q-int (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1.0, a float, and the binding asks for 1, an integer: values of different types are never equal.
+  ✓ docs -> queue q-float (x-match=all n=1.0) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-float gets its first copy.
+    ✓ The header n is 1.0, as the binding asks.
+  ✗ docs -> queue q-int64 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1.0, a float, and the binding asks for 1, an integer: values of different types are never equal.
+  ✗ docs -> queue q-bool (x-match=all b=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and b does not.
+    ✗ The header b is missing from the message.
+  ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+  ✗ docs -> queue q-any (x-match=any n=1 b=true) [none of 2 hold]
+    x-match=any: at least one condition has to hold, and none of the 2 does.
+    ✗ The header n is 1.0, a float, and the binding asks for 1, an integer: values of different types are never equal.
+    ✗ The header b is missing from the message.
+
+queue q-string: not reached
+  The queue q-string did not get the message.
+  - The binding from docs to queue q-string (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int: not reached
+  The queue q-int did not get the message.
+  - The binding from docs to queue q-int (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-float: reached through ✓ docs -> queue q-float (x-match=all n=1.0) [1 of 1 hold]
+
+queue q-int64: not reached
+  The queue q-int64 did not get the message.
+  - The binding from docs to queue q-int64 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-bool: not reached
+  The queue q-bool did not get the message.
+  - The binding from docs to queue q-bool (x-match=all b=true) was tried, and it did not match. x-match=all: every condition has to hold, and b does not.
+
+queue q-exists: reached through ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+
+queue q-any: not reached
+  The queue q-any did not get the message.
+  - The binding from docs to queue q-any (x-match=any n=1 b=true) was tried, and it did not match. x-match=any: at least one condition has to hold, and none of the 2 does.
+
+## publish 4 of 6: "m4" (step 19)
+broker: reached q-any, q-exists, q-int, q-int64
+message: published to "docs" with the empty key, headers n=1
+outcome: routed
+reached: q-int, q-int64, q-exists, q-any
+summary: Reached q-int, q-int64, q-exists and q-any.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 4 of its 7 bindings matched.
+  ✗ docs -> queue q-string (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for "1", a string: values of different types are never equal.
+  ✓ docs -> queue q-int (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-int gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ docs -> queue q-float (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is 1, an integer, and the binding asks for 1.0, a float: values of different types are never equal.
+  ✓ docs -> queue q-int64 (x-match=all n=1) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-int64 gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+  ✗ docs -> queue q-bool (x-match=all b=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and b does not.
+    ✗ The header b is missing from the message.
+  ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-exists gets its first copy.
+    ✓ The header n is there, as the binding asks.
+  ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+    x-match=any: n holds, and one is enough. The queue q-any gets its first copy.
+    ✓ The header n is 1, as the binding asks.
+    ✗ The header b is missing from the message.
+
+queue q-string: not reached
+  The queue q-string did not get the message.
+  - The binding from docs to queue q-string (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int: reached through ✓ docs -> queue q-int (x-match=all n=1) [1 of 1 hold]
+
+queue q-float: not reached
+  The queue q-float did not get the message.
+  - The binding from docs to queue q-float (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int64: reached through ✓ docs -> queue q-int64 (x-match=all n=1) [1 of 1 hold]
+
+queue q-bool: not reached
+  The queue q-bool did not get the message.
+  - The binding from docs to queue q-bool (x-match=all b=true) was tried, and it did not match. x-match=all: every condition has to hold, and b does not.
+
+queue q-exists: reached through ✓ docs -> queue q-exists (x-match=all exists(n)) [1 of 1 hold]
+
+queue q-any: reached through ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+
+## publish 5 of 6: "m5" (step 20)
+broker: reached q-any, q-bool
+message: published to "docs" with the empty key, headers b=true
+outcome: routed
+reached: q-bool, q-any
+summary: Reached q-bool and q-any.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 2 of its 7 bindings matched.
+  ✗ docs -> queue q-string (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-int (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-float (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-int64 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✓ docs -> queue q-bool (x-match=all b=true) [1 of 1 hold]
+    x-match=all: its one condition holds. The queue q-bool gets its first copy.
+    ✓ The header b is true, as the binding asks.
+  ✗ docs -> queue q-exists (x-match=all exists(n)) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+    x-match=any: b holds, and one is enough. The queue q-any gets its first copy.
+    ✗ The header n is missing from the message.
+    ✓ The header b is true, as the binding asks.
+
+queue q-string: not reached
+  The queue q-string did not get the message.
+  - The binding from docs to queue q-string (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int: not reached
+  The queue q-int did not get the message.
+  - The binding from docs to queue q-int (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-float: not reached
+  The queue q-float did not get the message.
+  - The binding from docs to queue q-float (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int64: not reached
+  The queue q-int64 did not get the message.
+  - The binding from docs to queue q-int64 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-bool: reached through ✓ docs -> queue q-bool (x-match=all b=true) [1 of 1 hold]
+
+queue q-exists: not reached
+  The queue q-exists did not get the message.
+  - The binding from docs to queue q-exists (x-match=all exists(n)) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-any: reached through ✓ docs -> queue q-any (x-match=any n=1 b=true) [1 of 2 hold]
+
+## publish 6 of 6: "m6" (step 21)
+broker: returned, no queue got it
+message: published to "docs" with the empty key
+outcome: unroutable
+reached: nothing
+summary: No queue got it: it reached docs, and none of its 7 bindings matched.
+
+exchange docs (headers): docs is a headers exchange, and the message was published to it. 0 of its 7 bindings matched.
+  ✗ docs -> queue q-string (x-match=all n="1") [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-int (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-float (x-match=all n=1.0) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-int64 (x-match=all n=1) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-bool (x-match=all b=true) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and b does not.
+    ✗ The header b is missing from the message.
+  ✗ docs -> queue q-exists (x-match=all exists(n)) [0 of 1 hold, all needed]
+    x-match=all: every condition has to hold, and n does not.
+    ✗ The header n is missing from the message.
+  ✗ docs -> queue q-any (x-match=any n=1 b=true) [none of 2 hold]
+    x-match=any: at least one condition has to hold, and none of the 2 does.
+    ✗ The header n is missing from the message.
+    ✗ The header b is missing from the message.
+
+queue q-string: not reached
+  The queue q-string did not get the message.
+  - The binding from docs to queue q-string (x-match=all n="1") was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int: not reached
+  The queue q-int did not get the message.
+  - The binding from docs to queue q-int (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-float: not reached
+  The queue q-float did not get the message.
+  - The binding from docs to queue q-float (x-match=all n=1.0) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-int64: not reached
+  The queue q-int64 did not get the message.
+  - The binding from docs to queue q-int64 (x-match=all n=1) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-bool: not reached
+  The queue q-bool did not get the message.
+  - The binding from docs to queue q-bool (x-match=all b=true) was tried, and it did not match. x-match=all: every condition has to hold, and b does not.
+
+queue q-exists: not reached
+  The queue q-exists did not get the message.
+  - The binding from docs to queue q-exists (x-match=all exists(n)) was tried, and it did not match. x-match=all: every condition has to hold, and n does not.
+
+queue q-any: not reached
+  The queue q-any did not get the message.
+  - The binding from docs to queue q-any (x-match=any n=1 b=true) was tried, and it did not match. x-match=any: at least one condition has to hold, and none of the 2 does.
