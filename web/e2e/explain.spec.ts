@@ -102,11 +102,11 @@ test.describe('the event log (ADR-0061)', () => {
     // A published row lights the link that the producer sent along and what it is linked to, and not what happened after: the message was routed, and this row is not about that.
     await expect(explain.card).toHaveAttribute('data-source', 'row');
     await expect(explain.card.getByTestId('why-card-title')).toHaveText(/^Event \d+$/);
-    expect(await explain.edgeMark('p1>x1')).toBe('path');
-    expect(await explain.nodeMark('p1')).toBe('visited');
-    expect(await explain.nodeMark('x1')).toBe('visited');
-    expect(await explain.nodeMark('q1')).toBeNull();
-    expect(await explain.edgeMark('x1>q1')).toBeNull();
+    await explain.expectEdgeMark('p1>x1', 'path');
+    await explain.expectNodeMark('p1', 'visited');
+    await explain.expectNodeMark('x1', 'visited');
+    await explain.expectNodeMark('q1', null);
+    await explain.expectEdgeMark('x1>q1', null);
   });
 
   test('moves with the arrow keys and chooses with Enter, and lets go with Escape, and closes with Escape when nothing is lit', async ({
@@ -126,20 +126,20 @@ test.describe('the event log (ADR-0061)', () => {
     await page.keyboard.press('Enter');
 
     // The row that is two above the routing is the `published` row of the message.
-    expect(await explain.emphasis()).toMatchObject({ source: 'row', message: 1 });
-    expect(await explain.nodeMark('q1')).toBeNull();
+    await expect.poll(() => explain.emphasis()).toMatchObject({ source: 'row', message: 1 });
+    await explain.expectNodeMark('q1', null);
     await expect(spoken(page)).toContainText('Showing it on the canvas.');
 
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    expect(await explain.nodeMark('q1')).toBe('reached');
+    await explain.expectNodeMark('q1', 'reached');
 
     await page.keyboard.press('Escape');
     await expect(spoken(page)).toHaveText('Let go of what the event showed.');
     await expect(explain.log).toBeVisible();
     // Escape let go of what the row lit, and of the Why? of the last message too, which comes again with the next message.
-    expect(await explain.emphasis()).toBeNull();
+    await expect.poll(() => explain.emphasis()).toBeNull();
     await expect(explain.card).toHaveCount(0);
 
     await page.keyboard.press('Escape');
@@ -154,7 +154,7 @@ test.describe('the event log (ADR-0061)', () => {
     await explain.rowsOfKind('command').first().click();
 
     await expect(spoken(page)).toHaveText('pause. There is nothing of it to show on the canvas.');
-    expect(await explain.emphasis()).toMatchObject({ source: 'row', nodes: [], edges: [] });
+    await expect.poll(() => explain.emphasis()).toMatchObject({ source: 'row', nodes: [], edges: [] });
     await expect(explain.card).toContainText('There is nothing of it to show on the canvas.');
   });
 
@@ -276,12 +276,12 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await expect
       .poll(() => explain.nodeLook('q2'))
       .toMatchObject({ stroke: miss, dasharray: '2px, 3px', opacity: '0.7' });
-    expect(await explain.nodeMark('x1')).toBe('visited');
-    expect(await explain.nodeMark('q2')).toBe('missed');
+    await explain.expectNodeMark('x1', 'visited');
+    await explain.expectNodeMark('q2', 'missed');
     // The reason is words, on the label of the binding, which is hidden from a screen reader as the rest of the label is, and the same words are in the page's text elsewhere.
-    expect(await explain.reasonOn('x1>q2')).toMatch(/^✗ .+/);
-    expect(await explain.reasonOn('x1>q1')).toBeNull();
-    expect(await explain.reasonOn('x1>q2')).toContain('order.cancelled');
+    await expect.poll(() => explain.reasonOn('x1>q2')).toMatch(/^✗ .+/);
+    await expect.poll(() => explain.reasonOn('x1>q1')).toBeNull();
+    await expect.poll(() => explain.reasonOn('x1>q2')).toContain('order.cancelled');
   });
 
   test('has a transition of a tenth of a second on what is lit, only on what is lit, and none for a learner who asked for less motion', async ({
@@ -301,7 +301,7 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await expect.poll(() => seconds('[data-edge="x1>q1"] path.f-connection-path')).toEqual([0.1, 0.1, 0.1]);
     await expect.poll(() => seconds('[data-node-id="q1"] .rmq-node-outline')).toEqual([0.1, 0.1, 0.1]);
     // What is not lit is drawn as it always was: no transition on its stroke.
-    expect(await explain.nodeMark('c1')).toBeNull();
+    await explain.expectNodeMark('c1', null);
     const unlit = await seconds('[data-node-id="c1"] .rmq-node-outline');
     expect(unlit).toEqual([0.08]);
 
@@ -314,8 +314,8 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
       .poll(async () => (await seconds('[data-node-id="q1"] .rmq-node-outline')).every((value) => value < 0.001))
       .toBe(true);
     // Reduced motion changes how it is drawn and not what is lit.
-    expect(await explain.edgeMark('x1>q1')).toBe('path');
-    expect(await explain.nodeMark('q1')).toBe('reached');
+    await explain.expectEdgeMark('x1>q1', 'path');
+    await explain.expectNodeMark('q1', 'reached');
   });
 
   test('lights nothing while the clock runs, however many messages are routed, and the Why? of the last one comes back when it is stopped', async ({
@@ -330,14 +330,14 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await twoFrames(page);
     await twoFrames(page);
 
-    expect(await explain.emphasis()).toBeNull();
+    await expect.poll(() => explain.emphasis()).toBeNull();
     await expect(explain.card).toHaveCount(0);
-    expect(await explain.nodeMark('q1')).toBeNull();
+    await explain.expectNodeMark('q1', null);
 
     await explain.simulation.pause.click();
 
     await expect(explain.card).toContainText('Why? Message 1 (the last one routed)');
-    expect(await explain.nodeMark('q1')).toBe('reached');
+    await explain.expectNodeMark('q1', 'reached');
   });
 
   test('is let go of with the button of the card, which stays away until the next message is routed, and then follows it', async ({
@@ -355,14 +355,14 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
 
     await expect(explain.card).toHaveCount(0);
     await twoFrames(page);
-    expect(await explain.nodeMark('q1')).toBeNull();
-    expect(await explain.edgeMark('x1>q1')).toBeNull();
-    expect(await explain.emphasis()).toBeNull();
+    await explain.expectNodeMark('q1', null);
+    await explain.expectEdgeMark('x1>q1', null);
+    await expect.poll(() => explain.emphasis()).toBeNull();
 
     await explain.simulation.step();
 
     await expect(explain.card.getByTestId('why-card-title')).toHaveText('Why? Message 2 (the last one routed)');
-    expect(await explain.nodeMark('q1')).toBe('reached');
+    await explain.expectNodeMark('q1', 'reached');
   });
 
   test('keeps the accent of what is selected, which the look of what is lit is not allowed to hide', async ({
@@ -394,8 +394,8 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await expect(explain.card).toContainText('Reached billing.');
 
     await expect(page.locator('[data-edge="p1>q1"]')).toHaveAttribute('data-emphasis', 'path');
-    expect(await explain.nodeMark('q1')).toBe('reached');
-    expect(await explain.reasonOn('p1>q1')).toBeNull();
+    await explain.expectNodeMark('q1', 'reached');
+    await expect.poll(() => explain.reasonOn('p1>q1')).toBeNull();
   });
 
   test('says in the card how many parts of what is lit are not on the canvas any more, and keeps what is still there lit', async ({
@@ -416,8 +416,8 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await expect(explain.card.getByTestId('why-card-gone')).toHaveText(
       '2 parts of this are not on the canvas any more.',
     );
-    expect(await explain.nodeMark('q1')).toBe('reached');
-    expect(await explain.edgeMark('x1>q1')).toBe('path');
+    await explain.expectNodeMark('q1', 'reached');
+    await explain.expectEdgeMark('x1>q1', 'path');
   });
 
   test('keeps what is lit when a node that it lights is renamed, because it is found by what it is and not by what it is called', async ({
@@ -433,8 +433,8 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await page.keyboard.press('Escape');
 
     await expect(explain.editor.node('Queue invoices')).toBeVisible();
-    expect(await explain.nodeMark('q1')).toBe('reached');
-    expect(await explain.edgeMark('x1>q1')).toBe('path');
+    await explain.expectNodeMark('q1', 'reached');
+    await explain.expectEdgeMark('x1>q1', 'path');
     await expect(explain.card.getByTestId('why-card-gone')).toHaveCount(0);
   });
 
@@ -450,19 +450,19 @@ test.describe('what is lit on the canvas, and the card that says why (ADR-0062)'
     await expect(explain.card).toHaveAttribute('data-source', 'queue');
     await expect(explain.card.getByTestId('why-card-title')).toHaveText('Why? Message 1 and archive');
     await expect(explain.card.getByTestId('why-card-text')).toContainText('The queue archive did not get the message.');
-    expect(await explain.nodeMark('q2')).toBe('asked');
-    expect(await explain.edgeMark('x1>q2')).toBe('missed');
+    await explain.expectNodeMark('q2', 'asked');
+    await explain.expectEdgeMark('x1>q2', 'missed');
     const asked = await explain.tokenColour('--rmq-explain-asked');
     // The queue has a ring of its own, which is the colour of asking and is not the accent that its selection has.
     await expect
       .poll(() => page.locator('[data-node-id="q2"] .rmq-node-ring').evaluate((ring) => getComputedStyle(ring).stroke))
       .toBe(asked);
-    expect(await explain.reasonOn('x1>q2')).toContain('order.cancelled');
+    await expect.poll(() => explain.reasonOn('x1>q2')).toContain('order.cancelled');
 
     await explain.card.getByRole('button', { name: 'Stop asking' }).click();
 
     await expect(explain.card).toHaveCount(0);
     expect((await page.evaluate(() => window.__rmq?.selection()))?.nodes).toEqual([]);
-    expect(await explain.nodeMark('q2')).toBeNull();
+    await explain.expectNodeMark('q2', null);
   });
 });

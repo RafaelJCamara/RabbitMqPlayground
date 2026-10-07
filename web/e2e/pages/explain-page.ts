@@ -108,6 +108,29 @@ export class ExplainPage {
     return { x: host.x + marker.x, y: host.y + marker.y, count: marker.count };
   }
 
+  /**
+   * Waits until a node is lit as this, or is not lit when `mark` is `null`. What is lit is set on the page a moment after what chose it, when the page is drawn, so a test that reads it at once finds what was
+   * there before; this waits for what it says, and a test that says that something stays unlit waits two frames first.
+   */
+  async expectNodeMark(id: string, mark: string | null): Promise<void> {
+    const node = this.page.locator(`[data-node-id="${id}"]`);
+    if (mark === null) {
+      await expect(node).not.toHaveAttribute('data-emphasis', /.+/);
+    } else {
+      await expect(node).toHaveAttribute('data-emphasis', mark);
+    }
+  }
+
+  /** The same for an edge, by its key. */
+  async expectEdgeMark(key: string, mark: string | null): Promise<void> {
+    const edge = this.page.locator(`[data-edge="${key}"]`);
+    if (mark === null) {
+      await expect(edge).not.toHaveAttribute('data-emphasis', /.+/);
+    } else {
+      await expect(edge).toHaveAttribute('data-emphasis', mark);
+    }
+  }
+
   /** How an edge is lit, by the attribute that the canvas sets on it, or `null`. */
   edgeMark(key: string): Promise<string | null> {
     return this.page.locator(`[data-edge="${key}"]`).getAttribute('data-emphasis');

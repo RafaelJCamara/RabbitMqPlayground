@@ -166,7 +166,7 @@ test.describe('the message inspector, opened from a row of the log (ADR-0063)', 
 
     await expect(explain.card.getByTestId('why-card-title')).toHaveText('Why? Message 1');
     await expect(spoken(page)).toHaveText('Showing why message 1 went where it went on the canvas.');
-    expect(await explain.nodeMark('q1')).toBe('reached');
+    await explain.expectNodeMark('q1', 'reached');
 
     await explain.message.getByRole('button', { name: 'Close message 1' }).click();
     await expect(explain.message).toHaveCount(0);
@@ -196,7 +196,7 @@ test.describe('the message inspector, opened from a row of the log (ADR-0063)', 
     await expect(asked.getByTestId('queue-why-text')).toHaveText('The queue warnings did not get the message.');
     await expect(asked.getByTestId('reason').first()).toContainText('"*.warn"');
     await expect(explain.card).toHaveAttribute('data-source', 'queue');
-    expect(await explain.nodeMark('q2')).toBe('asked');
+    await explain.expectNodeMark('q2', 'asked');
 
     await explain.editor.select('Queue errors');
     await expect(asked.getByTestId('queue-why-text')).toHaveText('The queue errors got a copy of the message.');
@@ -277,6 +277,7 @@ test.describe('the message inspector, opened from a message on the canvas, while
     );
     await expect(spoken(page)).toHaveText('Message 1 is open in the inspector.');
     // The press was the shape's: the edge under it was not selected.
+    await twoFrames(page);
     expect((await page.evaluate(() => window.__rmq?.selection()))?.edges).toEqual([]);
   });
 
@@ -335,6 +336,7 @@ test.describe('the message inspector on a finger (ADR-0063)', () => {
     await finger.tap({ x: at.x, y: at.y });
 
     await expect(explain.message.getByTestId('message-title')).toHaveText('Message 1');
+    await twoFrames(page);
     expect((await page.evaluate(() => window.__rmq?.selection()))?.edges).toEqual([]);
   });
 });
