@@ -1,5 +1,5 @@
 import { HeadersPage } from './pages/headers-page';
-import { FILES_BOUND, MANY_CONDITIONS } from './support/headers';
+import { FILES_BOUND, LONG_VALUE, MANY_CONDITIONS } from './support/headers';
 import { expect, test } from './support/test';
 
 /**
@@ -90,6 +90,36 @@ test.describe('the label of a headers binding (ADR-0070)', () => {
 
     await expect(headers.chips('x1>q2')).toHaveText(['all · format=tiff · x-region=eu (ignored)']);
     await expect(headers.chips('x1>q1')).not.toContainText('(ignored)');
+  });
+
+  test('keeps each dot with the word before it, and the count with its word, so that no line of a chip begins with a dot or with "more"', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, MANY_CONDITIONS);
+    const space = String.fromCodePoint(0xa0);
+
+    const text = await headers
+      .chips('x1>q1')
+      .first()
+      .evaluate((chip) => chip.textContent);
+
+    expect(text).toBe(`all-with-x${space}· format=pdf${space}· type=report${space}· size=10${space}· +3${space}more`);
+  });
+
+  test('breaks a value that has no space in it where the line ends, and does not let it out of the chip', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, LONG_VALUE);
+
+    const chip = headers.chips('x1>q1').first();
+
+    await expect(chip).toContainText('description=' + 'x'.repeat(40));
+    const box = (await chip.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(118);
+    expect(await chip.evaluate((element) => element.scrollWidth <= element.clientWidth), 'nothing is out of it').toBe(
+      true,
+    );
+    await expect(chip).toHaveCSS('overflow-wrap', 'anywhere');
   });
 
   test('lists every condition in a card while the pointer is over a label that cuts them, which stays while the pointer is on it and goes on Escape', async ({

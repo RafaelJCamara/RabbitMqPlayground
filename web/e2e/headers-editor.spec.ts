@@ -38,6 +38,8 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     await expect(popover.modeHelp).toHaveText(
       'Every condition has to hold. Arguments that start with x- are not counted.',
     );
+    // The sentence is what describes the group of modes, and the group is named by its legend.
+    await expect(popover.modes).toHaveAttribute('aria-describedby', (await popover.modeHelp.getAttribute('id'))!);
     expect(await headers.editor.edges(), 'nothing is made until Bind').toEqual(['sender -> files']);
     expect(await headers.bindings()).toEqual([]);
   });

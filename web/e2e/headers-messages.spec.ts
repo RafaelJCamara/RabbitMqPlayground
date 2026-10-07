@@ -178,6 +178,17 @@ test.describe('a binding made from a message (ADR-0070)', () => {
     await expect(panel.create).toBeEnabled();
   });
 
+  test('starts with the first queue that did not get the message, and not with the first queue', async ({ page }) => {
+    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    await headers.openLastMessage('routed');
+
+    await headers.bind.show();
+
+    // The message went to pdfs, which is the first queue, and not to scans.
+    await expect(headers.bind.to.locator('option:checked')).toHaveText('queue scans');
+    await expect(headers.bind.line).toHaveText('bind files -> scans x-match=all format=pdf type=report');
+  });
+
   test('changes what it makes as a header is unticked, another queue is chosen and another mode is, and makes nothing until it is told to', async ({
     page,
   }) => {

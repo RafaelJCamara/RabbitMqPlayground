@@ -1,6 +1,6 @@
 import { HeadersPage } from './pages/headers-page';
 import { FILES, FILES_BOUND, FILES_UNBOUND } from './support/headers';
-import { UNLINKED } from './support/orders';
+import { ORDERS, UNLINKED } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
@@ -55,6 +55,8 @@ test.describe('without the flag headers (ADR-0004)', () => {
       'The message has 2 headers. The table to edit them is coming with the headers exchange.',
     );
     await expect(headers.composer.getByTestId('composer-headers-table')).toHaveCount(0);
+    // The note about the routing key of a headers exchange is a part of the table, and is not there without it.
+    await expect(headers.composer.getByTestId('composer-key-note')).toHaveCount(0);
   });
 
   test('a message that is open has no panel that makes a binding from it, and a binding has no table of recent messages', async ({
@@ -101,6 +103,20 @@ test.describe('the conditions, with the flags editor and headers (ADR-0069)', ()
 
     await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
     await expect(page.getByRole('group', { name: /^Conditions for the binding/ })).toHaveCount(0);
+  });
+});
+
+test.describe('the conditions leave the bindings of the other exchanges as they were (ADR-0066)', () => {
+  test('keeps the key field for the binding of a direct exchange, which reads the key, with the flag on', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, ORDERS, { flags: CONDITIONS });
+
+    await headers.selectBinding('x1>q1');
+
+    await expect(headers.editor.inspector.getByRole('textbox', { name: 'Key' })).toHaveValue('order.new');
+    await expect(headers.editor.inspector.getByTestId('binding-conditions')).toHaveCount(0);
+    await expect(headers.chips('x1>q1')).toHaveText(['order.new']);
   });
 });
 

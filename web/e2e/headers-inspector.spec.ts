@@ -1,5 +1,5 @@
 import { HeadersPage } from './pages/headers-page';
-import { FILES_BOUND, FILES_TWICE, NEVER } from './support/headers';
+import { FILES_BOUND, FILES_TWICE, KEYED, NEVER } from './support/headers';
 import { expect, test } from './support/test';
 
 /**
@@ -266,5 +266,23 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
     await headers.conditions().submit.click();
     await expect(headers.editor.inspector.getByTestId('inspector-warnings')).toHaveCount(0);
     await expect(headers.label('x1>q1').getByTestId('edge-lint')).toHaveCount(0);
+  });
+
+  test('says that the key of a binding is not read by a headers exchange, and keeps it when the conditions are changed', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, KEYED);
+    await headers.selectBinding('x1>q1');
+    const conditions = headers.conditions();
+    await expect(conditions.keyNote).toHaveText('Its key, legacy, is not read by a headers exchange.');
+    await expect(conditions.line).toHaveText('bind files -> pdfs key=legacy x-match=all format=pdf');
+
+    await conditions.choose('any');
+    await conditions.submit.click();
+
+    await expect(conditions.keyNote).toBeVisible();
+    expect(await headers.commands()).toEqual([
+      'unbind files -> pdfs key=legacy x-match=all format=pdf; bind files -> pdfs key=legacy x-match=any format=pdf',
+    ]);
   });
 });

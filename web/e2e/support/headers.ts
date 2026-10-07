@@ -212,3 +212,26 @@ export const NEVER = buildDocument([
   bindTo('files', 'pdfs', 'any', [text('x-region', 'eu')]),
   bindTo('files', 'scans', 'any', [text('format', 'tiff')]),
 ]);
+
+/**
+ * `files` has a binding to `pdfs` that was made with a key, `legacy`, which a headers exchange does not read, and one condition: the editor says so, and keeps the key when the conditions are changed. The
+ * edge is `x1>q1`.
+ */
+export const KEYED = buildDocument([
+  headersExchange('files'),
+  { type: 'declare-queue', name: 'pdfs', durable: true },
+  {
+    type: 'bind',
+    source: 'files',
+    destination: { kind: 'queue', name: 'pdfs' },
+    key: 'legacy',
+    headers: { xMatch: 'all', args: [text('format', 'pdf')] },
+  },
+]);
+
+/** `files` has a binding to `pdfs` with a condition that has a value of forty characters and no space in it, which a chip has to break where the line ends. The edge is `x1>q1`. */
+export const LONG_VALUE = buildDocument([
+  headersExchange('files'),
+  { type: 'declare-queue', name: 'pdfs', durable: true },
+  bindTo('files', 'pdfs', 'all', [text('description', 'x'.repeat(40))]),
+]);
