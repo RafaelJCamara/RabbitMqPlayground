@@ -9,7 +9,15 @@ export {
   type ManualFramesSource,
   type ManualTimer,
 } from './lib/doubles';
-export { applyAll, exchangeEnd, prefixedIds, queueEnd, sequentialIds, undoRedoProblems } from './lib/commands';
+export {
+  applyAll,
+  canvasFromText,
+  exchangeEnd,
+  prefixedIds,
+  queueEnd,
+  sequentialIds,
+  undoRedoProblems,
+} from './lib/commands';
 export {
   arbDocument,
   arbIntent,

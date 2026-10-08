@@ -1,6 +1,9 @@
 import {
   applyCommand,
+  emptyDocument,
   History,
+  isDocumentCommand,
+  parseCommand,
   type ApplyContext,
   type CanvasDocument,
   type DocumentCommand,
@@ -49,6 +52,37 @@ export function applyAll(
     }
     return result.value;
   }, document);
+}
+
+/**
+ * The canvas that these lines of the command language make, one command to a line, on an empty canvas or on `from`. A line that is blank or starts with `#` is a comment. It throws, saying which line and why,
+ * when a line is not read, is not a command that changes the canvas, or is refused. It is how a fixture says what canvas it is about, in words that a person reads.
+ */
+export function canvasFromText(
+  text: string,
+  context: ApplyContext = sequentialIds(),
+  from: CanvasDocument = emptyDocument(),
+): CanvasDocument {
+  let document = from;
+  text.split('\n').forEach((raw, index) => {
+    const line = raw.trim();
+    if (line === '' || line.startsWith('#')) {
+      return;
+    }
+    const read = parseCommand(line, document);
+    if (!read.ok) {
+      throw new Error(`Line ${index + 1} (${line}) was not read: ${read.error.message}`);
+    }
+    if (!isDocumentCommand(read.value)) {
+      throw new Error(`Line ${index + 1} (${line}) is not a command that changes the canvas`);
+    }
+    const result = applyCommand(document, read.value, context);
+    if (!result.ok) {
+      throw new Error(`Line ${index + 1} (${line}) was refused: ${result.error.message}`);
+    }
+    document = result.value;
+  });
+  return document;
 }
 
 /** The two ends of a binding that a spec names most: a queue and an exchange. */
