@@ -26,6 +26,12 @@ configureFastCheck((globalThis as { process?: { env: Record<string, string | und
 const M = THUMBNAIL_MARGIN;
 
 describe('thumbnailOf (ADR-0073)', () => {
+  it('draws at most 150 nodes and 300 edges, which are the numbers of the ADR, in a box with a margin of 24', () => {
+    expect(THUMBNAIL_NODES).toBe(150);
+    expect(THUMBNAIL_EDGES).toBe(300);
+    expect(THUMBNAIL_MARGIN).toBe(24);
+  });
+
   it('has nothing to draw for a canvas with nothing on it', () => {
     expect(thumbnailOf(emptyDocument())).toBe(EMPTY_THUMBNAIL);
     expect(EMPTY_THUMBNAIL).toEqual({ box: null, nodes: [], edges: [] });

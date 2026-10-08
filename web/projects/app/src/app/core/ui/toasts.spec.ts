@@ -68,6 +68,7 @@ describe('Toasts (ADR-0074)', () => {
 
       expect(MAX_TOASTS).toBe(3);
       expect(toasts.visible().map(({ id }) => id)).toEqual(ids.slice(1));
+      expect(timer.pending).toBe(3);
       timer.advance(30_000);
       expect(toasts.visible()).toEqual([]);
     });
@@ -127,10 +128,25 @@ describe('Toasts (ADR-0074)', () => {
       toasts.dismiss(id);
 
       toasts.resume(id);
+      expect(timer.pending).toBe(0);
       const other = toasts.show({ message: 'b' });
       timer.advance(30_000);
 
       expect(toasts.visible().map(({ id: seen }) => seen)).not.toContain(other);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('waits again for the notice that was let go, whatever else is on the screen', () => {
+      const { toasts, timer } = setup();
+      const first = toasts.show({ message: 'first' });
+      toasts.show({ message: 'second' });
+
+      toasts.pause(first);
+      timer.advance(60_000);
+      expect(toasts.visible().map(({ message }) => message)).toEqual(['first']);
+      toasts.resume(first);
+      timer.advance(30_000);
+
       expect(toasts.visible()).toEqual([]);
     });
 
@@ -192,6 +208,19 @@ describe('Toasts (ADR-0074)', () => {
       undo.run.mockResolvedValue(succeed(undefined));
       await toasts.undo(id);
       expect(toasts.visible()).toEqual([]);
+    });
+
+    it('says why on the notice whose action did not work, and on no other', async () => {
+      const { toasts } = setup();
+      const other = toasts.show({ message: 'other', undo: undoing() });
+      const id = toasts.show({ message: 'a', undo: undoing(failure('It did not work.')) });
+
+      await toasts.undo(id);
+
+      expect(toasts.visible().map(({ id: seen, problem }) => [seen, problem])).toEqual([
+        [other, null],
+        [id, 'It did not work.'],
+      ]);
     });
 
     it('does nothing for a notice that has no action, or is not there', async () => {

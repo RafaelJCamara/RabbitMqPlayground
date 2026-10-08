@@ -165,13 +165,27 @@ describe('Home (ADR-0073)', () => {
       await renderHome(many());
 
       expect(screen.getByRole('searchbox', { name: 'Search canvases' })).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent('4 canvases');
+      expect(screen.getByRole('status')).toHaveTextContent(/^4 canvases$/);
+    });
+
+    it('puts the search field in a search landmark, so that a screen reader can go straight to it', async () => {
+      await renderHome(many());
+
+      expect(
+        within(screen.getByRole('search')).getByRole('searchbox', { name: 'Search canvases' }),
+      ).toBeInTheDocument();
     });
 
     it('says "1 canvas" for one', async () => {
       await renderHome([canvas('a')]);
 
-      expect(screen.getByRole('status')).toHaveTextContent('1 canvas');
+      expect(screen.getByRole('status')).toHaveTextContent(/^1 canvas$/);
+    });
+
+    it('says "2 canvases" for two', async () => {
+      await renderHome([canvas('a'), canvas('b')]);
+
+      expect(screen.getByRole('status')).toHaveTextContent(/^2 canvases$/);
     });
 
     it('keeps the canvases that have the text in their names, as it is typed, and says how many of how many', async () => {
@@ -181,7 +195,7 @@ describe('Home (ADR-0073)', () => {
 
       expect(names()).toEqual(expect.arrayContaining(['Orders flow', 'orders']));
       expect(names()).toHaveLength(2);
-      expect(screen.getByRole('status')).toHaveTextContent('2 of 4 canvases');
+      expect(screen.getByRole('status')).toHaveTextContent(/^2 of 4 canvases$/);
     });
 
     it('does not mind accents', async () => {
@@ -254,7 +268,7 @@ describe('Home (ADR-0073)', () => {
       const { user } = await renderHome(lots(100));
 
       expect(names()).toHaveLength(PAGE);
-      expect(screen.getByRole('status')).toHaveTextContent('100 canvases');
+      expect(screen.getByRole('status')).toHaveTextContent(/^100 canvases$/);
       await user.click(screen.getByRole('button', { name: 'Show more' }));
 
       expect(names()).toHaveLength(2 * PAGE);
@@ -270,6 +284,17 @@ describe('Home (ADR-0073)', () => {
 
     it('leaves the focus on the first new card when the last ones are shown, because the button is gone', async () => {
       const { user } = await renderHome(lots(PAGE + 2));
+
+      await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: `Open Canvas ${String(PAGE).padStart(3, '0')}` })).toHaveFocus(),
+      );
+    });
+
+    it('leaves the focus on the first new card when the last page is exactly full', async () => {
+      const { user } = await renderHome(lots(2 * PAGE));
 
       await user.click(screen.getByRole('button', { name: 'Show more' }));
 
@@ -307,7 +332,7 @@ describe('Home (ADR-0073)', () => {
       await user.type(screen.getByRole('searchbox', { name: 'Search canvases' }), 'Canvas 099');
 
       expect(names()).toEqual(['Canvas 099']);
-      expect(screen.getByRole('status')).toHaveTextContent('1 of 100 canvases');
+      expect(screen.getByRole('status')).toHaveTextContent(/^1 of 100 canvases$/);
     });
   });
 });
@@ -363,6 +388,15 @@ describe('Home, deleting (ADR-0074)', () => {
     await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open Gamma' })).toHaveFocus());
+  });
+
+  it('puts the focus on the next card when the one that was deleted was the first', async () => {
+    const { user } = await renderHome(some());
+    answering(true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Alpha' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open Beta' })).toHaveFocus());
   });
 
   it('puts the focus on the card before it when the one that was deleted was the last', async () => {
@@ -472,6 +506,7 @@ describe('Home, canvases that could not be opened (ADR-0073)', () => {
     await renderHome([canvas('a')], [newer('x1', 'From a newer app'), newer('x2')]);
 
     const section = screen.getByTestId('home-unreadable');
+    expect(screen.getByRole('region', { name: 'Canvases that could not be opened' })).toBe(section);
     expect(
       within(section).getByRole('heading', { level: 2, name: 'Canvases that could not be opened' }),
     ).toBeInTheDocument();
@@ -516,6 +551,15 @@ describe('Home, canvases that could not be opened (ADR-0073)', () => {
     await waitFor(() => expect(screen.queryByTestId('home-unreadable')).not.toBeInTheDocument());
   });
 
+  it('puts the focus on the search when one is deleted, because it has no card to leave the focus beside', async () => {
+    const { user } = await renderHome([canvas('a'), canvas('b')], [newer('x1', 'From a newer app')]);
+    vi.spyOn(TestBed.inject(CanvasDialogs), 'confirm').mockImplementation(async () => true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete From a newer app' }));
+
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search canvases' })).toHaveFocus());
+  });
+
   it('deletes nothing when the learner says no', async () => {
     const { library, user } = await renderHome([canvas('a')], [newer('x1')]);
     vi.spyOn(TestBed.inject(CanvasDialogs), 'confirm').mockImplementation(async () => false);
@@ -534,6 +578,7 @@ describe('Home, files and backups (ADR-0075)', () => {
   it('has a button for each of the acts that concern every canvas, named in words', async () => {
     await renderHome([canvas('a')]);
 
+    expect(screen.getByRole('button', { name: 'Delete all…' })).toHaveClass('text-danger');
     for (const name of ['New canvas', 'Open a file…', 'Restore a backup…', 'Back up everything', 'Delete all…']) {
       expect(screen.getByRole('button', { name })).toBeEnabled();
     }

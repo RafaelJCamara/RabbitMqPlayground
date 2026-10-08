@@ -45,6 +45,17 @@ describe('ThumbnailView (ADR-0073)', () => {
     expect(container.querySelectorAll('line')).toHaveLength(3);
   });
 
+  it('draws each edge from where it starts to where it ends', async () => {
+    const thumbnail = sample();
+    const { container } = await render(ThumbnailView, { inputs: { thumbnail } });
+
+    const ends = [...container.querySelectorAll('line')].map((line) =>
+      ['x1', 'y1', 'x2', 'y2'].map((name) => line.getAttribute(name)),
+    );
+    expect(ends).toEqual(thumbnail.edges.map(({ x1, y1, x2, y2 }) => [x1, y1, x2, y2].map(String)));
+    expect(thumbnail.edges.some(({ x1, x2 }) => x1 !== x2)).toBe(true);
+  });
+
   it('colours each kind with the colours of that kind, and keeps the lines thin at any size', async () => {
     const { container } = await render(ThumbnailView, { inputs: { thumbnail: sample() } });
 

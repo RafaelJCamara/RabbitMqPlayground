@@ -4,6 +4,7 @@ import {
   createMemoryRepository,
   parseBackup,
   parseCanvasFile,
+  SIZE_CAPS,
   writeBackup,
   writeCanvasFile,
   type CanvasRepository,
@@ -145,6 +146,11 @@ function editorOf(id: string) {
 /** Lets everything that is waiting on a promise go on. */
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+/** For a branch of a test that cannot be reached: the canvas was just made. */
+function impossible(): never {
+  throw new Error('the canvas was just made');
+}
+
 describe('CanvasLibrary', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
@@ -256,6 +262,22 @@ describe('CanvasLibrary', () => {
       await settle();
 
       expect(set).not.toHaveBeenCalled();
+    });
+
+    it('writes the strip when it could not be read, because it cannot tell whether the strip has changed', async () => {
+      const unreadableStrip = (repository: CanvasRepository): CanvasRepository => ({
+        ...repository,
+        getMeta: (async (key: string) =>
+          key === 'openCanvases'
+            ? { ok: false, error: broken }
+            : repository.getMeta(key as 'lastOpenCanvas')) as CanvasRepository['getMeta'],
+      });
+      const harness = setup({ browser: unreadableStrip });
+      await seed(harness, 'Alpha');
+
+      await harness.library.start();
+
+      await vi.waitFor(async () => expect(await strip(harness.repository)).toEqual(['alpha']));
     });
 
     it('never shows the home at start, and lists every canvas for the home', async () => {
@@ -407,6 +429,38 @@ describe('CanvasLibrary', () => {
       await harness.library.show(canvasView('alpha'));
 
       expect(editor.flush).not.toHaveBeenCalled();
+    });
+
+    it('reads the canvases again for the home and not for a canvas, which the library has already', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      const list = vi.spyOn(harness.repository, 'list');
+
+      await harness.library.show(canvasView('alpha'));
+      expect(list).not.toHaveBeenCalled();
+
+      await harness.library.show(HOME);
+      expect(list).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets the last request win even when the write that an earlier one waited for is the last to be done', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('lastOpenCanvas', 'alpha');
+      await harness.library.start();
+      const writes: (() => void)[] = [];
+      harness.library.attach({ id: 'alpha', flush: () => new Promise<void>((resolve) => writes.push(resolve)) });
+
+      const first = harness.library.show(canvasView('beta'));
+      const second = harness.library.show(canvasView('gamma'));
+      await settle();
+      writes[1]?.();
+      await second;
+      writes[0]?.();
+      await first;
+
+      expect(harness.library.view()).toEqual(canvasView('gamma'));
     });
 
     it('lets the last request win when an earlier one was still waiting for the editor to write', async () => {
@@ -849,6 +903,34 @@ describe('CanvasLibrary', () => {
       expect(harness.library.view()).toEqual(HOME);
     });
 
+    it('brings back the first tab to the first place, and the only tab to the strip', async () => {
+      const first = setup();
+      await seed(first, 'Alpha', 'Beta');
+      await first.repository.setMeta('openCanvases', ['alpha', 'beta']);
+      await first.repository.setMeta('lastOpenCanvas', 'beta');
+      await first.library.start();
+      await first.library.show(HOME);
+      await first.library.delete('alpha');
+      expect(first.library.tabs().map(({ id }) => id)).toEqual(['beta']);
+
+      await first.toasts.undo(notice(first)?.id ?? 0);
+
+      expect(first.library.tabs().map(({ id }) => id)).toEqual(['alpha', 'beta']);
+      expect(await strip(first.repository)).toEqual(['alpha', 'beta']);
+    });
+
+    it('brings back the tab of the only canvas there is', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      await harness.library.delete('alpha');
+      expect(harness.library.tabs()).toEqual([]);
+
+      await harness.toasts.undo(notice(harness)?.id ?? 0);
+
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha']);
+    });
+
     it('does not put a canvas back in the strip that was not in it, and does not open it', async () => {
       const harness = setup();
       await seed(harness, 'Alpha', 'Beta');
@@ -961,6 +1043,7 @@ describe('CanvasLibrary', () => {
 
       await harness.library.delete('beta');
       expect(notice(harness)?.message).toBe('Deleted “From a newer app”.');
+      expect(harness.library.unreadable().map(({ id }) => id)).toEqual(['nameless']);
       await harness.library.delete('nameless');
 
       expect(harness.toasts.visible().map(({ message }) => message)).toEqual([
@@ -1041,6 +1124,26 @@ describe('CanvasLibrary', () => {
       const saved = await harness.library.saveAsFile('alpha');
 
       expect(saved).toEqual({ ok: true, value: 'canvas.rmq.json' });
+    });
+
+    it('says why, and gives no file, when the file would not open again, which is when its name is too long', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const got = await harness.repository.get('alpha');
+      const name = 'x'.repeat(SIZE_CAPS.name + 1);
+      vi.spyOn(harness.repository, 'get').mockResolvedValue({
+        ok: true,
+        value: { ...(got.ok ? got.value : impossible()), name },
+      });
+
+      const saved = await harness.library.saveAsFile('alpha');
+
+      const lead = `“${name}” could not be saved as a file. `;
+      expect(!saved.ok && saved.error.startsWith(lead)).toBe(true);
+      expect(!saved.ok && saved.error.length > lead.length).toBe(true);
+      expect(harness.library.problem()).toBe(!saved.ok ? saved.error : null);
+      expect(harness.saved).toEqual([]);
     });
 
     it('says why, on the screen and aloud, and gives no file, when the canvas cannot be read', async () => {
@@ -1276,6 +1379,23 @@ describe('CanvasLibrary', () => {
 
       expect(!done.ok && done.error).toBe(`The backup could not be made. ${broken.message}`);
       expect(harness.saved).toEqual([]);
+    });
+
+    it('says why, and gives no file, when the backup would not open again, which is when a name is too long', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const got = await harness.repository.get('alpha');
+      const long = { ...(got.ok ? got.value : impossible()), name: 'x'.repeat(SIZE_CAPS.name + 1) };
+      vi.spyOn(harness.repository, 'list').mockResolvedValue({ ok: true, value: { canvases: [long], unreadable: [] } });
+
+      const done = await harness.library.exportBackup();
+
+      const lead = 'The backup could not be made. ';
+      expect(!done.ok && done.error.startsWith(lead)).toBe(true);
+      expect(!done.ok && done.error.length > lead.length).toBe(true);
+      expect(harness.saved).toEqual([]);
+      expect(await harness.repository.getMeta('lastBackupAt')).toEqual({ ok: true, value: undefined });
     });
 
     it('leaves the telling to the caller when it is asked to be quiet: no notice', async () => {
@@ -1551,6 +1671,7 @@ describe('CanvasLibrary', () => {
       const listed = await harness.repository.list();
       expect(listed.ok && listed.value.canvases).toEqual([]);
       expect(harness.toasts.visible().map(({ message }) => message)).toEqual(['Deleted all 3 canvases.']);
+      expect(harness.toasts.visible()[0]?.undo).toMatchObject({ label: 'Undo', keys: 'Ctrl+Z' });
     });
 
     it('says "1 canvas" when there is one', async () => {
@@ -1734,6 +1855,20 @@ describe('CanvasLibrary', () => {
       expect(harness.library.view()).toEqual(canvasView('alpha'));
       expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha']);
       expect(await strip(harness.repository)).toEqual(['alpha']);
+    });
+
+    it('keeps the other tabs, in their places, when it follows the editor to another canvas', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('openCanvases', ['gamma', 'beta']);
+      await harness.repository.setMeta('lastOpenCanvas', 'beta');
+      await harness.library.start();
+
+      harness.library.attach({ id: 'alpha', flush: async () => undefined });
+      await settle();
+
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['gamma', 'alpha']);
+      expect(await strip(harness.repository)).toEqual(['gamma', 'alpha']);
     });
 
     it('changes nothing when the editor opened the canvas that was wanted', async () => {

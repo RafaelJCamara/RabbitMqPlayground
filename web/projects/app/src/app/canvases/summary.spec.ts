@@ -119,6 +119,23 @@ describe('sortSummaries (ADR-0073)', () => {
     expect(ids(sortSummaries(tied, 'name'))).toEqual(['a', 'b']);
   });
 
+  it('puts sixty canvases that are the same in everything but the id in the order of their ids, however they came', () => {
+    const tied = Array.from({ length: 60 }, (_, index) =>
+      summary(`c${String((index * 37) % 60).padStart(2, '0')}`, {
+        name: 'Same',
+        updatedAt: 5,
+        createdAt: 5,
+        elements: 1,
+      }),
+    );
+    const expected = Array.from({ length: 60 }, (_, index) => `c${String(index).padStart(2, '0')}`);
+
+    for (const key of ['edited', 'created', 'name', 'size'] as const) {
+      expect(ids(sortSummaries(tied, key))).toEqual(expected);
+      expect(ids(sortSummaries([...tied].reverse(), key))).toEqual(expected);
+    }
+  });
+
   it('does not change the list that it is given', () => {
     const before = [...canvases];
 

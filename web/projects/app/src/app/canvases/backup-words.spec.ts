@@ -79,6 +79,7 @@ describe('restoreView (ADR-0075)', () => {
       '“C0 (restored)”, “C1 (restored)”, “C2 (restored)”, “C3 (restored)”, “C4 (restored)” and 2 more.',
     );
     expect(restoreView(report({ copies: copies.slice(0, 5) })).summary[0]).toContain('“C4 (restored)”.');
+    expect(restoreView(report({ copies: copies.slice(0, 6) })).summary[0]).toContain('“C4 (restored)” and 1 more.');
   });
 
   it('says that the browser ran out of room, how many were not put back, and what the browser said', () => {

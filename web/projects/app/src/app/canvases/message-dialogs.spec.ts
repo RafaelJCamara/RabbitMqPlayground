@@ -107,6 +107,7 @@ describe('the report of a backup that was put back (ADR-0075)', () => {
     const { dialog } = await report(view({ problems, more: 3 }));
 
     expect(within(dialog).getByRole('heading', { level: 3, name: 'What could not be put back' })).toBeVisible();
+    expect(within(dialog).getByRole('region', { name: 'What could not be put back' })).toBeVisible();
     const list = within(dialog).getByRole('list');
     expect(
       within(list)

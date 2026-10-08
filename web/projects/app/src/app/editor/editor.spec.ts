@@ -44,6 +44,7 @@ import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore, type Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
+import { Toasts } from '../core/ui/toasts';
 import { THEME_STORAGE_KEY } from '../core/theme/theme';
 import { ContextMenu } from './context-menu';
 import { Editor } from './editor';
@@ -121,10 +122,23 @@ describe('Editor', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
     expect(screen.getByRole('banner')).toBeInTheDocument();
+    // Without a workspace the top bar is the banner, and not in a region of its own (ADR-0076).
+    expect(screen.queryByRole('region', { name: 'Editor tools' })).not.toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Toolbox' })).toBeInTheDocument();
     expect(screen.getByRole('main', { name: 'Canvas' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo', { name: 'Status' })).toBeInTheDocument();
+  });
+
+  it('does not follow a clear with a notice when it is not in a workspace, which is where the Undo of one is offered (ADR-0074)', async () => {
+    const { fixture } = await renderEditor(harness().providers);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+    const bus = fixture.debugElement.injector.get(CommandBus);
+    bus.apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
+
+    bus.apply({ type: 'clear' }, 'toolbar');
+
+    expect(TestBed.inject(Toasts).visible()).toEqual([]);
   });
 
   it('opens the one implicit canvas, and says that its changes are saved', async () => {

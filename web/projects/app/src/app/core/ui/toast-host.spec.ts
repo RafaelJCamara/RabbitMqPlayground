@@ -105,6 +105,7 @@ describe('ToastHost (ADR-0074)', () => {
     toasts.show({ message: 'Deleted.' });
     fixture.detectChanges();
     await screen.findByRole('region', { name: 'Notices' });
+    const dismiss = vi.spyOn(toasts, 'dismiss');
 
     elsewhere.focus();
     await user.keyboard('{Escape}');
@@ -112,6 +113,7 @@ describe('ToastHost (ADR-0074)', () => {
     await user.keyboard('{Escape}');
 
     expect(toasts.visible()).toHaveLength(1);
+    expect(dismiss).not.toHaveBeenCalled();
   });
 
   it('stops its time while the pointer is on it, and starts again when the pointer leaves', async () => {

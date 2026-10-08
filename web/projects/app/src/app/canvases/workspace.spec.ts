@@ -122,6 +122,19 @@ describe('Workspace (ADR-0072)', () => {
       expect(screen.queryByTestId('opening-canvases')).not.toBeInTheDocument();
     });
 
+    it('says that it is opening the canvases, as a status, while it does not have them, and shows neither the home nor the editor', async () => {
+      const hung = (memory: CanvasRepository): CanvasRepository => ({
+        ...memory,
+        list: () => new Promise(() => undefined),
+      });
+      await renderWorkspace({ browser: hung });
+
+      expect(screen.getByRole('status')).toHaveTextContent('Opening your canvases…');
+      expect(screen.queryByRole('main', { name: 'My canvases' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
     it('has the name of the product as the one heading of the page, in the strip, and not again in the editor', async () => {
       await renderWorkspace();
       await screen.findByLabelText('Toolbox');
@@ -227,6 +240,7 @@ describe('Workspace (ADR-0072)', () => {
       const dialog = await screen.findByRole('dialog', { name: 'Rename canvas' });
       const field = within(dialog).getByRole('textbox', { name: 'Name' });
       expect(field).toHaveValue('Alpha');
+      expect(within(dialog).getByRole('button', { name: 'Rename' })).toBeInTheDocument();
       await user.clear(field);
       await user.type(field, 'Orders{Enter}');
 

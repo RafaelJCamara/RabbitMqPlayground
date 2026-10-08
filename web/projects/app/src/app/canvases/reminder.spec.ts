@@ -109,6 +109,16 @@ describe('backupReminder (ADR-0075)', () => {
       expect(backupReminder(facts({ lastBackupAt: last, canvases: [canvas({ updatedAt: last + 1 })] })).due).toBe(true);
     });
 
+    it('is due when only one of the canvases was edited since the backup', () => {
+      const last = NOW - 90 * DAY;
+      const canvases = [
+        canvas({ id: 'before', updatedAt: last - DAY }),
+        canvas({ id: 'after', updatedAt: last + DAY }),
+      ];
+
+      expect(backupReminder(facts({ lastBackupAt: last, canvases })).due).toBe(true);
+    });
+
     it('does not count how much is on a canvas, because a canvas that was emptied has changed too', () => {
       const last = NOW - 90 * DAY;
 

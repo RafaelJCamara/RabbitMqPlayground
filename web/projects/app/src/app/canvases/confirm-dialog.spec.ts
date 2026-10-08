@@ -28,6 +28,7 @@ describe('the dialog that asks before a canvas is deleted (ADR-0074)', () => {
     const { dialog } = await ask();
 
     expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(document.querySelector('.cdk-overlay-backdrop')).toHaveClass('cdk-overlay-dark-backdrop');
     expect(within(dialog).getByRole('heading', { level: 2, name: 'Delete “Orders”?' })).toBeVisible();
     expect(dialog).toHaveAccessibleDescription('It has 12 elements. You can take this back for a short while after.');
   });
