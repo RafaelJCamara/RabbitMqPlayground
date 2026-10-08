@@ -35,3 +35,21 @@ test.describe('the page-problems check fails a test when', () => {
     await page.evaluate(() => fetch('missing-asset.js'));
   });
 });
+
+test.describe('the page-problems check also fails a test when', () => {
+  test('the page breaks its own content security policy (ADR-0078)', async ({ page }) => {
+    test.fail(true, 'the check must report this');
+    await new AppPage(page).goto();
+
+    // The listener of the check was added when the document was made, so it runs first, and what it reports is on its way to the test before this answers.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          document.addEventListener('securitypolicyviolation', () => resolve(), { once: true });
+          const script = document.createElement('script');
+          script.textContent = 'window.ran = true';
+          document.head.append(script);
+        }),
+    );
+  });
+});
