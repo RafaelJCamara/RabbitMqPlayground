@@ -1041,6 +1041,17 @@ describe('CommandBar, share (ADR-0078)', () => {
     expect(history.lines()).toEqual(['share']);
   });
 
+  it('is not asked for by any other command, which does what it says and leaves the panel shut', async () => {
+    const { user, store, onShare, log } = await renderBar(emptyDocument(), { flags: 'editor,share' });
+    await openBar(user);
+
+    await type(user, 'declare queue jobs{Enter}');
+
+    expect(Object.values(store.document().queues).map(({ name }) => name)).toEqual(['jobs']);
+    expect(log.entries()).toHaveLength(1);
+    expect(onShare).not.toHaveBeenCalled();
+  });
+
   it('changes nothing: the canvas is the same one, and there is no step of undo', async () => {
     const { user, store, onShare } = await renderBar(SHOP, { flags: 'editor,share' });
     const before = store.document();

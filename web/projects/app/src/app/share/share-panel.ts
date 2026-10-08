@@ -61,7 +61,6 @@ const NUMBER = new Intl.NumberFormat('en-US');
             <input
               type="radio"
               name="rmq-share-what"
-              [checked]="withMessages()"
               [disabled]="messages.count === 0"
               [attr.aria-describedby]="messages.count === 0 ? noMessagesId : null"
               data-testid="share-choice-messages"

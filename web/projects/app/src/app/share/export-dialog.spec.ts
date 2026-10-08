@@ -100,7 +100,10 @@ describe('the dialog that exports a canvas for a broker (ADR-0079)', () => {
         documentOf({ exchanges: { E1: exchangeRecord('orders') }, queues: { Q1: queueRecord('billing') } }),
       );
 
-      expect(within(dialog).getByTestId('export-all')).toHaveTextContent('Everything on the canvas is in the file.');
+      // What is left out is a part of the dialog with a name of its own, so that a screen reader can go to it.
+      const leftOut = within(dialog).getByRole('region', { name: 'What is not in the file' });
+      expect(within(leftOut).getByTestId('export-all')).toHaveTextContent('Everything on the canvas is in the file.');
+      expect(within(leftOut).getByTestId('export-never')).toBeInTheDocument();
       expect(within(dialog).queryByTestId('export-warnings')).not.toBeInTheDocument();
       expect(within(dialog).getByTestId('export-never')).toHaveTextContent(
         'The layout, the seed and the latencies of the simulation are not in the file either: the canvas file keeps them.',
@@ -197,7 +200,7 @@ describe('the dialog that exports a canvas for a broker (ADR-0079)', () => {
     });
 
     it('gives nothing, and says why, for a canvas that has nothing that a broker holds, and leaves the dialog open', async () => {
-      const { dialog, save, user, download } = await openDialog(
+      const { dialog, save, user, download, vhost } = await openDialog(
         documentOf({ consumers: { C1: consumerRecord('worker') } }),
       );
 
@@ -206,6 +209,9 @@ describe('the dialog that exports a canvas for a broker (ADR-0079)', () => {
       expect(within(dialog).getByRole('alert')).toHaveTextContent('Nothing on the canvas can go in a definitions file');
       expect(save).not.toHaveBeenCalled();
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      // The cursor stays where it was, because the virtual host is not what is wrong.
+      expect(download()).toHaveFocus();
+      expect(vhost()).not.toHaveFocus();
     });
   });
 
@@ -234,6 +240,8 @@ describe('the dialog that exports a canvas for a broker (ADR-0079)', () => {
       TestBed.inject(ShareDialogs).exportDefinitions({ name: 'Other', document: sampleDocument() });
       TestBed.inject(ShareDialogs).share({ name: 'Other', document: sampleDocument(), saveAsFile: vi.fn() });
 
+      // Not by what a screen reader finds: a modal dialog hides the one that it covers, so two would be one.
+      expect(document.querySelectorAll('.cdk-dialog-container')).toHaveLength(1);
       expect(screen.getAllByRole('dialog')).toHaveLength(1);
     });
 

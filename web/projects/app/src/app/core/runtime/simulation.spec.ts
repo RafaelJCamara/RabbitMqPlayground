@@ -953,7 +953,7 @@ describe('Simulation', () => {
       const { messages, failed } = shared(snapshot);
       expect(snapshot.now).toBe(180);
 
-      const { simulation, frames } = setup({ shared: messages });
+      const { simulation, frames, stats } = setup({ shared: messages });
       frames.frame(10_000);
 
       expect(failed).not.toHaveBeenCalled();
@@ -964,6 +964,10 @@ describe('Simulation', () => {
       expect(simulation.messageCount()).toBeGreaterThan(0);
       // Paused, the clock does not move, whatever the frames say.
       expect(simulation.now()).toBe(180);
+      // The screen is told at once, without waiting for the clock: the numbers on the nodes and the messages on their way are those of the messages that came.
+      expect(stats.of('Q')()).toEqual({ kind: 'queue', ready: 1, unacked: 1, consumers: 1 });
+      expect(stats.of('P')()).toEqual({ kind: 'producer', sent: 2, repeating: false });
+      expect(simulation.travelling()).toBe(1);
     });
 
     it('go on from there when the learner plays, as the engine that the snapshot was taken from would have', () => {

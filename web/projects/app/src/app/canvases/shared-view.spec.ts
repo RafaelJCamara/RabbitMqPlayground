@@ -189,6 +189,8 @@ describe('SharedView (ADR-0078)', () => {
       });
 
       expect(screen.getByTestId('opening-shared')).toHaveTextContent('Opening the shared canvas…');
+      // Said as a status, so that a screen reader says it when it comes and when it goes.
+      expect(screen.getByTestId('opening-shared')).toHaveAttribute('role', 'status');
       expect(screen.getByRole('button', { name: 'Save a copy to my canvases' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Leave' })).toBeEnabled();
     });

@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { decodeShare, payloadOf, type ShareError } from '@rmq/persistence';
 import { sampleDocument, snapshotAfter } from '@rmq/testing';
@@ -118,6 +119,8 @@ describe('the panel that makes a link (ADR-0078)', () => {
 
       TestBed.inject(ShareDialogs).share({ name: 'Other', document: sampleDocument(), saveAsFile: vi.fn() });
 
+      // Not by what a screen reader finds: a modal dialog hides the one that it covers, so two would be one.
+      expect(document.querySelectorAll('.cdk-dialog-container')).toHaveLength(1);
       expect(screen.getAllByRole('dialog')).toHaveLength(1);
     });
   });
@@ -135,6 +138,30 @@ describe('the panel that makes a link (ADR-0078)', () => {
 
       expect(within(dialog).getByRole('radio', { name: 'The canvas and its 3 messages' })).toBeEnabled();
       expect(within(dialog).getByRole('radio', { name: 'The canvas' })).toBeChecked();
+      // What the messages will be is not said until they are chosen.
+      expect(dialog).not.toHaveTextContent('Whoever opens the link sees the messages');
+    });
+
+    it('makes the two choices one group of radio buttons, so that the arrow keys go from one to the other and a screen reader counts them', async () => {
+      const { dialog } = await openPanel({ messages: messagesOf(3) });
+
+      const [canvas, messages] = within(dialog).getAllByRole<HTMLInputElement>('radio');
+
+      expect(canvas?.name).not.toBe('');
+      expect(messages?.name).toBe(canvas?.name);
+      expect(within(dialog).getByRole('group', { name: 'What to share' })).toContainElement(canvas as HTMLElement);
+    });
+
+    it('moves the choice with the radio buttons themselves: choosing the messages unchecks the canvas, and choosing the canvas unchecks them', async () => {
+      const { dialog, user } = await openPanel({ messages: messagesOf(3) });
+      const canvas = within(dialog).getByRole('radio', { name: 'The canvas' });
+      const messages = within(dialog).getByRole('radio', { name: 'The canvas and its 3 messages' });
+
+      await user.click(messages);
+      expect([canvas, messages].map((radio) => (radio as HTMLInputElement).checked)).toEqual([false, true]);
+
+      await user.click(canvas);
+      expect([canvas, messages].map((radio) => (radio as HTMLInputElement).checked)).toEqual([true, false]);
     });
 
     it('says “message” for one, and does not switch the choice off', async () => {
@@ -180,13 +207,50 @@ describe('the panel that makes a link (ADR-0078)', () => {
       expect(field().value.startsWith(`${BASE}?ff=editor,share#c=v1.`)).toBe(true);
     });
 
-    it('selects itself when it is focused or pressed, so that it can be copied with the keys', async () => {
-      const { field, ready, user } = await openPanel();
+    it('selects itself when it gets the cursor, so that it can be copied with the keys', async () => {
+      const { field, ready } = await openPanel();
       await ready();
+      field().setSelectionRange(2, 5);
 
-      await user.click(field());
+      field().focus();
 
       expect([field().selectionStart, field().selectionEnd]).toEqual([0, field().value.length]);
+    });
+
+    it('selects itself again when it is pressed, though it has the cursor already and a part of it was selected', async () => {
+      const { field, ready } = await openPanel();
+      await ready();
+      field().focus();
+      field().setSelectionRange(2, 5);
+
+      fireEvent.click(field());
+
+      expect([field().selectionStart, field().selectionEnd]).toEqual([0, field().value.length]);
+    });
+
+    it('is described by what is said about it, which is its length, so that it is read with the field', async () => {
+      const { dialog, field, ready } = await openPanel();
+      await ready();
+
+      expect(within(dialog).getByRole('status')).toHaveTextContent(/^The link is [\d,]+ characters long\.$/);
+      expect(field()).toHaveAccessibleDescription(/^The link is [\d,]+ characters long\.$/);
+    });
+
+    it('asks for the canvas alone, with no simulation at all, and for the messages when they are chosen', async () => {
+      const make = vi.fn(makeLink);
+      const { dialog, ready, user } = await openPanel({ messages: messagesOf(2), maker: make });
+      await ready();
+
+      await user.click(within(dialog).getByRole('radio', { name: 'The canvas and its 2 messages' }));
+
+      expect(make).toHaveBeenCalledTimes(2);
+      expect(make.mock.calls[0]?.[0]).toStrictEqual({ name: 'Orders', document: sampleDocument() });
+      expect(make.mock.calls[1]?.[0]).toStrictEqual({
+        name: 'Orders',
+        document: sampleDocument(),
+        simulation: snapshotAfter(sampleDocument(), 1_000),
+      });
+      expect(make.mock.calls[1]?.[1]).toBe(BASE);
     });
 
     it('says what it is making, while it is being made, and has nothing to copy yet', async () => {
@@ -240,10 +304,13 @@ describe('the panel that makes a link (ADR-0078)', () => {
 
       finishers[1]?.({ kind: 'ready', address: `${BASE}#c=v1.second`, length: 10, long: false });
       await waitFor(() => expect(field().value).toBe(`${BASE}#c=v1.second`));
-      finishers[0]?.({ kind: 'ready', address: `${BASE}#c=v1.first`, length: 10, long: false });
-      await Promise.resolve();
+      finishers[0]?.({ kind: 'ready', address: `${BASE}#c=v1.first`, length: 11, long: false });
+      // The page draws when a task of its own has run, which a promise does not wait for.
+      await TestBed.inject(ApplicationRef).whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(field().value).toBe(`${BASE}#c=v1.second`);
+      expect(within(dialog).getByTestId('share-length')).toHaveTextContent('The link is 10 characters long.');
     });
   });
 

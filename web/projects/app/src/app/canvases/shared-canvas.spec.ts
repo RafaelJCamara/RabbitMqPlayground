@@ -170,6 +170,16 @@ describe('SharedCanvas (ADR-0078)', () => {
       expect(canvas.canvasToOpen()).toBeUndefined();
     });
 
+    it('has nothing to say of messages, a name or a copy before there is a link, whatever the flags', async () => {
+      const { canvas } = setup({ flags: 'editor,share' });
+
+      expect(canvas.notice()).toBeNull();
+      expect(canvas.messages()).toBeNull();
+      expect(canvas.name()).toBe('');
+      expect(canvas.saving()).toBe(false);
+      expect(canvas.problem()).toBeNull();
+    });
+
     it('says the name that the link gave, as it is', async () => {
       const { canvas } = await opened({}, canvasOf('<b>Orders</b> & “co”'));
 
