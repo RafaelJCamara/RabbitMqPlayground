@@ -1,0 +1,50 @@
+{
+  "vhosts": [
+    {
+      "name": "/numbers"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "docs",
+      "vhost": "/numbers",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "archive",
+      "vhost": "/numbers",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "docs",
+      "vhost": "/numbers",
+      "destination": "archive",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "any",
+        "10": 1,
+        "2": 1.0,
+        "whole": 1.0,
+        "zero": 0.0,
+        "negzero": -0.0,
+        "negative": -2.5,
+        "plain": 7,
+        "big": 123456789012345680000.0,
+        "small": 0.000001,
+        "tiny": 1.5e-7,
+        "huge": 1e+21
+      }
+    }
+  ]
+}

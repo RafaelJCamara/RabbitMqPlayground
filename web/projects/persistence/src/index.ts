@@ -31,6 +31,19 @@ export {
   shareLink,
 } from './lib/share/codec';
 export { readShare, type Shared } from './lib/share/share';
+export {
+  definitionsText,
+  exportDefinitions,
+  NOT_IN_THE_FILE,
+  planDefinitions,
+  vhostIssue,
+  type DefinitionsPlan,
+  type DefinitionsSummary,
+  type DefinitionsWarning,
+  type ExportedDefinitions,
+  type ExportError,
+  type WarningKind,
+} from './lib/export/definitions';
 export { parseCanvasFile, readCanvasFile, writeCanvasFile, type CanvasFile } from './lib/files/canvas-file';
 export { parseBackup, readBackup, writeBackup, type Backup, type BackupEntry } from './lib/files/backup';
 export {

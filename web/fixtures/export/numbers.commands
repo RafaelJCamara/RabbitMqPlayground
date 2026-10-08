@@ -1,0 +1,7 @@
+# How a number is written. 1 is an integer and 1.0 is a float, and RabbitMQ keeps them apart, so the file has to as
+# well. The headers 10 and 2 come out in the order they were given, and not in the order in which a JavaScript object
+# would keep them.
+# export to the vhost /numbers
+declare exchange docs type=headers
+declare queue archive
+bind docs -> archive x-match=any "10"=1 "2"=1.0 whole=1.0 zero=0.0 negzero=-0.0 negative=-2.5 plain=7 big=123456789012345680000.0 small=0.000001 tiny=1.5e-7 huge=1e21

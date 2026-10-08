@@ -1,0 +1,9 @@
+{
+  "vhost": "/numbers",
+  "summary": {
+    "exchanges": 1,
+    "queues": 1,
+    "bindings": 1
+  },
+  "warnings": []
+}

@@ -1,0 +1,16 @@
+# What the file cannot say: a binding that asks for a header to exist, and a producer and a consumer, which are the
+# simulator's.
+# export to the vhost /
+declare exchange docs type=headers
+declare exchange events type=topic
+declare queue archive
+declare queue inbox
+bind docs -> archive x-match=all format=pdf exists(author)
+bind docs -> inbox format=pdf
+bind events -> inbox key=doc.#
+add producer sender
+add producer clock
+add consumer worker
+link sender -> docs
+set sender payload=hello header:format=pdf
+subscribe worker inbox

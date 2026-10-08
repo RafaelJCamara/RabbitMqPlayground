@@ -1,0 +1,20 @@
+# The basics: the four kinds of exchange, their flags, bindings to queues and to an exchange, and a headers
+# exchange with every kind of value that a header can have.
+# export to the vhost /orders
+declare exchange orders type=topic
+declare exchange invoices type=direct auto-delete=true
+declare exchange broadcast type=fanout durable=false
+declare exchange docs type=headers
+declare exchange hidden type=fanout internal=true
+declare queue billing
+declare queue archive
+declare queue audit
+bind orders -> billing key=order.*
+bind orders -> archive key=order.#
+bind orders -> hidden key=#
+bind hidden -> audit
+bind invoices -> billing key=paid
+bind broadcast -> audit
+bind docs -> archive x-match=all format=pdf size=10 ratio=1.0 draft=false
+bind docs -> billing x-match=any-with-x format=pdf x-region=eu price=-0.5 count=-3
+bind docs -> audit

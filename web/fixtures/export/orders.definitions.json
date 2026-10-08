@@ -1,0 +1,163 @@
+{
+  "vhosts": [
+    {
+      "name": "/orders"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "orders",
+      "vhost": "/orders",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoices",
+      "vhost": "/orders",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": true,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "broadcast",
+      "vhost": "/orders",
+      "type": "fanout",
+      "durable": false,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "docs",
+      "vhost": "/orders",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "hidden",
+      "vhost": "/orders",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": true,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "billing",
+      "vhost": "/orders",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "archive",
+      "vhost": "/orders",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "audit",
+      "vhost": "/orders",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "orders",
+      "vhost": "/orders",
+      "destination": "billing",
+      "destination_type": "queue",
+      "routing_key": "order.*",
+      "arguments": {}
+    },
+    {
+      "source": "orders",
+      "vhost": "/orders",
+      "destination": "archive",
+      "destination_type": "queue",
+      "routing_key": "order.#",
+      "arguments": {}
+    },
+    {
+      "source": "orders",
+      "vhost": "/orders",
+      "destination": "hidden",
+      "destination_type": "exchange",
+      "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "hidden",
+      "vhost": "/orders",
+      "destination": "audit",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "invoices",
+      "vhost": "/orders",
+      "destination": "billing",
+      "destination_type": "queue",
+      "routing_key": "paid",
+      "arguments": {}
+    },
+    {
+      "source": "broadcast",
+      "vhost": "/orders",
+      "destination": "audit",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "docs",
+      "vhost": "/orders",
+      "destination": "archive",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "all",
+        "format": "pdf",
+        "size": 10,
+        "ratio": 1.0,
+        "draft": false
+      }
+    },
+    {
+      "source": "docs",
+      "vhost": "/orders",
+      "destination": "billing",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "any-with-x",
+        "format": "pdf",
+        "x-region": "eu",
+        "price": -0.5,
+        "count": -3
+      }
+    },
+    {
+      "source": "docs",
+      "vhost": "/orders",
+      "destination": "audit",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ]
+}

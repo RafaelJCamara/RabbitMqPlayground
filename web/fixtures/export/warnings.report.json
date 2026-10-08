@@ -1,0 +1,18 @@
+{
+  "vhost": "/",
+  "summary": {
+    "exchanges": 2,
+    "queues": 2,
+    "bindings": 2
+  },
+  "warnings": [
+    {
+      "kind": "exists",
+      "message": "The binding from the exchange “docs” to the queue “archive” is not in the file: it has a condition that a header exists, and RabbitMQ does not accept a header with no value in a definitions file."
+    },
+    {
+      "kind": "simulator",
+      "message": "The producers “sender” and “clock” and the consumer “worker” are not in the file: they are the simulator’s, and a broker has clients instead."
+    }
+  ]
+}

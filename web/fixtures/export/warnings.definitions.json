@@ -1,0 +1,63 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "docs",
+      "vhost": "/",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "archive",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "inbox",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "docs",
+      "vhost": "/",
+      "destination": "inbox",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "format": "pdf"
+      }
+    },
+    {
+      "source": "events",
+      "vhost": "/",
+      "destination": "inbox",
+      "destination_type": "queue",
+      "routing_key": "doc.#",
+      "arguments": {}
+    }
+  ]
+}

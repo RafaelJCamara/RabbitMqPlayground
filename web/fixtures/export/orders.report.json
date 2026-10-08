@@ -1,0 +1,9 @@
+{
+  "vhost": "/orders",
+  "summary": {
+    "exchanges": 5,
+    "queues": 3,
+    "bindings": 9
+  },
+  "warnings": []
+}
