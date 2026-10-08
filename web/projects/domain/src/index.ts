@@ -192,3 +192,4 @@ export {
 export { wordText } from './lib/syntax/words';
 export type { CommandSpec } from './lib/syntax/spec';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
+export { readSnapshot, snapshotDisagrees, type SnapshotRead } from './lib/snapshot';

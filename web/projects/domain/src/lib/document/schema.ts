@@ -74,10 +74,12 @@ const checkValue = (
   }
 };
 
-const headerValueSchema = z.discriminatedUnion('t', [...valueVariants]).superRefine(checkValue);
-const headerConditionSchema = z.discriminatedUnion('t', [...valueVariants, existsVariant]).superRefine(checkValue);
+export const headerValueSchema = z.discriminatedUnion('t', [...valueVariants]).superRefine(checkValue);
+export const headerConditionSchema = z
+  .discriminatedUnion('t', [...valueVariants, existsVariant])
+  .superRefine(checkValue);
 
-const headerArgumentsSchema = z.strictObject({
+export const headerArgumentsSchema = z.strictObject({
   xMatch: xMatchSchema.nullable(),
   args: z.array(z.strictObject({ key: z.string(), value: headerConditionSchema })),
 });
