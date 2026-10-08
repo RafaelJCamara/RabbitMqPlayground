@@ -7,7 +7,7 @@ import type { Issue } from '@rmq/domain';
  */
 
 /** Which of the version numbers of ADR-0027 a `newer-version` error is about. */
-export type VersionOf = 'schema' | 'file' | 'backup';
+export type VersionOf = 'schema' | 'file' | 'backup' | 'link';
 
 /** What can be wrong with data that is to become a canvas. */
 export type LoadError =
@@ -31,6 +31,16 @@ export type LoadError =
       readonly message: string;
     }
   | { readonly kind: 'invalid'; readonly issues: readonly Issue[]; readonly message: string };
+
+/**
+ * What can be wrong with a share link (ADR-0077): what a load can say, and the three things that only a link can be: not one of this app's, cut short or changed on the
+ * way, and made for a browser that this one is not.
+ */
+export type ShareError =
+  | LoadError
+  | { readonly kind: 'not-a-link'; readonly message: string }
+  | { readonly kind: 'damaged'; readonly message: string }
+  | { readonly kind: 'unsupported'; readonly message: string };
 
 /** What the browser can refuse, and what can go wrong with it. */
 export interface StorageError {
@@ -57,7 +67,17 @@ export class StorageFailure extends Error {
 
 /** What a cap is on (`SIZE_CAPS` has the numbers). */
 export type TooLargeWhat =
-  'elements' | 'edges' | 'positions' | 'labels' | 'headers' | 'text' | 'file' | 'canvases' | 'name';
+  | 'elements'
+  | 'edges'
+  | 'positions'
+  | 'labels'
+  | 'headers'
+  | 'text'
+  | 'file'
+  | 'canvases'
+  | 'name'
+  | 'link'
+  | 'inflated';
 
 /** A whole number with a comma between the thousands, the same in every locale. */
 export const thousands = (value: number): string => String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -116,6 +136,22 @@ export const notAnObject = (value: unknown): LoadError => ({
 
 export const unknownFormat = (message: string): LoadError => ({ kind: 'unknown-format', message });
 
+export const notALink = (reason: string): ShareError => ({
+  kind: 'not-a-link',
+  message: `This is not a link of this app: ${reason}. Nothing was opened and nothing was changed.`,
+});
+
+export const damagedLink = (reason: string): ShareError => ({
+  kind: 'damaged',
+  message: `This link is cut short or was changed on the way: ${reason}. Chat apps and mail clients do that to a long link, so ask for it again, or for a file. Nothing was opened and nothing was changed.`,
+});
+
+export const unsupportedBrowser = (): ShareError => ({
+  kind: 'unsupported',
+  message:
+    'This browser cannot make or open a share link, because it cannot compress and unpack data (it has no CompressionStream). Use a recent browser, or send the canvas as a file. Nothing was opened and nothing was changed.',
+});
+
 const NEWER: Record<VersionOf, (found: number, understood: number) => string> = {
   schema: (found, understood) =>
     `This canvas was saved by a newer version of this app. It uses schema version ${found}, and this version understands up to ${understood}.`,
@@ -123,6 +159,8 @@ const NEWER: Record<VersionOf, (found: number, understood: number) => string> = 
     `This file was saved by a newer version of this app. It is canvas file format ${found}, and this version reads up to format ${understood}.`,
   backup: (found, understood) =>
     `This backup was saved by a newer version of this app. It is backup format ${found}, and this version reads up to format ${understood}.`,
+  link: (found, understood) =>
+    `This link was made by a newer version of this app. It is link format ${found}, and this version reads up to format ${understood}.`,
 };
 
 export const newerVersion = (of: VersionOf, found: number, understood: number): LoadError => ({
@@ -146,6 +184,7 @@ export const migrationFailed = (from: number, to: number, reason: string): LoadE
 });
 
 const HOSTILE = 'It was not opened, so that a damaged or hostile file cannot make the page run out of memory.';
+const HOSTILE_LINK = 'It was not opened, so that a damaged or hostile link cannot make the page run out of memory.';
 
 const TOO_LARGE: Record<TooLargeWhat, (found: string, limit: string) => string> = {
   elements: (found, limit) =>
@@ -165,6 +204,10 @@ const TOO_LARGE: Record<TooLargeWhat, (found: string, limit: string) => string> 
   canvases: (found, limit) =>
     `This backup has ${found} canvases, and one backup can have at most ${limit}. ${HOSTILE} If the file is genuine, split the backup into several files.`,
   name: (found, limit) => `The name has ${found} characters, and a name can have at most ${limit}. Shorten the name.`,
+  link: (found, limit) =>
+    `This link is ${found} characters long, and a link that this app opens can be at most ${limit}. ${HOSTILE_LINK} A canvas that big is sent as a file.`,
+  inflated: (_found, limit) =>
+    `This link holds more than ${limit} bytes of text once it is opened, which is more than a canvas can be. ${HOSTILE_LINK} A canvas that big is sent as a file.`,
 };
 
 export const tooLarge = (what: TooLargeWhat, found: number, limit: number): LoadError => ({

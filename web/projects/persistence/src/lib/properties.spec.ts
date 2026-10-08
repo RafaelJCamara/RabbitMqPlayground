@@ -1,14 +1,26 @@
 import { emptyDocument, validateDocument, type CanvasDocument } from '@rmq/domain';
-import { arbDocument, idSequence, manualClock, manualTimer, sampleDocument } from '@rmq/testing';
+import {
+  arbDamage,
+  arbDocument,
+  at,
+  edit,
+  engineFor,
+  idSequence,
+  manualClock,
+  manualTimer,
+  pathsOf,
+  sampleDocument,
+  type Json,
+} from '@rmq/testing';
 import 'fake-indexeddb/auto';
 import * as fc from 'fast-check';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { createAutosave } from './autosave';
-import type { LoadError, RepositoryError } from './errors';
+import type { RepositoryError, ShareError } from './errors';
 import { parseBackup, writeBackup } from './files/backup';
 import { parseCanvasFile, readCanvasFile, writeCanvasFile } from './files/canvas-file';
-import { CANVAS_FILE_FORMAT, CANVAS_FILE_VERSION } from './files/formats';
+import { CANVAS_FILE_FORMAT, CANVAS_FILE_VERSION, SHARE_FORMAT, SHARE_VERSION } from './files/formats';
 import { loadCanvas } from './load/load';
 import { failure, succeed, type Outcome } from './outcome';
 import type { CanvasRecord } from './record';
@@ -16,6 +28,10 @@ import { createIdbStore } from './repository/idb-store';
 import { createMemoryStore } from './repository/memory-store';
 import { createCanvasRepository, type CanvasRepository, type MetaKey } from './repository/repository';
 import type { RecordStore } from './repository/store';
+import { toBase64Url } from './share/base64url';
+import { decodeShare, encodeShare, SHARE_PREFIX } from './share/codec';
+import { deflate } from './share/compress';
+import { readShare } from './share/share';
 
 /**
  * The properties that ADR-0015 and ADR-0027 ask of persistence. The seed and the number of runs come from FC_SEED and
@@ -36,10 +52,14 @@ const ERROR_KINDS: ReadonlySet<string> = new Set([
   'migration-failed',
   'too-large',
   'invalid',
+  // Only a link can be these three.
+  'not-a-link',
+  'damaged',
+  'unsupported',
 ]);
 
 /** What a refusal has to be: one of the kinds that there are, with a sentence, and every issue of an invalid one with its own. */
-function expectTyped(error: LoadError): void {
+function expectTyped(error: ShareError): void {
   expect(ERROR_KINDS.has(error.kind), error.kind).toBe(true);
   expect(typeof error.message).toBe('string');
   expect(error.message.length).toBeGreaterThan(10);
@@ -296,92 +316,8 @@ function safeJson(value: unknown): string | undefined {
   }
 }
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-type Path = readonly (string | number)[];
-
 const isObject = (value: unknown): value is Record<string, Json> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-
-/** Every place in a tree of JSON, the root included. */
-function pathsOf(value: Json | undefined, prefix: Path = []): Path[] {
-  if (Array.isArray(value)) {
-    return [prefix, ...value.flatMap((inner, index) => pathsOf(inner, [...prefix, index]))];
-  }
-  if (isObject(value)) {
-    return [prefix, ...Object.entries(value).flatMap(([key, inner]) => pathsOf(inner, [...prefix, key]))];
-  }
-  return [prefix];
-}
-
-const at = (root: Json | undefined, path: Path): unknown =>
-  path.reduce<unknown>((node, key) => (node as Record<string | number, unknown> | undefined)?.[key], root);
-
-/** A copy of the tree with the node at the path replaced by what `change` makes of it. */
-function edit(root: Json | undefined, path: Path, change: (node: unknown) => unknown): unknown {
-  if (path.length === 0) {
-    return change(root);
-  }
-  const copy = structuredClone(root) as Record<string | number, unknown>;
-  const parent = path
-    .slice(0, -1)
-    .reduce<Record<string | number, unknown>>((node, key) => node[key] as Record<string | number, unknown>, copy);
-  const key = path[path.length - 1] as string | number;
-  parent[key] = change(parent[key]);
-  return copy;
-}
-
-/** A way to damage a tree of JSON at some place that the damage itself picks: remove, replace, or turn into something else. */
-function arbDamage(): fc.Arbitrary<(root: Json | null) => unknown> {
-  const arbReplacement = fc.anything({ maxDepth: 2, withBigInt: true, withDate: true, withNullPrototype: true });
-  return fc
-    .record({
-      pick: fc.nat(),
-      kind: fc.constantFrom('remove', 'replace', 'null', 'wrong type', 'truncate'),
-      replacement: arbReplacement,
-    })
-    .map(({ pick, kind, replacement }) => (root) => {
-      const places = pathsOf(root ?? undefined);
-      const path = places[pick % places.length] ?? [];
-      switch (kind) {
-        case 'remove': {
-          if (path.length === 0) {
-            return undefined;
-          }
-          const parentPath = path.slice(0, -1);
-          const key = path[path.length - 1] as string | number;
-          return edit(root ?? undefined, parentPath, (parent) => {
-            if (Array.isArray(parent)) {
-              return parent.filter((_, index) => index !== key);
-            }
-            const { [key as string]: _gone, ...rest } = parent as Record<string, unknown>;
-            return rest;
-          });
-        }
-        case 'replace':
-          return edit(root ?? undefined, path, () => replacement);
-        case 'null':
-          return edit(root ?? undefined, path, () => null);
-        case 'wrong type':
-          return edit(root ?? undefined, path, (node) =>
-            typeof node === 'string'
-              ? 5
-              : typeof node === 'number'
-                ? String(node)
-                : typeof node === 'boolean'
-                  ? 0
-                  : [node],
-          );
-        default:
-          return edit(root ?? undefined, path, (node) =>
-            Array.isArray(node)
-              ? node.slice(0, Math.floor(node.length / 2))
-              : typeof node === 'string'
-                ? node.slice(0, 1)
-                : node,
-          );
-      }
-    });
-}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The repository, against a model of it that is as simple as can be.
@@ -825,6 +761,206 @@ describe('autosave', () => {
           expect(written.at(-1) ?? -1).toBe(scheduled.at(-1));
         }
       }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The share link (ADR-0077): what it gives back, and what it does with what it is not.
+
+describe('sharing', () => {
+  const arbName = fc.oneof(
+    fc.constantFrom('Orders', '日本語', 'a "quoted" name', ' padded ', 'x'.repeat(200), '😀', '<b>bold</b>'),
+    fc.string({ minLength: 1, maxLength: 40 }).filter((name) => /\S/.test(name)),
+  );
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const encoder = new TextEncoder();
+
+  /** The payload of a link whose text is this text, which is what any program could make. */
+  const packed = async (text: string): Promise<string> =>
+    `${SHARE_PREFIX}${toBase64Url(await deflate(encoder.encode(text)))}`;
+
+  /** The link of a canvas that commands made, which is small enough for one. */
+  async function linkFor(shared: Parameters<typeof encodeShare>[0]): Promise<string> {
+    const made = await encodeShare(shared);
+    expect(made.ok, made.ok ? '' : made.error.message).toBe(true);
+    return made.ok ? made.value : '';
+  }
+
+  /** The run of a canvas: every producer publishes once, and the clock goes on to `until`. */
+  function runOf(document: CanvasDocument, until: number) {
+    const engine = engineFor(document);
+    for (const id of Object.keys(document.producers)) {
+      engine.dispatch({ op: 'producer.publish', producer: id });
+    }
+    engine.advanceTo(until);
+    return engine;
+  }
+
+  /** What an outcome has to be: a canvas that is right, or a refusal that is typed. */
+  function expectOpenedOrTyped(result: Outcome<{ readonly document: CanvasDocument }, ShareError>): void {
+    if (result.ok) {
+      expect(validateDocument(result.value.document)).toEqual([]);
+    } else {
+      expectTyped(result.error);
+    }
+  }
+
+  it('gives back the same canvas from a link, through JSON, for any canvas that commands made', async () => {
+    await fc.assert(
+      fc.asyncProperty(arbDocument, arbName, async (document, name) => {
+        const opened = await decodeShare(await linkFor({ name, document }));
+
+        expect(opened.ok).toBe(true);
+        if (opened.ok) {
+          expect(opened.value.name).toBe(name);
+          expect(viaJson(opened.value.document)).toEqual(viaJson(document));
+          expect(validateDocument(opened.value.document)).toEqual([]);
+          expect('simulation' in opened.value).toBe(false);
+        }
+      }),
+    );
+  });
+
+  it('gives back the messages as they were, and an engine that goes on as the first one does, for any canvas and any moment', async () => {
+    await fc.assert(
+      fc.asyncProperty(arbDocument, fc.nat(4_000), fc.nat(4_000), async (document, until, more) => {
+        const original = runOf(document, until);
+        const simulation = original.snapshot();
+
+        const opened = await decodeShare(await linkFor({ name: 'Orders', document, simulation }));
+
+        expect(opened.ok).toBe(true);
+        const received = opened.ok ? opened.value.simulation : undefined;
+        expect(viaJson(received)).toEqual(viaJson(simulation));
+        if (received !== undefined) {
+          const copy = engineFor(document);
+          copy.restore(received);
+          original.advanceTo(until + more);
+          copy.advanceTo(until + more);
+          expect(viaJson(copy.snapshot())).toEqual(viaJson(original.snapshot()));
+        }
+      }),
+    );
+  });
+
+  it('makes a link that it opens, or says why there is none, for any name and any canvas', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        arbDocument,
+        fc.oneof(fc.string({ maxLength: 250 }), fc.string({ unit: 'binary', maxLength: 250 })),
+        async (document, name) => {
+          const made = await encodeShare({ name, document });
+
+          if (made.ok) {
+            const opened = await decodeShare(made.value);
+            expect(opened.ok).toBe(true);
+            expect(opened.ok && opened.value.name).toBe(name);
+          } else {
+            expectTyped(made.error);
+            expect(['invalid', 'too-large']).toContain(made.error.kind);
+          }
+        },
+      ),
+    );
+  });
+
+  it('never throws for text that is not a link, and for anything that is not text, and says what is wrong in a typed error', async () => {
+    const arbAlphabet = fc
+      .array(fc.constantFrom(...ALPHABET), { maxLength: 200 })
+      .map((characters) => characters.join(''));
+    await fc.assert(
+      fc.asyncProperty(
+        fc.oneof(
+          fc.string(),
+          fc.string({ unit: 'binary' }),
+          arbAlphabet,
+          arbAlphabet.map((text) => `${SHARE_PREFIX}${text}`),
+          fc.anything().map((value) => value as string),
+        ),
+        async (text) => {
+          const result = await decodeShare(text);
+
+          expectOpenedOrTyped(result);
+        },
+      ),
+    );
+  });
+
+  it('never throws for a link that is right with one character changed, put in, taken out, or the rest cut off, and what it lets through is right', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        arbDocument,
+        fc.nat(),
+        fc.constantFrom(...ALPHABET),
+        fc.constantFrom('change', 'cut', 'insert', 'delete'),
+        async (document, pick, character, how) => {
+          const payload = await linkFor({ name: 'Orders', document });
+          const place = SHARE_PREFIX.length + (pick % (payload.length - SHARE_PREFIX.length));
+          const damaged = {
+            change: payload.slice(0, place) + character + payload.slice(place + 1),
+            cut: payload.slice(0, place),
+            insert: payload.slice(0, place) + character + payload.slice(place),
+            delete: payload.slice(0, place) + payload.slice(place + 1),
+          }[how];
+
+          expectOpenedOrTyped(await decodeShare(damaged));
+        },
+      ),
+    );
+  });
+
+  it('never throws for the bytes of a stream that are anything, or for text that is the JSON of anything, in a link', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.oneof(
+          fc.uint8Array({ maxLength: 300 }).map((bytes) => `${SHARE_PREFIX}${toBase64Url(bytes)}`),
+          fc.jsonValue().map((value) => packed(JSON.stringify(value))),
+          fc.string({ unit: 'binary' }).map((text) => packed(text)),
+        ),
+        async (payload) => {
+          const result = await decodeShare(await payload);
+
+          expectOpenedOrTyped(result);
+        },
+      ),
+    );
+  });
+
+  it('never throws for an envelope that is right with one part of it damaged, and what it lets through is right and can be restored', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        arbDocument,
+        arbDamage(),
+        fc.nat(3_000),
+        fc.boolean(),
+        async (document, damage, until, withMessages) => {
+          const envelope = {
+            format: SHARE_FORMAT,
+            version: SHARE_VERSION,
+            name: 'Orders',
+            document: viaJson(document),
+            ...(withMessages ? { simulation: viaJson(runOf(document, until).snapshot()) } : {}),
+          } as Json;
+          const damaged = damage(envelope);
+
+          const result = readShare(damaged);
+          expectOpenedOrTyped(result);
+          if (result.ok && result.value.simulation !== undefined) {
+            // What the reader lets through is what the engine takes, and it goes on without throwing.
+            const engine = engineFor(result.value.document);
+            expect(() => {
+              engine.restore(result.value.simulation!);
+              engine.advanceTo(engine.now() + 5_000);
+            }).not.toThrow();
+          }
+          // And the same through a whole link, when the envelope can be written down.
+          const text = safeJson(damaged);
+          if (text !== undefined) {
+            expectOpenedOrTyped(await decodeShare(await packed(text)));
+          }
+        },
+      ),
     );
   });
 });

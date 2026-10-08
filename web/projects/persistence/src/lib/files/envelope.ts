@@ -26,8 +26,8 @@ export interface EnvelopeKind {
   readonly of: Exclude<VersionOf, 'schema'>;
   /** What it is called in a sentence: `canvas file`, `backup`. */
   readonly noun: string;
-  /** The other kind of envelope that this app writes, and what to say to someone who has opened that one by mistake. */
-  readonly mistaken: { readonly format: string; readonly message: string };
+  /** The other kinds of envelope that this app writes, and what to say to someone who has opened one of them by mistake. */
+  readonly mistaken: readonly { readonly format: string; readonly message: string }[];
 }
 
 /** What some editors put at the start of a UTF-8 file. It is not a part of the JSON. */
@@ -58,8 +58,9 @@ export function checkEnvelope(data: unknown, kind: EnvelopeKind): Outcome<Raw, L
   }
 
   const format = data['format'];
-  if (format === kind.mistaken.format) {
-    return failure(unknownFormat(kind.mistaken.message));
+  const mistaken = kind.mistaken.find((other) => other.format === format);
+  if (mistaken !== undefined) {
+    return failure(unknownFormat(mistaken.message));
   }
   if (format !== kind.format) {
     const found = format === undefined ? 'it does not say what it is.' : `its format is ${summarise(format)}.`;

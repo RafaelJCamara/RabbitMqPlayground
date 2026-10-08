@@ -17,10 +17,12 @@ const KIND: EnvelopeKind = {
   version: BACKUP_VERSION,
   of: 'backup',
   noun: 'backup',
-  mistaken: {
-    format: CANVAS_FILE_FORMAT,
-    message: 'This is the file of one canvas, and not a backup of several. Open it as a canvas.',
-  },
+  mistaken: [
+    {
+      format: CANVAS_FILE_FORMAT,
+      message: 'This is the file of one canvas, and not a backup of several. Open it as a canvas.',
+    },
+  ],
 };
 
 /** One canvas of a backup: read, or why it could not be. One that cannot be read does not stop the others. */

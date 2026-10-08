@@ -10,3 +10,7 @@ export const CANVAS_FILE_VERSION = 1;
 /** The backup of many canvases. */
 export const BACKUP_FORMAT = 'rmq-playground/backup';
 export const BACKUP_VERSION = 1;
+
+/** A share link (ADR-0077): the envelope inside the payload of `#c=`. The version of the link (`v1.`) is the same number. */
+export const SHARE_FORMAT = 'rmq-playground/share';
+export const SHARE_VERSION = 1;

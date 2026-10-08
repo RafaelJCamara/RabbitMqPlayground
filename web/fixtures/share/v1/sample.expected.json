@@ -1,0 +1,165 @@
+{
+  "name": "Orders",
+  "document": {
+    "schemaVersion": 1,
+    "rabbitmqBaseline": "4.3",
+    "vhost": "/",
+    "exchanges": {
+      "E1": {
+        "name": "orders",
+        "type": "topic",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      "E2": {
+        "name": "docs",
+        "type": "headers",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      "E3": {
+        "name": "hidden",
+        "type": "fanout",
+        "durable": true,
+        "autoDelete": false,
+        "internal": true
+      }
+    },
+    "queues": {
+      "Q1": {
+        "name": "billing",
+        "serverNamed": false,
+        "durable": true
+      },
+      "Q2": {
+        "name": "archive",
+        "serverNamed": false,
+        "durable": true
+      }
+    },
+    "bindings": {
+      "B1": {
+        "source": "E1",
+        "dest": {
+          "kind": "queue",
+          "id": "Q1"
+        },
+        "key": "order.*"
+      },
+      "B2": {
+        "source": "E2",
+        "dest": {
+          "kind": "queue",
+          "id": "Q2"
+        },
+        "key": "",
+        "headers": {
+          "xMatch": "any",
+          "args": [
+            {
+              "key": "format",
+              "value": {
+                "t": "string",
+                "v": "pdf"
+              }
+            }
+          ]
+        }
+      },
+      "B3": {
+        "source": "E1",
+        "dest": {
+          "kind": "exchange",
+          "id": "E3"
+        },
+        "key": "#"
+      }
+    },
+    "producers": {
+      "P1": {
+        "name": "sender",
+        "target": {
+          "kind": "exchange",
+          "id": "E1"
+        },
+        "message": {
+          "payload": "hello",
+          "key": "order.new",
+          "headers": [
+            {
+              "key": "n",
+              "value": {
+                "t": "integer",
+                "v": 1
+              }
+            }
+          ]
+        },
+        "burst": 2,
+        "interval": {
+          "everyMs": 500,
+          "on": true
+        }
+      }
+    },
+    "consumers": {
+      "C1": {
+        "name": "worker",
+        "queues": [
+          "Q1"
+        ],
+        "ack": "manual",
+        "prefetch": 3,
+        "processingMs": 200
+      }
+    },
+    "layout": {
+      "nodes": {
+        "E1": {
+          "x": 0,
+          "y": 0
+        },
+        "E2": {
+          "x": 100,
+          "y": 0
+        },
+        "E3": {
+          "x": 200,
+          "y": 0
+        },
+        "Q1": {
+          "x": 300,
+          "y": 0
+        },
+        "Q2": {
+          "x": 400,
+          "y": 0
+        },
+        "P1": {
+          "x": 500,
+          "y": 0
+        },
+        "C1": {
+          "x": 600,
+          "y": 0
+        }
+      },
+      "labels": {
+        "E1>Q1": {
+          "at": 0.5
+        }
+      }
+    },
+    "settings": {
+      "showDefaultExchange": false,
+      "seed": 1,
+      "timing": {
+        "publishMs": 500,
+        "brokerMs": 300,
+        "deliverMs": 500
+      }
+    }
+  }
+}

@@ -1,0 +1,633 @@
+{
+  "name": "Orders with messages",
+  "document": {
+    "schemaVersion": 1,
+    "rabbitmqBaseline": "4.3",
+    "vhost": "/",
+    "exchanges": {
+      "E1": {
+        "name": "orders",
+        "type": "topic",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      "E2": {
+        "name": "docs",
+        "type": "headers",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      "E3": {
+        "name": "hidden",
+        "type": "fanout",
+        "durable": true,
+        "autoDelete": false,
+        "internal": true
+      }
+    },
+    "queues": {
+      "Q1": {
+        "name": "billing",
+        "serverNamed": false,
+        "durable": true
+      },
+      "Q2": {
+        "name": "archive",
+        "serverNamed": false,
+        "durable": true
+      }
+    },
+    "bindings": {
+      "B1": {
+        "source": "E1",
+        "dest": {
+          "kind": "queue",
+          "id": "Q1"
+        },
+        "key": "order.*"
+      },
+      "B2": {
+        "source": "E2",
+        "dest": {
+          "kind": "queue",
+          "id": "Q2"
+        },
+        "key": "",
+        "headers": {
+          "xMatch": "any",
+          "args": [
+            {
+              "key": "format",
+              "value": {
+                "t": "string",
+                "v": "pdf"
+              }
+            }
+          ]
+        }
+      },
+      "B3": {
+        "source": "E1",
+        "dest": {
+          "kind": "exchange",
+          "id": "E3"
+        },
+        "key": "#"
+      }
+    },
+    "producers": {
+      "P1": {
+        "name": "sender",
+        "target": {
+          "kind": "exchange",
+          "id": "E1"
+        },
+        "message": {
+          "payload": "hello",
+          "key": "order.new",
+          "headers": [
+            {
+              "key": "n",
+              "value": {
+                "t": "integer",
+                "v": 1
+              }
+            }
+          ]
+        },
+        "burst": 2,
+        "interval": {
+          "everyMs": 500,
+          "on": true
+        }
+      }
+    },
+    "consumers": {
+      "C1": {
+        "name": "worker",
+        "queues": [
+          "Q1"
+        ],
+        "ack": "manual",
+        "prefetch": 3,
+        "processingMs": 200
+      }
+    },
+    "layout": {
+      "nodes": {
+        "E1": {
+          "x": 0,
+          "y": 0
+        },
+        "E2": {
+          "x": 100,
+          "y": 0
+        },
+        "E3": {
+          "x": 200,
+          "y": 0
+        },
+        "Q1": {
+          "x": 300,
+          "y": 0
+        },
+        "Q2": {
+          "x": 400,
+          "y": 0
+        },
+        "P1": {
+          "x": 500,
+          "y": 0
+        },
+        "C1": {
+          "x": 600,
+          "y": 0
+        }
+      },
+      "labels": {
+        "E1>Q1": {
+          "at": 0.5
+        }
+      }
+    },
+    "settings": {
+      "showDefaultExchange": false,
+      "seed": 1,
+      "timing": {
+        "publishMs": 500,
+        "brokerMs": 300,
+        "deliverMs": 500
+      }
+    }
+  },
+  "simulation": {
+    "version": 1,
+    "vhost": "/",
+    "seed": 1,
+    "prng": 1,
+    "timing": {
+      "publishMs": 500,
+      "brokerMs": 300,
+      "deliverMs": 500
+    },
+    "now": 1400,
+    "nextSeq": 23,
+    "nextEventSeq": 27,
+    "nextMessageId": 9,
+    "published": 8,
+    "exchanges": [
+      {
+        "op": "exchange.declare",
+        "name": "orders",
+        "type": "topic",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      {
+        "op": "exchange.declare",
+        "name": "docs",
+        "type": "headers",
+        "durable": true,
+        "autoDelete": false,
+        "internal": false
+      },
+      {
+        "op": "exchange.declare",
+        "name": "hidden",
+        "type": "fanout",
+        "durable": true,
+        "autoDelete": false,
+        "internal": true
+      }
+    ],
+    "bindings": [
+      {
+        "source": "orders",
+        "destination": {
+          "kind": "queue",
+          "name": "billing"
+        },
+        "key": "order.*"
+      },
+      {
+        "source": "docs",
+        "destination": {
+          "kind": "queue",
+          "name": "archive"
+        },
+        "key": "",
+        "headers": {
+          "xMatch": "any",
+          "args": [
+            {
+              "key": "format",
+              "value": {
+                "t": "string",
+                "v": "pdf"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "source": "orders",
+        "destination": {
+          "kind": "exchange",
+          "name": "hidden"
+        },
+        "key": "#"
+      }
+    ],
+    "queues": [
+      {
+        "name": "billing",
+        "durable": true,
+        "ready": [
+          {
+            "message": {
+              "id": 4,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 4,
+            "redelivered": false
+          },
+          {
+            "message": {
+              "id": 5,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 5,
+            "redelivered": false
+          },
+          {
+            "message": {
+              "id": 6,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 6,
+            "redelivered": false
+          }
+        ],
+        "turn": [],
+        "blocked": [
+          "C1/billing"
+        ],
+        "nextOrder": 7,
+        "enqueued": 6,
+        "delivered": 3
+      },
+      {
+        "name": "archive",
+        "durable": true,
+        "ready": [],
+        "turn": [],
+        "blocked": [],
+        "nextOrder": 1,
+        "enqueued": 0,
+        "delivered": 0
+      }
+    ],
+    "channels": [
+      {
+        "id": "C1",
+        "prefetch": 3,
+        "processingMs": 200,
+        "tags": [
+          "C1/billing"
+        ],
+        "waiting": [
+          {
+            "queue": "billing",
+            "tag": "C1/billing",
+            "ack": "manual",
+            "message": {
+              "id": 2,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 2,
+            "redelivered": false
+          },
+          {
+            "queue": "billing",
+            "tag": "C1/billing",
+            "ack": "manual",
+            "message": {
+              "id": 3,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 3,
+            "redelivered": false
+          }
+        ],
+        "working": {
+          "queue": "billing",
+          "tag": "C1/billing",
+          "ack": "manual",
+          "message": {
+            "id": 1,
+            "producer": "P1",
+            "exchange": "orders",
+            "key": "order.new",
+            "headers": [
+              {
+                "key": "n",
+                "value": {
+                  "t": "integer",
+                  "v": 1
+                }
+              }
+            ],
+            "payload": "hello"
+          },
+          "order": 1,
+          "redelivered": false
+        },
+        "received": 3,
+        "consumed": 0
+      }
+    ],
+    "tags": [
+      {
+        "tag": "C1/billing",
+        "channel": "C1",
+        "queue": "billing",
+        "ack": "manual",
+        "unacked": [
+          {
+            "message": {
+              "id": 1,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 1,
+            "redelivered": false
+          },
+          {
+            "message": {
+              "id": 2,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 2,
+            "redelivered": false
+          },
+          {
+            "message": {
+              "id": 3,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 3,
+            "redelivered": false
+          }
+        ],
+        "cancelled": false
+      }
+    ],
+    "producers": [
+      {
+        "published": 8,
+        "lastTickAt": 1000,
+        "nextTickAt": 1500,
+        "id": "P1",
+        "target": {
+          "kind": "exchange",
+          "name": "orders"
+        },
+        "key": "order.new",
+        "payload": "hello",
+        "headers": [
+          {
+            "key": "n",
+            "value": {
+              "t": "integer",
+              "v": 1
+            }
+          }
+        ],
+        "burst": 2,
+        "everyMs": 500,
+        "repeat": true
+      }
+    ],
+    "exchangeCounters": [
+      [
+        "",
+        {
+          "routed": 0,
+          "unroutable": 0,
+          "refused": 0
+        }
+      ],
+      [
+        "orders",
+        {
+          "routed": 6,
+          "unroutable": 0,
+          "refused": 0
+        }
+      ],
+      [
+        "docs",
+        {
+          "routed": 0,
+          "unroutable": 0,
+          "refused": 0
+        }
+      ],
+      [
+        "hidden",
+        {
+          "routed": 0,
+          "unroutable": 0,
+          "refused": 0
+        }
+      ]
+    ],
+    "heap": [
+      {
+        "at": 1500,
+        "seq": 19,
+        "task": {
+          "kind": "arrive",
+          "message": {
+            "id": 7,
+            "producer": "P1",
+            "exchange": "orders",
+            "key": "order.new",
+            "headers": [
+              {
+                "key": "n",
+                "value": {
+                  "t": "integer",
+                  "v": 1
+                }
+              }
+            ],
+            "payload": "hello"
+          },
+          "sentAt": 1000
+        }
+      },
+      {
+        "at": 1500,
+        "seq": 20,
+        "task": {
+          "kind": "arrive",
+          "message": {
+            "id": 8,
+            "producer": "P1",
+            "exchange": "orders",
+            "key": "order.new",
+            "headers": [
+              {
+                "key": "n",
+                "value": {
+                  "t": "integer",
+                  "v": 1
+                }
+              }
+            ],
+            "payload": "hello"
+          },
+          "sentAt": 1000
+        }
+      },
+      {
+        "at": 1500,
+        "seq": 21,
+        "task": {
+          "kind": "tick",
+          "producer": "P1"
+        }
+      },
+      {
+        "at": 1500,
+        "seq": 22,
+        "task": {
+          "kind": "finish",
+          "channel": "C1",
+          "held": {
+            "queue": "billing",
+            "tag": "C1/billing",
+            "ack": "manual",
+            "message": {
+              "id": 1,
+              "producer": "P1",
+              "exchange": "orders",
+              "key": "order.new",
+              "headers": [
+                {
+                  "key": "n",
+                  "value": {
+                    "t": "integer",
+                    "v": 1
+                  }
+                }
+              ],
+              "payload": "hello"
+            },
+            "order": 1,
+            "redelivered": false
+          }
+        }
+      }
+    ]
+  }
+}

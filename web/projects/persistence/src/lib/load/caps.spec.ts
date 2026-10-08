@@ -26,7 +26,7 @@ describe('the caps', () => {
     expect(SIZE_CAPS.edges).toBeGreaterThanOrEqual(10 * 500);
   });
 
-  it('are the numbers of ADR-0027', () => {
+  it('are the numbers of ADR-0027, and the two of a share link of ADR-0077', () => {
     expect(SIZE_CAPS).toEqual({
       elements: 2_000,
       edges: 5_000,
@@ -35,7 +35,14 @@ describe('the caps', () => {
       file: 50_000_000,
       canvases: 1_000,
       name: 200,
+      link: 256_000,
+      inflated: 2_000_000,
     });
+  });
+
+  it('let a link that is full of the text of a canvas be opened, which is why the text it opens into is bounded more than the link', () => {
+    expect(SIZE_CAPS.inflated).toBeGreaterThan(SIZE_CAPS.link);
+    expect(SIZE_CAPS.inflated).toBeLessThan(SIZE_CAPS.file);
   });
 });
 

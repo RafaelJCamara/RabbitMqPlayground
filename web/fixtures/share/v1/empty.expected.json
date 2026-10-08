@@ -1,0 +1,26 @@
+{
+  "name": "Empty",
+  "document": {
+    "schemaVersion": 1,
+    "rabbitmqBaseline": "4.3",
+    "vhost": "/",
+    "exchanges": {},
+    "queues": {},
+    "bindings": {},
+    "producers": {},
+    "consumers": {},
+    "layout": {
+      "nodes": {},
+      "labels": {}
+    },
+    "settings": {
+      "showDefaultExchange": false,
+      "seed": 1,
+      "timing": {
+        "publishMs": 500,
+        "brokerMs": 300,
+        "deliverMs": 500
+      }
+    }
+  }
+}

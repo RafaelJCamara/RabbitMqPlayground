@@ -26,6 +26,10 @@ export const SIZE_CAPS = {
   canvases: 1_000,
   /** Characters in the name of a canvas. */
   name: 200,
+  /** Characters in the part of a share link after `#c=` (ADR-0077). */
+  link: 256_000,
+  /** Bytes of text that a share link may open into, counted while it is inflated (ADR-0077). */
+  inflated: 2_000_000,
 } as const;
 
 const count = (value: unknown): number => (isRecord(value) ? Object.keys(value).length : 0);

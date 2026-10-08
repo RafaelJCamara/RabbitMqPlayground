@@ -18,10 +18,12 @@ const KIND: EnvelopeKind = {
   version: CANVAS_FILE_VERSION,
   of: 'file',
   noun: 'canvas file',
-  mistaken: {
-    format: BACKUP_FORMAT,
-    message: 'This is a backup of several canvases, and not the file of one canvas. Open it as a backup.',
-  },
+  mistaken: [
+    {
+      format: BACKUP_FORMAT,
+      message: 'This is a backup of several canvases, and not the file of one canvas. Open it as a backup.',
+    },
+  ],
 };
 
 /** What a file holds: the name that its canvas had, and the document, brought up to date. */

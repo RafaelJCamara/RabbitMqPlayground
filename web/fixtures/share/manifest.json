@@ -1,0 +1,15 @@
+{
+  "about": "The share links that each version of the link format made, each with the canvas that it must open as, and the SHA-256 of what each file holds: the text of a link, and what an expected file parses to, so that a line ending cannot change it. A file here is never edited, and none is deleted: a link that has been sent cannot be recalled, so the day a reader stops opening one of these, they are the proof (ADR-0077). A new version of the format adds a folder. They were made once, by the encoder of version 1; the bytes that a compressor makes differ between builds of zlib, so a spec decodes these and never compares what the encoder makes with them.",
+  "files": {
+    "v1/empty.link": "9635840e23dad2d7273b49810a7c54511b22b2c5c85f48f3cc52338cdcf15ae1",
+    "v1/empty.expected.json": "f65ea6058154ebe8df048bf16b3ffd83523acd33596faabb8906248348d72bfb",
+    "v1/sample.link": "ab91401bcbbdfdef3e9fab1a459126fc2137a91180843971c0679be720f40b82",
+    "v1/sample.expected.json": "ee27f76130fe8889f8b9558692770cc7a49dc74075bb28524340e9552e0f1ca0",
+    "v1/typed-headers.link": "de2d7898891e8d3020a5050100fce1430e08820b8a742c5ebfdaa2a8849dd610",
+    "v1/typed-headers.expected.json": "13fc19c430e938103508013307ee31183446fb1d0ca1eb745399e4a1de37fcd2",
+    "v1/unicode.link": "b4d70561f6f58a545e50879b6fd1df05b35934435800ed2d41cdf458deb28636",
+    "v1/unicode.expected.json": "0dc5779d0dd52561396558262aa75f9993e4fde6f17c843934dad4e6afdfa33a",
+    "v1/sample-with-messages.link": "9b9e161d532d36ea94ce58a869c20f01e9932db447b73297cbf41b7a5c9a043d",
+    "v1/sample-with-messages.expected.json": "ea4261c47e019b6a8551ede90ee56a2a94d175f21fcc7431d6ca30488e43a275"
+  }
+}
