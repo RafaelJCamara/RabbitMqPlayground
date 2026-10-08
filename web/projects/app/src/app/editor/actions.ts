@@ -1,12 +1,17 @@
 import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
-import { elementCount, kindOf, nameOf, type Id } from '@rmq/domain';
+import { elementCount, kindOf, nameOf, type CanvasDocument, type Id } from '@rmq/domain';
+import { writeCanvasFile } from '@rmq/persistence';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { canvasFileName } from '../core/files/file-names';
 import { Simulation } from '../core/runtime/simulation';
+import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import type { CommandOrigin } from '../core/state/origin';
 import { SelectionStore } from '../core/state/selection-store';
+import { ShareDialogs } from '../share/dialogs';
 
 /** What the editor shows as a result of an action: a field for a name, the inspector with the focus. */
 export interface ActionSurface {
@@ -35,6 +40,9 @@ export class EditorActions {
   private readonly announcer = inject(Announcer);
   private readonly injector = inject(Injector);
   private readonly simulation = inject(Simulation);
+  private readonly session = inject(CanvasSession);
+  private readonly dialogs = inject(ShareDialogs);
+  private readonly downloader = inject(FILE_DOWNLOADER);
 
   /** Set by the editor, which owns the field for a name and the inspector. */
   surface: ActionSurface | undefined;
@@ -131,6 +139,40 @@ export class EditorActions {
 
   openCheatSheet(): void {
     this.surface?.openCheatSheet();
+  }
+
+  /**
+   * Opens the panel that makes a link to the canvas as it is on the screen (ADR-0078), with the messages that it holds as a choice where there is a simulation to ask. The panel gives the canvas
+   * as a file when a link is too long to send.
+   */
+  share(): void {
+    const name = this.session.name();
+    const document = this.store.document();
+    this.dialogs.share({
+      name,
+      document,
+      saveAsFile: () => this.saveAsFile(name, document),
+      ...(this.simulation.enabled
+        ? { messages: { count: this.simulation.messageCount(), snapshot: () => this.simulation.snapshot() } }
+        : {}),
+    });
+  }
+
+  /** Opens the dialog that exports the canvas as it is on the screen as a definitions file for a broker (ADR-0079). */
+  exportDefinitions(): void {
+    this.dialogs.exportDefinitions({ name: this.session.name(), document: this.store.document() });
+  }
+
+  /** Gives the canvas as a file (ADR-0075), and says so. A canvas that the app could not open again is not given, and that is said. */
+  private saveAsFile(name: string, document: CanvasDocument): void {
+    const written = writeCanvasFile({ name, document });
+    if (!written.ok) {
+      this.announcer.announce(`“${name}” could not be saved as a file. ${written.error.message}`, 'assertive');
+      return;
+    }
+    const file = canvasFileName(name);
+    this.downloader.save(file, written.value);
+    this.announcer.announce(`Saved “${name}” as ${file}.`);
   }
 
   /** Shows or hides the event log. It answers `false` when there is none, so that the key is left for the page. */

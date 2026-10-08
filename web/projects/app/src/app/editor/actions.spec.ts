@@ -4,15 +4,18 @@ import { manualFrames, sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { FILE_DOWNLOADER, type FileDownloader } from '../core/files/downloader';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { Simulation } from '../core/runtime/simulation';
+import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { StatusStore } from '../core/state/status-store';
+import { ShareDialogs } from '../share/dialogs';
 import { EditorActions, type ActionSurface } from './actions';
 
 describe('EditorActions', () => {
@@ -22,8 +25,11 @@ describe('EditorActions', () => {
   let announcer: Announcer;
   let calls: string[];
   let surface: ActionSurface;
+  let dialogs: ShareDialogs;
+  const downloader = { save: vi.fn<FileDownloader['save']>() };
 
   beforeEach(() => {
+    downloader.save.mockClear();
     TestBed.configureTestingModule({
       providers: [
         DocumentStore,
@@ -33,11 +39,16 @@ describe('EditorActions', () => {
         FlowViewport,
         EditorActions,
         CommandLog,
+        CanvasSession,
         ...RUNTIME_SERVICES,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,share' } },
+        { provide: FILE_DOWNLOADER, useValue: downloader },
       ],
     });
+    dialogs = TestBed.inject(ShareDialogs);
+    vi.spyOn(dialogs, 'share').mockImplementation(() => undefined);
+    vi.spyOn(dialogs, 'exportDefinitions').mockImplementation(() => undefined);
     actions = TestBed.inject(EditorActions);
     store = TestBed.inject(DocumentStore);
     selection = TestBed.inject(SelectionStore);
@@ -342,6 +353,99 @@ describe('EditorActions', () => {
       selection.select(['Q1']);
 
       expect(actions.editSelected()).toBe(false);
+    });
+  });
+
+  describe('sharing (ADR-0078, ADR-0079)', () => {
+    const shared = () => vi.mocked(dialogs.share).mock.calls[0]?.[0];
+
+    it('opens the panel for the canvas as it is on the screen, with the name the session gives it', () => {
+      actions.share();
+
+      expect(dialogs.share).toHaveBeenCalledTimes(1);
+      expect(shared()?.name).toBe('Untitled canvas');
+      expect(shared()?.document).toBe(store.document());
+    });
+
+    it('offers the messages when there is a simulation to ask, with how many there are and the engine as it is when the choice is made', () => {
+      TestBed.inject(CommandBus).run({ type: 'publish', from: { kind: 'producer', name: 'sender' } }, 'toolbar');
+      const simulation = TestBed.inject(Simulation);
+
+      actions.share();
+
+      expect(shared()?.messages?.count).toBe(simulation.messageCount());
+      expect(shared()?.messages?.count).toBeGreaterThan(0);
+      expect(shared()?.messages?.snapshot()).toEqual(simulation.snapshot());
+    });
+
+    it('offers nothing of messages where there is no simulation', () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          DocumentStore,
+          SelectionStore,
+          StatusStore,
+          CommandBus,
+          FlowViewport,
+          EditorActions,
+          CommandLog,
+          CanvasSession,
+          ...RUNTIME_SERVICES,
+          { provide: FRAME_SOURCE, useValue: manualFrames() },
+          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'editor,share' } },
+        ],
+      });
+      const withoutSimulation = TestBed.inject(EditorActions);
+      TestBed.inject(DocumentStore).load(sampleDocument());
+      const open = vi.spyOn(TestBed.inject(ShareDialogs), 'share').mockImplementation(() => undefined);
+
+      withoutSimulation.share();
+
+      expect(open.mock.calls[0]?.[0]).not.toHaveProperty('messages');
+    });
+
+    it('opens the dialog that exports a definitions file for the canvas as it is on the screen', () => {
+      actions.exportDefinitions();
+
+      expect(dialogs.exportDefinitions).toHaveBeenCalledExactlyOnceWith({
+        name: 'Untitled canvas',
+        document: store.document(),
+      });
+    });
+
+    describe('the file that a link too long to send is replaced by', () => {
+      it('is the canvas file of the canvas as it was when the panel opened, named for the canvas, and it is said', () => {
+        actions.share();
+        const opened = shared();
+        TestBed.inject(CommandBus).apply({ type: 'declare-queue', name: 'later', durable: true }, 'gesture');
+
+        opened?.saveAsFile();
+
+        expect(downloader.save).toHaveBeenCalledTimes(1);
+        const [file, text] = vi.mocked(downloader.save).mock.calls[0] ?? [];
+        expect(file).toBe('untitled-canvas.rmq.json');
+        const parsed = JSON.parse(text ?? '') as {
+          name: string;
+          document: { queues: Record<string, { name: string }> };
+        };
+        expect(parsed.name).toBe('Untitled canvas');
+        expect(Object.values(parsed.document.queues).map(({ name }) => name)).toEqual(['billing', 'archive']);
+        expect(Object.values(store.document().queues).map(({ name }) => name)).toContain('later');
+        expect(announcer.announce).toHaveBeenCalledWith('Saved “Untitled canvas” as untitled-canvas.rmq.json.');
+      });
+
+      it('is not given, and that is said at once, for a canvas that the app could not open again', () => {
+        store.load({ ...sampleDocument(), vhost: '' });
+        actions.share();
+
+        shared()?.saveAsFile();
+
+        expect(downloader.save).not.toHaveBeenCalled();
+        expect(announcer.announce).toHaveBeenCalledWith(
+          expect.stringContaining('“Untitled canvas” could not be saved as a file.'),
+          'assertive',
+        );
+      });
     });
   });
 });

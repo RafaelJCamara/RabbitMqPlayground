@@ -278,4 +278,60 @@ describe('CommandRunner (ADR-0045)', () => {
       expect(runner.run('help frobnicate')).toMatchObject({ kind: 'refused', issue: { kind: 'unknown-command' } });
     });
   });
+
+  describe('share (ADR-0078)', () => {
+    it('is refused without the flag, saying that sharing is not switched on and how to try it, and tells the bus', () => {
+      const outcome = runner.run('share');
+
+      expect(outcome).toMatchObject({
+        kind: 'refused',
+        issue: {
+          kind: 'unsupported',
+          message:
+            'Sharing is not switched on yet, so there is no link to make. It is still being built: add ?ff=share to the address to try it.',
+        },
+      });
+      expect(status.refusal()).toMatchObject({ origin: 'typed' });
+      expect(log.entries()).toHaveLength(0);
+    });
+
+    describe('with the flag', () => {
+      beforeEach(() => {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [
+            DocumentStore,
+            SelectionStore,
+            StatusStore,
+            CommandBus,
+            CommandLog,
+            CommandRunner,
+            { provide: FLAG_SOURCES, useValue: { stored: null, query: 'share' } },
+          ],
+        });
+        runner = TestBed.inject(CommandRunner);
+        store = TestBed.inject(DocumentStore);
+        status = TestBed.inject(StatusStore);
+        log = TestBed.inject(CommandLog);
+      });
+
+      it('asks the editor to open the panel, and changes nothing: no step of undo, no line in the log, nothing said', () => {
+        runner.run('declare queue billing');
+        const before = store.document();
+        const said = status.notice();
+
+        const outcome = runner.run('share');
+
+        expect(outcome).toEqual({ kind: 'share' });
+        expect(store.document()).toBe(before);
+        expect(status.notice()).toBe(said);
+        expect(log.entries()).toHaveLength(1);
+        expect(status.refusal()).toBeNull();
+      });
+
+      it('cannot be one of several commands, because it opens a panel', () => {
+        expect(runner.run('declare queue a; share')).toMatchObject({ kind: 'refused', issue: { kind: 'batch' } });
+      });
+    });
+  });
 });

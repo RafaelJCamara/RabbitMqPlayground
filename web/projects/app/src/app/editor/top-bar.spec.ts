@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { CanvasSession, type SaveState } from '../core/session/canvas-session';
 import { ICONS } from '../core/ui/icons';
@@ -15,7 +16,7 @@ import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { EditorActions } from './actions';
 import { TopBar } from './top-bar';
 
-async function renderBar() {
+async function renderBar(options: { readonly flags?: string } = {}) {
   const save = signal<SaveState>({ kind: 'saved' });
   const calls: string[] = [];
   const view = await render(TopBar, {
@@ -28,6 +29,7 @@ async function renderBar() {
       EditorActions,
       ...RUNTIME_SERVICES,
       { provide: CanvasSession, useValue: { save } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? null } },
     ],
   });
   const viewport = TestBed.inject(FlowViewport);
@@ -54,6 +56,49 @@ async function renderBar() {
 }
 
 describe('TopBar', () => {
+  describe('sharing (ADR-0078, ADR-0079)', () => {
+    it('has neither button without the flag, so that a visitor who has not asked for it sees nothing of it', async () => {
+      await renderBar();
+
+      expect(screen.queryByRole('button', { name: 'Share…' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Export…' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Share' })).not.toBeInTheDocument();
+    });
+
+    it('has a Share button and an Export button with the flag, in a group, each of which says that it opens a dialog', async () => {
+      await renderBar({ flags: 'editor,share' });
+
+      const group = screen.getByRole('group', { name: 'Share' });
+      for (const name of ['Share…', 'Export…']) {
+        const button = within(group).getByRole('button', { name });
+        expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+        expect(button).toHaveAttribute('type', 'button');
+      }
+    });
+
+    it('asks the editor for the panel that makes a link when Share is pressed, and for the dialog that exports when Export is', async () => {
+      const { user } = await renderBar({ flags: 'editor,share' });
+      const actions = TestBed.inject(EditorActions);
+      const share = vi.spyOn(actions, 'share').mockImplementation(() => undefined);
+      const exporting = vi.spyOn(actions, 'exportDefinitions').mockImplementation(() => undefined);
+
+      await user.click(screen.getByRole('button', { name: 'Share…' }));
+      expect([share.mock.calls.length, exporting.mock.calls.length]).toEqual([1, 0]);
+      await user.click(screen.getByRole('button', { name: 'Export…' }));
+
+      expect([share.mock.calls.length, exporting.mock.calls.length]).toEqual([1, 1]);
+    });
+
+    it('says in words, when the pointer rests on them, what each of them does', async () => {
+      await renderBar({ flags: 'editor,share' });
+
+      expect(screen.getByRole('button', { name: 'Share…' })).toHaveAttribute('title', 'Make a link to this canvas');
+      expect(screen.getByRole('button', { name: 'Export…' })).toHaveAttribute(
+        'title',
+        'Export this canvas as a RabbitMQ definitions file',
+      );
+    });
+  });
   describe('help (ADR-0047)', () => {
     it('has a button, with its name in words, that asks for the cheat-sheet and says that it opens a dialog', async () => {
       await renderBar();

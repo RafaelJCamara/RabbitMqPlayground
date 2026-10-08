@@ -8,6 +8,7 @@ import { ThemeService } from '../core/theme/theme-service';
 import { parseTheme, THEME_LABEL, THEME_PREFERENCES } from '../core/theme/theme';
 import { Icon } from '../core/ui/icon';
 import { Switch } from '../core/ui/switch';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { EditorActions } from './actions';
 import { formatChord } from './keyboard';
 import { saveText } from './save-text';
@@ -19,8 +20,7 @@ const BUTTON =
 
 /**
  * The top bar (ADR-0010): the name of the product, which is the one heading of the page, what can be done to the whole canvas (undo and
- * redo, auto-layout, the view), and what concerns keeping it. The tabs of S9, the play controls of S6 and Share of S10 go here when
- * they exist. A button that has a key says which, so that nothing is hidden (ADR-0002), and each is a button with a name in words.
+ * redo, auto-layout, the view), and what concerns keeping it, and, with the flag `share`, Share and Export (ADR-0078, ADR-0079). A button that has a key says which, so that nothing is hidden (ADR-0002), and each is a button with a name in words.
  */
 @Component({
   selector: 'rmq-top-bar',
@@ -119,6 +119,32 @@ const BUTTON =
         </div>
       </div>
       <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        @if (sharing) {
+          <div class="flex items-center gap-1.5" role="group" aria-label="Share">
+            <button
+              type="button"
+              [class]="button"
+              aria-haspopup="dialog"
+              title="Make a link to this canvas"
+              data-testid="share"
+              (click)="actions.share()"
+            >
+              <rmq-icon name="link" [size]="18" />
+              <span>Share…</span>
+            </button>
+            <button
+              type="button"
+              [class]="button"
+              aria-haspopup="dialog"
+              title="Export this canvas as a RabbitMQ definitions file"
+              data-testid="export"
+              (click)="actions.exportDefinitions()"
+            >
+              <rmq-icon name="send" [size]="18" />
+              <span>Export…</span>
+            </button>
+          </div>
+        }
         <p class="flex min-w-36 items-center gap-1.5" data-testid="save-state" [class]="saveClass()">
           <rmq-icon [name]="saveIcon()" [size]="16" />
           <span>{{ save().text }}</span>
@@ -157,6 +183,8 @@ export class TopBar {
   protected readonly name = APP_NAME;
   /** In a workspace (ADR-0072) the name of the product is the one heading of the page, and it is in the strip of open canvases. */
   protected readonly inWorkspace = inject(CANVAS_HOST) !== null;
+  /** With the flag `share`, the buttons that make a link and export for a broker (ADR-0078, ADR-0079). */
+  protected readonly sharing = inject(FeatureFlags).isEnabled('share');
   protected readonly theme = inject(ThemeService);
   protected readonly store = inject(DocumentStore);
   protected readonly actions = inject(EditorActions);

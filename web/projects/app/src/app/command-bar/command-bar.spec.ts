@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
@@ -19,12 +20,25 @@ const SHOP = documentOf({
   queues: { q1: queueRecord('billing'), q2: queueRecord('archive') },
 });
 
-async function renderBar(document: CanvasDocument = emptyDocument()) {
+async function renderBar(
+  document: CanvasDocument = emptyDocument(),
+  options: { readonly flags?: string; readonly onShare?: () => void } = {},
+) {
   const focused: string[] = [];
   const spoken: string[] = [];
+  const onShare = options.onShare ?? vi.fn();
   const view = await render(CommandBar, {
-    providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, CommandLog, FlowViewport],
+    providers: [
+      DocumentStore,
+      SelectionStore,
+      StatusStore,
+      CommandBus,
+      CommandLog,
+      FlowViewport,
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? null } },
+    ],
     inputs: { keys: '/ or Ctrl+K' },
+    on: { share: onShare },
   });
   TestBed.inject(DocumentStore).load(document);
   TestBed.inject(FlowViewport).attach({
@@ -44,6 +58,7 @@ async function renderBar(document: CanvasDocument = emptyDocument()) {
     ...view,
     focused,
     spoken,
+    onShare,
     user: userEvent.setup(),
     store: TestBed.inject(DocumentStore),
     bus: TestBed.inject(CommandBus),
@@ -1007,5 +1022,49 @@ describe('CommandBar, what to do next (ADR-0045)', () => {
     }
 
     expect(screen.queryByRole('group', { name: 'Try one of these' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CommandBar, share (ADR-0078)', () => {
+  it('asks the editor that hosts it to open the panel, and has nothing to show of its own, when the flag is on', async () => {
+    const onShare = vi.fn();
+    const { user, log, history } = await renderBar(emptyDocument(), { flags: 'editor,share', onShare });
+    await openBar(user);
+
+    await type(user, 'share{Enter}');
+
+    expect(onShare).toHaveBeenCalledTimes(1);
+    expect(field()).toHaveValue('');
+    expect(screen.queryByTestId('command-answer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('help')).not.toBeInTheDocument();
+    expect(log.entries()).toEqual([]);
+    expect(history.lines()).toEqual(['share']);
+  });
+
+  it('changes nothing: the canvas is the same one, and there is no step of undo', async () => {
+    const { user, store, onShare } = await renderBar(SHOP, { flags: 'editor,share' });
+    const before = store.document();
+    await openBar(user);
+
+    await type(user, 'share{Enter}');
+
+    expect(onShare).toHaveBeenCalledTimes(1);
+    expect(store.document()).toBe(before);
+    expect(store.canUndo()).toBe(false);
+  });
+
+  it('is refused, saying why and how to try it, when the flag is off, and the panel is not asked for', async () => {
+    const { user, onShare, status, spoken } = await renderBar(emptyDocument(), { flags: 'editor' });
+    await openBar(user);
+
+    await type(user, 'share{Enter}');
+
+    expect(onShare).not.toHaveBeenCalled();
+    const answer = await screen.findByTestId('command-answer');
+    expect(answer).toHaveTextContent('Sharing is not switched on yet, so there is no link to make.');
+    expect(answer).toHaveTextContent('add ?ff=share to the address to try it');
+    expect(status.refusal()).toMatchObject({ origin: 'typed' });
+    expect(spoken.some((line) => line.includes('Sharing is not switched on yet'))).toBe(true);
+    expect(field()).toHaveValue('share');
   });
 });

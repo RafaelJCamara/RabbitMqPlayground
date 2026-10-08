@@ -7,6 +7,7 @@ import {
   inject,
   Injector,
   input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -229,6 +230,8 @@ const helpSpoken = (output: HelpOutput): string =>
 export class CommandBar {
   /** The keys that open the bar, as they are written for a person, which the editor makes from its table of shortcuts. */
   readonly keys = input('/');
+  /** The line was `share`: the editor that hosts the bar opens the panel that makes a link (ADR-0078). */
+  readonly share = output();
 
   private readonly store = inject(DocumentStore);
   protected readonly log = inject(CommandLog);
@@ -481,6 +484,9 @@ export class CommandBar {
     }
     if (outcome.kind === 'help') {
       this.showHelp(outcome.output);
+    } else if (outcome.kind === 'share') {
+      this.answer.set(null);
+      this.share.emit();
     } else {
       this.answer.set(null);
     }

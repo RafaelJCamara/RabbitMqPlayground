@@ -19,6 +19,7 @@ import { FeatureFlags, FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
+import { CanvasSession } from '../core/session/canvas-session';
 import { rebindCommand, unbindCommand } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
@@ -192,6 +193,7 @@ const SERVICES: (Provider | EnvironmentProviders)[] = [
   StatusStore,
   CommandBus,
   CommandLog,
+  CanvasSession,
   FlowViewport,
   NewNodeFocus,
   LinkFlow,

@@ -270,7 +270,7 @@ interface Peek {
       @if (explain.enabled && explain.logOpen()) {
         <rmq-event-log-panel />
       }
-      <rmq-command-bar [keys]="commandKeys" />
+      <rmq-command-bar [keys]="commandKeys" (share)="actions.share()" />
       <rmq-hint-bar />
       <rmq-status-bar />
       <rmq-context-menu #contextMenu (act)="onMenuAction($event)" (dismissed)="viewport.focus()" />
@@ -299,7 +299,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   private readonly eventLog = inject(EventLog);
   private readonly links = inject(LinkFlow);
-  private readonly actions = inject(EditorActions);
+  protected readonly actions = inject(EditorActions);
   private readonly cheatSheet = inject(CheatSheetService);
   private readonly inspector = viewChild.required(Inspector);
   private readonly commandBar = viewChild.required(CommandBar);
