@@ -1,19 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import {
-  route,
-  type Binding,
-  type Exchange,
-  type HeaderCondition,
-  type HeaderEntry,
-  type HeaderValue,
-  type Topology,
-  type XMatch,
-} from '@rmq/engine';
-import { bindingKey, canonicalTopology, sequentialIds } from '@rmq/testing';
+import { route, type Binding, type Exchange, type Topology } from '@rmq/engine';
+import { asEntries, asValue, bindingKey, canonicalTopology, commandOfStep, sequentialIds } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { applyCommand } from './commands/apply';
-import type { BindCommand, DeclareExchange, DeclareQueue, DocumentCommand, UnbindCommand } from './commands/types';
+import type { DocumentCommand } from './commands/types';
 import { canonicalHeaders } from './document/headers';
 import { emptyDocument, type CanvasDocument } from './document/schema';
 import { toTopology } from './document/topology';
@@ -66,48 +57,6 @@ const OUTSIDE_THE_MODEL: Readonly<Record<string, string>> = {
     'it declares an exclusive queue, and M1 has no exclusive flag (ADR-0024)',
 };
 
-const asValue = (json: Json): HeaderValue => {
-  const { t, v } = json as { t: HeaderValue['t']; v: never };
-  return { t, v } as HeaderValue; // The width of an integer on the wire is not in the model, which does not need it (ADR-0009).
-};
-const asCondition = (json: Json): HeaderCondition => (json['t'] === 'exists' ? { t: 'exists' } : asValue(json));
-const asEntries = <V>(list: unknown, convert: (value: Json) => V): HeaderEntry<V>[] =>
-  ((list ?? []) as { key: string; value: Json }[]).map(({ key, value }) => ({ key, value: convert(value) }));
-
-/** The command that a declaration or a binding of a fixture is, or `undefined` for a step that is not one. */
-function commandOf(step: Json): DocumentCommand | undefined {
-  switch (step['op']) {
-    case 'exchange.declare':
-      return {
-        type: 'declare-exchange',
-        name: step['name'] as string,
-        exchangeType: step['type'] as DeclareExchange['exchangeType'],
-        durable: (step['durable'] as boolean | undefined) ?? true,
-        autoDelete: (step['autoDelete'] as boolean | undefined) ?? false,
-        internal: step['internal'] === true,
-      };
-    case 'queue.declare':
-      return {
-        type: 'declare-queue',
-        name: step['name'] as string,
-        durable: (step['durable'] as boolean | undefined) ?? true,
-      } satisfies DeclareQueue;
-    case 'bind':
-    case 'unbind': {
-      const headers = step['headers'] as { xMatch: XMatch | null; args: unknown } | undefined;
-      return {
-        type: step['op'] as 'bind' | 'unbind',
-        source: step['source'] as string,
-        destination: step['destination'] as BindCommand['destination'],
-        key: (step['key'] as string | undefined) ?? '',
-        ...(headers ? { headers: { xMatch: headers.xMatch, args: asEntries(headers.args, asCondition) } } : {}),
-      } satisfies BindCommand | UnbindCommand;
-    }
-    default:
-      return undefined;
-  }
-}
-
 /** What reading a command back from its text must give: the command, with arguments that say nothing left out. */
 function normalise(command: DocumentCommand): DocumentCommand {
   if (command.type !== 'bind' && command.type !== 'unbind') {
@@ -147,7 +96,7 @@ function replay(fixture: Fixture): Replayed {
   fixture.steps.forEach((step, index) => {
     const at = `${fixture.id}, step ${index + 1} (${String(step['op'])})`;
     const refused = step['refused'] === true;
-    const command = commandOf(step);
+    const command = commandOfStep(step);
 
     if (command === undefined) {
       if (step['op'] !== 'basic.publish') {
