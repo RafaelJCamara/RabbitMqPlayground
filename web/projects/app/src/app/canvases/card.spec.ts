@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { NOW } from '../core/session/canvas-session';
 import { CanvasCard, elementsText } from './card';
 import type { CanvasSummary } from './summary';
@@ -20,7 +21,7 @@ const canvas = (change: Partial<CanvasSummary> = {}): CanvasSummary => ({
   ...change,
 });
 
-async function renderCard(summary: CanvasSummary = canvas()) {
+async function renderCard(summary: CanvasSummary = canvas(), flags: string | null = null) {
   const events: string[] = [];
   const view = await render(CanvasCard, {
     inputs: { canvas: summary },
@@ -29,9 +30,13 @@ async function renderCard(summary: CanvasSummary = canvas()) {
       rename: () => events.push('rename'),
       duplicate: () => events.push('duplicate'),
       save: () => events.push('save'),
+      share: () => events.push('share'),
       delete: () => events.push('delete'),
     },
-    providers: [{ provide: NOW, useValue: () => CLOCK }],
+    providers: [
+      { provide: NOW, useValue: () => CLOCK },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
+    ],
   });
   return { ...view, events, user: userEvent.setup() };
 }
@@ -126,5 +131,24 @@ describe('CanvasCard (ADR-0073)', () => {
     await renderCard(canvas({ id: 'xyz' }));
 
     expect(screen.getByRole('article')).toHaveAttribute('data-canvas', 'xyz');
+  });
+
+  describe('sharing (ADR-0078)', () => {
+    it('has no Share button without the flag', async () => {
+      await renderCard();
+
+      expect(screen.queryByRole('button', { name: /^Share / })).not.toBeInTheDocument();
+    });
+
+    it('has a Share button with the flag, named with the canvas and saying that it opens a dialog, that asks for a link', async () => {
+      const { events, user } = await renderCard(canvas(), 'editor,share');
+
+      const share = screen.getByRole('button', { name: 'Share Orders flow' });
+      expect(share).toHaveAttribute('aria-haspopup', 'dialog');
+      expect(share).toHaveTextContent('Share…');
+      await user.click(share);
+
+      expect(events).toEqual(['share']);
+    });
   });
 });

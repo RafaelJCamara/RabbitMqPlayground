@@ -13,13 +13,14 @@ import {
   type StorageManagerLike,
 } from '@rmq/persistence';
 import { documentOf, idSequence, manualClock, manualTimer, queueRecord, type ManualClock } from '@rmq/testing';
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest';
 import { Announcer, type Politeness } from '../core/announcer';
 import type { OpenEditor } from '../core/session/canvas-host';
 import { NOW } from '../core/session/canvas-session';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
 import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { ShareDialogs } from '../share/dialogs';
 import { CanvasLibrary, type View } from './library';
 
 const unavailable: RepositoryError = {
@@ -1061,6 +1062,75 @@ describe('CanvasLibrary', () => {
           .sort(),
       ).toEqual(['alpha', 'beta']);
       expect(harness.toasts.visible()).toEqual([]);
+    });
+  });
+
+  describe('sharing a canvas (ADR-0078)', () => {
+    const opened = (): MockInstance<ShareDialogs['share']> =>
+      vi.spyOn(TestBed.inject(ShareDialogs), 'share').mockImplementation(() => undefined);
+
+    it('opens the panel for the canvas as it is saved, with its name, and no messages, which the home has none of', async () => {
+      const harness = setup();
+      await seed(harness, 'Orders');
+      await harness.repository.save('orders', {
+        name: 'Orders flow',
+        document: documentOf({ queues: { q1: queueRecord('billing') } }),
+      });
+      await harness.library.start();
+      const share = opened();
+
+      const done = await harness.library.share('orders');
+
+      expect(done).toBe(true);
+      expect(share).toHaveBeenCalledTimes(1);
+      const data = share.mock.calls[0]?.[0];
+      expect(data?.name).toBe('Orders flow');
+      expect(Object.values(data?.document.queues ?? {}).map(({ name }) => name)).toEqual(['billing']);
+      expect(data).not.toHaveProperty('messages');
+    });
+
+    it('makes the open editor write first, so that what is shared is what the learner sees', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const share = opened();
+      const { editor, finish } = editorOf('alpha');
+      harness.library.attach(editor);
+
+      const sharing = harness.library.share('alpha');
+      await settle();
+      expect(share).not.toHaveBeenCalled();
+      finish();
+      await sharing;
+
+      expect(share).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives the canvas file, named after the canvas, when the panel asks for it', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const share = opened();
+      await harness.library.share('alpha');
+
+      share.mock.calls[0]?.[0].saveAsFile();
+      await settle();
+
+      expect(harness.saved.map(({ name }) => name)).toEqual(['alpha.rmq.json']);
+    });
+
+    it('says why, on the screen and aloud, and opens nothing, when the canvas cannot be read', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const share = opened();
+
+      const done = await harness.library.share('nowhere');
+
+      expect(done).toBe(false);
+      expect(share).not.toHaveBeenCalled();
+      expect(harness.library.problem()).toMatch(
+        /^The canvas could not be shared\. There is no canvas with the id "nowhere"/,
+      );
     });
   });
 

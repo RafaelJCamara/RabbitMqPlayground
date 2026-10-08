@@ -121,6 +121,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
                     (rename)="rename(canvas)"
                     (duplicate)="library.duplicate(canvas.id)"
                     (save)="library.saveAsFile(canvas.id)"
+                    (share)="library.share(canvas.id)"
                     (delete)="deleteCanvas(canvas)"
                   />
                 </li>

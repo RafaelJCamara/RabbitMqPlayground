@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output } from '@angular/core';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import { NOW } from '../core/session/canvas-session';
 import { Icon } from '../core/ui/icon';
 import { ago } from './ago';
@@ -63,6 +64,19 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
           <rmq-icon name="plus" [size]="16" />
           <span>Duplicate</span>
         </button>
+        @if (sharing) {
+          <button
+            type="button"
+            [class]="button"
+            aria-haspopup="dialog"
+            [attr.aria-label]="'Share ' + canvas().name"
+            data-testid="card-share"
+            (click)="share.emit()"
+          >
+            <rmq-icon name="link" [size]="16" />
+            <span>Share…</span>
+          </button>
+        }
         <button
           type="button"
           [class]="button"
@@ -95,9 +109,13 @@ export class CanvasCard {
   readonly rename = output();
   readonly duplicate = output();
   readonly save = output();
+  /** The learner asked for a link to the canvas as it is saved (ADR-0078). */
+  readonly share = output();
   readonly delete = output();
 
   private readonly now = inject(NOW);
+  /** With the flag `share`, a card can make a link (ADR-0078). */
+  protected readonly sharing = inject(FeatureFlags).isEnabled('share');
 
   protected readonly button = BUTTON;
   protected readonly primary = BUTTON_PRIMARY;

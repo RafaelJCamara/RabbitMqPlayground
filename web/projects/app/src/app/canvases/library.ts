@@ -27,6 +27,7 @@ import { Toasts } from '../core/ui/toasts';
 import { formatChord } from '../editor/keyboard';
 import { backupDone, type BackupDone } from './backup-words';
 import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { ShareDialogs } from '../share/dialogs';
 import { readText, tooBigToRead } from './file-text';
 import { backupFileName, canvasFileName } from '../core/files/file-names';
 import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
@@ -59,6 +60,7 @@ export class CanvasLibrary implements CanvasHost {
   private readonly announcer = inject(Announcer);
   private readonly toasts = inject(Toasts);
   private readonly downloader = inject(FILE_DOWNLOADER);
+  private readonly sharing = inject(ShareDialogs);
   private readonly now = inject(NOW);
   private readonly manager = inject(STORAGE_MANAGER);
 
@@ -393,6 +395,26 @@ export class CanvasLibrary implements CanvasHost {
     this.downloader.save(file, written.value);
     this.toasts.show({ message: `Saved “${record.value.name}” as ${file}.` });
     return succeed(file);
+  }
+
+  /**
+   * Opens the panel that makes a link to a canvas of the home (ADR-0078), as it is saved: the editor that has it open writes first, so that what is shared is what the learner sees. A canvas that cannot be read is not
+   * shared, and the problem is said. It answers whether the panel was opened.
+   */
+  async share(id: string): Promise<boolean> {
+    await this.editor?.flush();
+    const repository = await this.storage.repository();
+    const record = await repository.get(id);
+    if (!record.ok) {
+      this.report(`The canvas could not be shared. ${record.error.message}`);
+      return false;
+    }
+    this.sharing.share({
+      name: record.value.name,
+      document: record.value.document,
+      saveAsFile: () => void this.saveAsFile(id),
+    });
+    return true;
   }
 
   /** Opens a canvas file as a new canvas, always (ADR-0075). A file that cannot be opened changes nothing, and the answer says why, root cause first. */

@@ -4,6 +4,7 @@ import { failure, succeed, type Outcome, type RestoreReport, type UnreadableCanv
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { NOW } from '../core/session/canvas-session';
 import { Toasts } from '../core/ui/toasts';
 import { Home } from './home';
@@ -47,6 +48,7 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
     exportBackup: vi.fn(async (_options?: { say?: boolean }) => succeed({ file: 'b.json', count: 1, left: 0 })),
     snoozeReminder: vi.fn(async () => undefined),
     saveAsFile: vi.fn(async (_id: string) => succeed('a.rmq.json')),
+    share: vi.fn(async (_id: string) => true),
     openFile: vi.fn(async (_file: File): Promise<Outcome<undefined, string>> => succeed(undefined)),
     restoreFile: vi.fn(async (_file: File): Promise<Outcome<RestoreReport, string>> => succeed(NOTHING_RESTORED)),
     deleteAll: vi.fn(async () => true),
@@ -63,12 +65,17 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
   };
 }
 
-async function renderHome(canvases: readonly CanvasSummary[], unreadable: readonly UnreadableCanvas[] = []) {
+async function renderHome(
+  canvases: readonly CanvasSummary[],
+  unreadable: readonly UnreadableCanvas[] = [],
+  flags: string | null = null,
+) {
   const library = fakeLibrary(canvases, unreadable);
   const view = await render(Home, {
     providers: [
       { provide: CanvasLibrary, useValue: { ...library, problem: library.problemText } },
       { provide: NOW, useValue: () => CLOCK },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
   });
   return { ...view, library, user: userEvent.setup() };
@@ -590,6 +597,20 @@ describe('Home, files and backups (ADR-0075)', () => {
     await user.click(screen.getByRole('button', { name: 'Save as file Alpha' }));
 
     expect(library.saveAsFile).toHaveBeenCalledExactlyOnceWith('a');
+  });
+
+  it('has a button to share each canvas, with the flag, which asks the library for a link to it', async () => {
+    const { library, user } = await renderHome([canvas('a', { name: 'Alpha' })], [], 'editor,share');
+
+    await user.click(screen.getByRole('button', { name: 'Share Alpha' }));
+
+    expect(library.share).toHaveBeenCalledExactlyOnceWith('a');
+  });
+
+  it('has no button to share a canvas without the flag', async () => {
+    await renderHome([canvas('a', { name: 'Alpha' })]);
+
+    expect(screen.queryByRole('button', { name: 'Share Alpha' })).not.toBeInTheDocument();
   });
 
   it('backs everything up', async () => {
