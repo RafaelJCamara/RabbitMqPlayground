@@ -374,6 +374,29 @@ describe('CanvasLibrary', () => {
       expect(await harness.repository.getMeta('lastOpenCanvas')).toEqual({ ok: true, value: 'alpha' });
     });
 
+    it('says aloud what is shown now: the home, or a canvas by its name', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      harness.announce.mockClear();
+
+      await harness.library.show(HOME);
+      await harness.library.show(canvasView('alpha'));
+
+      expect(harness.announce.mock.calls).toEqual([['Showing My canvases.'], ['Showing “Alpha”.']]);
+    });
+
+    it('says nothing when it shows what is shown', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      harness.announce.mockClear();
+
+      await harness.library.show(canvasView('alpha'));
+
+      expect(harness.announce).not.toHaveBeenCalled();
+    });
+
     it('does nothing to show what is shown: it does not make the editor write', async () => {
       const harness = setup();
       await seed(harness, 'Alpha');
@@ -586,6 +609,30 @@ describe('CanvasLibrary', () => {
       ]);
       expect(harness.library.view()).toEqual(canvasView(second.ok ? second.value.id : ''));
       expect(harness.announce).toHaveBeenCalledWith('Made “Untitled canvas 3”.');
+    });
+
+    it('makes a canvas from the document and the name it is given, which is how a template is made, and opens it', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      const made = await harness.library.create({
+        name: 'Hello World',
+        document: documentOf({ queues: { q1: queueRecord('hello') } }),
+      });
+
+      expect(made.ok && made.value).toMatchObject({ name: 'Hello World', elements: 1 });
+      const stored = await harness.repository.get(made.ok ? made.value.id : '');
+      expect(stored.ok && Object.keys(stored.value.document.queues)).toEqual(['q1']);
+      expect(harness.library.view()).toEqual(canvasView(made.ok ? made.value.id : ''));
+    });
+
+    it('names a canvas that is only given a document "Untitled canvas", and the first number that is free', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      const made = await harness.library.create({ document: documentOf({ queues: { q1: queueRecord('hello') } }) });
+
+      expect(made.ok && made.value.name).toBe('Untitled canvas 2');
     });
 
     it('says what went wrong, aloud and on the screen, and opens nothing, when the canvas cannot be made', async () => {

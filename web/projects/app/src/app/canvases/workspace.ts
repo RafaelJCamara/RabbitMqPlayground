@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, Injector } from '@angular/core';
 import { APP_NAME } from '../core/app-info';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { Icon } from '../core/ui/icon';
@@ -50,7 +50,7 @@ import { CanvasLibrary } from './library';
                   [class]="button"
                   [attr.aria-label]="'Close ' + item.name"
                   data-testid="tab-close"
-                  (click)="library.closeTab(item.id)"
+                  (click)="close(item.id)"
                 >
                   <rmq-icon name="close" [size]="14" />
                 </button>
@@ -103,8 +103,19 @@ export class Workspace {
     return id === undefined ? [] : [id];
   });
 
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly injector = inject(Injector);
+
   constructor() {
     void this.library.start();
+  }
+
+  /** Closes a tab, and puts the cursor on the item of the strip that is shown now, because the button that had it is gone. */
+  protected async close(id: string): Promise<void> {
+    await this.library.closeTab(id);
+    afterNextRender(() => this.element.querySelector<HTMLElement>('nav [aria-current="true"]')?.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected tab(current: boolean): string {

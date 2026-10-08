@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { emptyDocument } from '@rmq/domain';
+import { emptyDocument, type CanvasDocument } from '@rmq/domain';
 import {
   failure,
   parseBackup,
@@ -196,6 +196,7 @@ export class CanvasLibrary implements CanvasHost {
       return;
     }
     this.current.set(view);
+    this.announcer.announce(view.kind === 'home' ? 'Showing My canvases.' : `Showing “${this.nameOf(view.id)}”.`);
     if (view.kind === 'canvas') {
       const repository = await this.storage.repository();
       void repository.setMeta('lastOpenCanvas', view.id);
@@ -234,10 +235,18 @@ export class CanvasLibrary implements CanvasHost {
     this.saveStrip();
   }
 
-  /** Makes a blank canvas called "Untitled canvas", or the first of "Untitled canvas 2" and so on that nobody has, and opens it. */
-  async create(): Promise<Outcome<CanvasSummary, RepositoryError>> {
+  /**
+   * Makes a canvas and opens it. It is blank and called "Untitled canvas", or the first of "Untitled canvas 2" and so on that nobody has, unless it is given a document, such as
+   * a template's, or a name (ADR-0072).
+   */
+  async create(
+    options: { readonly name?: string; readonly document?: CanvasDocument } = {},
+  ): Promise<Outcome<CanvasSummary, RepositoryError>> {
     const repository = await this.storage.repository();
-    const made = await this.makeBlank(repository);
+    const made = await repository.create({
+      name: options.name ?? uniqueName(UNTITLED, this.names()),
+      document: options.document ?? emptyDocument(),
+    });
     if (!made.ok) {
       this.report(`A canvas could not be made. ${made.error.message}`);
       return made;
@@ -554,6 +563,11 @@ export class CanvasLibrary implements CanvasHost {
   protected report(text: string): void {
     this.trouble.set(text);
     this.announcer.announce(text, 'assertive');
+  }
+
+  /** The name a canvas has now, or its id if the library does not know it. */
+  private nameOf(id: string): string {
+    return this.summaries().find((canvas) => canvas.id === id)?.name ?? id;
   }
 
   protected names(): string[] {

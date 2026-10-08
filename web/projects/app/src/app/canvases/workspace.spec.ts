@@ -217,6 +217,33 @@ describe('Workspace (ADR-0072)', () => {
       expect(current()).toEqual(['Untitled canvas']);
     });
 
+    it('puts the cursor on the item that is shown now when a tab is closed, because the button that had it is gone', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha', 'Beta'], strip: ['alpha', 'beta'], last: 'beta' });
+      await screen.findByLabelText('Toolbox');
+
+      await user.click(within(strip()).getByRole('button', { name: 'Close Beta' }));
+
+      await waitFor(() => expect(within(strip()).getByRole('button', { name: 'Alpha' })).toHaveFocus());
+    });
+
+    it('puts the cursor on the item that is shown when a tab that is not shown is closed', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha', 'Beta'], strip: ['alpha', 'beta'], last: 'beta' });
+      await screen.findByLabelText('Toolbox');
+
+      await user.click(within(strip()).getByRole('button', { name: 'Close Alpha' }));
+
+      await waitFor(() => expect(within(strip()).getByRole('button', { name: 'Beta' })).toHaveFocus());
+    });
+
+    it('puts the cursor on My canvases when the last tab is closed', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+
+      await user.click(within(strip()).getByRole('button', { name: 'Close Alpha' }));
+
+      await waitFor(() => expect(within(strip()).getByRole('button', { name: 'My canvases' })).toHaveFocus());
+    });
+
     it('shows the home when the last tab is closed, and keeps the canvas', async () => {
       const { user, memory } = await renderWorkspace();
       await screen.findByLabelText('Toolbox');
