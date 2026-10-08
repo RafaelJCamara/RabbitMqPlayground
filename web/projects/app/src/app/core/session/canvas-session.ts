@@ -1,13 +1,10 @@
-import { DOCUMENT, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { computed, DOCUMENT, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { emptyDocument, type CanvasDocument } from '@rmq/domain';
 import {
   createAutosave,
-  createIdbRepository,
-  createMemoryRepository,
   failure,
   quotaWarning,
   readUsage,
-  requestPersistence,
   succeed,
   systemTimer,
   type Autosave,
@@ -15,33 +12,22 @@ import {
   type CanvasRecord,
   type CanvasRepository,
   type Outcome,
-  type PersistResult,
   type QuotaWarning,
   type RepositoryError,
-  type StorageManagerLike,
 } from '@rmq/persistence';
 import { CommandBus } from '../state/command-bus';
 import { DocumentStore, type ChangeCause } from '../state/document-store';
+import { CANVAS_HOST } from './canvas-host';
+import { CanvasStorage, STORAGE_MANAGER } from './canvas-storage';
+
+// The two repositories and the storage manager are the page's (ADR-0072); a spec that decides which the page gets still says so from here.
+export { REPOSITORIES, STORAGE_MANAGER, type RepositoryFactories } from './canvas-storage';
 
 /** The name of the one canvas that the editor makes for a learner who has none. S9 lets them name it. */
 export const UNTITLED = 'Untitled canvas';
 
 /** The estimate of the browser is read after a save, but not more often than this. */
 const QUOTA_READ_EVERY_MS = 30_000;
-
-/** The two repositories that a session may use: the browser's, and one in memory for a browser that keeps nothing (ADR-0028). */
-export interface RepositoryFactories {
-  browser(): CanvasRepository;
-  memory(): CanvasRepository;
-}
-
-export const REPOSITORIES = new InjectionToken<RepositoryFactories>('REPOSITORIES', {
-  providedIn: 'root',
-  factory: () => {
-    const options = { now: () => Date.now(), newId: () => crypto.randomUUID() };
-    return { browser: () => createIdbRepository(options), memory: () => createMemoryRepository(options) };
-  },
-});
 
 /** The timer that the autosave waits with. A spec moves its own by hand. */
 export const AUTOSAVE_TIMER = new InjectionToken<AutosaveTimer>('AUTOSAVE_TIMER', {
@@ -50,12 +36,6 @@ export const AUTOSAVE_TIMER = new InjectionToken<AutosaveTimer>('AUTOSAVE_TIMER'
 });
 
 export const NOW = new InjectionToken<() => number>('NOW', { providedIn: 'root', factory: () => () => Date.now() });
-
-/** `navigator.storage`, which asks the browser to keep the canvases and how much room there is. */
-export const STORAGE_MANAGER = new InjectionToken<StorageManagerLike | undefined>('STORAGE_MANAGER', {
-  providedIn: 'root',
-  factory: () => inject(DOCUMENT).defaultView?.navigator.storage,
-});
 
 /** What each write came to, for the top bar to show. */
 export type SaveState =
@@ -72,17 +52,19 @@ interface Opened {
 }
 
 /**
- * The one implicit canvas, and keeping it (ADR-0031, ADR-0028). It opens the canvas that was open last, or the most recent, or
- * makes one if there is none. It saves every document that the editor makes, 500 ms after the last change, and at once when
- * the page is hidden or left. It says what each write came to, asks the browser to keep the canvases once, after the first save
- * that worked, and warns when the room is running out. If the browser does not let the site keep anything, it works in memory and says so.
+ * The canvas that is open, and keeping it (ADR-0031, ADR-0028, ADR-0072). It opens the canvas that the workspace asks for, or, without a workspace, the
+ * canvas that was open last, or the most recent, or makes one if there is none. It saves every document that the editor makes, 500 ms after the last
+ * change, and at once when the page is hidden or left, and when the editor goes. It says what each write came to, asks the browser to keep the canvases
+ * once for the page, after the first save that worked, and warns when the room is running out. If the browser does not let the site keep anything, the
+ * page works in memory and the session says so. The repository is the page's, and the session does not close it.
  */
 @Injectable()
 export class CanvasSession {
-  private readonly factories = inject(REPOSITORIES);
+  private readonly pageStorage = inject(CanvasStorage);
+  private readonly host = inject(CANVAS_HOST);
   private readonly timer = inject(AUTOSAVE_TIMER);
   private readonly now = inject(NOW);
-  private readonly storage = inject(STORAGE_MANAGER);
+  private readonly manager = inject(STORAGE_MANAGER);
   private readonly page = inject(DOCUMENT);
   private readonly store = inject(DocumentStore);
   private readonly bus = inject(CommandBus);
@@ -90,41 +72,39 @@ export class CanvasSession {
   private readonly saveState = signal<SaveState>({ kind: 'opening' });
   private readonly canvasName = signal(UNTITLED);
   private readonly unreadableCount = signal(0);
-  private readonly persistResult = signal<PersistResult | null>(null);
+  private readonly persistRead = signal(false);
   private readonly quotaResult = signal<QuotaWarning | null>(null);
 
   readonly save = this.saveState.asReadonly();
   readonly name = this.canvasName.asReadonly();
   /** How many canvases in the browser could not be opened (a newer version saved them, or they are damaged). Nothing was changed. */
   readonly unreadable = this.unreadableCount.asReadonly();
-  /** What the browser said when it was asked to keep the canvases, unless it agreed. */
-  readonly persistence = this.persistResult.asReadonly();
+  /** What the browser said when it was asked to keep the canvases, unless it agreed, and until the learner has read it. */
+  readonly persistence = computed(() => (this.persistRead() ? null : this.pageStorage.persistence()));
   /** A warning that the room is running out, or `null`. */
   readonly quota = this.quotaResult.asReadonly();
 
-  /** The learner has read what the browser said about keeping the canvases, and it goes away for as long as the page is open. */
+  /** The learner has read what the browser said about keeping the canvases, and it goes away from the status strip for as long as the page is open. */
   dismissPersistence(): void {
-    this.persistResult.set(null);
+    this.persistRead.set(true);
   }
 
-  private repository: CanvasRepository | undefined;
   private autosave: Autosave<CanvasDocument> | undefined;
   /** The document that is kept, as far as the session knows: the one it opened, or the last one that was written. */
   private persisted: CanvasDocument | undefined;
   /** Why the canvas is kept in memory, when it is. */
   private memoryReason: string | undefined;
-  private persistAsked = false;
   private lastQuotaRead: number | undefined;
   private cleanups: (() => void)[] = [];
 
-  async open(): Promise<void> {
-    let repository = this.factories.browser();
-    let opened = await this.pick(repository);
-    if (!opened.ok) {
-      await repository.close();
-      this.memoryReason = opened.error.message;
-      repository = this.factories.memory();
-      opened = await this.pick(repository);
+  /** Opens the canvas with this id; without one, the canvas that the workspace wants, and without a workspace the one that was open last (ADR-0072). */
+  async open(canvas?: string): Promise<void> {
+    const wanted = canvas ?? this.host?.canvasToOpen();
+    let repository = await this.pageStorage.repository();
+    let opened = await this.pick(repository, wanted);
+    if (!opened.ok && this.pageStorage.memoryReason() === undefined) {
+      repository = await this.pageStorage.fallBack(opened.error.message);
+      opened = await this.pick(repository, wanted);
     }
     if (!opened.ok) {
       // A repository in memory keeps its records in a map, and does not fail.
@@ -132,7 +112,7 @@ export class CanvasSession {
     }
 
     const { record, unreadable } = opened.value;
-    this.repository = repository;
+    this.memoryReason = this.pageStorage.memoryReason();
     this.persisted = record.document;
     this.canvasName.set(record.name);
     this.unreadableCount.set(unreadable);
@@ -145,6 +125,9 @@ export class CanvasSession {
     });
     this.autosave = autosave;
     this.cleanups.push(this.store.subscribe((document, cause) => this.changed(document, cause)));
+    if (this.host !== null) {
+      this.cleanups.push(this.host.attach({ id: record.id, flush: () => this.flush() }));
+    }
     this.saveState.set(
       this.memoryReason === undefined ? { kind: 'saved' } : { kind: 'memory', reason: this.memoryReason },
     );
@@ -169,27 +152,30 @@ export class CanvasSession {
     await this.autosave?.flush();
   }
 
-  /** Stops listening to the page and the document, and lets go of the repository. What is waiting is not written. */
+  /**
+   * Stops listening to the page and the document, and writes what is waiting, so that a canvas that the learner leaves keeps its last change
+   * (ADR-0072). The repository is the page's, and stays open.
+   */
   close(): void {
     for (const cleanup of this.cleanups) {
       cleanup();
     }
     this.cleanups = [];
-    this.autosave?.cancel();
-    void this.repository?.close();
+    void this.autosave?.flush();
   }
 
   /** The canvas to open, and how many could not be read. A failure of the browser is the answer, not an exception. */
-  private async pick(repository: CanvasRepository): Promise<Outcome<Opened, RepositoryError>> {
-    await repository.purgeExpired();
+  private async pick(repository: CanvasRepository, asked?: string): Promise<Outcome<Opened, RepositoryError>> {
     const listed = await repository.list();
     if (!listed.ok) {
       return listed;
     }
     const { canvases, unreadable } = listed.value;
     const remembered = await repository.getMeta('lastOpenCanvas');
-    const wanted = remembered.ok ? remembered.value : undefined;
-    const chosen = canvases.find((canvas) => canvas.id === wanted) ?? canvases[0];
+    const wanted = [asked, remembered.ok ? remembered.value : undefined];
+    const chosen =
+      wanted.map((id) => canvases.find((canvas) => canvas.id === id)).find((found) => found !== undefined) ??
+      canvases[0];
     const record =
       chosen === undefined ? await repository.create({ name: UNTITLED, document: emptyDocument() }) : succeed(chosen);
     if (!record.ok) {
@@ -251,12 +237,7 @@ export class CanvasSession {
 
   /** What is done after a write that worked: ask to keep the canvases, once, and look at the room. */
   private afterSave(): void {
-    if (!this.persistAsked) {
-      this.persistAsked = true;
-      void requestPersistence(this.storage).then((result) => {
-        this.persistResult.set(result.status === 'granted' || result.status === 'already' ? null : result);
-      });
-    }
+    this.pageStorage.askPersistence();
     void this.readQuota(false);
   }
 
@@ -266,7 +247,7 @@ export class CanvasSession {
       return;
     }
     this.lastQuotaRead = now;
-    const usage = await readUsage(this.storage);
+    const usage = await readUsage(this.manager);
     if (usage.ok) {
       const warning = quotaWarning(usage.value);
       this.quotaResult.set(warning.level === 'ok' ? null : warning);

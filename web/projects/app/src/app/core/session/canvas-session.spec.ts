@@ -22,6 +22,7 @@ import { CommandBus } from '../state/command-bus';
 import { DocumentStore } from '../state/document-store';
 import { SelectionStore } from '../state/selection-store';
 import { StatusStore } from '../state/status-store';
+import { CANVAS_HOST, type CanvasHost, type OpenEditor } from './canvas-host';
 import { AUTOSAVE_TIMER, CanvasSession, NOW, REPOSITORIES, STORAGE_MANAGER, UNTITLED } from './canvas-session';
 
 const quotaError: RepositoryError = {
@@ -52,6 +53,8 @@ function setup(
   options: {
     readonly browser?: (memory: CanvasRepository) => CanvasRepository;
     readonly memory?: (memory: CanvasRepository) => CanvasRepository;
+    /** The workspace, when the spec is about the session in one (ADR-0072). */
+    readonly host?: CanvasHost;
   } = {},
 ): Harness {
   const clock = manualClock(5_000_000);
@@ -88,6 +91,7 @@ function setup(
       { provide: AUTOSAVE_TIMER, useValue: timer },
       { provide: NOW, useValue: clock.now },
       { provide: STORAGE_MANAGER, useValue: storage },
+      ...(options.host === undefined ? [] : [{ provide: CANVAS_HOST, useValue: options.host }]),
     ],
   });
   vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
@@ -208,6 +212,119 @@ describe('CanvasSession', () => {
       await session.open();
 
       expect(store.canUndo()).toBe(false);
+    });
+
+    describe('in a workspace (ADR-0072)', () => {
+      /** A workspace that wants a canvas, and records which editors were open and gone. */
+      function workspace(wants: string | undefined) {
+        const open: OpenEditor[] = [];
+        const gone: OpenEditor[] = [];
+        const host: CanvasHost = {
+          canvasToOpen: () => wants,
+          attach: (editor) => {
+            open.push(editor);
+            return () => gone.push(editor);
+          },
+        };
+        return { host, open, gone };
+      }
+
+      const twoCanvases = async (repository: CanvasRepository) => {
+        const first = await repository.create({
+          id: 'first',
+          name: 'First',
+          document: documentOf({ queues: { q1: queueRecord('one') } }),
+        });
+        await repository.create({
+          id: 'second',
+          name: 'Second',
+          document: documentOf({ queues: { q1: queueRecord('two') } }),
+        });
+        await repository.setMeta('lastOpenCanvas', first.ok ? first.value.id : '');
+      };
+
+      it('opens the canvas that it is given, and not the one that was open last', async () => {
+        const { session, store, repository } = setup();
+        await twoCanvases(repository);
+
+        await session.open('second');
+
+        expect(session.name()).toBe('Second');
+        expect(store.document().queues['q1']?.name).toBe('two');
+        expect(await repository.getMeta('lastOpenCanvas')).toEqual({ ok: true, value: 'second' });
+      });
+
+      it('opens the canvas that the workspace wants when it is not given one', async () => {
+        const { host } = workspace('second');
+        const { session, repository } = setup({ host });
+        await twoCanvases(repository);
+
+        await session.open();
+
+        expect(session.name()).toBe('Second');
+      });
+
+      it('prefers the canvas it is given to the one the workspace wants', async () => {
+        const { host } = workspace('second');
+        const { session, repository } = setup({ host });
+        await twoCanvases(repository);
+
+        await session.open('first');
+
+        expect(session.name()).toBe('First');
+      });
+
+      it('opens the one that was open last when the canvas that it is asked for is not there any more', async () => {
+        const { session, repository } = setup();
+        await twoCanvases(repository);
+
+        await session.open('gone');
+
+        expect(session.name()).toBe('First');
+      });
+
+      it('opens the most recent one when neither the canvas it is asked for nor the one open last is there', async () => {
+        const { session, repository, clock } = setup();
+        await twoCanvases(repository);
+        clock.advance(1_000);
+        await repository.save('second', { name: 'Second, edited' });
+        await repository.setMeta('lastOpenCanvas', 'also-gone');
+
+        await session.open('gone');
+
+        expect(session.name()).toBe('Second, edited');
+      });
+
+      it('tells the workspace which canvas it opened, which is not the one asked for when that was gone, and that the editor is gone', async () => {
+        const { host, open, gone } = workspace(undefined);
+        const { session, repository } = setup({ host });
+        await twoCanvases(repository);
+
+        await session.open('gone');
+
+        expect(open.map(({ id }) => id)).toEqual(['first']);
+        expect(gone).toEqual([]);
+        session.close();
+        expect(gone).toEqual(open);
+      });
+
+      it('lets the workspace make it write what is waiting, and waits for the write', async () => {
+        const { host, open } = workspace('first');
+        const { session, bus, repository } = setup({ host });
+        await twoCanvases(repository);
+        await session.open();
+        declare(bus, 'billing');
+
+        await open[0]?.flush();
+
+        expect(Object.keys((await stored(repository, 'first')).document.queues)).toHaveLength(2);
+      });
+
+      it('does not tell anyone when there is no workspace', async () => {
+        const { session } = setup();
+
+        await expect(session.open()).resolves.toBeUndefined();
+      });
     });
 
     it('purges the tombstones that have expired, when it starts', async () => {
@@ -462,10 +579,33 @@ describe('CanvasSession', () => {
       await vi.waitFor(async () => expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1));
     });
 
+    it('writes what is waiting when it is closed, so that a canvas that the learner leaves keeps its last change', async () => {
+      const { session, bus, repository } = setup();
+      await session.open();
+      const id = await currentId(repository);
+      declare(bus, 'billing');
+
+      session.close();
+
+      await vi.waitFor(async () => expect(Object.keys((await stored(repository, id)).document.queues)).toHaveLength(1));
+    });
+
+    it('does not close the repository of the page, which the next canvas will use', async () => {
+      const { session, repository } = setup();
+      await session.open();
+      const close = vi.spyOn(repository, 'close');
+
+      session.close();
+      await settle();
+
+      expect(close).not.toHaveBeenCalled();
+    });
+
     it('stops listening to the page, and saving, once it is closed', async () => {
       const { session, bus, repository, timer } = setup();
       await session.open();
       declare(bus, 'billing');
+      await session.flush();
       session.close();
       const save = vi.spyOn(repository, 'save');
       const flush = vi.spyOn(session, 'flush');
