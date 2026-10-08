@@ -1,6 +1,6 @@
 # ADR-0070: A binding is made from a message by ticking its headers, the live table is the explanation of the draft, and a chip says the mode and the first conditions
 
-- **Status:** Accepted
+- **Status:** Accepted. The chip is 118 wide and goes on to more lines, where it was 300 wide and cut at its width, and a binding made from a message starts with the first queue that did not get it, then the first queue, then the first target: [ADR-0071](0071-what-building-s8-settled-a-chip-fits-between-two-nodes-a-binding-from-a-message-starts-with-the-queue-that-missed-and-three-defects.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Bindings built from data" and "Canvas label" of [ADR-0009](0009-headers-exchange-support.md), the chips of [ADR-0044](0044-edges-carry-chips-labels-are-placed-greedily-and-dragged-and-lints-are-badges.md) ("a binding with header arguments is a chip
