@@ -874,18 +874,6 @@ describe('Inspector', () => {
       expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
     });
 
-    it('is not there without the flag of the explanation, whatever else is on', async () => {
-      for (const flags of [null, 'simulation']) {
-        TestBed.resetTestingModule();
-        document.body.replaceChildren();
-        const { user } = await renderInspector({ edges: ['E1>Q1'] }, flags);
-
-        await user.click(keyField());
-
-        expect(screen.queryByTestId('topic-tester'), String(flags)).not.toBeInTheDocument();
-      }
-    });
-
     it('does not stop the cursor from reaching the buttons of the row, or the key from being changed with the tester under it', async () => {
       const { user, store } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
       await user.click(keyField());

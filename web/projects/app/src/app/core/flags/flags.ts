@@ -14,11 +14,6 @@ export const FLAGS = {
     default: false,
     description: 'Running the simulation: messages in flight, consumers, queues that fill (slice S6).',
   },
-  explain: {
-    default: false,
-    description:
-      'The what-if and topic testers, and with the simulation the event log, the message inspector and the "Why?" overlay (slice S7).',
-  },
   canvases: {
     default: false,
     description:

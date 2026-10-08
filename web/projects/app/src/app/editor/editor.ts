@@ -33,7 +33,6 @@ import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
 import { isVirtual } from '../core/state/default-exchange';
 import type { CommandOrigin } from '../core/state/origin';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { describeNode, edgeEnds } from '../core/state/refs';
 import { SelectionStore } from '../core/state/selection-store';
@@ -261,16 +260,14 @@ interface Peek {
           }
         </main>
         <aside class="border-line bg-panel w-80 shrink-0 overflow-y-auto border-l p-3" aria-label="Inspector">
-          @if (ready() && explainTools) {
+          @if (ready()) {
             <rmq-why-card />
           }
           @if (explain.enabled) {
             <rmq-message-inspector />
           }
           <rmq-inspector />
-          @if (explainTools) {
-            <rmq-what-if />
-          }
+          <rmq-what-if />
         </aside>
       </div>
       @if (explain.enabled && explain.logOpen()) {
@@ -297,10 +294,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly intents = inject(IntentHandler);
   protected readonly keys = inject(KeyboardService);
   protected readonly simulation = inject(Simulation);
-  /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flags `explain` and `simulation`. */
+  /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flag `simulation`. */
   protected readonly explain = inject(ExplainState);
-  /** Whether the tools of the explanation that need no events are there: the what-if tester, the topic tester, and the card that says what the tester lights. They need the flag `explain` alone (ADR-0064). */
-  protected readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   private readonly eventLog = inject(EventLog);
   private readonly links = inject(LinkFlow);
   protected readonly actions = inject(EditorActions);
@@ -544,7 +539,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     this.closeAsks();
     this.keyError.set(null);
     // A topic key has wildcards, and the tester of it is under the field (ADR-0064), which makes the popover taller.
-    const test = this.explainTools && ask.exchangeType === 'topic';
+    const test = ask.exchangeType === 'topic';
     this.keyAsk.set({ ask, at: this.placed(ask.anchor, test ? KEY_TOPIC_SIZE : KEY_SIZE), test });
   }
 

@@ -474,8 +474,6 @@ export class Inspector {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   /** The parts of the inspector that the simulation adds are there only with its flag (ADR-0056). */
   protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
-  /** The tester of a topic key, under the field that is typed in, needs the flag of the explanation alone (ADR-0064). */
-  private readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   /** The key field of a binding that is being typed in, and what is typed in it, which the tester follows before the key is changed (it is changed when the field is left). */
   protected readonly typing = signal<{ readonly id: string; readonly text: string } | null>(null);
   private readonly uid = `rmq-inspector-${nextInspector++}`;
@@ -638,9 +636,9 @@ export class Inspector {
     this.links.openPicker(edge.from, 'inspector');
   }
 
-  /** Whether the tester of a topic key is offered for the bindings of this edge: with the flag, and when the edge starts from a topic exchange. */
+  /** Whether the tester of a topic key is offered for the bindings of this edge: when the edge starts from a topic exchange. */
   protected testsKeys(edge: EdgeView): boolean {
-    return this.explainTools && lookup(this.store.document().exchanges, edge.from)?.type === 'topic';
+    return lookup(this.store.document().exchanges, edge.from)?.type === 'topic';
   }
 
   protected typeKey(event: Event, row: BindingRow): void {

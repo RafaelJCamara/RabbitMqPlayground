@@ -75,9 +75,9 @@ test.describe('feature flags', () => {
   test('can be turned on in local storage, and add up with ?ff=', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem('rmq.flags', 'canvases'));
     const app = new AppPage(page);
-    await app.goto('?ff=explain');
+    await app.goto('?ff=simulation');
 
-    expect(await app.flags()).toEqual(['canvases', 'explain']);
+    expect(await app.flags()).toEqual(['canvases', 'simulation']);
   });
 
   test('ignore a name they do not know, and say so in the console', async ({ page }) => {

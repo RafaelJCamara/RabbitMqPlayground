@@ -448,19 +448,12 @@ describe('EventLog (ADR-0061)', () => {
     expect(log.count()).toBe(0);
   });
 
-  it('listens to nothing without both flags: a log that says what it cannot know would be a log of nothing', () => {
-    for (const flags of ['simulation', 'explain', null]) {
-      TestBed.resetTestingModule();
-      const { run, log } = setup({ flags });
-      if (flags === 'simulation') {
-        run({ type: 'pause' });
-        run(PUBLISH);
-      }
+  it('listens to nothing without the simulation: a log that says what it cannot know would be a log of nothing', () => {
+    const { log } = setup({ flags: null });
 
-      expect(log.enabled, String(flags)).toBe(false);
-      expect(log.count(), String(flags)).toBe(0);
-      expect(log.held.size, String(flags)).toBe(0);
-    }
+    expect(log.enabled).toBe(false);
+    expect(log.count()).toBe(0);
+    expect(log.held.size).toBe(0);
   });
 
   it('stops listening to the events and to the lines of commands when it is destroyed, so that a closed editor says nothing', () => {

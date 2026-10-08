@@ -25,7 +25,7 @@ export const LOG_CAP = 5000;
  * from it when the panel is opened, and it costs a record for each row and nothing for a panel that is closed. The bus tells it of a command after the simulation has said what the command made, so what was said in a
  * turn is kept, and the line of the command is put before it. It is the session's: a canvas that is opened empties it.
  *
- * It needs both flags, `explain` for what it says and `simulation` for the events that it says, and without either it listens to nothing.
+ * It needs the flag `simulation` for the events that it says, and without it it listens to nothing.
  */
 @Injectable()
 export class EventLog {
@@ -76,8 +76,7 @@ export class EventLog {
   });
 
   constructor() {
-    const flags = inject(FeatureFlags);
-    this.enabled = flags.isEnabled('explain') && flags.isEnabled('simulation');
+    this.enabled = inject(FeatureFlags).isEnabled('simulation');
     if (!this.enabled) {
       return;
     }

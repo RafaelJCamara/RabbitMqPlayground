@@ -56,10 +56,10 @@ describe('FeatureFlags', () => {
     });
 
     it('reads ?ff= from the address', () => {
-      window.history.replaceState(null, '', '/?ff=explain,canvases');
+      window.history.replaceState(null, '', '/?ff=simulation,canvases');
       const flags = TestBed.inject(FeatureFlags);
 
-      expect(flags.isEnabled('explain')).toBe(true);
+      expect(flags.isEnabled('simulation')).toBe(true);
       expect(flags.isEnabled('canvases')).toBe(true);
       expect(flags.isEnabled('editor')).toBe(false);
     });

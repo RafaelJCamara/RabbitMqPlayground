@@ -54,8 +54,6 @@ export class WhatIf {
   private readonly selection = inject(SelectionStore);
   private readonly flags = inject(FeatureFlags);
 
-  /** Whether the tester is there: the flag `explain` is enough. */
-  readonly enabled = this.flags.isEnabled('explain');
   /** Whether the line that would send the message is offered: it is a command of the simulation. */
   private readonly offersLine = this.flags.isEnabled('simulation');
 

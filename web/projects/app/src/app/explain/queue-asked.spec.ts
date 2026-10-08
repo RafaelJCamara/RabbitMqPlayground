@@ -132,16 +132,4 @@ describe('QueueAsked (ADR-0062, ADR-0063)', () => {
     settle();
     expect(screen.getByTestId('queue-asked-title')).toHaveTextContent('Message 1 and this queue');
   });
-
-  it('is not there without both flags', async () => {
-    const { selection, settle, run } = await renderAsked('simulation');
-    run({ type: 'pause' });
-    run({ type: 'publish', from: { kind: 'producer', name: 'sender' } });
-    run({ type: 'step' });
-
-    selection.select(['A']);
-    settle();
-
-    expect(screen.queryByTestId('queue-asked')).toBeNull();
-  });
 });

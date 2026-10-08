@@ -82,16 +82,7 @@ async function renderSection(document: CanvasDocument = canvas(), id = 'Q', flag
 }
 
 describe('QueueMessages and the message inspector (ADR-0063)', () => {
-  it('has no button on a message without the flag of the explanation, and its text is as it was', async () => {
-    const { send, step } = await renderSection(canvas(withWorker()));
-    send();
-    step(2);
-
-    expect(screen.queryByTestId('open-message')).toBeNull();
-    expect(screen.getByTestId('queue-message')).toHaveTextContent('#1 new hello');
-  });
-
-  it('has a button for each message with the flags, which opens it in the inspector with what the list says of it and which queue it is in', async () => {
+  it('has a button for each message, which opens it in the inspector with what the list says of it and which queue it is in', async () => {
     const { send, step, user, explain, settle } = await renderSection(canvas(withWorker()), 'Q', 'simulation,explain');
     send('new', 'one');
     send('new', 'two');

@@ -79,16 +79,6 @@ function setup(flags: string | null = 'explain,simulation') {
 }
 
 describe('WhatIf (ADR-0064)', () => {
-  it('is there with the flag of the explanation alone, and not without it, whatever else is on', () => {
-    expect(setup('explain').whatIf.enabled).toBe(true);
-    TestBed.resetTestingModule();
-    expect(setup('explain,simulation').whatIf.enabled).toBe(true);
-    TestBed.resetTestingModule();
-    expect(setup('simulation').whatIf.enabled).toBe(false);
-    TestBed.resetTestingModule();
-    expect(setup(null).whatIf.enabled).toBe(false);
-  });
-
   it('is shut at first, says nothing, and lights nothing', () => {
     const { whatIf } = setup();
 

@@ -40,7 +40,7 @@ export class TesterPage extends LitCanvas {
   ): Promise<TesterPage> {
     await seedCanvas(page, document, 'Tested canvas');
     const editor = new EditorPage(page);
-    await editor.goto(`?ff=${options.flags ?? 'editor,explain'}`);
+    await editor.goto(`?ff=${options.flags ?? 'editor'}`);
     await page.locator('rmq-flow-canvas[data-ready]').waitFor();
     await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length ?? 0)).toBe(edgeKeys(document).size);
     await editor.settled();

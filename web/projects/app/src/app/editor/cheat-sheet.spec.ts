@@ -30,7 +30,7 @@ async function openSheet(flags: string | null = null) {
 
 describe('keyRows (ADR-0047)', () => {
   it('has a row for every row of the table of shortcuts, in its order, whether or not the hint bar shows it', () => {
-    expect(keyRows(false, ['simulation', 'explain']).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
+    expect(keyRows(false, ['simulation']).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
   });
 
   it('leaves out the keys that are for a feature flag that is off, which are the page\u2019s, and says them when it is on', () => {
@@ -44,14 +44,11 @@ describe('keyRows (ADR-0047)', () => {
     expect(without).not.toContain('event-log');
   });
 
-  it('says the key of the event log only when both of its flags are on, since the explanation alone has no events to log', () => {
+  it('says the key of the event log when the simulation is on, and not without it, since there are no events to log', () => {
     const rows = (enabled: Parameters<typeof keyRows>[1]) => keyRows(false, enabled).map((row) => row.id);
 
-    expect(rows(['explain'])).not.toContain('event-log');
-    expect(rows(['simulation'])).not.toContain('event-log');
-    expect(rows(['simulation', 'explain'])).toContain('event-log');
-    // Nothing else of the table is for the explanation alone, so it adds no row to what a page without flags says.
-    expect(rows(['explain'])).toEqual(rows([]));
+    expect(rows([])).not.toContain('event-log');
+    expect(rows(['simulation'])).toContain('event-log');
   });
 
   it('writes Space as a word, and the other keys of the simulation as they are', () => {
@@ -63,7 +60,7 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('writes the key of the event log as the letter that it is', () => {
-    const rows = Object.fromEntries(keyRows(false, ['simulation', 'explain']).map((row) => [row.id, row.keys]));
+    const rows = Object.fromEntries(keyRows(false, ['simulation']).map((row) => [row.id, row.keys]));
 
     expect(rows['event-log']).toBe('E');
   });
@@ -93,9 +90,7 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('says what each does, in the words of the table', () => {
-    expect(keyRows(false, ['simulation', 'explain']).map((row) => row.label)).toEqual(
-      SHORTCUTS.map((row) => row.label),
-    );
+    expect(keyRows(false, ['simulation']).map((row) => row.label)).toEqual(SHORTCUTS.map((row) => row.label));
   });
 });
 
@@ -187,7 +182,7 @@ describe('the cheat-sheet (ADR-0047)', () => {
   });
 
   it('says the keys of the simulation and of the explanation when their flags are on', async () => {
-    const { dialog } = await openSheet('simulation,explain');
+    const { dialog } = await openSheet('simulation');
 
     const table = within(dialog).getByRole('table', { name: 'Keys' });
 

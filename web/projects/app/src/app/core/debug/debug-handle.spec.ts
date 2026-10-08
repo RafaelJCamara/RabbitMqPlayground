@@ -46,17 +46,17 @@ const editor: EditorDebugSources = {
 
 describe('createDebugHandle', () => {
   it('names the app and lists the flags that are on', () => {
-    const handle = createDebugHandle(flagsWith('editor,explain'));
+    const handle = createDebugHandle(flagsWith('editor,simulation'));
 
     expect(handle.app).toBe(APP_NAME);
-    expect([...handle.flags()].sort()).toEqual(['editor', 'explain']);
+    expect([...handle.flags()].sort()).toEqual(['editor', 'simulation']);
   });
 
   it('is frozen, and hands out a copy of the flags, so a test cannot change the app through it', () => {
     const handle = createDebugHandle(flagsWith('editor'));
 
     expect(Object.isFrozen(handle)).toBe(true);
-    (handle.flags() as string[]).push('explain');
+    (handle.flags() as string[]).push('simulation');
     expect(handle.flags()).toEqual(['editor']);
   });
 
@@ -160,7 +160,7 @@ describe('provideDebugHandle', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: DOCUMENT, useValue: { defaultView: fakeWindow } },
-        { provide: FLAG_SOURCES, useValue: { stored: 'explain', query: null } },
+        { provide: FLAG_SOURCES, useValue: { stored: 'simulation', query: null } },
         provideDebugHandle(),
       ],
     });
@@ -168,7 +168,7 @@ describe('provideDebugHandle', () => {
 
     const installed = (fakeWindow as { __rmq?: { app: string; flags: () => string[]; document: () => unknown } }).__rmq;
     expect(installed?.app).toBe(APP_NAME);
-    expect(installed?.flags()).toEqual(['explain']);
+    expect(installed?.flags()).toEqual(['simulation']);
     expect(installed?.document()).toBeNull();
   });
 

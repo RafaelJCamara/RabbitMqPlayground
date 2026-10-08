@@ -8,7 +8,7 @@ import { expect, test } from './support/test';
  * Nothing sets the app into a state: the bindings are made in the popover, the message is made in the table of the producer, and what the engine did is read from what the page shows.
  */
 
-const FLAGS = 'editor,simulation,explain';
+const FLAGS = 'editor,simulation';
 
 test.describe('"1" is not 1 (ADR-0009, ADR-0067)', () => {
   test('a binding for the number and a binding for the text take different messages, which the table of recent messages says in words', async ({

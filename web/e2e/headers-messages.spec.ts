@@ -15,7 +15,7 @@ import { expect, test } from './support/test';
  * them, and the panel of the message inspector that makes a binding from the message that is open. They need the flags `editor`, `simulation` and `explain`.
  */
 
-const FLAGS = 'editor,simulation,explain';
+const FLAGS = 'editor,simulation';
 
 test.describe('the table of recent messages against the conditions of a binding (ADR-0070)', () => {
   test('says that no message has been published yet, and what to do about it', async ({ page }) => {

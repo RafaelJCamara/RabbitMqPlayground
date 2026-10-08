@@ -35,16 +35,13 @@ test.describe('the what-if tester (ADR-0064)', () => {
     await expect(page.getByRole('region', { name: 'Event log' })).toHaveCount(0);
   });
 
-  test('has none of it with the simulation alone, and is beside the log with both flags', async ({ page }) => {
-    const alone = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor,simulation' });
-    await expect(page.getByRole('region', { name: 'Simulation' })).toBeVisible();
-    await expect(alone.section).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Event log' })).toHaveCount(0);
-    // The key of the log is the page's: it is not said, and the simulation has keys of its own that are.
-    await expect(alone.editor.hints).toContainText('Play or pause the simulation');
-    await expect(alone.editor.hints).not.toContainText('event log');
+  test('is beside the log, and the keys of the simulation and of the log are said, in the editor that has the simulation', async ({
+    page,
+  }) => {
+    const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor,simulation' });
 
-    const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor,simulation,explain' });
+    await expect(page.getByRole('region', { name: 'Simulation' })).toBeVisible();
+    await expect(both.editor.hints).toContainText('Play or pause the simulation');
     await expect(both.editor.hints).toContainText('Show or hide the event log');
     await expect(both.section).toBeVisible();
     await expect(page.getByRole('button', { name: 'Event log' })).toBeVisible();
@@ -372,26 +369,12 @@ test.describe('the topic tester (ADR-0064)', () => {
     await expect(tester.topicTester).toHaveCount(0);
   });
 
-  test('is not offered for a direct exchange, which has no wildcards, or without the flag of the explanation', async ({
-    page,
-  }) => {
+  test('is not offered for a direct exchange, which has no wildcards', async ({ page }) => {
     const direct = await TesterPage.open(page, WITH_ARCHIVE);
     await direct.selectBinding('x1>q1');
     await page.getByRole('group', { name: 'Binding 1 of 1' }).getByRole('textbox', { name: 'Key' }).click();
     await twoFrames(page);
     await expect(direct.topicTester).toHaveCount(0);
-
-    const without = await TesterPage.open(page, TOPICS, { flags: 'editor,simulation' });
-    await without.selectBinding('x1>q1');
-    await page.getByRole('group', { name: 'Binding 1 of 1' }).getByRole('textbox', { name: 'Key' }).click();
-    await twoFrames(page);
-    await expect(without.topicTester).toHaveCount(0);
-
-    const unlinked = await TesterPage.open(page, UNLINKED, { flags: 'editor,simulation' });
-    await unlinked.editor.dragLinkTo('x1', await unlinked.editor.centre(unlinked.editor.nodeById('q1')));
-    await expect(unlinked.keyPopover('exchange logs', 'queue errors')).toBeVisible();
-    await twoFrames(page);
-    await expect(unlinked.topicTester).toHaveCount(0);
   });
 
   test('is not in the popover of a direct exchange', async ({ page }) => {

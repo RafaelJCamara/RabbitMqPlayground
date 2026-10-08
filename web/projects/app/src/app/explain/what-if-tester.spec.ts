@@ -46,15 +46,8 @@ async function renderTester(flags: string | null = 'explain,simulation') {
 }
 
 describe('WhatIfTester (ADR-0064)', () => {
-  it('is not there without the flag of the explanation, whatever else is on', async () => {
-    await renderTester('simulation');
-
-    expect(screen.queryByTestId('what-if')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'What if…?' })).toBeNull();
-  });
-
-  it('is there with the flag of the explanation alone, as a section with a name, shut', async () => {
-    const { toggle } = await renderTester('explain');
+  it('is there with no flag, as a section with a name, shut', async () => {
+    const { toggle } = await renderTester();
 
     expect(screen.getByRole('region', { name: 'What if…?' })).toBeVisible();
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');

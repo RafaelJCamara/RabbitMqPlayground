@@ -23,7 +23,7 @@ const CONDITIONS = 'editor';
 const LIGHT_ACCENT = 'rgb(29, 78, 216)';
 const DARK_ACCENT = 'rgb(147, 197, 253)';
 const PRODUCER = 'editor,simulation';
-const MESSAGES = 'editor,simulation,explain';
+const MESSAGES = 'editor,simulation';
 
 interface State {
   readonly name: string;

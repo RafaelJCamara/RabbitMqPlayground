@@ -193,11 +193,8 @@ export class BindingConditions {
   private readonly store = inject(DocumentStore);
   private readonly announcer = inject(Announcer);
   private readonly rowsView = viewChild.required(HeaderRows);
-  /** The table of recent messages needs the log, which needs the simulation and the explanation (ADR-0069). */
-  protected readonly live = (() => {
-    const flags = inject(FeatureFlags);
-    return flags.isEnabled('simulation') && flags.isEnabled('explain');
-  })();
+  /** The table of recent messages needs the log, which needs the simulation (ADR-0069). */
+  protected readonly live = inject(FeatureFlags).isEnabled('simulation');
 
   private readonly uid = `rmq-conditions-${nextEditor++}`;
   protected readonly modeId = `${this.uid}-mode`;

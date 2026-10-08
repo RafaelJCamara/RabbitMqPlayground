@@ -11,7 +11,7 @@ import { expect, test } from './support/test';
 
 const CONDITIONS = 'editor';
 const PRODUCER = 'editor,simulation';
-const MESSAGES = 'editor,simulation,explain';
+const MESSAGES = 'editor,simulation';
 
 test.describe('the conditions, with the editor (ADR-0069)', () => {
   test('has the popover, the editor in the inspector and the chips, and nothing that needs the simulation', async ({
@@ -57,9 +57,7 @@ test.describe('the conditions leave the bindings of the other exchanges as they 
 });
 
 test.describe('the producer table, with the simulation (ADR-0069)', () => {
-  test('has the table of the headers of the message, and no table of recent messages without the explanation', async ({
-    page,
-  }) => {
+  test('has the table of the headers of the message, and the editor of a binding', async ({ page }) => {
     const headers = await HeadersPage.open(page, FILES_BOUND, { flags: PRODUCER });
 
     await headers.editor.select('Producer sender');
@@ -68,11 +66,10 @@ test.describe('the producer table, with the simulation (ADR-0069)', () => {
     await expect(headers.table.rows).toHaveCount(2);
     await headers.selectBinding('x1>q1');
     await expect(headers.conditions().scope).toBeVisible();
-    await expect(headers.conditions().live.scope).toHaveCount(0);
   });
 });
 
-test.describe('the messages, with the simulation and the explanation (ADR-0069)', () => {
+test.describe('the messages, with the simulation (ADR-0069)', () => {
   test('has the table of recent messages in the editor of a binding, and the panel that makes a binding from a message', async ({
     page,
   }) => {
@@ -88,7 +85,7 @@ test.describe('the messages, with the simulation and the explanation (ADR-0069)'
   test('has no table of recent messages without the simulation, which is where the messages are, and no panel', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: 'editor,explain' });
+    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: 'editor' });
 
     await headers.selectBinding('x1>q1');
 

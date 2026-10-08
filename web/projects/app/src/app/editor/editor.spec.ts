@@ -1777,20 +1777,16 @@ describe('Editor', () => {
       };
     }
 
-    it('has none of it without both of its flags: no button in the strip, no log, no card, and E is the page’s', async () => {
-      for (const flags of [null, 'simulation', 'explain']) {
-        TestBed.resetTestingModule();
-        document.body.replaceChildren();
-        const { onCanvas, announcer, canvas, routeOne } = await openEditor(flags);
+    it('has none of it without the simulation: no button in the strip, no log, no card, and E is the page’s', async () => {
+      const { onCanvas, announcer, canvas, routeOne } = await openEditor(null);
 
-        expect(screen.queryByRole('button', { name: 'Event log' }), String(flags)).not.toBeInTheDocument();
-        onCanvas({ key: 'e' });
-        expect(screen.queryByRole('region', { name: 'Event log' }), String(flags)).not.toBeInTheDocument();
-        expect(announcer.last(), String(flags)).not.toMatch(/^Event log/);
-        await routeOne();
-        expect(screen.queryByTestId('why-card'), String(flags)).not.toBeInTheDocument();
-        expect(canvas().emphasis(), String(flags)).toBe(NO_EMPHASIS);
-      }
+      expect(screen.queryByRole('button', { name: 'Event log' })).not.toBeInTheDocument();
+      onCanvas({ key: 'e' });
+      expect(screen.queryByRole('region', { name: 'Event log' })).not.toBeInTheDocument();
+      expect(announcer.last()).not.toMatch(/^Event log/);
+      await routeOne();
+      expect(screen.queryByTestId('why-card')).not.toBeInTheDocument();
+      expect(canvas().emphasis()).toBe(NO_EMPHASIS);
     });
 
     it('has the button of the log in the strip of the simulation, and the log is closed', async () => {
@@ -1931,16 +1927,6 @@ describe('Editor', () => {
       expect(overlay().pressable()).toBe(false);
     });
 
-    it('does not take a press on a message without the flag of the explanation, though the clock is stopped', async () => {
-      const { fixture, onCanvas } = await openEditor('simulation');
-      onCanvas({ key: ' ' });
-      fixture.detectChanges();
-
-      const overlay = fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
-
-      expect(overlay.pressable()).toBe(false);
-    });
-
     it('opens the message that a press on a shape took, and says of a shape that stands for a crowd that it does and where to open one', async () => {
       const { routeOne, fixture, announcer } = await openEditor('simulation,explain');
       await routeOne();
@@ -1957,13 +1943,6 @@ describe('Editor', () => {
       expect(announcer.last()).toBe(
         'This shape stands for 20 messages. Open one from the event log or from the list of a queue.',
       );
-    });
-
-    it('has no message inspector without both flags', async () => {
-      const { routeOne } = await openEditor('simulation');
-      await routeOne();
-
-      expect(document.querySelector('rmq-message-inspector')).toBeNull();
     });
 
     it('lets go of what is lit with the button of the card, and lights nothing on the canvas that the editor draws', async () => {
@@ -2016,8 +1995,8 @@ describe('Editor', () => {
     /** What is lit on the canvas that the editor draws. */
     const lit = (canvas: () => FakeCanvas) => [...canvas().emphasis().nodes.entries()].sort();
 
-    it('has the what-if tester under what is selected, in the region of the inspector, with the flag alone, and none of what needs events', async () => {
-      await openEditor('explain');
+    it('has the what-if tester under what is selected, in the region of the inspector, without the simulation, and none of what needs events', async () => {
+      await openEditor(null);
 
       const aside = screen.getByRole('complementary', { name: 'Inspector' });
       const tester = within(aside).getByRole('region', { name: 'What if…?' });
@@ -2029,26 +2008,15 @@ describe('Editor', () => {
       expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Show or hide the event log');
     });
 
-    it('has none of it with the simulation alone, or with no flag', async () => {
-      for (const flags of ['simulation', null]) {
-        TestBed.resetTestingModule();
-        document.body.replaceChildren();
-        await openEditor(flags);
-
-        expect(screen.queryByRole('region', { name: 'What if…?' }), String(flags)).not.toBeInTheDocument();
-        expect(screen.queryByTestId('why-card'), String(flags)).not.toBeInTheDocument();
-      }
-    });
-
-    it('has the tester and the log together with both flags, which is what the whole of the explanation is', async () => {
-      await openEditor('explain,simulation');
+    it('has the tester and the log together with the simulation, which is what the whole of the explanation is', async () => {
+      await openEditor('simulation');
 
       expect(screen.getByRole('region', { name: 'What if…?' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Event log' })).toBeVisible();
     });
 
-    it('answers that there is no log to show with the explanation alone, so that the key is left to the page, and says nothing', async () => {
-      const { fixture, injector } = await openEditor('explain');
+    it('answers that there is no log to show without the simulation, so that the key is left to the page, and says nothing', async () => {
+      const { fixture, injector } = await openEditor(null);
       const announcer = injector.get(Announcer);
       const before = announcer.last();
 
@@ -2142,7 +2110,7 @@ describe('Editor', () => {
       expect(within(tester).getByTestId('topic-tester-refusal')).toHaveTextContent("has 3 '#' words");
     });
 
-    it('is placed above its node when there is room for the popover that has no tester under it and not for the taller one that has, which is a topic key with the explanation on', async () => {
+    it('is placed above its node when there is room for the popover that has no tester under it and not for the taller one that has, which is a topic key', async () => {
       /** An exchange of the type, and a queue, with the exchange at the height where 190 pixels fit under it and 480 do not, on the canvas of 800 by 600 that the editor has here. */
       const lowDocument = (type: 'topic' | 'direct'): CanvasDocument =>
         documentOf({
@@ -2162,32 +2130,20 @@ describe('Editor', () => {
         return parseFloat(popover.style.top);
       };
 
-      const withTester = await popoverTop('explain', 'topic');
-      const without = await popoverTop('simulation', 'topic');
-      const direct = await popoverTop('explain', 'direct');
+      const withTester = await popoverTop('simulation', 'topic');
+      const direct = await popoverTop('simulation', 'direct');
 
       // The popover with no tester is under the node. The taller one does not fit there, and is put over it, at the top.
-      expect(without).toBeGreaterThan(250);
-      expect(direct).toBe(without);
+      expect(direct).toBeGreaterThan(250);
       expect(withTester).toBeLessThan(250);
     });
 
-    it('has no tester under the field for a direct exchange, which has no wildcards, or without the flag', async () => {
-      const direct = await openEditor('explain', 'Direct exchange', 'Queue');
+    it('has no tester under the field for a direct exchange, which has no wildcards', async () => {
+      const direct = await openEditor(null, 'Direct exchange', 'Queue');
       direct
         .canvas()
         .intent.emit({ type: 'link', source: direct.idOf('exchange'), target: direct.idOf('queue'), via: 'drag' });
       direct.fixture.detectChanges();
-      await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
-      expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
-
-      TestBed.resetTestingModule();
-      document.body.replaceChildren();
-      const without = await openEditor('simulation', 'Topic exchange', 'Queue');
-      without
-        .canvas()
-        .intent.emit({ type: 'link', source: without.idOf('exchange'), target: without.idOf('queue'), via: 'drag' });
-      without.fixture.detectChanges();
       await screen.findByRole('group', { name: 'Binding key from exchange exchange1 to queue queue1' });
       expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
     });

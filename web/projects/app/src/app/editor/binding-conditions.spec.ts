@@ -484,14 +484,11 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.queryByTestId('conditions-key')).not.toBeInTheDocument();
     });
 
-    it.each(['simulation', 'explain', 'editor'])(
-      'has no table of recent messages with the flags %s, because the log needs the simulation and the explanation',
-      async (flags) => {
-        await renderEditor({ flags });
+    it('has no table of recent messages without the simulation, because the log needs it', async () => {
+      await renderEditor({ flags: 'editor' });
 
-        expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
-      },
-    );
+      expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
+    });
 
     it('has no table of recent messages without the log, which needs the flags', async () => {
       await renderEditor();

@@ -114,12 +114,9 @@ describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-00
     expect(TestBed.inject(DocumentStore).document().bindings['B']?.headers?.args).toHaveLength(1);
   });
 
-  it('is not there with the simulation alone, or with the explanation alone, because it needs the log', async () => {
-    await renderEditor('simulation');
-    expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
-    TestBed.resetTestingModule();
+  it('is not there without the simulation, because it needs the log', async () => {
+    await renderEditor('editor');
 
-    await renderEditor('explain');
     expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
   });
 });

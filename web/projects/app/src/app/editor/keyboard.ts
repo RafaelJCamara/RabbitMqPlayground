@@ -159,8 +159,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
     chords: [{ key: 'e' }],
     scope: 'canvas',
     owner: 'app',
-    // A log is made of what the simulation does, so with the explanation alone there is none to show, and the key is not offered (ADR-0064).
-    flag: ['simulation', 'explain'],
+    // A log is made of what the simulation does, so without the simulation there is none to show, and the key is not offered (ADR-0064).
+    flag: 'simulation',
     shows: always,
     run: (actions) => actions.toggleEventLog(),
   },

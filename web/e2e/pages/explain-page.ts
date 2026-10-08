@@ -154,7 +154,7 @@ export class ExplainPage extends LitCanvas {
     document: CanvasDocument,
     options: { readonly reducedMotion?: boolean; readonly theme?: 'light' | 'dark'; readonly stop?: boolean } = {},
   ): Promise<ExplainPage> {
-    const simulation = await SimulationPage.open(page, document, { ...options, flags: 'editor,simulation,explain' });
+    const simulation = await SimulationPage.open(page, document, { ...options, flags: 'editor,simulation' });
     return new ExplainPage(simulation);
   }
 

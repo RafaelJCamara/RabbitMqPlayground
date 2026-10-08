@@ -625,13 +625,10 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     expect(state.toggleLog()).toBe(false);
   });
 
-  it('lights nothing without both flags', () => {
-    for (const flags of ['simulation', 'explain', null]) {
-      TestBed.resetTestingModule();
-      const { state } = setup(flags);
+  it('lights nothing without the simulation', () => {
+    const { state } = setup(null);
 
-      expect(state.enabled, String(flags)).toBe(false);
-      expect(state.shown(), String(flags)).toBeNull();
-    }
+    expect(state.enabled).toBe(false);
+    expect(state.shown()).toBeNull();
   });
 });
