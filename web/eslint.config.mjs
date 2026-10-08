@@ -237,13 +237,62 @@ const testHygiene = {
 
 /** Angular 22 makes OnPush the default; `Eager` (and the deprecated `Default`) is the way to opt out. */
 const noOptingOutOfOnPush = {
-  'no-restricted-syntax': [
+  selector: "MemberExpression[object.name='ChangeDetectionStrategy'][property.name=/^(Eager|Default)$/]",
+  message: 'Components are OnPush, which is the Angular 22 default. Do not opt out (ADR-0018).',
+};
+
+/**
+ * ADR-0078: everything that comes from a share link is text, and nothing in the app turns text into markup or into code. A name, a payload or a header is shown by Angular's text binding, which
+ * escapes it, and these are the ways around that, which the code of the app does not have. The rules hold it before it runs; a browser test holds it after.
+ */
+const PLAIN_TEXT =
+  'Everything that comes from a link is shown as text, and nothing turns text into markup or code (ADR-0078).';
+const plainText = {
+  'no-eval': 'error',
+  'no-new-func': 'error',
+  'no-script-url': 'error',
+  'no-restricted-properties': [
     'error',
-    {
-      selector: "MemberExpression[object.name='ChangeDetectionStrategy'][property.name=/^(Eager|Default)$/]",
-      message: 'Components are OnPush, which is the Angular 22 default. Do not opt out (ADR-0018).',
-    },
+    ...['innerHTML', 'outerHTML', 'insertAdjacentHTML'].map((property) => ({
+      property,
+      message: `Do not use \`${property}\`. ${PLAIN_TEXT}`,
+    })),
+    ...['write', 'writeln'].map((property) => ({
+      object: 'document',
+      property,
+      message: `Do not use \`document.${property}\`. ${PLAIN_TEXT}`,
+    })),
   ],
+};
+const plainTextSyntax = [
+  {
+    selector: 'MemberExpression[property.name=/^bypassSecurityTrust/]',
+    message: `Do not tell Angular to trust a value. ${PLAIN_TEXT}`,
+  },
+  {
+    selector: "Identifier[name='DomSanitizer']",
+    message: `Do not use the DomSanitizer: all it is for here is to trust a value. ${PLAIN_TEXT}`,
+  },
+  {
+    selector: "CallExpression[callee.property.name='createContextualFragment']",
+    message: `Do not make elements from text. ${PLAIN_TEXT}`,
+  },
+  {
+    // `no-implied-eval` needs `setTimeout` to be a declared global, which the app's configuration does not say, so the shape is named here.
+    selector:
+      ":matches(CallExpression[callee.name=/^(setTimeout|setInterval)$/], CallExpression[callee.property.name=/^(setTimeout|setInterval)$/]):matches([arguments.0.type='Literal'], [arguments.0.type='TemplateLiteral'])",
+    message: `Do not give a timer text to run. ${PLAIN_TEXT}`,
+  },
+  {
+    selector: "NewExpression[callee.name='DOMParser']",
+    message: `Do not make elements from text. ${PLAIN_TEXT}`,
+  },
+];
+
+/** What no code of the app does: opt out of OnPush (ADR-0018), or turn text into markup or into code (ADR-0078). */
+const appHygiene = {
+  ...plainText,
+  'no-restricted-syntax': ['error', noOptingOutOfOnPush, ...plainTextSyntax],
 };
 
 const SPECS = ['**/*.spec.ts', '**/*.bench.ts'];
@@ -303,7 +352,18 @@ export default defineConfig([
     files: ['projects/app/src/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     // Inline templates are linted as files like these. A button with no type submits the form that it may one day be in.
-    rules: { '@angular-eslint/template/button-has-type': 'error' },
+    rules: {
+      '@angular-eslint/template/button-has-type': 'error',
+      '@angular-eslint/template/no-outerhtml': 'error',
+      // A binding to innerHTML is Angular's sanitiser turning text into markup, which a name from a link must never go through (ADR-0078). `innerHtml` is the same property.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'BoundAttribute[name=/^innerHTML$/i], TextAttribute[name=/^innerHTML$/i]',
+          message: `Do not bind \`innerHTML\`. ${PLAIN_TEXT}`,
+        },
+      ],
+    },
   },
 
   // Dependency rules, one block per project (production code only; specs follow below)
@@ -373,7 +433,7 @@ export default defineConfig([
         noFoblex,
         belowCanvases,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -393,7 +453,7 @@ export default defineConfig([
         coreStaysBelowExplain,
         coreStaysBelowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -413,7 +473,7 @@ export default defineConfig([
         coreFilesStayBelowExplain,
         coreFilesStayBelowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -434,7 +494,7 @@ export default defineConfig([
         belowExplain,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -455,7 +515,7 @@ export default defineConfig([
         belowExplain,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -473,7 +533,7 @@ export default defineConfig([
         belowExplain,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -490,7 +550,7 @@ export default defineConfig([
         explainStaysBelowEditor,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -506,7 +566,7 @@ export default defineConfig([
         belowCanvases,
         shareStaysBelowEditor,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -525,7 +585,7 @@ export default defineConfig([
         belowExplain,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
   {
@@ -544,7 +604,7 @@ export default defineConfig([
         belowExplain,
         belowShare,
       ),
-      ...noOptingOutOfOnPush,
+      ...appHygiene,
     },
   },
 

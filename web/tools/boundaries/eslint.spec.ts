@@ -13,6 +13,10 @@ const RESTRICTION_RULES = new Set([
   'no-restricted-globals',
   'no-restricted-properties',
   'no-restricted-syntax',
+  'no-eval',
+  'no-new-func',
+  'no-script-url',
+  '@angular-eslint/template/no-outerhtml',
 ]);
 
 let eslint: ESLint;
@@ -664,6 +668,186 @@ describe('components stay OnPush', () => {
 
   it('allows ChangeDetectionStrategy.OnPush', async () => {
     expect(await violations(APP, using('ChangeDetectionStrategy.OnPush'))).toEqual([]);
+  });
+});
+
+describe('plain text (ADR-0078)', () => {
+  /** Where the code of the app lives: every one of these has the rules, because each has a block of its own. */
+  const WHERE = [
+    APP,
+    FLOW,
+    CORE,
+    MODEL,
+    COMMAND_BAR,
+    OVERLAY,
+    SIMULATION,
+    EXPLAIN,
+    CORE_ROOT,
+    CORE_EXPLAIN,
+    CANVASES,
+    SHARE,
+    CORE_SHARE,
+    'projects/app/src/app/example.ts',
+  ];
+
+  describe.each([
+    // [description, code, rule, message]
+    [
+      'assigning innerHTML',
+      'export const x = (el: HTMLElement) => { el.innerHTML = name; };',
+      'no-restricted-properties',
+      /innerHTML/,
+    ],
+    [
+      'reading innerHTML',
+      'export const x = (el: HTMLElement) => el.innerHTML;',
+      'no-restricted-properties',
+      /innerHTML/,
+    ],
+    [
+      'assigning outerHTML',
+      'export const x = (el: HTMLElement) => { el.outerHTML = name; };',
+      'no-restricted-properties',
+      /outerHTML/,
+    ],
+    [
+      'insertAdjacentHTML',
+      "export const x = (el: HTMLElement) => el.insertAdjacentHTML('beforeend', name);",
+      'no-restricted-properties',
+      /insertAdjacentHTML/,
+    ],
+    ['document.write', 'export const x = () => document.write(name);', 'no-restricted-properties', /document\.write/],
+    [
+      'document.writeln',
+      'export const x = () => document.writeln(name);',
+      'no-restricted-properties',
+      /document\.writeln/,
+    ],
+    [
+      'bypassSecurityTrustHtml',
+      'export const x = (s: { bypassSecurityTrustHtml(v: string): unknown }) => s.bypassSecurityTrustHtml(name);',
+      'no-restricted-syntax',
+      /trust a value/,
+    ],
+    [
+      'bypassSecurityTrustResourceUrl',
+      'export const x = (s: { bypassSecurityTrustResourceUrl(v: string): unknown }) => s.bypassSecurityTrustResourceUrl(name);',
+      'no-restricted-syntax',
+      /trust a value/,
+    ],
+    ['the DomSanitizer', 'export const x = inject(DomSanitizer);', 'no-restricted-syntax', /DomSanitizer/],
+    [
+      'createContextualFragment',
+      "export const x = (range: Range) => range.createContextualFragment('<b>');",
+      'no-restricted-syntax',
+      /Do not make elements from text/,
+    ],
+    ['a DOMParser', 'export const x = new DOMParser();', 'no-restricted-syntax', /Do not make elements from text/],
+    ['eval', "export const x = eval('1');", 'no-eval', /eval/],
+    ['new Function', "export const x = new Function('return 1');", 'no-new-func', /Function/],
+    [
+      'a string for setTimeout to run',
+      "export const x = setTimeout('go()', 0);",
+      'no-restricted-syntax',
+      /timer text to run/,
+    ],
+    [
+      'a template for setInterval to run',
+      'export const x = setInterval(`go()`, 0);',
+      'no-restricted-syntax',
+      /timer text to run/,
+    ],
+    [
+      'a string for window.setTimeout to run',
+      "export const x = window.setTimeout('go()', 0);",
+      'no-restricted-syntax',
+      /timer text to run/,
+    ],
+    ['a javascript: URL', "export const x = 'javascript:go()';", 'no-script-url', /Script URL/],
+  ])('%s', (_description, code, rule, message) => {
+    it.each(WHERE)('is refused in %s', async (file) => {
+      const found = await violations(file, `${code}\n`);
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({ rule });
+      expect(found[0]?.text).toMatch(message);
+    });
+
+    it('is allowed in a spec, which makes its own fixtures', async () => {
+      expect(await violations('projects/app/src/app/editor/example.spec.ts', `${code}\n`)).toEqual([]);
+    });
+  });
+
+  it('says why in every message, and what to do instead: that it is shown as text', async () => {
+    const found = await violations(APP, 'export const x = (el: HTMLElement) => { el.innerHTML = name; };\n');
+
+    expect(found[0]?.text).toContain('Everything that comes from a link is shown as text');
+  });
+
+  it('allows what shows text as text', async () => {
+    const code = [
+      'export const show = (el: HTMLElement, name: string) => {',
+      '  el.textContent = name;',
+      '  el.append(document.createTextNode(name));',
+      "  el.setAttribute('title', name);",
+      '};',
+      '',
+    ].join('\n');
+
+    expect(await violations(APP, code)).toEqual([]);
+  });
+
+  describe('in a template', () => {
+    const HTML = 'projects/app/src/app/example.html';
+
+    it.each([
+      ['a binding to innerHTML', '<div [innerHTML]="name"></div>'],
+      ['a binding to innerHtml, which is the same property', '<div [innerHtml]="name"></div>'],
+      ['a binding to innerHTML with bind-', '<div bind-innerHTML="name"></div>'],
+      ['an interpolation into innerHTML', '<div innerHTML="{{ name }}"></div>'],
+      ['a static innerHTML', '<div innerHTML="<b>x</b>"></div>'],
+    ])('refuses %s', async (_description, template) => {
+      const found = await violations(HTML, `${template}\n`);
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({ rule: 'no-restricted-syntax' });
+      expect(found[0]?.text).toMatch(/Do not bind `innerHTML`\. Everything that comes from a link is shown as text/);
+    });
+
+    it('refuses a binding to outerHTML', async () => {
+      const found = await violations(HTML, '<div [outerHTML]="name"></div>\n');
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({ rule: '@angular-eslint/template/no-outerhtml' });
+    });
+
+    it('refuses innerHTML in the template of a component', async () => {
+      const code = [
+        "import { Component } from '@angular/core';",
+        '@Component({ selector: "rmq-example", template: `<div [innerHTML]="name"></div>` })',
+        'export class Example {',
+        "  name = 'x';",
+        '}',
+        '',
+      ].join('\n');
+
+      const found = await violations(APP, code);
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({ rule: 'no-restricted-syntax' });
+    });
+
+    it('allows text in every way that a template shows it', async () => {
+      const template = [
+        '<p>{{ name }}</p>',
+        '<p [textContent]="name"></p>',
+        '<p [attr.title]="name" [title]="name"></p>',
+        '<input [value]="name" [attr.aria-label]="name" />',
+        '',
+      ].join('\n');
+
+      expect(await violations(HTML, template)).toEqual([]);
+    });
   });
 });
 
