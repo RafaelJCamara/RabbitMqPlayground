@@ -18,6 +18,9 @@
       "path": "../projects/domain/tsconfig.lib.json"
     },
     {
+      "path": "../projects/persistence/tsconfig.lib.json"
+    },
+    {
       "path": "../projects/testing/tsconfig.lib.json"
     }
   ]
