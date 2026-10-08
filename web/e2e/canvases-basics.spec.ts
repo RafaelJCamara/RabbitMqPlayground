@@ -120,6 +120,29 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await expect(canvases.home).toHaveCount(0);
   });
 
+  test('renames the canvas of a tab with a double click, and with F2 when the tab has the cursor', async ({ page }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+
+    await canvases.tab('Untitled canvas').dblclick();
+    const field = canvases.dialog.getByRole('textbox', { name: 'Name' });
+    await expect(canvases.dialog).toHaveAccessibleName('Rename canvas');
+    await expect(field).toHaveValue('Untitled canvas');
+    await field.fill('Orders');
+    await page.keyboard.press('Enter');
+    await expect(canvases.dialog).toHaveCount(0);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Orders']);
+
+    await canvases.tab('Orders').focus();
+    await page.keyboard.press('F2');
+    await expect(canvases.dialog).toBeVisible();
+    await page.keyboard.type('Billing');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Billing']);
+    await expect(canvases.tab('Billing')).toHaveAttribute('title', 'Double-click or press F2 to rename');
+    expect(await canvases.stored()).toEqual(['Billing']);
+  });
+
   test('closes a tab without deleting the canvas, which is on the home and can be opened again', async ({ page }) => {
     const canvases = new CanvasesPage(page);
     await canvases.goto();

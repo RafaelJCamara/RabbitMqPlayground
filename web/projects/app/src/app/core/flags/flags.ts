@@ -26,7 +26,8 @@ export const FLAGS = {
   },
   canvases: {
     default: false,
-    description: 'Several canvases, the home screen, backups and files (slice S9).',
+    description:
+      'Several canvases around the editor: a strip of open canvases, the home, delete and clear with an Undo, files and backups. It needs the flag editor (slice S9).',
   },
   share: {
     default: false,

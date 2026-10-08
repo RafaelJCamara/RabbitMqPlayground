@@ -219,6 +219,47 @@ describe('Workspace (ADR-0072)', () => {
       expect(current()).toEqual(['Alpha']);
     });
 
+    it('renames the canvas of a tab with a double click, in the dialog that asks for a name, and the tab follows', async () => {
+      const { user, memory } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+
+      await user.dblClick(within(strip()).getByRole('button', { name: 'Alpha' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Rename canvas' });
+      const field = within(dialog).getByRole('textbox', { name: 'Name' });
+      expect(field).toHaveValue('Alpha');
+      await user.clear(field);
+      await user.type(field, 'Orders{Enter}');
+
+      await waitFor(() => expect(tabNames()).toEqual(['My canvases', 'Orders']));
+      const stored = await memory.get('alpha');
+      expect(stored.ok && stored.value.name).toBe('Orders');
+    });
+
+    it('renames it with F2 when the tab has the cursor, and says so on the tab for a person who does not know', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+      const tab = within(strip()).getByRole('button', { name: 'Alpha' });
+      expect(tab).toHaveAttribute('title', 'Double-click or press F2 to rename');
+      expect(tab).toHaveAttribute('aria-keyshortcuts', 'F2');
+
+      tab.focus();
+      await user.keyboard('{F2}');
+
+      expect(await screen.findByRole('dialog', { name: 'Rename canvas' })).toBeInTheDocument();
+    });
+
+    it('does not rename the canvas of a tab for F2 on the home button, which is not a canvas', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+      const home = within(strip()).getByRole('button', { name: 'My canvases' });
+
+      home.focus();
+      await user.keyboard('{F2}');
+      await user.dblClick(home);
+
+      expect(screen.queryByRole('dialog', { name: 'Rename canvas' })).not.toBeInTheDocument();
+    });
+
     it('closes a tab with a button named for the canvas, and shows the one on its left', async () => {
       const { user } = await renderWorkspace();
       await screen.findByLabelText('Toolbox');

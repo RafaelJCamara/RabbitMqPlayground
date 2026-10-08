@@ -5,8 +5,9 @@ import { Icon } from '../core/ui/icon';
 import { ToastHost } from '../core/ui/toast-host';
 import { Editor } from '../editor/editor';
 import { BUTTON, tabClass } from './buttons';
+import { CanvasDialogs } from './dialogs';
 import { Home } from './home';
-import { CanvasLibrary } from './library';
+import { CanvasLibrary, type Tab } from './library';
 
 /**
  * The workspace (ADR-0072), which the flag `canvases` puts around the editor: the name of the product, the strip of open canvases, and the home or the editor. The
@@ -40,8 +41,12 @@ import { CanvasLibrary } from './library';
                   type="button"
                   [class]="tab(shown() === item.id)"
                   [attr.aria-current]="shown() === item.id ? 'true' : null"
+                  title="Double-click or press F2 to rename"
+                  aria-keyshortcuts="F2"
                   data-testid="tab"
                   (click)="library.show({ kind: 'canvas', id: item.id })"
+                  (dblclick)="rename(item)"
+                  (keydown.f2)="rename(item)"
                 >
                   <span class="max-w-48 truncate">{{ item.name }}</span>
                 </button>
@@ -89,6 +94,7 @@ import { CanvasLibrary } from './library';
 export class Workspace {
   protected readonly name = APP_NAME;
   protected readonly library = inject(CanvasLibrary);
+  private readonly dialogs = inject(CanvasDialogs);
   protected readonly button = BUTTON;
 
   protected readonly home = computed(() => this.library.view().kind === 'home');
@@ -108,6 +114,16 @@ export class Workspace {
 
   constructor() {
     void this.library.start();
+  }
+
+  /** Asks for the new name of the canvas of a tab, from a double click or F2 on it (ADR-0072), as the card of the home does. */
+  protected rename(tab: Tab): void {
+    this.dialogs.rename({
+      title: 'Rename canvas',
+      name: tab.name,
+      confirm: 'Rename',
+      submit: (name) => this.library.rename(tab.id, name),
+    });
   }
 
   /** Closes a tab, and puts the cursor on the item of the strip that is shown now, because the button that had it is gone. */
