@@ -113,3 +113,46 @@ export function only<Type extends EngineEvent['type']>(
 
 /** The types of the events, in order, for a spec that reads what happened as a sentence. */
 export const types = (events: readonly EngineEvent[]): string[] => events.map(({ type }) => type);
+
+/**
+ * An engine that is busy everywhere, for the specs of what keeps its state: messages on their way, in queues, held, waiting and handled, consumers that acknowledge and consumers that do not, one
+ * that was cancelled while it held messages, producers that repeat, and a channel that was closed. It is stopped at 2,300 ms of its clock.
+ */
+export function busyEngine(): Engine {
+  const engine = newEngine(CANVAS_TIMING, 7);
+  runAll(
+    engine,
+    declareExchange('e', 'topic'),
+    declareExchange('f', 'fanout', { durable: false }),
+    declareQueue('jobs'),
+    declareQueue('logs'),
+    bindQueue('e', 'jobs', 'job.#'),
+    { op: 'bind', source: 'e', destination: { kind: 'exchange', name: 'f' }, key: '#' },
+    bindQueue('f', 'logs'),
+    bindQueue('f', 'jobs', '', undefined),
+    openChannel('slow', 1, 400),
+    consume('slow', 'jobs', 'c-slow', 'manual'),
+    openChannel('fast', 0, 100),
+    consume('fast', 'logs', 'c-fast', 'auto'),
+    openChannel('scripted', 2, null),
+    consume('scripted', 'jobs', 'c-held', 'manual'),
+    openChannel('gone', 1, null),
+    consume('gone', 'logs', 'c-gone', 'manual'),
+    producer('p1', {
+      target: { kind: 'exchange', name: 'e' },
+      key: 'job.new',
+      payload: 'work',
+      burst: 3,
+      everyMs: 700,
+      repeat: true,
+    }),
+    producer('p2', { target: { kind: 'queue', name: 'logs' }, payload: 'line', everyMs: 300, repeat: true }),
+    producer('p3', { target: { kind: 'exchange', name: 'f' }, headers: [{ key: 'n', value: { t: 'integer', v: 1 } }] }),
+  );
+  engine.advanceTo(1900);
+  run(engine, { op: 'producer.publish', producer: 'p3' });
+  run(engine, { op: 'channel.close', channel: 'gone' });
+  engine.advanceTo(2300);
+  run(engine, { op: 'basic.cancel', consumer: 'c-slow' });
+  return engine;
+}

@@ -35,7 +35,9 @@ export {
   type DocumentParts,
 } from './lib/documents';
 export { bindingKey, canonicalTopology } from './lib/broker';
+export { arbDamage, arbTypedDamage, at, edit, pathsOf, type Json, type Path } from './lib/damage';
 export { documentHolds, engineHolds, type Held } from './lib/held';
+export { engineFor, snapshotAfter } from './lib/runs';
 export {
   DEFAULT_FC_NUM_RUNS,
   DEFAULT_FC_SEED,
@@ -62,6 +64,7 @@ export {
 export { arbHeaderArguments, arbHeaderCondition, arbHeaderValue, arbMessageFor, arbTopology } from './lib/arbitraries';
 export {
   bindQueue,
+  busyEngine,
   CANVAS_TIMING,
   consume,
   declareExchange,
