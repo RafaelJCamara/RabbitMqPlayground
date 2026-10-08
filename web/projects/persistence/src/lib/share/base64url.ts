@@ -53,19 +53,14 @@ export function fromBase64Url(text: string): Decoded {
   const value = (at: number): number => valueOf(text.charCodeAt(at));
   let out = 0;
   for (let at = 0; at < text.length; at += 4) {
-    const left = text.length - at;
-    // Past the end of the text a character has no value, and what would be made of it is not written.
+    // The last group may have two or three characters. Past the end of the text a character has no value, and what would be made of it is a write past the end of `bytes`, which a typed array drops.
     const a = value(at);
     const b = value(at + 1);
     const c = value(at + 2);
     const d = value(at + 3);
     bytes[out++] = (a << 2) | (b >> 4);
-    if (left > 2) {
-      bytes[out++] = ((b & 15) << 4) | (c >> 2);
-    }
-    if (left > 3) {
-      bytes[out++] = ((c & 3) << 6) | d;
-    }
+    bytes[out++] = ((b & 15) << 4) | (c >> 2);
+    bytes[out++] = ((c & 3) << 6) | d;
   }
   return { ok: true, bytes };
 }

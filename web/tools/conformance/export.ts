@@ -25,7 +25,8 @@ export function whyNotExportable(fixture: Fixture): string | null {
   if (other !== undefined) {
     return `it has a ${other.op} step, which a definitions file cannot say`;
   }
-  if (fixture.steps.some((step) => 'refused' in step && step.refused === true)) {
+  // `refused` can only be true, and is left out of a step that the broker accepted (scenario.ts), so its being there is the answer.
+  if (fixture.steps.some((step) => 'refused' in step)) {
     return 'the broker refused one of its steps, and a file is only what a broker accepted';
   }
   if (fixture.steps.some((step) => step.op === 'queue.declare' && step.exclusive === true)) {
