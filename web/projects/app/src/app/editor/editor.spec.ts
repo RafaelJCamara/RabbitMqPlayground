@@ -1866,13 +1866,14 @@ describe('Editor', () => {
       expect(canvas().emphasis().edges.get('E>A')?.mark).toBe('missed');
     });
 
-    it('lights the Why? of the message that was routed last, while the clock is stopped, with its card in the region of the canvas', async () => {
+    it('lights the Why? of the message that was routed last, while the clock is stopped, with its card at the top of the inspector, and not over the canvas', async () => {
       const { routeOne, canvas } = await openEditor('simulation,explain');
 
       await routeOne();
 
       const card = screen.getByTestId('why-card');
-      expect(screen.getByRole('main', { name: 'Canvas' })).toContainElement(card);
+      expect(screen.getByRole('complementary', { name: 'Inspector' })).toContainElement(card);
+      expect(screen.getByRole('main', { name: 'Canvas' })).not.toContainElement(card);
       expect(card).toHaveTextContent('Why? Message 1 (the last one routed)');
       expect(card).toHaveTextContent('Reached billing.');
       expect(canvas().emphasis().nodes.get('Q')).toBe('reached');
@@ -2082,7 +2083,7 @@ describe('Editor', () => {
       fixture.detectChanges();
 
       const card = screen.getByTestId('why-card');
-      expect(screen.getByRole('main', { name: 'Canvas' })).toContainElement(card);
+      expect(screen.getByRole('complementary', { name: 'Inspector' })).toContainElement(card);
       expect(card).toHaveTextContent('What if? To exchange1 with the key "new"');
       expect(card).toHaveTextContent('Would reach queue1.');
       expect(lit(canvas)).toContainEqual([expect.any(String), 'reached']);

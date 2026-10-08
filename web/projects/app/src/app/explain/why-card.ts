@@ -3,8 +3,9 @@ import { legendOf } from '../core/explain/emphasis';
 import { ExplainState } from '../core/explain/explain-state';
 
 /**
- * The card of Why? (ADR-0062): over the canvas, in its corner, while something is lit, it says what it is in words, what the lines mean, and how many parts of what was chosen are not on the canvas any more, and has a
- * button to let it go. It is a labelled group inside the region of the canvas, and it is there only while something is lit. It does not speak: what was chosen was said, once, when it was chosen.
+ * The card of Why? (ADR-0062, ADR-0085): at the top of the inspector column, while something is lit, it says what it is in words, what the lines mean, and how many parts of what was chosen are not on the canvas any more,
+ * and has a button to let it go. It is a labelled group, a block of the column and not a card over the canvas, which would cover a node, and it is there only while something is lit. It does not speak: what was chosen was
+ * said, once, when it was chosen.
  */
 @Component({
   selector: 'rmq-why-card',
@@ -13,7 +14,7 @@ import { ExplainState } from '../core/explain/explain-state';
       <div
         role="group"
         aria-labelledby="rmq-why-title"
-        class="border-border bg-panel text-fg absolute top-3 left-3 z-10 flex max-w-sm flex-col gap-1.5 rounded-md border p-3 text-sm shadow-lg"
+        class="border-border bg-panel text-fg mb-3 flex flex-col gap-1.5 rounded-md border p-3 text-sm"
         data-testid="why-card"
         [attr.data-source]="shown.source"
       >

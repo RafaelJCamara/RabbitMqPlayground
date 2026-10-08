@@ -197,9 +197,6 @@ interface Peek {
           @if (ready() && simulation.enabled) {
             <rmq-message-overlay [pressable]="markersPressable()" (pressed)="onMarkerPressed($event)" />
           }
-          @if (ready() && explainTools) {
-            <rmq-why-card />
-          }
           @if (ready() && model().nodes.length === 0) {
             <p
               class="text-muted pointer-events-none absolute inset-0 grid place-items-center p-8 text-center"
@@ -264,6 +261,9 @@ interface Peek {
           }
         </main>
         <aside class="border-line bg-panel w-80 shrink-0 overflow-y-auto border-l p-3" aria-label="Inspector">
+          @if (ready() && explainTools) {
+            <rmq-why-card />
+          }
           @if (explain.enabled) {
             <rmq-message-inspector />
           }
