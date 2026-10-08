@@ -146,6 +146,58 @@ test.describe('journey 5: a link to a canvas', () => {
     expect(await new EditorPage(other).canvasNames()).toEqual(['Orders flow (shared)']);
   });
 
+  test('puts the copy after the canvases that the learner has open, shows it, and leaves theirs as they were', async ({
+    visitor,
+  }) => {
+    // This one has canvases of their own, and is sent a link: the copy joins them, at the end of the strip, and is the one that is shown.
+    const other = await visitor();
+    await seedLibrary(
+      other,
+      [
+        { id: 'alpha', name: 'Alpha' },
+        { id: 'beta', name: 'Beta' },
+      ],
+      { openCanvases: ['beta', 'alpha'], lastOpenCanvas: 'alpha' },
+    );
+    await other.goto(`?ff=editor,canvases,share#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    const shared = new SharedViewPage(other);
+    await shared.ready();
+    await expect(other.getByRole('navigation', { name: 'Open canvases' })).toHaveCount(0);
+    const mine = new CanvasesPage(other);
+    expect(await mine.stored()).toEqual(['Alpha', 'Beta']);
+
+    await shared.saveCopy.click();
+
+    await mine.editorReady();
+    expect(await mine.tabs()).toEqual(['My canvases', 'Beta', 'Alpha', 'Orders flow (shared)']);
+    expect(await mine.current()).toEqual(['Orders flow (shared)']);
+    expect(await mine.stored()).toEqual(['Alpha', 'Beta', 'Orders flow (shared)']);
+    for (const node of ORDERS_NODES) {
+      await expect(mine.editor.node(node)).toBeVisible();
+    }
+  });
+
+  test('says what a clear came to, with the Undo that brings the canvas back, as it does for the canvases of the browser', async ({
+    visitor,
+  }) => {
+    const other = await visitor();
+    await other.goto(`?ff=editor,canvases,share#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    const shared = new SharedViewPage(other);
+    await shared.ready();
+    await expect(shared.editor.node('Queue billing')).toBeVisible();
+    const notices = other.getByRole('region', { name: 'Notices' });
+
+    await other.getByRole('button', { name: 'Clear canvas' }).click();
+
+    await expect(notices.getByTestId('toast-message')).toHaveText('Cleared the canvas.');
+    await expect(shared.editor.node('Queue billing')).toHaveCount(0);
+    await notices.getByRole('button', { name: 'Undo' }).click();
+
+    await expect(shared.editor.node('Queue billing')).toBeVisible();
+    await expect(notices).toHaveCount(0);
+    expect(await databases(other)).toEqual([]);
+  });
+
   test('leaves the link when Leave is pressed: the page is as it was before, and nothing of the canvas is kept', async ({
     visitor,
   }) => {
