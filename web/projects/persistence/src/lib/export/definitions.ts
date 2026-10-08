@@ -66,11 +66,12 @@ const these = (thing: string, names: readonly string[]): string =>
   names.length === 0 ? '' : `the ${thing}${names.length === 1 ? '' : 's'} ${listOf(names)}`;
 
 /**
- * The arguments of a binding of a headers exchange: `x-match` when the canvas names a mode, then each condition, with the value it has. Another exchange has none, whatever the canvas keeps for it. A binding with a
- * condition that a header exists has no arguments to write, because RabbitMQ refuses a header with no value, and the answer is `null`.
+ * The arguments of a binding: `x-match` when the canvas names a mode, then each condition, with the value it has. Only a headers exchange reads them, but a broker keeps them for a binding of any exchange, and two bindings
+ * that differ only by them are two bindings, as they are on the canvas, so they are written whatever the exchange is. A binding with a condition that a header exists has no arguments to write, because RabbitMQ refuses a
+ * header with no value, and the answer is `null`.
  */
-function argumentsOf(source: ExchangeRecord, record: BindingRecord): Fields | null {
-  if (source.type !== 'headers' || record.headers === undefined) {
+function argumentsOf(record: BindingRecord): Fields | null {
+  if (record.headers === undefined) {
     return new Fields([]);
   }
   const entries: (readonly [string, Value])[] =
@@ -102,7 +103,7 @@ export function planDefinitions(document: CanvasDocument): DefinitionsPlan {
       leftWithQueue.set(destination.name, (leftWithQueue.get(destination.name) ?? 0) + 1);
       continue;
     }
-    const args = argumentsOf(source, record);
+    const args = argumentsOf(record);
     if (args === null) {
       exists.push({
         kind: 'exists',

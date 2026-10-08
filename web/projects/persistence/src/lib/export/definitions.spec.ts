@@ -37,7 +37,7 @@ function exported(document: CanvasDocument, vhost = '/'): ExportedDefinitions {
   return result.value;
 }
 
-type Parsed = {
+interface Parsed {
   readonly vhosts: readonly { name: string }[];
   readonly exchanges: readonly Record<string, unknown>[];
   readonly queues: readonly Record<string, unknown>[];
@@ -49,7 +49,7 @@ type Parsed = {
     routing_key: string;
     arguments: Record<string, unknown>;
   }[];
-};
+}
 
 const parsed = (text: string): Parsed => JSON.parse(text) as Parsed;
 
@@ -60,7 +60,7 @@ function numbersOf(text: string): string[] {
     .filter((token) => !token.startsWith('"'));
 }
 
-/** The numbers that a file of this canvas has to hold, in order, worked out without the exporter: those of the conditions of the bindings of headers exchanges that are not left out. */
+/** The numbers that a file of this canvas has to hold, in order, worked out without the exporter: those of the conditions of the bindings that are not left out. */
 function numbersIn(document: CanvasDocument): { float: boolean; value: number }[] {
   const numbers: { float: boolean; value: number }[] = [];
   for (const binding of Object.values(document.bindings)) {
@@ -68,7 +68,7 @@ function numbersIn(document: CanvasDocument): { float: boolean; value: number }[
     const destination = (binding.dest.kind === 'queue' ? document.queues : document.exchanges)[binding.dest.id];
     const toNamed = binding.dest.kind === 'queue' && document.queues[binding.dest.id]?.serverNamed === true;
     const exists = binding.headers?.args.some(({ value }) => value.t === 'exists') ?? false;
-    if (source?.type !== 'headers' || destination === undefined || toNamed || exists) {
+    if (source === undefined || destination === undefined || toNamed || exists) {
       continue;
     }
     for (const { value } of binding.headers?.args ?? []) {
@@ -368,20 +368,36 @@ describe('exportDefinitions', () => {
       expect(text.indexOf('"b"')).toBeLessThan(text.indexOf('"1"'));
     });
 
-    it('are empty for a binding of any other exchange, whatever headers the canvas keeps for it', () => {
+    it('are written for a binding of any other exchange too, because a broker keeps them, and two bindings that differ by them are two', () => {
       const document = documentOf({
-        exchanges: { E1: exchangeRecord('orders', 'topic'), E2: exchangeRecord('plain', 'direct') },
+        exchanges: { E1: exchangeRecord('orders', 'topic') },
         queues: { Q1: queueRecord('billing') },
         bindings: {
           B1: headersBinding({ xMatch: 'all', args: [{ key: 'a', value: { t: 'string', v: 'b' } }] }, 'E1'),
-          B2: headersBinding({ xMatch: null, args: [{ key: 'c', value: { t: 'exists' } }] }, 'E2'),
+          B2: headersBinding({ xMatch: null, args: [{ key: 'a', value: { t: 'string', v: 'c' } }] }, 'E1'),
         },
       });
 
       const result = exported(document);
 
-      expect(parsed(result.text).bindings.map((binding) => binding.arguments)).toEqual([{}, {}]);
+      expect(parsed(result.text).bindings.map((binding) => binding.arguments)).toEqual([
+        { 'x-match': 'all', a: 'b' },
+        { a: 'c' },
+      ]);
       expect(result.warnings).toEqual([]);
+    });
+
+    it('leave a binding out of the file, with a word, when one of them is a header that has to exist, whatever the exchange is', () => {
+      const document = documentOf({
+        exchanges: { E1: exchangeRecord('orders', 'direct') },
+        queues: { Q1: queueRecord('billing') },
+        bindings: { B1: headersBinding({ xMatch: null, args: [{ key: 'c', value: { t: 'exists' } }] }, 'E1') },
+      });
+
+      const result = exported(document);
+
+      expect(result.summary.bindings).toBe(0);
+      expect(result.warnings.map(({ kind }) => kind)).toEqual(['exists']);
     });
   });
 
@@ -736,8 +752,7 @@ describe('for any canvas that commands can make and any vhost', () => {
           return;
         }
         const exists = Object.values(document.bindings).filter(
-          ({ headers, source, dest }) =>
-            document.exchanges[source]?.type === 'headers' &&
+          ({ headers, dest }) =>
             headers?.args.some(({ value }) => value.t === 'exists') &&
             !(dest.kind === 'queue' && document.queues[dest.id]?.serverNamed === true),
         ).length;

@@ -121,7 +121,8 @@ describe('writeValue', () => {
           float: number;
         };
 
-        expect(read.tree).toEqual(json);
+        // A zero with a sign in a place that is not a float is written as JSON writes it, as a zero.
+        expect(read.tree).toEqual(JSON.parse(JSON.stringify(json)));
         expect(Object.is(read.float, float)).toBe(true);
       }),
     );
