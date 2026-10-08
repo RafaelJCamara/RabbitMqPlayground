@@ -8,7 +8,7 @@ import type { CanvasRecord } from '../record';
 import { createMemoryStore } from '../repository/memory-store';
 import { createCanvasRepository, type CanvasRepository } from '../repository/repository';
 import { readBackup, type Backup, type BackupEntry } from './backup';
-import { planRestore, restoreBackup, restoredName, sameValue } from './restore';
+import { cutName, planRestore, restoreBackup, restoredName, sameValue } from './restore';
 
 const record = (id: string, change: Partial<CanvasRecord> = {}): CanvasRecord => ({
   id,
@@ -104,6 +104,46 @@ describe('sameValue', () => {
         expect(sameValue(document, changed)).toBe(false);
         const seeded = { ...document, settings: { ...document.settings, seed: document.settings.seed + 1 } };
         expect(sameValue(document, seeded)).toBe(false);
+      }),
+    );
+  });
+});
+
+describe('cutName', () => {
+  it('leaves a name that fits as it is, to the last character', () => {
+    expect(cutName('abc', 3)).toBe('abc');
+    expect(cutName('abc', 4)).toBe('abc');
+    expect(cutName('', 0)).toBe('');
+  });
+
+  it('cuts a name that is too long to the number of characters that fit', () => {
+    expect(cutName('abcd', 3)).toBe('abc');
+    expect(cutName('abcd', 0)).toBe('');
+  });
+
+  it('does not keep the first half of a character that does not fit, and keeps a whole one that does', () => {
+    expect(cutName('ab😀', 3)).toBe('ab');
+    expect(cutName('ab😀', 4)).toBe('ab😀');
+    expect(cutName('a😀😀', 4)).toBe('a😀');
+  });
+
+  it('never leaves half of a character, and never takes more than the one character that does not fit', () => {
+    const arbText = fc
+      .array(fc.oneof(fc.integer({ min: 0x20, max: 0x7e }), fc.integer({ min: 0x10000, max: 0x10ffff })), {
+        maxLength: 30,
+      })
+      .map((points) => String.fromCodePoint(...points));
+
+    fc.assert(
+      fc.property(arbText, fc.nat(40), (name, max) => {
+        const cut = cutName(name, max);
+
+        expect(cut.length).toBeLessThanOrEqual(max);
+        expect(name.startsWith(cut)).toBe(true);
+        expect(hasLoneSurrogate(cut)).toBe(false);
+        if (name.length > max) {
+          expect(cut.length).toBeGreaterThanOrEqual(max - 1);
+        }
       }),
     );
   });

@@ -9,6 +9,7 @@ export { BACKUP_FORMAT, BACKUP_VERSION, CANVAS_FILE_FORMAT, CANVAS_FILE_VERSION 
 export { parseCanvasFile, readCanvasFile, writeCanvasFile, type CanvasFile } from './lib/files/canvas-file';
 export { parseBackup, readBackup, writeBackup, type Backup, type BackupEntry } from './lib/files/backup';
 export {
+  cutName,
   planRestore,
   restoreBackup,
   restoredName,

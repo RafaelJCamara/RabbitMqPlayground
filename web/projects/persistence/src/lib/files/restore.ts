@@ -41,7 +41,7 @@ export function sameValue(a: unknown, b: unknown): boolean {
 const RESTORED = ' (restored)';
 
 /** Cuts a name to `max` characters without leaving half of a pair of code units that make one character. */
-function cut(name: string, max: number): string {
+export function cutName(name: string, max: number): string {
   if (name.length <= max) {
     return name;
   }
@@ -50,7 +50,7 @@ function cut(name: string, max: number): string {
 }
 
 /** The name of a canvas that is made from one of a backup whose id was taken: "Orders (restored)", cut so that the whole stays inside the cap. */
-export const restoredName = (name: string): string => `${cut(name, SIZE_CAPS.name - RESTORED.length)}${RESTORED}`;
+export const restoredName = (name: string): string => `${cutName(name, SIZE_CAPS.name - RESTORED.length)}${RESTORED}`;
 
 /** What is done with one canvas of a backup. */
 export type RestoreStep =
