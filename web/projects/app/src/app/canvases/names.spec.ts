@@ -2,7 +2,7 @@ import { SIZE_CAPS } from '@rmq/persistence';
 import { configureFastCheck } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { backupFileName, canvasFileName, copyName, slug, UNTITLED, uniqueName } from './names';
+import { backupFileName, canvasFileName, copyName, nameProblem, slug, UNTITLED, uniqueName } from './names';
 
 configureFastCheck((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {});
 
@@ -82,6 +82,33 @@ describe('copyName (ADR-0072)', () => {
           expect(copy.length).toBeLessThanOrEqual(SIZE_CAPS.name);
           taken.add(copy);
         }
+      }),
+    );
+  });
+});
+
+describe('nameProblem (ADR-0028)', () => {
+  it.each(['', ' ', '   ', '\t', '\n \r\n'])('refuses %j, which has nothing in it, and says what to do', (name) => {
+    expect(nameProblem(name)).toBe('A canvas needs a name, and this one is blank. Type a name.');
+  });
+
+  it('accepts a name that has something in it, with white space round it or inside it', () => {
+    expect(nameProblem('a')).toBeNull();
+    expect(nameProblem('  Orders flow  ')).toBeNull();
+    expect(nameProblem('日本語')).toBeNull();
+  });
+
+  it('accepts a name of exactly the longest length, and refuses one character more, with the number of them', () => {
+    expect(nameProblem('x'.repeat(SIZE_CAPS.name))).toBeNull();
+    expect(nameProblem('x'.repeat(SIZE_CAPS.name + 1))).toBe(
+      'The name has 201 characters, and a name can have at most 200. Shorten the name.',
+    );
+  });
+
+  it('counts characters as the persistence library does, so that a name it accepts is a name it keeps', () => {
+    fc.assert(
+      fc.property(fc.string({ minLength: 1, maxLength: 260 }), (name) => {
+        expect(nameProblem(name) === null).toBe(/\S/.test(name) && name.length <= SIZE_CAPS.name);
       }),
     );
   });

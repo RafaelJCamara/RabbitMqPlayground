@@ -372,6 +372,15 @@ describe('restoreBackup', () => {
     expect(report.ok && report.value.restored.map(({ id }) => id)).toEqual(['a', 'b']);
   });
 
+  it('lists a canvas that could not be read without a name when the file did not give one', async () => {
+    const { repository } = harness();
+    const nameless: BackupEntry = { ok: false, position: 0, error: newer };
+
+    const report = await restoreBackup(repository, backupOf(nameless));
+
+    expect(report.ok && report.value.unreadable).toEqual([{ position: 1, message: newer.message }]);
+  });
+
   it('lists a canvas that could not be written, with the reason, and goes on with the rest', async () => {
     const failing: RepositoryError = {
       kind: 'failed',
