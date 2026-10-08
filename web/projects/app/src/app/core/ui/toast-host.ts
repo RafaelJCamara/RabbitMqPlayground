@@ -4,7 +4,8 @@ import { Icon } from './icon';
 import { Toasts } from './toasts';
 
 /**
- * Where the notices are drawn (ADR-0074): one region named "Notices", at the bottom of the screen, that is there only while there is a notice. It is not a live
+ * Where the notices are drawn (ADR-0074): one region named "Notices", at the bottom of the screen and in the flow of the page, so that it takes room from what is above it and
+ * covers nothing (a notice that floated over the corner of the page covered the button of the card under it), that is there only while there is a notice. It is not a live
  * region, because the service says each notice through the announcer, and one that was both would be said twice. The buttons are reached by Tab, and Escape on a
  * notice dismisses it.
  */
@@ -15,12 +16,12 @@ import { Toasts } from './toasts';
     @if (toasts.visible().length > 0) {
       <section
         aria-label="Notices"
-        class="pointer-events-none fixed bottom-14 left-4 z-40 flex w-[min(30rem,calc(100vw-2rem))] flex-col gap-2"
+        class="border-line bg-panel flex flex-col gap-2 border-t px-4 py-2"
         data-testid="notices"
       >
         @for (toast of toasts.visible(); track toast.id) {
           <div
-            class="pointer-events-auto border-border bg-panel text-fg flex flex-col gap-1 rounded-md border px-3 py-2 shadow-lg"
+            class="border-border bg-surface text-fg flex max-w-3xl flex-col gap-1 rounded-md border px-3 py-2"
             data-testid="toast"
             [attr.data-toast]="toast.id"
             (pointerenter)="toasts.pause(toast.id)"
@@ -53,7 +54,7 @@ import { Toasts } from './toasts';
       </section>
     }
   `,
-  host: { '(document:keydown.escape)': 'onEscape()' },
+  host: { class: 'block', '(document:keydown.escape)': 'onEscape()' },
 })
 export class ToastHost {
   protected readonly toasts = inject(Toasts);

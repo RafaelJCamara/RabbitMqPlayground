@@ -65,7 +65,6 @@ import { CanvasLibrary } from './library';
           </ul>
         </nav>
       </header>
-      <rmq-toast-host />
       <div class="min-h-0 flex-1">
         @if (library.ready()) {
           @if (home()) {
@@ -83,6 +82,7 @@ import { CanvasLibrary } from './library';
           <p class="text-muted p-6" role="status" data-testid="opening-canvases">Opening your canvases…</p>
         }
       </div>
+      <rmq-toast-host />
     </div>
   `,
 })
