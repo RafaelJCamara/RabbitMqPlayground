@@ -19,17 +19,23 @@ export function uniqueName(base: string, taken: Iterable<string>): string {
   }
 }
 
-/** The name of a copy: `name (copy)`, and else `name (copy 2)` and so on, with the name cut so that the whole stays inside the cap, at a character. */
-export function copyName(name: string, taken: Iterable<string>): string {
+/** `name (word)`, and else `name (word 2)` and so on, with the name cut so that the whole stays inside the cap, at a character. */
+function withWord(name: string, word: string, taken: Iterable<string>): string {
   const names = new Set(taken);
   for (let number = 1; ; number += 1) {
-    const suffix = number === 1 ? ' (copy)' : ` (copy ${number})`;
+    const suffix = number === 1 ? ` (${word})` : ` (${word} ${number})`;
     const candidate = `${cutName(name, SIZE_CAPS.name - suffix.length)}${suffix}`;
     if (!names.has(candidate)) {
       return candidate;
     }
   }
 }
+
+/** The name of a copy: `name (copy)`, and else `name (copy 2)` and so on, with the name cut so that the whole stays inside the cap, at a character. */
+export const copyName = (name: string, taken: Iterable<string>): string => withWord(name, 'copy', taken);
+
+/** The name of the copy that a learner keeps of a shared canvas (ADR-0078): `name (shared)`, and else `name (shared 2)` and so on, cut to the cap as a copy is. */
+export const sharedName = (name: string, taken: Iterable<string>): string => withWord(name, 'shared', taken);
 
 /**
  * Why this cannot be the name of a canvas, in words, or `null` if it can (ADR-0028): it needs something in it that is not white space, and it is at most

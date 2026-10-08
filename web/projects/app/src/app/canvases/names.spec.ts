@@ -2,7 +2,7 @@ import { SIZE_CAPS } from '@rmq/persistence';
 import { configureFastCheck } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { copyName, nameProblem, sharedName, UNTITLED, uniqueName } from './names';
 
 configureFastCheck((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {});
 
@@ -84,6 +84,35 @@ describe('copyName (ADR-0072)', () => {
         }
       }),
     );
+  });
+});
+
+describe('sharedName (ADR-0078)', () => {
+  it('is the name and "(shared)" whether or not the learner has a canvas of that name', () => {
+    expect(sharedName('Orders', [])).toBe('Orders (shared)');
+    expect(sharedName('Orders', ['Orders'])).toBe('Orders (shared)');
+  });
+
+  it('counts the copies from 2, and takes the first number that is free', () => {
+    expect(sharedName('Orders', ['Orders (shared)'])).toBe('Orders (shared 2)');
+    expect(sharedName('Orders', ['Orders (shared)', 'Orders (shared 2)'])).toBe('Orders (shared 3)');
+    expect(sharedName('Orders', ['Orders (shared)', 'Orders (shared 3)'])).toBe('Orders (shared 2)');
+  });
+
+  it('does not take a copy of the learner’s own for a shared one', () => {
+    expect(sharedName('Orders', ['Orders (copy)'])).toBe('Orders (shared)');
+  });
+
+  it('cuts a name that is too long so that the whole stays inside the cap, and still tells the copies apart', () => {
+    const name = 'x'.repeat(SIZE_CAPS.name);
+
+    const first = sharedName(name, []);
+    const second = sharedName(name, [first]);
+
+    expect(first).toHaveLength(SIZE_CAPS.name);
+    expect(first.endsWith(' (shared)')).toBe(true);
+    expect(second).toHaveLength(SIZE_CAPS.name);
+    expect(second.endsWith(' (shared 2)')).toBe(true);
   });
 });
 

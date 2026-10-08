@@ -1,4 +1,16 @@
-@if (editor && canvases) {
+@if (opening()) {
+  <p class="bg-surface text-muted p-6" role="status" data-testid="opening-link">Opening the shared canvas…</p>
+} @else if (refusal(); as why) {
+  <rmq-link-failed [error]="why" />
+} @else if (shared(); as canvas) {
+  @defer (on immediate) {
+    <rmq-shared-view [shared]="canvas" />
+  } @loading {
+    <p class="bg-surface text-muted p-6" role="status">Loading the editor…</p>
+  } @error {
+    <p class="bg-surface text-danger p-6" role="alert">The editor could not be loaded. Reload the page to try again.</p>
+  }
+} @else if (editor && canvases) {
   @defer (on immediate) {
     <rmq-workspace />
   } @loading {
