@@ -48,7 +48,6 @@ export interface ChooserData {
             <button
               type="button"
               class="border-border bg-surface hover:bg-canvas flex w-full flex-col gap-0.5 rounded-md border px-3 py-2 text-left"
-              [attr.data-testid]="'template-' + template.id"
               (click)="ref.close({ kind: 'template', id: template.id })"
             >
               <span class="font-semibold">{{ template.name }}</span>

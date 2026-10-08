@@ -285,4 +285,67 @@ describe('Tour (ADR-0083)', () => {
       expect(screen.queryByRole('region', { name: 'Tour' })).not.toBeInTheDocument();
     });
   });
+
+  describe('what is shown at each step', () => {
+    it('has the title of every step as the learner reaches it, the ways to link under the one that links, and “Done.” only under a step that is done', async () => {
+      const { user } = await renderTour({ before: ALL_BUT_THE_LAST });
+      const seen: string[] = [];
+      for (let step = 1; step <= 5; step += 1) {
+        seen.push(`${progress()}: ${title()}`);
+        expect(screen.queryByTestId('tour-ways') !== null, progress()).toBe(step === 2);
+        // The last question, whether a message has been sent, is not done by a canvas that was there before the tour.
+        expect(screen.queryByTestId('tour-done') !== null, progress()).toBe(step < 5);
+        await user.click(screen.getByRole('button', { name: step < 5 ? 'Next' : 'Skip this step' }));
+      }
+      seen.push(`${progress()}: ${title()}`);
+
+      expect(seen).toEqual([
+        'Step 1 of 6: Add a producer, an exchange and a queue',
+        'Step 2 of 6: Link the producer to the exchange',
+        'Step 3 of 6: Bind the exchange to the queue',
+        'Step 4 of 6: Add a consumer and give it the queue',
+        'Step 5 of 6: Send a message',
+        'Step 6 of 6: That is the whole path',
+      ]);
+      expect(screen.queryByTestId('tour-done')).not.toBeInTheDocument();
+    });
+
+    it('says nothing of being done, and lists no ways to link, at a first step that is not done', async () => {
+      await renderTour();
+
+      expect(screen.queryByTestId('tour-done')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('tour-ways')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the controller', () => {
+    it('does not go past the last step, nor before the first, whatever it is asked', async () => {
+      const { user } = await renderTour();
+      const controller = TestBed.inject(TourController);
+      controller.back();
+      expect(progress()).toBe('Step 1 of 6');
+      for (let skipped = 0; skipped < 5; skipped += 1) {
+        await user.click(screen.getByRole('button', { name: 'Skip this step' }));
+      }
+
+      controller.next();
+
+      expect(progress()).toBe('Step 6 of 6');
+      expect(title()).toBe('That is the whole path');
+    });
+
+    it('does nothing once the tour has ended, and says that it ended once', async () => {
+      const { spoken } = await renderTour();
+      const controller = TestBed.inject(TourController);
+
+      controller.end();
+      controller.end();
+      controller.next();
+      controller.back();
+
+      expect(spoken.filter((said) => said === 'Tour ended.')).toHaveLength(1);
+      expect(spoken.at(-1)).toBe('Tour ended.');
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Tour' })).not.toBeInTheDocument());
+    });
+  });
 });

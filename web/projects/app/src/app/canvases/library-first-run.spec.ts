@@ -163,6 +163,17 @@ describe('CanvasLibrary, the first run (ADR-0082)', () => {
     expect(tours.take()).toBe(false);
   });
 
+  it.each([[{ kind: 'blank' }], [{ kind: 'template', id: 'topics' }]] as const)(
+    'does not ask for the tour when the learner chose %j',
+    async (choice) => {
+      const { library, tours } = setup({ ask: async () => choice });
+
+      await library.start();
+
+      expect(tours.take()).toBe(false);
+    },
+  );
+
   it('does not ask a learner who has a canvas, nor ask for a tour', async () => {
     const { library, choose, repository, tours } = setup();
     await repository.create({ id: 'mine', name: 'Mine', document: buildTemplate(templateById('hello-world')!) });
@@ -235,6 +246,15 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
 
     expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas', 'My first topology']);
     expect(tours.take()).toBe(true);
+  });
+
+  it('asks for the tour only when the learner began the tour', async () => {
+    const { library, tours } = await started();
+
+    await library.begin({ kind: 'blank' });
+    await library.begin({ kind: 'template', id: 'routing' });
+
+    expect(tours.take()).toBe(false);
   });
 
   it('takes the request for the tour back when the canvas cannot be made', async () => {
