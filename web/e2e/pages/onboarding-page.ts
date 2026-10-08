@@ -4,10 +4,10 @@ import { EditorPage } from './editor-page';
 import { SimulationPage } from './simulation-page';
 
 /** The flags that the first run, the templates and the tour need (ADR-0082). */
-export const ONBOARDING_PATH = '?ff=editor,canvases,simulation,onboarding';
+export const ONBOARDING_PATH = '?ff=editor,canvases,simulation';
 
 /**
- * What a learner meets first (ADR-0081 to ADR-0083), behind the flags `editor`, `canvases`, `simulation` and `onboarding`: the chooser that asks what to start with, the templates it
+ * What a learner meets first (ADR-0081 to ADR-0083), behind the flags `editor`, `canvases` and `simulation`: the chooser that asks what to start with, the templates it
  * opens, and the tour, a banner in the editor. Paths are relative to the base path (`/RabbitMqPlayground/`).
  */
 export class OnboardingPage {

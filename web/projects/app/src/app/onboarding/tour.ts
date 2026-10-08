@@ -50,7 +50,7 @@ export class TourController {
         untracked(() => this.enter(this.place() + 1));
       }
     });
-    if (flags.isEnabled('onboarding') && flags.isEnabled('simulation') && inject(TourRequests).take()) {
+    if (flags.isEnabled('simulation') && inject(TourRequests).take()) {
       this.begin();
     }
   }

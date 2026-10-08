@@ -1,5 +1,6 @@
 import { emptyDocument } from '@rmq/domain';
 import { CanvasesPage } from './pages/canvases-page';
+import { skipWelcome } from './pages/editor-page';
 import { buildDocument, seedLibrary } from './support/seed';
 import { expect, test } from './support/test';
 
@@ -538,6 +539,7 @@ test.describe('what the home says about keeping the canvases (ADR-0075)', () => 
       });
     });
     await page.goto('?ff=editor,canvases');
+    await skipWelcome(page);
     await canvases.heading.waitFor();
     await expect(canvases.editor.saveState).toContainText('Not kept after you close this tab.');
     await canvases.editor.add('Queue');

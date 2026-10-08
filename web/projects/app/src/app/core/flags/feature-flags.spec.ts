@@ -56,10 +56,10 @@ describe('FeatureFlags', () => {
     });
 
     it('reads ?ff= from the address', () => {
-      window.history.replaceState(null, '', '/?ff=onboarding,canvases');
+      window.history.replaceState(null, '', '/?ff=share,canvases');
       const flags = TestBed.inject(FeatureFlags);
 
-      expect(flags.isEnabled('onboarding')).toBe(true);
+      expect(flags.isEnabled('share')).toBe(true);
       expect(flags.isEnabled('canvases')).toBe(true);
       expect(flags.isEnabled('editor')).toBe(false);
     });

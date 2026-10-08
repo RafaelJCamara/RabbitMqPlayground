@@ -1,5 +1,4 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { Icon } from '../core/ui/icon';
 import { Toasts } from '../core/ui/toasts';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
@@ -33,11 +32,9 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
               <rmq-icon name="plus" [size]="16" />
               <span>New canvas</span>
             </button>
-            @if (onboarding) {
-              <button type="button" [class]="button" data-testid="home-templates" (click)="library.newFromTemplate()">
-                New from a template…
-              </button>
-            }
+            <button type="button" [class]="button" data-testid="home-templates" (click)="library.newFromTemplate()">
+              New from a template…
+            </button>
             <button type="button" [class]="button" data-testid="home-open-file" (click)="openPicker.click()">
               Open a file…
             </button>
@@ -183,8 +180,6 @@ export class Home {
   private readonly toasts = inject(Toasts);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
-  /** With the flag `onboarding` the home offers the templates (ADR-0082). */
-  protected readonly onboarding = inject(FeatureFlags).isEnabled('onboarding');
 
   protected readonly button = BUTTON;
   protected readonly primary = BUTTON_PRIMARY;

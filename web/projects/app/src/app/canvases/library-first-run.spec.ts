@@ -4,7 +4,6 @@ import { createMemoryRepository, type CanvasRepository, type Outcome, type Repos
 import { idSequence, manualClock, manualTimer } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../core/announcer';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { NOW } from '../core/session/canvas-session';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
@@ -20,7 +19,6 @@ type Ask = (options: { readonly first: boolean }) => Promise<Choice | undefined>
 
 function setup(
   options: {
-    readonly flags?: string;
     readonly ask?: Ask;
     readonly browser?: (r: CanvasRepository) => CanvasRepository;
   } = {},
@@ -43,7 +41,6 @@ function setup(
       { provide: TOAST_TIMER, useValue: manualTimer() },
       { provide: NOW, useValue: clock.now },
       { provide: FILE_DOWNLOADER, useValue: { save: () => undefined } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor,canvases,onboarding' } },
       { provide: OnboardingDialogs, useValue: { choose } },
     ],
   });
@@ -81,16 +78,6 @@ const failsAfter =
 
 describe('CanvasLibrary, the first run (ADR-0082)', () => {
   beforeEach(() => TestBed.resetTestingModule());
-
-  it('makes “Untitled canvas” and asks nothing without the flag onboarding', async () => {
-    const { library, choose } = setup({ flags: 'editor,canvases' });
-
-    await library.start();
-
-    expect(choose).not.toHaveBeenCalled();
-    expect(library.canvases().map(({ name }) => name)).toEqual(['Untitled canvas']);
-    expect(library.view()).toEqual({ kind: 'canvas', id: library.canvases()[0]?.id });
-  });
 
   it('asks what to start with while the home is shown, empty, and makes no canvas until it is answered', async () => {
     let answer: (choice: Choice) => void = () => undefined;

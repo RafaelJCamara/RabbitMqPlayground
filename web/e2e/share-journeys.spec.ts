@@ -1,5 +1,5 @@
 import { CanvasesPage } from './pages/canvases-page';
-import { EditorPage } from './pages/editor-page';
+import { EditorPage, skipWelcome } from './pages/editor-page';
 import { databases, LinkFailedPage, SharedViewPage, SharePage, textOf } from './pages/share-page';
 import { SimulationPage } from './pages/simulation-page';
 import { goldenLink, GOLDEN_LINKS, payloadFor } from './support/links';
@@ -209,6 +209,8 @@ test.describe('journey 5: a link to a canvas', () => {
 
     await shared.leave.click();
 
+    // The learner has nothing of their own, so the page they come back to is a first run, and asks what to start with (ADR-0082, ADR-0084).
+    await skipWelcome(other);
     const mine = new CanvasesPage(other);
     await mine.editorReady();
     expect(other.url()).not.toContain('#c=');
@@ -452,6 +454,7 @@ test.describe('journey 5: a link that cannot be opened', () => {
 
     await failed.home.click();
 
+    await skipWelcome(other);
     const mine = new CanvasesPage(other);
     await mine.editorReady();
     expect(other.url()).not.toContain('#c=');

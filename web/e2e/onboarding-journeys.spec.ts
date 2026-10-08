@@ -100,22 +100,13 @@ test.describe('journey 11: the first run and the templates', () => {
     await expect(onboarding.dialog).toHaveCount(0);
   });
 
-  test('does not ask a learner who has a canvas, nor a learner without the flag onboarding', async ({
-    page,
-    visitor,
-  }) => {
+  test('does not ask a learner who has a canvas', async ({ page }) => {
     await seedLibrary(page, [{ id: 'mine', name: 'Mine' }]);
     const onboarding = new OnboardingPage(page);
 
     await onboarding.canvases.goto(ONBOARDING_PATH);
     await expect(onboarding.dialog).toHaveCount(0);
     expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Mine']);
-
-    const other = await visitor();
-    const plain = new OnboardingPage(other);
-    await plain.canvases.goto('?ff=editor,canvases,simulation');
-    await expect(plain.dialog).toHaveCount(0);
-    expect(await plain.canvases.stored()).toEqual(['Untitled canvas']);
   });
 
   test('asks again from the home, with a way to say never mind, and a template there is one more canvas', async ({

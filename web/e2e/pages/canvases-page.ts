@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Locator, type Page } from '@playwright/test';
-import { EditorPage } from './editor-page';
+import { EditorPage, skipWelcome } from './editor-page';
 
 /**
  * The workspace of several canvases (ADR-0072, ADR-0073), behind the flags `editor` and `canvases`: the strip of open canvases, the home, and the editor of the canvas that
@@ -33,9 +33,13 @@ export class CanvasesPage {
     this.notices = page.getByRole('region', { name: 'Notices' });
   }
 
-  /** Opens the workspace, and waits until an editor has opened a canvas and says that its changes are saved. */
+  /**
+   * Opens the workspace, answers the question of a first run by building from scratch (ADR-0084), and waits until an editor has opened a canvas and says that its changes are
+   * saved.
+   */
   async goto(path = '?ff=editor,canvases'): Promise<void> {
     await this.page.goto(path);
+    await skipWelcome(this.page);
     await this.heading.waitFor();
     await this.editorReady();
   }

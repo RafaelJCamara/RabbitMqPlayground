@@ -16,6 +16,8 @@ import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
 import { AUTOSAVE_TIMER, NOW, REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-session';
 import type { Selection } from '../core/state/selection-store';
 import { Editor } from '../editor/editor';
+import { OnboardingDialogs } from '../onboarding/dialogs';
+import { BLANK } from '../onboarding/template-chooser';
 import { Workspace } from './workspace';
 
 /** The canvas as the editor sees it, without a library to draw it (as in the spec of the editor): jsdom has no layout. */
@@ -81,6 +83,8 @@ async function renderWorkspace(
       },
       { provide: AUTOSAVE_TIMER, useValue: timer },
       { provide: NOW, useValue: clock.now },
+      // The first run asks what to start with (ADR-0082, ADR-0084); here it is answered the way a learner who leaves the question does.
+      { provide: OnboardingDialogs, useValue: { choose: async () => BLANK } },
       {
         provide: STORAGE_MANAGER,
         useValue: {

@@ -20,7 +20,6 @@ import {
   type UnreadableCanvas,
 } from '@rmq/persistence';
 import { Announcer } from '../core/announcer';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import type { CanvasHost, OpenEditor } from '../core/session/canvas-host';
 import { NOW } from '../core/session/canvas-session';
 import { CanvasStorage, STORAGE_MANAGER } from '../core/session/canvas-storage';
@@ -65,7 +64,6 @@ export class CanvasLibrary implements CanvasHost {
   private readonly toasts = inject(Toasts);
   private readonly downloader = inject(FILE_DOWNLOADER);
   private readonly sharing = inject(ShareDialogs);
-  private readonly flags = inject(FeatureFlags);
   private readonly chooser = inject(OnboardingDialogs);
   private readonly tours = inject(TourRequests);
   private readonly now = inject(NOW);
@@ -150,7 +148,7 @@ export class CanvasLibrary implements CanvasHost {
 
   /**
    * Reads the canvases of the browser, and decides what to show: the canvas that was open last if it is in the strip, else the first of the strip, else the
-   * most recent canvas, else a canvas that it makes (the first run), which with the flag `onboarding` is the one that the learner chooses to start with (ADR-0082). It never shows the home at start, except
+   * most recent canvas, else a canvas that it makes (the first run), which is the one that the learner chooses to start with (ADR-0082). It never shows the home at start, except
    * behind that question: the learner came to build.
    */
   async start(): Promise<void> {
@@ -202,11 +200,8 @@ export class CanvasLibrary implements CanvasHost {
     }
   }
 
-  /** What to start with at the first run: the learner is asked with the flag `onboarding`, and over the empty home; without it, a blank canvas is made (ADR-0082). */
+  /** What to start with at the first run: the learner is asked, over the empty home, and leaving the question means a blank canvas (ADR-0082, ADR-0084). */
   private async firstRun(): Promise<Choice> {
-    if (!this.flags.isEnabled('onboarding')) {
-      return BLANK;
-    }
     this.openIds.set([]);
     this.current.set(HOME);
     this.started.set(true);

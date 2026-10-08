@@ -10,11 +10,15 @@ import { FLAG_SOURCES } from './core/flags/feature-flags';
 import { REPOSITORIES } from './core/session/canvas-session';
 import { LinkOpening, type LinkState } from './core/share/link-opening';
 import { PAGE_ADDRESS, type PageAddress } from './core/share/page-address';
+import { OnboardingDialogs } from './onboarding/dialogs';
+import { BLANK } from './onboarding/template-chooser';
 
 const options = (stored: string | null) => ({
   deferBlockBehavior: DeferBlockBehavior.Playthrough,
   providers: [
     { provide: FLAG_SOURCES, useValue: { stored, query: null } },
+    // The first run asks what to start with (ADR-0082, ADR-0084); here it is answered the way a learner who leaves the question does.
+    { provide: OnboardingDialogs, useValue: { choose: async () => BLANK } },
     {
       provide: REPOSITORIES,
       useValue: {

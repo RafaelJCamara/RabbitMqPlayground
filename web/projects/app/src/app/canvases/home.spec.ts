@@ -114,14 +114,8 @@ describe('Home (ADR-0073)', () => {
       expect(library.create).toHaveBeenCalledOnce();
     });
 
-    it('has no button for templates without the flag onboarding', async () => {
-      await renderHome([canvas('a')], [], 'editor,canvases');
-
-      expect(screen.queryByRole('button', { name: /template/ })).not.toBeInTheDocument();
-    });
-
-    it('has a button for templates with the flag onboarding, beside the one that makes a blank canvas, which asks the library to ask (ADR-0082)', async () => {
-      const { library, user } = await renderHome([canvas('a')], [], 'editor,canvases,onboarding');
+    it('has a button for templates, beside the one that makes a blank canvas, which asks the library to ask (ADR-0082)', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
       const blank = screen.getByRole('button', { name: 'New canvas' });
       const templates = screen.getByRole('button', { name: 'New from a template…' });
 
@@ -133,7 +127,7 @@ describe('Home (ADR-0073)', () => {
     });
 
     it('offers the templates to a learner who has no canvas as well', async () => {
-      await renderHome([], [], 'editor,canvases,onboarding');
+      await renderHome([]);
 
       expect(screen.getByRole('button', { name: 'New from a template…' })).toBeInTheDocument();
     });

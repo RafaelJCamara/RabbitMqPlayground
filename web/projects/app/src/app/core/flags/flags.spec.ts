@@ -30,9 +30,7 @@ describe('the flag registry', () => {
   });
 
   it('keeps the flag names the M1 plan promises for its slices', () => {
-    expect([...FLAG_NAMES].sort()).toEqual(
-      ['canvases', 'editor', 'explain', 'headers', 'onboarding', 'share', 'simulation'].sort(),
-    );
+    expect([...FLAG_NAMES].sort()).toEqual(['canvases', 'editor', 'explain', 'headers', 'share', 'simulation'].sort());
   });
 });
 

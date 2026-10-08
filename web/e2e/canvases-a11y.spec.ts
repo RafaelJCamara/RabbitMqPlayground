@@ -1,6 +1,7 @@
 import { emptyDocument } from '@rmq/domain';
 import type { Page } from '@playwright/test';
 import { CanvasesPage } from './pages/canvases-page';
+import { skipWelcome } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { buildDocument, seedLibrary, type SeededCanvas } from './support/seed';
 import { expect, test } from './support/test';
@@ -326,6 +327,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         }
         if (state.inMemory === true) {
           await page.goto('?ff=editor,canvases');
+          await skipWelcome(page);
           await canvases.heading.waitFor();
           await expect(canvases.editor.saveState).toContainText('Not kept after you close this tab.');
         } else {

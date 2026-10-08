@@ -20,6 +20,8 @@ import { NOW } from '../core/session/canvas-session';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
 import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { OnboardingDialogs } from '../onboarding/dialogs';
+import { BLANK } from '../onboarding/template-chooser';
 import { ShareDialogs } from '../share/dialogs';
 import { CanvasLibrary, type View } from './library';
 
@@ -76,6 +78,8 @@ function setup(
       { provide: TOAST_TIMER, useValue: manualTimer() },
       { provide: NOW, useValue: clock.now },
       { provide: FILE_DOWNLOADER, useValue: { save: (name: string, text: string) => saved.push({ name, text }) } },
+      // The first run asks what to start with (ADR-0082, ADR-0084); here it is answered the way a learner who leaves the question does.
+      { provide: OnboardingDialogs, useValue: { choose: async () => BLANK } },
     ],
   });
   const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
@@ -330,7 +334,7 @@ describe('CanvasLibrary', () => {
       expect(harness.library.problem()).toBe(`The canvases of this browser could not be opened. ${broken.message}`);
     });
 
-    it('says why, and shows nothing, when not even memory can make the first canvas', async () => {
+    it('says why, over the home with nothing on it, when not even memory can make the first canvas (the question was asked over the home, ADR-0082)', async () => {
       const harness = setup({
         browser: (memory) => failing(memory, { create: unavailable }),
         memory: (memory) => failing(memory, { create: broken }),
@@ -338,7 +342,10 @@ describe('CanvasLibrary', () => {
 
       await harness.library.start();
 
-      expect(harness.library.ready()).toBe(false);
+      expect(harness.library.ready()).toBe(true);
+      expect(harness.library.view()).toEqual({ kind: 'home' });
+      expect(harness.library.tabs()).toEqual([]);
+      expect(harness.library.canvases()).toEqual([]);
       expect(harness.library.problem()).toBe(`A canvas could not be made. ${broken.message}`);
     });
   });

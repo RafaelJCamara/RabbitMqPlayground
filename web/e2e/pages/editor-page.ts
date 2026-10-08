@@ -7,6 +7,28 @@ export interface SavedDocument {
   readonly exchanges: Record<string, { name: string; type: string }>;
 }
 
+/**
+ * The question that a first run asks (ADR-0082): a dialog named "Welcome to RabbitMQ Playground", over the empty home. A learner who has a canvas is not asked.
+ */
+export const welcome = (page: Page): Locator => page.getByRole('dialog', { name: 'Welcome to RabbitMQ Playground' });
+
+/**
+ * Waits until the page has either asked the first-run question or opened an editor, and answers the question the way a learner does who wants to build from scratch: with
+ * Escape (ADR-0084). A journey that is not about the question starts, with this, as a learner who skipped it does, on a blank canvas called "Untitled canvas". Nothing
+ * in the product skips the question for a test.
+ */
+export async function skipWelcome(page: Page): Promise<void> {
+  const asked = welcome(page);
+  await asked
+    .or(page.getByRole('complementary', { name: 'Toolbox' }))
+    .first()
+    .waitFor();
+  if (await asked.isVisible()) {
+    await page.keyboard.press('Escape');
+    await expect(asked).toHaveCount(0);
+  }
+}
+
 /** The editor, behind the `editor` flag. Paths are relative to the base path (`/RabbitMqPlayground/`). */
 export class EditorPage {
   readonly heading: Locator;
