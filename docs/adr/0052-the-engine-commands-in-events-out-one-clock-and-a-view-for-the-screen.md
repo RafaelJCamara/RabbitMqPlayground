@@ -2,6 +2,7 @@
 
 - **Status:** Accepted. The records of its view have no prototype, and a message in the broker says which producer sent it, by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
   The trace and `explainMiss` are as [ADR-0059](0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) settles them, and a message in a list says where it was published and with what headers, by [ADR-0063](0063-the-message-inspector-opens-from-a-row-a-list-or-a-marker-and-says-so-when-its-route-is-gone.md).
+  `restore` checks what the engine trusts, and not only the version, by [ADR-0077](0077-a-share-link-is-v1-and-the-deflated-envelope-in-base64url-it-fails-in-words-and-its-messages-are-checked-before-they-are-restored.md).
 - **Date:** 2026-10-07
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0007](0007-deterministic-simulation-engine.md) (a pure, deterministic, discrete-event engine), section 2.2 of the [M1 plan](../plans/m1.md) (the sketch of `createEngine`) and

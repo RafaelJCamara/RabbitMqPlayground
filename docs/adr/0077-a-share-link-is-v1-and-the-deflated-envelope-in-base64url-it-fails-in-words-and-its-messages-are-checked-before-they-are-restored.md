@@ -11,7 +11,7 @@
 
 ADR-0013 says that a link holds a compressed snapshot of one canvas in the fragment of the address, starts with a version prefix, is capped on the way in so that a small link cannot become a big canvas, goes through the same validator as a file, and may carry the messages that are queued. The plan gives the
 codec: `'v1.' + base64url(deflate-raw(canonical JSON))` on the browser's own `CompressionStream`, 256,000 characters in and 2 MB out, counted while streaming, and the warning above 8,000. What is left to decide is the envelope and its text, what is checked first, the ways a link can fail and what each says, how the
-messages of a link are made safe to give to the engine (its `restore` reads the version and trusts the rest), what a link that is longer than it should be does, and how links that exist are kept opening. A link cannot be recalled or changed after it is sent (ADR-0013), so every choice here is a promise.
+messages of a link are made safe to give to the engine (its `restore` read the version and trusted the rest), what a link that is longer than it should be does, and how links that exist are kept opening. A link cannot be recalled or changed after it is sent (ADR-0013), so every choice here is a promise.
 
 ## Decision
 
@@ -65,10 +65,12 @@ A `ShareError` is a value with a `kind` that a program branches on and a message
 ### The messages
 
 - **"With messages" puts the engine's snapshot in the envelope**, and the shared view restores it paused (ADR-0078). The snapshot is the whole of what decides what the engine does next (ADR-0052): the queues with their messages, the consumers' channels, the unacknowledged ones, what is scheduled, the counters and the clock.
-- **`engine.restore` reads the version and trusts the rest**, which is right for the snapshot that the engine took itself and wrong for one that came in a link. `readSnapshot(data)` of the engine library is the reader of one from outside, in the style of `snapshotIssue`: it answers the snapshot or the first thing that is wrong with it. It asks for the
-  shape and the type of every field, whole numbers where they are counts, times and sequence numbers that do not go backwards, names that are in the topology (a queue of a channel, an exchange of a producer), at most as many entries as the link could hold, and each message once.
-- **The snapshot must agree with the document.** A fresh engine is made from the document (`reconcile`, the one path of ADR-0054), and the exchanges, the queues, the bindings and the producers of the snapshot must be the ones that its own snapshot has. A link whose messages belong to another topology is refused, with the sentence that its messages are not
-  those of its canvas, because restoring them would give an engine that the document does not describe.
+- **`engine.restore` trusted the snapshot, and no longer does.** It read the version and nothing else, which is right for the snapshot that the engine took itself and wrong for one that came in a link: the engine looks up the consumer that a queue serves, the channel that a consumer is on and the counters of an exchange, and does not ask whether they are there. A link that lacked the counters of one exchange passed the first reader that was written for this ADR, and stopped the engine with a `TypeError`
+  when a message reached that exchange; a property found it, on the fifth seed of six. So the check is the engine's: `snapshotIssue(snapshot)` says why a snapshot cannot be restored, and `restore` throws a `RangeError` with that sentence. It is the engine's because the engine knows what it trusts: each rule is one of the places where it reads a map and does not ask. The names are there once; a binding, a consumer, a channel and the queue that serves it refer to what is in the snapshot, and to each other (a channel lists the
+  consumers that are on it, a queue serves each consumer that is not cancelled, once); every exchange has its counters; a copy that a consumer has to acknowledge is among those it holds; the copies of a queue are in the order that they came in; a producer that repeats has one tick, at the time it says; what is scheduled is in the order it will happen; and the counters that say what comes next are above everything that was given out. The snapshot of an engine at any step of any run passes, which a property says, and a snapshot that is damaged and still passes does no harm to an engine
+  that goes on, which another says. What a consumer that acknowledges by itself already has is its own, and is not held against a consumer that is gone.
+- **`readSnapshot(data)` is the reader of one from outside.** It is in the domain, next to the schema of the document, because the engine may import nothing and the domain has the schema library: a strict schema of the snapshot, typed as the engine's `EngineSnapshot` in both directions so that the two cannot drift, that answers the snapshot or the first thing that is wrong with it, with its path, as the loader does (no field that it does not know, whole numbers where they are counts, times and sequence numbers), and then asks the engine's `snapshotIssue`.
+- **The snapshot must agree with the document.** A fresh engine is made from the document (`reconcile`, the one path of ADR-0054), and the exchanges, the queues, the bindings, the channels, the consumers and the producers of the snapshot must be the ones that its own snapshot has. A link whose messages belong to another topology is refused, with the sentence that its messages are not those of its canvas, because restoring them would give an engine that the document does not describe.
 - The reader is also guarded where it is used: the restore in the shared view is inside a `try`, and if it throws the canvas opens without the messages and a notice says so. A link is not trusted twice.
 
 ### Links that exist
@@ -85,12 +87,12 @@ A `ShareError` is a value with a `kind` that a program branches on and a message
 
 - A link is checked by the same loader as a file, so a limit, a migration or a refusal is written once.
 - A hostile link has a table of what it can do, and each row is a test; the codec never inflates more than 2 MB for any input of any size.
-- The reader of the snapshot is the engine's, next to the snapshot that it reads, so a change to what a snapshot holds changes its reader and its version in one place.
+- The reader of the snapshot is typed as the engine's snapshot, so a change to what a snapshot holds does not compile until the reader is changed, and the version of the snapshot is the version of the link.
 
 ### Negative / trade-offs
 
 - A link is a copy, not a pointer: it cannot be recalled or changed (ADR-0013), and a person who shares a canvas shares all of it, with the names that are in it.
-- The reader of the snapshot is a piece of code that has to follow the engine. A snapshot of version 2 is a link of version 2.
+- The check of a snapshot is a piece of code that has to follow the engine: a new place where the engine trusts what it holds is a new rule, and the property of damaged snapshots is what says that one is missing. A snapshot of version 2 is a link of version 2.
 - A canvas of a few hundred elements makes a link of more than 8,000 characters (a hundred exchanges and queues bound in pairs is 4,400), and the person is sent to a file.
 - The compressed bytes of one canvas are not the same in every browser, so a link cannot be checked against a text. What it opens as can.
 - A link whose messages are wrong is refused whole, though its canvas would have been fine. A person who is sent such a link sees why and can ask for another.
@@ -102,6 +104,7 @@ A `ShareError` is a value with a `kind` that a program branches on and a message
 - **Sorted keys.** Rejected: the order of the records of a document is the order they were made in, which the lists, the thumbnails and the layout show; a canonical form that sorts them changes the canvas that opens.
 - **A library for compression** (LZ-string, pako). Rejected: the platform has `CompressionStream`, and the link is a promise about a format that the platform will keep.
 - **Trusting the snapshot.** Rejected: `restore` would meet a queue that is not there, or a message twice, and the app would stop with an error that is the link's, not the learner's.
+- **The check in the domain, beside the schema.** Tried first, and moved: the rules are the engine's own trust, so they sit beside the code that trusts, and a change to the engine changes them in the same commit. The domain keeps what is about the shape of data that comes from outside, and about the document.
 - **Opening the canvas and dropping the messages when they are wrong.** Rejected for the reader, and kept for the restore that fails after the reader said yes: a link that says something it does not hold is refused, and a person is told.
 
 ## Related
