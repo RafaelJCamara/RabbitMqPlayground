@@ -73,6 +73,7 @@ export { createEngine, type DispatchResult, type Engine, type EngineOptions } fr
 export type * from './lib/events';
 export type { EngineSnapshot } from './lib/snapshot';
 export { SNAPSHOT_VERSION } from './lib/snapshot';
+export { snapshotIssue } from './lib/snapshot-check';
 export type * from './lib/view';
 export { explainMiss, type MissExplanation, type MissReason } from './lib/explain';
 export {

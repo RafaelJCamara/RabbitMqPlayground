@@ -1,9 +1,11 @@
-import { CANVAS_TIMING, configureFastCheck, newEngine, ZERO_TIMING } from '@rmq/testing';
+import { arbTypedDamage, CANVAS_TIMING, configureFastCheck, newEngine, ZERO_TIMING, type Json } from '@rmq/testing';
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { EngineCommand } from './command';
 import type { Engine } from './engine';
 import type { EngineEvent } from './events';
+import type { EngineSnapshot } from './snapshot';
+import { snapshotIssue } from './snapshot-check';
 import type { Timing } from './view';
 
 /**
@@ -675,5 +677,73 @@ describe('what holds of every run of the engine', () => {
 
     expect(model.problems.join('\n')).toMatch(/not numbered one after the other/);
     expect(model.problems.join('\n')).toMatch(/time went back/);
+  });
+});
+
+/** Does what a script says, as `play` does, without a model: for an engine whose state came from outside, which no model has heard the history of. */
+function carryOn(engine: Engine, script: readonly Intent[], check: () => void = () => undefined): void {
+  const counter = { next: 1_000 };
+  for (const intent of script) {
+    const step = stepFor(engine, intent, counter);
+    if (step.kind === 'advance') {
+      engine.advanceTo(engine.now() + step.by);
+    } else if (step.kind === 'step') {
+      engine.step();
+    } else {
+      engine.dispatch(step.command);
+    }
+    // What the screen reads after every change.
+    engine.view();
+    engine.flights();
+    check();
+  }
+}
+
+describe('what is restored (ADR-0052, ADR-0077)', () => {
+  it('is a snapshot that passes the check that a snapshot from outside has to, whatever the engine has done and whenever it was taken', () => {
+    fc.assert(
+      fc.property(arbScript, arbTiming, fc.nat(1_000), (script, timing, seed) => {
+        const engine = newEngine(timing, seed);
+
+        expect(snapshotIssue(engine.snapshot())).toBeNull();
+        carryOn(engine, script, () => {
+          const issue = snapshotIssue(engine.snapshot());
+          if (issue !== null) {
+            throw new Error(issue);
+          }
+        });
+      }),
+    );
+  });
+
+  it('is refused, with the reason, or does no harm to an engine that goes on, when the snapshot is damaged: a name that is another, a number that is one off, a list with an element gone or twice', () => {
+    fc.assert(
+      fc.property(
+        arbScript,
+        arbTiming,
+        fc.nat(1_000),
+        fc.nat(1_000),
+        arbTypedDamage(),
+        arbScript,
+        (script, timing, seed, where, damage, after) => {
+          const first = newEngine(timing, seed);
+          play(first, script.slice(0, where % (script.length + 1)));
+          const damaged = damage(JSON.parse(JSON.stringify(first.snapshot())) as Json) as unknown as EngineSnapshot;
+          const issue = snapshotIssue(damaged);
+          const engine = newEngine(ZERO_TIMING, 0);
+
+          if (issue !== null) {
+            expect(() => engine.restore(damaged)).toThrow(issue);
+            return;
+          }
+          engine.restore(damaged);
+          expect(() => {
+            engine.advanceTo(engine.now() + 3_000);
+            carryOn(engine, after);
+            engine.advanceTo(engine.now() + 6_000);
+          }).not.toThrow();
+        },
+      ),
+    );
   });
 });

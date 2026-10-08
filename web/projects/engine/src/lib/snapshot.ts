@@ -122,13 +122,6 @@ export function takeSnapshot(state: State): EngineSnapshot {
   };
 }
 
-/** Why a snapshot cannot be read, or `null` when its version is the one that this engine reads. It does not look inside. */
-export function snapshotIssue(snapshot: { readonly version?: unknown }): string | null {
-  return snapshot.version === SNAPSHOT_VERSION
-    ? null
-    : `This engine reads snapshots of version ${SNAPSHOT_VERSION}, and this one is version ${String(snapshot.version)}`;
-}
-
 /** The state that a snapshot describes, made of new objects, so that the snapshot can be used again. */
 export function loadSnapshot(snapshot: EngineSnapshot): State {
   const heap = createHeap<Scheduled>();

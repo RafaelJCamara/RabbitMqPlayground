@@ -1,15 +1,4 @@
-import {
-  bindQueue,
-  CANVAS_TIMING,
-  consume,
-  declareExchange,
-  declareQueue,
-  newEngine,
-  openChannel,
-  producer,
-  run,
-  runAll,
-} from '@rmq/testing';
+import { busyEngine, CANVAS_TIMING, newEngine, run } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import type { Engine } from './engine';
 import { createEngine } from './engine';
@@ -19,46 +8,6 @@ import { SNAPSHOT_VERSION, type EngineSnapshot } from './snapshot';
  * A snapshot is the whole state, as data (ADR-0052). An engine that is restored from one does what the engine that it was taken from would have
  * done, which is what lets S10 share a canvas with its messages.
  */
-
-/** An engine that is busy everywhere: messages on their way, in queues, held, waiting and handled, producers that repeat, and a channel gone. */
-function busy(): Engine {
-  const engine = newEngine(CANVAS_TIMING, 7);
-  runAll(
-    engine,
-    declareExchange('e', 'topic'),
-    declareExchange('f', 'fanout', { durable: false }),
-    declareQueue('jobs'),
-    declareQueue('logs'),
-    bindQueue('e', 'jobs', 'job.#'),
-    { op: 'bind', source: 'e', destination: { kind: 'exchange', name: 'f' }, key: '#' },
-    bindQueue('f', 'logs'),
-    bindQueue('f', 'jobs', '', undefined),
-    openChannel('slow', 1, 400),
-    consume('slow', 'jobs', 'c-slow', 'manual'),
-    openChannel('fast', 0, 100),
-    consume('fast', 'logs', 'c-fast', 'auto'),
-    openChannel('scripted', 2, null),
-    consume('scripted', 'jobs', 'c-held', 'manual'),
-    openChannel('gone', 1, null),
-    consume('gone', 'logs', 'c-gone', 'manual'),
-    producer('p1', {
-      target: { kind: 'exchange', name: 'e' },
-      key: 'job.new',
-      payload: 'work',
-      burst: 3,
-      everyMs: 700,
-      repeat: true,
-    }),
-    producer('p2', { target: { kind: 'queue', name: 'logs' }, payload: 'line', everyMs: 300, repeat: true }),
-    producer('p3', { target: { kind: 'exchange', name: 'f' }, headers: [{ key: 'n', value: { t: 'integer', v: 1 } }] }),
-  );
-  engine.advanceTo(1900);
-  run(engine, { op: 'producer.publish', producer: 'p3' });
-  run(engine, { op: 'channel.close', channel: 'gone' });
-  engine.advanceTo(2300);
-  run(engine, { op: 'basic.cancel', consumer: 'c-slow' });
-  return engine;
-}
 
 /** The same things done to two engines, which they should answer in the same way. */
 function drive(engine: Engine): string {
@@ -77,7 +26,7 @@ function drive(engine: Engine): string {
 
 describe('snapshot and restore', () => {
   it('is plain data that survives JSON, and says its version', () => {
-    const snapshot = busy().snapshot();
+    const snapshot = busyEngine().snapshot();
 
     expect(snapshot.version).toBe(SNAPSHOT_VERSION);
     expect(SNAPSHOT_VERSION).toBe(1);
@@ -85,7 +34,7 @@ describe('snapshot and restore', () => {
   });
 
   it('gives an engine the state that it was taken from: the same view, flights, clock and next event', () => {
-    const original = busy();
+    const original = busyEngine();
     const restored = createEngine({ seed: 1, timing: { publishMs: 0, brokerMs: 0, deliverMs: 0 } });
 
     restored.restore(original.snapshot());
@@ -99,7 +48,7 @@ describe('snapshot and restore', () => {
   });
 
   it('gives an engine that does what the first would have done: the same events for the same commands and the same time', () => {
-    const original = busy();
+    const original = busyEngine();
     const restored = newEngine();
     restored.restore(JSON.parse(JSON.stringify(original.snapshot())) as EngineSnapshot);
 
@@ -119,7 +68,7 @@ describe('snapshot and restore', () => {
   });
 
   it('is not changed by what the engine does afterwards, and does not change what it was restored into', () => {
-    const engine = busy();
+    const engine = busyEngine();
     const snapshot = engine.snapshot();
     const before = JSON.stringify(snapshot);
 
@@ -132,7 +81,7 @@ describe('snapshot and restore', () => {
   });
 
   it('can be restored twice, into engines that do not share anything', () => {
-    const snapshot = busy().snapshot();
+    const snapshot = busyEngine().snapshot();
     const first = newEngine();
     const second = newEngine();
     first.restore(snapshot);
@@ -145,7 +94,7 @@ describe('snapshot and restore', () => {
   });
 
   it('replaces everything that the engine had, topology, channels and producers included', () => {
-    const engine = busy();
+    const engine = busyEngine();
     const empty = newEngine().snapshot();
 
     engine.restore(empty);
@@ -156,7 +105,7 @@ describe('snapshot and restore', () => {
   });
 
   it('gives back the numbers that it was at, so that the events and the messages go on from there', () => {
-    const original = busy();
+    const original = busyEngine();
     const lastEvent = original.advanceTo(original.now() + 10).at(-1)?.seq ?? 0;
     const restored = newEngine();
 
@@ -168,7 +117,7 @@ describe('snapshot and restore', () => {
   });
 
   it('refuses a version that it cannot read, and says which', () => {
-    const snapshot = busy().snapshot();
+    const snapshot = busyEngine().snapshot();
 
     expect(() => newEngine().restore({ ...snapshot, version: 2 } as unknown as EngineSnapshot)).toThrow(RangeError);
     expect(() => newEngine().restore({ ...snapshot, version: 2 } as unknown as EngineSnapshot)).toThrow(
