@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { encodeShare, SHARE_PREFIX, shareLink } from '@rmq/persistence';
+import { encodeShare, SHARE_KEY, SHARE_PREFIX, shareLink } from '@rmq/persistence';
 import { sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FLAG_SOURCES } from '../flags/feature-flags';
-import { LinkOpening } from './link-opening';
+import { LINK_DECODER, LINK_PREFIX, LinkOpening, type LinkDecoder } from './link-opening';
 import { PAGE_ADDRESS, type PageAddress } from './page-address';
 
 /** The link in the address of the page (ADR-0078): when it is opened, what it opens as, and what it does when the fragment changes. */
@@ -83,6 +83,37 @@ describe('LinkOpening', () => {
     const cut = setup({ hash: `#c=${whole.slice(0, whole.length - 9)}` });
     await settled();
     expect(cut.opening.state()).toMatchObject({ kind: 'failed', error: { kind: 'damaged' } });
+  });
+
+  it('looks for the fragment that the persistence library makes: the root cannot import its key, and this holds the two together', () => {
+    expect(LINK_PREFIX).toBe(`#${SHARE_KEY}=`);
+    expect(shareLink('https://learner.test/app/', 'v1.abc').slice('https://learner.test/app/'.length)).toBe(
+      `${LINK_PREFIX}v1.abc`,
+    );
+  });
+
+  it('gives the decoder what comes after the prefix, once, and no more than that', async () => {
+    const decode = vi.fn<LinkDecoder>(async () => ({ ok: true, value: { name: 'Given', document: sampleDocument() } }));
+    TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
+
+    const { opening } = setup({ hash: '#c=v1.abc=def' });
+    await settled();
+
+    expect(decode).toHaveBeenCalledExactlyOnceWith('v1.abc=def');
+    expect(opening.state()).toMatchObject({ kind: 'shared', shared: { name: 'Given' } });
+  });
+
+  it('does not ask the decoder at all when there is no link, or when the flags are off', async () => {
+    const decode = vi.fn<LinkDecoder>();
+    TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
+
+    setup({ hash: '#other' });
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
+    setup({ hash: '#c=v1.abc', flags: 'editor' });
+    await settled();
+
+    expect(decode).not.toHaveBeenCalled();
   });
 
   it('reads the fragment of an address that was made by shareLink', async () => {

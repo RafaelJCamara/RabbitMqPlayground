@@ -1,5 +1,5 @@
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { decodeShare, payloadOf, type Shared, type ShareError } from '@rmq/persistence';
+import { DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import type { Outcome, Shared, ShareError } from '@rmq/persistence';
 import { FeatureFlags } from '../flags/feature-flags';
 import { PAGE_ADDRESS } from './page-address';
 
@@ -13,6 +13,23 @@ export type LinkState =
   | { readonly kind: 'shared'; readonly shared: Shared }
   /** The link is not one that can be opened, and this is why, in words. */
   | { readonly kind: 'failed'; readonly error: ShareError };
+
+/**
+ * How a link is unpacked. The default loads the codec of the persistence library when there is a link to open and not before: this service is in the root of the page, and the library with everything it needs (the schemas
+ * of the document, the engine) is the weight of the editor, which a visitor without a link, or without the flags, must not download (ADR-0030). A spec gives its own.
+ */
+export type LinkDecoder = (payload: string) => Promise<Outcome<Shared, ShareError>>;
+
+export const LINK_DECODER = new InjectionToken<LinkDecoder>('LINK_DECODER', {
+  providedIn: 'root',
+  factory: () => async (payload) => (await import('@rmq/persistence')).decodeShare(payload),
+});
+
+/**
+ * What the fragment of an address that holds a link starts with: `#c=`, and then the payload (ADR-0077). It is the fragment that `shareLink` of the persistence library makes, which the root cannot import to ask, because that
+ * is the weight above; a spec holds this to it.
+ */
+export const LINK_PREFIX = '#c=';
 
 /**
  * The link in the address of the page (ADR-0078, ADR-0077). A page whose address has `#c=` is a shared canvas when the flags `share` and `editor` are on, and without them the fragment is ignored. The
@@ -31,12 +48,12 @@ export class LinkOpening {
       return;
     }
     inject(DestroyRef).onDestroy(this.address.onHashChange(() => this.address.reload()));
-    const payload = payloadOf(this.address.hash());
-    if (payload === undefined) {
+    const hash = this.address.hash();
+    if (!hash.startsWith(LINK_PREFIX)) {
       return;
     }
     this.current.set({ kind: 'opening' });
-    void decodeShare(payload).then((result) =>
+    void inject(LINK_DECODER)(hash.slice(LINK_PREFIX.length)).then((result) =>
       this.current.set(result.ok ? { kind: 'shared', shared: result.value } : { kind: 'failed', error: result.error }),
     );
   }
