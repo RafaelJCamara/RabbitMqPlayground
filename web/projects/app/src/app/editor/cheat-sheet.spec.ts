@@ -7,7 +7,7 @@ import { firstSentence } from '../command-bar/help';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CheatSheetService, commandRows, keyRows } from './cheat-sheet';
 import { SHORTCUTS } from './keyboard';
-import { WAYS_TO_LINK } from './ways-to-link';
+import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
 
 afterEach(() => {
   document.body.replaceChildren();

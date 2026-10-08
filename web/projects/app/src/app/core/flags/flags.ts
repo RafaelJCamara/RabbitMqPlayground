@@ -35,7 +35,8 @@ export const FLAGS = {
   },
   onboarding: {
     default: false,
-    description: 'Templates, the first-run chooser and the tour (slice S11).',
+    description:
+      'Six templates, the first-run chooser that asks what to start with, and a short tour. It needs the flags editor and canvases, and the tour also simulation (slice S11).',
   },
 } as const satisfies Record<string, { readonly default: false; readonly description: string }>;
 // `default: false` is a literal type, so turning a flag on by default does not compile. A test checks it at runtime too.

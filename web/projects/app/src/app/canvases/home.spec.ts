@@ -58,6 +58,7 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
       return true;
     }),
     create: vi.fn(async () => undefined),
+    newFromTemplate: vi.fn(async () => undefined),
     openCanvas: vi.fn(async (_id: string) => undefined),
     duplicate: vi.fn(async (_id: string) => undefined),
     rename: vi.fn(async (_id: string, _name: string) => succeed(undefined)),
@@ -111,6 +112,30 @@ describe('Home (ADR-0073)', () => {
       await user.click(screen.getByRole('button', { name: 'New canvas' }));
 
       expect(library.create).toHaveBeenCalledOnce();
+    });
+
+    it('has no button for templates without the flag onboarding', async () => {
+      await renderHome([canvas('a')], [], 'editor,canvases');
+
+      expect(screen.queryByRole('button', { name: /template/ })).not.toBeInTheDocument();
+    });
+
+    it('has a button for templates with the flag onboarding, beside the one that makes a blank canvas, which asks the library to ask (ADR-0082)', async () => {
+      const { library, user } = await renderHome([canvas('a')], [], 'editor,canvases,onboarding');
+      const blank = screen.getByRole('button', { name: 'New canvas' });
+      const templates = screen.getByRole('button', { name: 'New from a template…' });
+
+      await user.click(templates);
+
+      expect(library.newFromTemplate).toHaveBeenCalledOnce();
+      expect(library.create).not.toHaveBeenCalled();
+      expect(blank.parentElement).toBe(templates.parentElement);
+    });
+
+    it('offers the templates to a learner who has no canvas as well', async () => {
+      await renderHome([], [], 'editor,canvases,onboarding');
+
+      expect(screen.getByRole('button', { name: 'New from a template…' })).toBeInTheDocument();
     });
 
     it('says that there are no canvases, with no search and no sort, and still offers a new one', async () => {

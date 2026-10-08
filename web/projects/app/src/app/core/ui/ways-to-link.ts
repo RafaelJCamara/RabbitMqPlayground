@@ -5,7 +5,7 @@ export interface Way {
 }
 
 /**
- * The five ways to link (ADR-0041), as a learner is told them (ADR-0047): by the card that the first run shows, and by the cheat-sheet. They are written
+ * The five ways to link (ADR-0041), as a learner is told them (ADR-0047): by the card that the first run shows, by the cheat-sheet and by the tour (ADR-0083). They are written
  * in the words of what is on the screen, so that a learner can find each: the dot on the right of a node, "Link to…", the key `L`.
  */
 export const WAYS_TO_LINK: readonly Way[] = [

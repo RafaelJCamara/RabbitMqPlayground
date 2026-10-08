@@ -106,6 +106,18 @@ const shareStaysBelowEditor = {
   regex: '^(\\.\\./)+editor(/|$)',
   message: `\`share/\` may not import from \`editor/\`, which is above it: the folders run ${SHARE_ORDER} (ADR-0078).`,
 };
+const ONBOARDING_ORDER =
+  'core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, share and onboarding (which do not import each other), editor, canvases';
+const belowOnboarding = {
+  regex: '^(\\.\\./)+onboarding(/|$)',
+  message: `\`core/\`, \`canvas/\`, \`command-bar/\`, \`simulation/\`, \`explain/\` and \`share/\` may not import from \`onboarding/\`, which is above them: the folders run ${ONBOARDING_ORDER} (ADR-0082).`,
+};
+const coreStaysBelowOnboarding = { regex: '^(\\.\\./){2,}onboarding(/|$)', message: belowOnboarding.message };
+const coreFilesStayBelowOnboarding = { regex: '^\\.\\./onboarding(/|$)', message: belowOnboarding.message };
+const onboardingStaysBelowEditor = {
+  regex: '^(\\.\\./)+(editor|share)(/|$)',
+  message: `\`onboarding/\` may not import from \`editor/\` or \`share/\`: the folders run ${ONBOARDING_ORDER} (ADR-0082).`,
+};
 const belowCanvases = {
   regex: '^(\\.\\./)+canvases(/|$)',
   message:
@@ -305,6 +317,7 @@ const SIMULATION_UI = 'projects/app/src/app/simulation/**/*.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/**/*.ts';
 const EXPLAIN_UI = 'projects/app/src/app/explain/**/*.ts';
 const SHARE_UI = 'projects/app/src/app/share/**/*.ts';
+const ONBOARDING_UI = 'projects/app/src/app/onboarding/**/*.ts';
 const CORE_ROOT = 'projects/app/src/app/core/*.ts';
 
 export default defineConfig([
@@ -452,6 +465,7 @@ export default defineConfig([
         belowSimulation,
         coreStaysBelowExplain,
         coreStaysBelowShare,
+        coreStaysBelowOnboarding,
       ),
       ...appHygiene,
     },
@@ -472,6 +486,7 @@ export default defineConfig([
         belowSimulation,
         coreFilesStayBelowExplain,
         coreFilesStayBelowShare,
+        coreFilesStayBelowOnboarding,
       ),
       ...appHygiene,
     },
@@ -493,6 +508,7 @@ export default defineConfig([
         modelStaysBelowOverlay,
         belowExplain,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },
@@ -514,6 +530,7 @@ export default defineConfig([
         overlayStaysBelowFlow,
         belowExplain,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },
@@ -532,6 +549,7 @@ export default defineConfig([
         simulationStaysBelowEditor,
         belowExplain,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },
@@ -549,6 +567,7 @@ export default defineConfig([
         belowCanvases,
         explainStaysBelowEditor,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },
@@ -565,6 +584,23 @@ export default defineConfig([
         noFoblex,
         belowCanvases,
         shareStaysBelowEditor,
+        belowOnboarding,
+      ),
+      ...appHygiene,
+    },
+  },
+  {
+    // The chooser of what to start with reads core and the domain, and the library and the home open it; the tour is hosted by the editor (ADR-0082, ADR-0083).
+    files: [ONBOARDING_UI],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        belowCanvases,
+        onboardingStaysBelowEditor,
       ),
       ...appHygiene,
     },
@@ -584,6 +620,7 @@ export default defineConfig([
         belowSimulation,
         belowExplain,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },
@@ -603,6 +640,7 @@ export default defineConfig([
         belowSimulation,
         belowExplain,
         belowShare,
+        belowOnboarding,
       ),
       ...appHygiene,
     },

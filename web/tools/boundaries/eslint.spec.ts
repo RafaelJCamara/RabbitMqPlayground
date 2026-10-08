@@ -55,6 +55,7 @@ const CORE_EXPLAIN = 'projects/app/src/app/core/explain/example.ts';
 const CANVASES = 'projects/app/src/app/canvases/example.ts';
 const SHARE = 'projects/app/src/app/share/example.ts';
 const CORE_SHARE = 'projects/app/src/app/core/share/example.ts';
+const ONBOARDING = 'projects/app/src/app/onboarding/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -353,6 +354,69 @@ describe('imports', () => {
       '@rmq/testing',
       /only be imported from specs/,
     ],
+    // The chooser and the tour have a place of their own beside the panels of sharing, between the explanation and the editor (ADR-0082).
+    ['core importing the chooser', CORE, '../../onboarding/template-chooser', /may not import from `onboarding\/`/],
+    [
+      'a file directly in core importing the chooser',
+      CORE_ROOT,
+      '../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the canvas model importing the chooser',
+      MODEL,
+      '../../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the canvas overlay importing the chooser',
+      OVERLAY,
+      '../../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the Foblex adapter importing the chooser',
+      FLOW,
+      '../../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the command bar importing the chooser',
+      COMMAND_BAR,
+      '../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the controls of the simulation importing the chooser',
+      SIMULATION,
+      '../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the components of the explanation importing the chooser',
+      EXPLAIN,
+      '../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the panels of sharing importing the chooser',
+      SHARE,
+      '../onboarding/template-chooser',
+      /may not import from `onboarding\/`/,
+    ],
+    [
+      'the chooser importing the editor',
+      ONBOARDING,
+      '../editor/editor',
+      /`onboarding\/` may not import from `editor\/` or `share\/`/,
+    ],
+    [
+      'the chooser importing the panels of sharing',
+      ONBOARDING,
+      '../share/dialogs',
+      /`onboarding\/` may not import from `editor\/` or `share\/`/,
+    ],
+    ['the chooser importing the workspace', ONBOARDING, '../canvases/library', /may not import from `canvases\/`/],
     // The panels that make a link and export for a broker have a place of their own between the explanation and the editor (ADR-0078). The link in the address is `core/share/`, which is core's.
     ['core importing the panels of sharing', CORE, '../../share/share-panel', /may not import from `share\/`/],
     [
@@ -502,6 +566,10 @@ describe('imports', () => {
     ['the panels of sharing importing core', SHARE, '../core/session/canvas-session'],
     ['the panels of sharing importing the link in the address', SHARE, '../core/share/page-address'],
     ['the panels of sharing importing their own folder', SHARE, './link-maker'],
+    ['the chooser importing core', ONBOARDING, '../core/flags/feature-flags'],
+    ['the chooser importing its own folder', ONBOARDING, './template-chooser'],
+    ['the editor importing the tour', APP, '../onboarding/tour'],
+    ['the workspace importing the chooser', CANVASES, '../onboarding/dialogs'],
     ['the panels of sharing importing the notices of core', SHARE, '../core/announcer'],
     ['the editor importing the panels of sharing', APP, '../share/dialogs'],
     ['the workspace importing the panels of sharing', CANVASES, '../share/dialogs'],

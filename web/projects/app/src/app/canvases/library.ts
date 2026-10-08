@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { emptyDocument, type CanvasDocument } from '@rmq/domain';
+import { buildTemplate, emptyDocument, templateById, type CanvasDocument, type Template } from '@rmq/domain';
 import {
   failure,
   parseBackup,
@@ -20,6 +20,7 @@ import {
   type UnreadableCanvas,
 } from '@rmq/persistence';
 import { Announcer } from '../core/announcer';
+import { FeatureFlags } from '../core/flags/feature-flags';
 import type { CanvasHost, OpenEditor } from '../core/session/canvas-host';
 import { NOW } from '../core/session/canvas-session';
 import { CanvasStorage, STORAGE_MANAGER } from '../core/session/canvas-storage';
@@ -27,10 +28,13 @@ import { Toasts } from '../core/ui/toasts';
 import { formatChord } from '../editor/keyboard';
 import { backupDone, type BackupDone } from './backup-words';
 import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { OnboardingDialogs } from '../onboarding/dialogs';
+import { BLANK, type Choice } from '../onboarding/template-chooser';
+import { TourRequests } from '../onboarding/tour-requests';
 import { ShareDialogs } from '../share/dialogs';
 import { readText, tooBigToRead } from './file-text';
 import { backupFileName, canvasFileName } from '../core/files/file-names';
-import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { copyName, nameProblem, TOUR_CANVAS, UNTITLED, uniqueName } from './names';
 import { backupReminder, SNOOZE_MS } from './reminder';
 import { summarise, type CanvasSummary } from './summary';
 
@@ -61,6 +65,9 @@ export class CanvasLibrary implements CanvasHost {
   private readonly toasts = inject(Toasts);
   private readonly downloader = inject(FILE_DOWNLOADER);
   private readonly sharing = inject(ShareDialogs);
+  private readonly flags = inject(FeatureFlags);
+  private readonly chooser = inject(OnboardingDialogs);
+  private readonly tours = inject(TourRequests);
   private readonly now = inject(NOW);
   private readonly manager = inject(STORAGE_MANAGER);
 
@@ -143,7 +150,8 @@ export class CanvasLibrary implements CanvasHost {
 
   /**
    * Reads the canvases of the browser, and decides what to show: the canvas that was open last if it is in the strip, else the first of the strip, else the
-   * most recent canvas, else a canvas that it makes (the first run). It never shows the home at start: the learner came to build.
+   * most recent canvas, else a canvas that it makes (the first run), which with the flag `onboarding` is the one that the learner chooses to start with (ADR-0082). It never shows the home at start, except
+   * behind that question: the learner came to build.
    */
   async start(): Promise<void> {
     const loaded = await this.load();
@@ -163,11 +171,13 @@ export class CanvasLibrary implements CanvasHost {
 
     let shown = lastId !== undefined && open.includes(lastId) ? lastId : open[0];
     shown ??= lastId !== undefined && readable.has(lastId) ? lastId : canvases[0]?.id;
+    let opened: string | null = null;
     if (shown === undefined) {
-      let made = await this.makeBlank(repository);
+      const choice = await this.firstRun();
+      let made = await this.makeFrom(repository, choice);
       if (!made.ok && this.storage.memoryReason() === undefined) {
         repository = await this.storage.fallBack(made.error.message);
-        made = await this.makeBlank(repository);
+        made = await this.makeFrom(repository, choice);
       }
       if (!made.ok) {
         this.trouble.set(`A canvas could not be made. ${made.error.message}`);
@@ -175,6 +185,10 @@ export class CanvasLibrary implements CanvasHost {
       }
       this.add(made.value);
       shown = made.value.id;
+      if (choice.kind === 'tour') {
+        this.tours.request();
+      }
+      opened = this.openedNotice(choice, made.value.name);
     }
     const ids = open.includes(shown) ? open : [...open, shown];
     this.openIds.set(ids);
@@ -183,6 +197,58 @@ export class CanvasLibrary implements CanvasHost {
       this.saveStrip();
     }
     this.started.set(true);
+    if (opened !== null) {
+      this.toasts.show({ message: opened });
+    }
+  }
+
+  /** What to start with at the first run: the learner is asked with the flag `onboarding`, and over the empty home; without it, a blank canvas is made (ADR-0082). */
+  private async firstRun(): Promise<Choice> {
+    if (!this.flags.isEnabled('onboarding')) {
+      return BLANK;
+    }
+    this.openIds.set([]);
+    this.current.set(HOME);
+    this.started.set(true);
+    return (await this.chooser.choose({ first: true })) ?? BLANK;
+  }
+
+  /** Asks what to start with, from the home, and makes it. Never mind makes nothing. */
+  async newFromTemplate(): Promise<void> {
+    const choice = await this.chooser.choose({ first: false });
+    if (choice !== undefined) {
+      await this.begin(choice);
+    }
+  }
+
+  /** Makes the canvas that was chosen and opens it: a template's, a blank one, or the blank one that the tour is taken on (ADR-0082, ADR-0083). */
+  async begin(choice: Choice): Promise<void> {
+    const template = choice.kind === 'template' ? templateById(choice.id) : undefined;
+    if (choice.kind === 'tour') {
+      this.tours.request();
+    }
+    const options =
+      template !== undefined
+        ? { name: uniqueName(template.name, this.names()), document: buildTemplate(template) }
+        : choice.kind === 'tour'
+          ? { name: uniqueName(TOUR_CANVAS, this.names()) }
+          : {};
+    const made = await this.create(options);
+    if (!made.ok) {
+      this.tours.take();
+    } else if (template !== undefined) {
+      this.toasts.show({ message: this.openedText(made.value.name, template) });
+    }
+  }
+
+  /** The notice that says what to try, for a template that was chosen. */
+  private openedNotice(choice: Choice, name: string): string | null {
+    const template = choice.kind === 'template' ? templateById(choice.id) : undefined;
+    return template === undefined ? null : this.openedText(name, template);
+  }
+
+  private openedText(name: string, template: Template): string {
+    return `Opened “${name}”. ${template.tryThis}`;
   }
 
   /**
@@ -601,8 +667,14 @@ export class CanvasLibrary implements CanvasHost {
     return summary;
   }
 
-  private makeBlank(repository: CanvasRepository): Promise<Outcome<CanvasRecord, RepositoryError>> {
-    return repository.create({ name: uniqueName(UNTITLED, this.names()), document: emptyDocument() });
+  /** The first canvas, as the learner chose it (a blank one when there was no choice). */
+  private makeFrom(repository: CanvasRepository, choice: Choice): Promise<Outcome<CanvasRecord, RepositoryError>> {
+    const template = choice.kind === 'template' ? templateById(choice.id) : undefined;
+    if (template !== undefined) {
+      return repository.create({ name: uniqueName(template.name, this.names()), document: buildTemplate(template) });
+    }
+    const name = uniqueName(choice.kind === 'tour' ? TOUR_CANVAS : UNTITLED, this.names());
+    return repository.create({ name, document: emptyDocument() });
   }
 
   /** The canvases of the browser, on the browser's repository or, if that cannot list, in memory, as the session does (ADR-0072). */

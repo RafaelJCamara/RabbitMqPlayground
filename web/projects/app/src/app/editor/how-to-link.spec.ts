@@ -8,7 +8,7 @@ import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { HOW_TO_LINK_KEY, HowToLink, HowToLinkCard, readDismissed, writeDismissed } from './how-to-link';
-import { WAYS_TO_LINK } from './ways-to-link';
+import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
 
 const memoryStorage = (initial: Record<string, string> = {}) => {
   const items = new Map(Object.entries(initial));

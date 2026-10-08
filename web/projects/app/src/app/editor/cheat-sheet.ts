@@ -5,7 +5,7 @@ import { firstSentence } from '../command-bar/help';
 import { FeatureFlags } from '../core/flags/feature-flags';
 import type { FlagName } from '../core/flags/flags';
 import { available, keysOf, SHORTCUTS } from './keyboard';
-import { WAYS_TO_LINK } from './ways-to-link';
+import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
 
 /** One key of the table, as the cheat-sheet says it. */
 export interface KeyRow {

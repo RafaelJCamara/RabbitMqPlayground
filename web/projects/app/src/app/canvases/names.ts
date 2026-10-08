@@ -6,6 +6,9 @@ import { cutName, SIZE_CAPS } from '@rmq/persistence';
  */
 
 /** The name of a canvas that the learner has not named. */
+/** The name of the canvas that the tour is taken on (ADR-0083). */
+export const TOUR_CANVAS = 'My first topology';
+
 export const UNTITLED = 'Untitled canvas';
 
 /** `base` if nobody has it, and else `base 2`, `base 3`, and so on, the first that nobody has. */

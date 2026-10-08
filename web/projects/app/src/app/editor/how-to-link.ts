@@ -3,7 +3,7 @@ import { edgeCount } from '@rmq/domain';
 import { localStorageOf } from '../core/browser-storage';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
-import { WAYS_TO_LINK } from './ways-to-link';
+import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
 
 /** Whether the learner has dismissed the card, or has linked, is a preference of the browser, as the theme is, and not part of any canvas. */
 export const HOW_TO_LINK_KEY = 'rmq.how-to-link';
