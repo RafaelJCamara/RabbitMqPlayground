@@ -21,7 +21,7 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
       class="border-border bg-surface flex h-full flex-col overflow-hidden rounded-lg border"
       [attr.data-canvas]="canvas().id"
     >
-      <div class="bg-canvas border-line aspect-[16/10] border-b p-2" aria-hidden="true">
+      <div class="bg-canvas border-line aspect-[16/10] border-b p-2">
         <rmq-thumbnail [thumbnail]="canvas().thumbnail" />
       </div>
       <div class="flex flex-1 flex-col gap-1 p-3">

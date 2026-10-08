@@ -310,10 +310,8 @@ export class CanvasLibrary implements CanvasHost {
       this.unreadableCanvases().find((canvas) => canvas.id === id)?.name ??
       id;
     const place = this.openIds().indexOf(id);
-    if (place >= 0) {
-      // Out of the strip first, which makes the editor write and shows another view, so that nothing saves a canvas that has gone.
-      await this.closeTab(id);
-    }
+    // Out of the strip first, which makes the editor write and shows another view, so that nothing saves a canvas that has gone. A canvas that is not in it is not closed.
+    await this.closeTab(id);
     const repository = await this.storage.repository();
     const done = await repository.softDelete(id);
     if (!done.ok) {

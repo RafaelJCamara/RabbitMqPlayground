@@ -53,6 +53,17 @@ describe('ago (ADR-0073)', () => {
     expect(ago(NOW, at(2))).toBe('6 days ago');
   });
 
+  it('counts the learner’s calendar days from noon to noon, whatever the clocks did in between, for any day of the year', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 364 }), fc.integer({ min: 2, max: 6 }), (start, gap) => {
+        const then = new Date(2026, 0, 1 + start, 12).getTime();
+        const now = new Date(2026, 0, 1 + start + gap, 12).getTime();
+
+        expect(ago(now, then)).toBe(`${gap} days ago`);
+      }),
+    );
+  });
+
   it('says the date from a week', () => {
     expect(ago(NOW, at(1))).toBe('on 1 Oct 2026');
     expect(ago(NOW, new Date(2025, 11, 25, 10).getTime())).toBe('on 25 Dec 2025');
@@ -82,5 +93,13 @@ describe('dateWords', () => {
     expect(dateWords(new Date(2026, 1, 28).getTime())).toBe('28 Feb 2026');
     expect(dateWords(new Date(2026, 5, 15).getTime())).toBe('15 Jun 2026');
     expect(dateWords(new Date(2026, 11, 31).getTime())).toBe('31 Dec 2026');
+  });
+
+  it('has the three letters of every month, in the order of the year', () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    expect(months.map((_name, month) => dateWords(new Date(2026, month, 9).getTime()))).toEqual(
+      months.map((name) => `9 ${name} 2026`),
+    );
   });
 });

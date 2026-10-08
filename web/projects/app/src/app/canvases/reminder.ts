@@ -8,7 +8,7 @@ import type { CanvasSummary } from './summary';
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** A backup is asked for after this long without one (or, if there has never been one, since the oldest canvas was made). */
+/** A backup is asked for after this long without one (or, if there has never been one, since the oldest canvas that has an element on it was made). */
 export const REMIND_AFTER_MS = 14 * DAY;
 
 /** "Remind me in a week". */

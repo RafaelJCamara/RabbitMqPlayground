@@ -10,10 +10,10 @@ const DAY = 24 * HOUR;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
-/** The first moment of the learner's day that `time` is in. */
-function startOfDay(time: number): number {
+/** The learner's calendar day that `time` is in, counted in days: two of them are as many days apart as there are midnights between, whatever the clocks did in between. */
+function calendarDay(time: number): number {
   const day = new Date(time);
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+  return Date.UTC(day.getFullYear(), day.getMonth(), day.getDate()) / DAY;
 }
 
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'} ago`;
@@ -36,8 +36,8 @@ export function ago(now: number, then: number): string {
   if (elapsed < DAY) {
     return plural(Math.floor(elapsed / HOUR), 'hour');
   }
-  // Two midnights are 24 hours apart, except when the clocks changed in between, which `round` takes in; a whole day has gone, so it is at least yesterday.
-  const days = Math.max(1, Math.round((startOfDay(now) - startOfDay(then)) / DAY));
+  // At least a whole day has gone, so it is "yesterday" at the least, even if the clocks went back and both times are on one date.
+  const days = Math.max(1, calendarDay(now) - calendarDay(then));
   if (days === 1) {
     return 'yesterday';
   }

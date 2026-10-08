@@ -145,10 +145,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
             </p>
             <ul class="flex flex-col gap-2" aria-label="Canvases that could not be opened">
               @for (item of library.unreadable(); track item.id) {
-                <li
-                  class="border-border bg-surface flex flex-wrap items-start gap-3 rounded-md border p-3"
-                  [attr.data-unreadable]="item.id"
-                >
+                <li class="border-border bg-surface flex flex-wrap items-start gap-3 rounded-md border p-3">
                   <div class="min-w-0 flex-1">
                     <h3 class="font-semibold">{{ item.name ?? item.id }}</h3>
                     <p class="text-muted text-sm">{{ item.error.message }}</p>

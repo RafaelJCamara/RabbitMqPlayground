@@ -36,7 +36,7 @@ import { CanvasLibrary, type Tab } from './library';
               </button>
             </li>
             @for (item of library.tabs(); track item.id) {
-              <li class="flex items-center gap-0.5" [attr.data-tab]="item.id">
+              <li class="flex items-center gap-0.5">
                 <button
                   type="button"
                   [class]="tab(shown() === item.id)"
@@ -74,10 +74,9 @@ import { CanvasLibrary, type Tab } from './library';
         @if (library.ready()) {
           @if (home()) {
             <rmq-home />
-          } @else {
-            @for (id of editors(); track id) {
-              <rmq-editor class="block h-full" />
-            }
+          }
+          @for (id of editors(); track id) {
+            <rmq-editor class="block h-full" />
           }
         } @else if (library.problem(); as problem) {
           <p class="border-danger bg-danger-bg text-danger m-4 rounded-md border px-3 py-2" role="alert">
