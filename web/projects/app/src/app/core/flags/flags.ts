@@ -29,10 +29,6 @@ export const FLAGS = {
     description:
       'Several canvases around the editor: a strip of open canvases, the home, delete and clear with an Undo, files and backups. It needs the flag editor (slice S9).',
   },
-  share: {
-    default: false,
-    description: 'Share links and the definitions.json export (slice S10).',
-  },
 } as const satisfies Record<string, { readonly default: false; readonly description: string }>;
 // `default: false` is a literal type, so turning a flag on by default does not compile. A test checks it at runtime too.
 

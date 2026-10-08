@@ -30,7 +30,7 @@ describe('the flag registry', () => {
   });
 
   it('keeps the flag names the M1 plan promises for its slices', () => {
-    expect([...FLAG_NAMES].sort()).toEqual(['canvases', 'editor', 'explain', 'headers', 'share', 'simulation'].sort());
+    expect([...FLAG_NAMES].sort()).toEqual(['canvases', 'editor', 'explain', 'headers', 'simulation'].sort());
   });
 });
 
@@ -46,7 +46,7 @@ describe('parseFlagList', () => {
     [' editor , simulation ,, ', ['editor', 'simulation']],
     ['Editor,SIMULATION', ['editor', 'simulation']],
     ['editor,editor,Editor', ['editor']],
-    ['editor\nsimulation\tshare', ['editor', 'simulation', 'share']],
+    ['editor\nsimulation\theaders', ['editor', 'simulation', 'headers']],
   ])('reads %j as %j', (raw, expected) => {
     expect(parseFlagList(raw)).toEqual(expected);
   });
@@ -61,7 +61,7 @@ describe('resolveFlags', () => {
   });
 
   it('turns on the flags named in the URL', () => {
-    expect(enabled(null, 'simulation,share')).toEqual(['share', 'simulation']);
+    expect(enabled(null, 'simulation,headers')).toEqual(['headers', 'simulation']);
   });
 
   it('adds the two sources together', () => {
@@ -98,7 +98,7 @@ describe('readFlagSources', () => {
   });
 
   it('reads the ff parameter among other parameters', () => {
-    expect(readFlagSources(win(`?a=1&${FLAGS_QUERY_PARAM}=share,headers&b=2`)).query).toBe('share,headers');
+    expect(readFlagSources(win(`?a=1&${FLAGS_QUERY_PARAM}=explain,headers&b=2`)).query).toBe('explain,headers');
   });
 
   it('reports nothing for a missing key or parameter', () => {

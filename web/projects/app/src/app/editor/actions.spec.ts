@@ -42,7 +42,7 @@ describe('EditorActions', () => {
         CanvasSession,
         ...RUNTIME_SERVICES,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,share' } },
+        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
         { provide: FILE_DOWNLOADER, useValue: downloader },
       ],
     });
@@ -392,7 +392,7 @@ describe('EditorActions', () => {
           CanvasSession,
           ...RUNTIME_SERVICES,
           { provide: FRAME_SOURCE, useValue: manualFrames() },
-          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'editor,share' } },
+          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'editor' } },
         ],
       });
       const withoutSimulation = TestBed.inject(EditorActions);

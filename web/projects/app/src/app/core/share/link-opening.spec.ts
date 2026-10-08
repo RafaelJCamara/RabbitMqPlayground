@@ -2,17 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { encodeShare, SHARE_KEY, SHARE_PREFIX, shareLink } from '@rmq/persistence';
 import { sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FLAG_SOURCES } from '../flags/feature-flags';
 import { LINK_DECODER, LINK_PREFIX, LinkOpening, type LinkDecoder } from './link-opening';
 import { PAGE_ADDRESS, type PageAddress } from './page-address';
 
 /** The link in the address of the page (ADR-0078): when it is opened, what it opens as, and what it does when the fragment changes. */
 
-function setup(options: { readonly hash: string; readonly flags?: string }) {
+function setup(options: { readonly hash: string }) {
   const listeners = new Set<() => void>();
   const address: PageAddress = {
     base: () => 'https://learner.test/app/',
-    home: () => 'https://learner.test/app/?ff=editor,share',
+    home: () => 'https://learner.test/app/?ff=editor',
     hash: () => options.hash,
     clearHash: vi.fn(),
     reload: vi.fn(),
@@ -22,10 +21,7 @@ function setup(options: { readonly hash: string; readonly flags?: string }) {
     },
   };
   TestBed.configureTestingModule({
-    providers: [
-      { provide: PAGE_ADDRESS, useValue: address },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor,share' } },
-    ],
+    providers: [{ provide: PAGE_ADDRESS, useValue: address }],
   });
   return { address, listeners, opening: TestBed.inject(LinkOpening) };
 }
@@ -115,14 +111,11 @@ describe('LinkOpening', () => {
     expect(opening.state()).toMatchObject({ kind: 'shared', shared: { name: 'Given' } });
   });
 
-  it('does not ask the decoder at all when there is no link, or when the flags are off', async () => {
+  it('does not ask the decoder at all when there is no link', async () => {
     const decode = vi.fn<LinkDecoder>();
     TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
 
     setup({ hash: '#other' });
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
-    setup({ hash: '#c=v1.abc', flags: 'editor' });
     await quiet();
 
     expect(decode).not.toHaveBeenCalled();
@@ -136,17 +129,6 @@ describe('LinkOpening', () => {
 
     expect(opening.state().kind).toBe('shared');
   });
-
-  it.each([['share'], ['editor'], ['']])(
-    'ignores the fragment, and does not listen for it to change, without the flags: only %j is on',
-    async (flags) => {
-      const { opening, listeners } = setup({ hash: `#c=${await payload()}`, flags });
-      await quiet();
-
-      expect(opening.state()).toEqual({ kind: 'none' });
-      expect(listeners.size).toBe(0);
-    },
-  );
 
   it('loads the page again when the fragment changes, each time, so that a link pasted over another opens as the first did', () => {
     const { address, listeners } = setup({ hash: '' });

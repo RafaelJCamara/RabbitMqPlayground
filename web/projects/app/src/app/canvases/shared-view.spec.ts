@@ -121,7 +121,7 @@ async function renderView(options: Options = {}) {
         },
       },
       { provide: LinkOpening, useValue: { leave } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor,share' } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor' } },
     ],
   });
   vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
@@ -314,7 +314,7 @@ describe('SharedView (ADR-0078)', () => {
 
     it('are put back as they were, paused, with the clock where the sender left it, when the simulation is on', async () => {
       const snapshot = snapshotAfter(traffic(), 180);
-      const { editorInjector } = await renderView({ shared: withMessages(snapshot), flags: 'editor,share,simulation' });
+      const { editorInjector } = await renderView({ shared: withMessages(snapshot), flags: 'editor,simulation' });
       await editorOpen();
 
       const simulation = editorInjector()?.get(Simulation);
@@ -335,7 +335,7 @@ describe('SharedView (ADR-0078)', () => {
 
     it('are said to be left out, and why, when the engine does not take them, and the canvas is shown without them', async () => {
       const snapshot = { ...snapshotAfter(traffic(), 180), version: 2 } as unknown as EngineSnapshot;
-      const { editorInjector } = await renderView({ shared: withMessages(snapshot), flags: 'editor,share,simulation' });
+      const { editorInjector } = await renderView({ shared: withMessages(snapshot), flags: 'editor,simulation' });
 
       expect(await screen.findByTestId('shared-notice')).toHaveTextContent(
         'The messages of this link could not be put back (This engine reads snapshots of version 1, and this one is version 2), so the canvas is shown without them.',

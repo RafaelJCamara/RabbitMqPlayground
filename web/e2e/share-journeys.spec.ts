@@ -23,7 +23,7 @@ test.describe('journey 5: a link to a canvas', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await seedLibrary(page, [{ id: 'orders', name: 'Orders flow', document: ORDERS }]);
     const canvases = new CanvasesPage(page);
-    await canvases.goto('?ff=editor,canvases,share');
+    await canvases.goto('?ff=editor,canvases');
     const share = new SharePage(page);
 
     await expect(share.button).toHaveAttribute('aria-haspopup', 'dialog');
@@ -92,7 +92,7 @@ test.describe('journey 5: a link to a canvas', () => {
       { id: 'blank', name: 'Blank' },
     ]);
     const canvases = new CanvasesPage(page);
-    await canvases.goto('?ff=editor,canvases,share');
+    await canvases.goto('?ff=editor,canvases');
     const share = new SharePage(page);
     await canvases.showHome();
 
@@ -128,7 +128,7 @@ test.describe('journey 5: a link to a canvas', () => {
   }) => {
     await seedCanvas(page, ORDERS, 'Orders flow');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor,share');
+    await editor.goto('?ff=editor');
     const share = new SharePage(page);
     await share.open();
     const link = await share.address();
@@ -159,7 +159,7 @@ test.describe('journey 5: a link to a canvas', () => {
       ],
       { openCanvases: ['beta', 'alpha'], lastOpenCanvas: 'alpha' },
     );
-    await other.goto(`?ff=editor,canvases,share#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    await other.goto(`?ff=editor,canvases#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
     const shared = new SharedViewPage(other);
     await shared.ready();
     await expect(other.getByRole('navigation', { name: 'Open canvases' })).toHaveCount(0);
@@ -181,7 +181,7 @@ test.describe('journey 5: a link to a canvas', () => {
     visitor,
   }) => {
     const other = await visitor();
-    await other.goto(`?ff=editor,canvases,share#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    await other.goto(`?ff=editor,canvases#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
     const shared = new SharedViewPage(other);
     await shared.ready();
     await expect(shared.editor.node('Queue billing')).toBeVisible();
@@ -201,7 +201,7 @@ test.describe('journey 5: a link to a canvas', () => {
   test('leaves the link when Leave is pressed: the page is as it was before, and nothing of the canvas is kept', async ({
     visitor,
   }) => {
-    const link = `?ff=editor,canvases,share#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`;
+    const link = `?ff=editor,canvases#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`;
     const other = await visitor();
     await other.goto(link);
     const shared = new SharedViewPage(other);
@@ -214,7 +214,7 @@ test.describe('journey 5: a link to a canvas', () => {
     const mine = new CanvasesPage(other);
     await mine.editorReady();
     expect(other.url()).not.toContain('#c=');
-    expect(other.url()).toContain('?ff=editor,canvases,share');
+    expect(other.url()).toContain('?ff=editor,canvases');
     expect(await mine.stored()).toEqual(['Untitled canvas']);
     await expect(other.getByTestId('shared-banner')).toHaveCount(0);
   });
@@ -225,7 +225,7 @@ test.describe('journey 5: a link to a canvas', () => {
     const first = await payloadFor({ name: 'First', document: ORDERS });
     const second = await payloadFor({ name: 'Second', document: buildDocument(ORDERS_COMMANDS.slice(0, 4)) });
     const other = await visitor();
-    await other.goto(`?ff=editor,share#c=${first}`);
+    await other.goto(`?ff=editor#c=${first}`);
     const shared = new SharedViewPage(other);
     await shared.ready();
     await expect(shared.name).toHaveText('Shared canvas “First”');
@@ -238,20 +238,6 @@ test.describe('journey 5: a link to a canvas', () => {
     await shared.ready();
     expect(await databases(other)).toEqual([]);
   });
-
-  test('is nothing to the page without the flag share: the fragment is ignored and the editor opens as it always did', async ({
-    page,
-  }) => {
-    const payload = await payloadFor({ name: 'Orders flow', document: ORDERS });
-
-    await page.goto(`?ff=editor#c=${payload}`);
-
-    const editor = new EditorPage(page);
-    await expect(editor.saveState).toHaveText('All changes saved');
-    await expect(page.getByTestId('shared-banner')).toHaveCount(0);
-    await expect(page.getByTestId('link-failed')).toHaveCount(0);
-    expect(await editor.canvasNames()).toEqual(['Untitled canvas']);
-  });
 });
 
 test.describe('journey 5: a link with the messages', () => {
@@ -259,7 +245,7 @@ test.describe('journey 5: a link with the messages', () => {
     page,
     visitor,
   }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation,share' });
+    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
     await sender.editor.select('Producer sender');
     await page.keyboard.press('p');
     await sender.step(2);
@@ -295,7 +281,7 @@ test.describe('journey 5: a link with the messages', () => {
   });
 
   test('is not offered when nothing is queued, and the panel says so', async ({ page }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation,share' });
+    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
     const share = new SharePage(sender.page);
 
     await share.open();
@@ -309,7 +295,7 @@ test.describe('journey 5: a link with the messages', () => {
     page,
     visitor,
   }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation,share' });
+    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
     await sender.editor.select('Producer sender');
     await page.keyboard.press('p');
     await sender.step(2);
@@ -317,8 +303,8 @@ test.describe('journey 5: a link with the messages', () => {
     await share.open();
     await share.withMessages.check();
     const withFlags = await share.address();
-    // The same link, for a page that has the flags editor and share and no simulation.
-    const bare = withFlags.replace(/\?ff=[^#]*/, '?ff=editor,share');
+    // The same link, for a page that has the flag editor and no simulation.
+    const bare = withFlags.replace(/\?ff=[^#]*/, '?ff=editor');
 
     const other = await visitor();
     await other.goto(bare);
@@ -347,7 +333,7 @@ test.describe('journey 5: a link that is too long to send', () => {
     ]);
     await seedLibrary(page, [{ id: 'long', name: 'A long one', document: long }]);
     const canvases = new CanvasesPage(page);
-    await canvases.goto('?ff=editor,canvases,share');
+    await canvases.goto('?ff=editor,canvases');
     const share = new SharePage(page);
 
     await share.open();
@@ -379,7 +365,7 @@ test.describe('journey 5: links that were made once and are only ever read', () 
       const { payload, expected } = goldenLink(name);
       const other = await visitor();
 
-      await other.goto(`?ff=editor,share#c=${payload}`);
+      await other.goto(`?ff=editor#c=${payload}`);
 
       const shared = new SharedViewPage(other);
       await shared.ready();
@@ -398,7 +384,7 @@ test.describe('journey 5: links that were made once and are only ever read', () 
     const { payload } = goldenLink('sample-with-messages');
     const other = await visitor();
 
-    await other.goto(`?ff=editor,share,simulation#c=${payload}`);
+    await other.goto(`?ff=editor,simulation#c=${payload}`);
 
     const shared = new SharedViewPage(other);
     await shared.ready();
@@ -429,7 +415,7 @@ test.describe('journey 5: a link that cannot be opened', () => {
     }) => {
       const other = await visitor();
 
-      await other.goto(`?ff=editor,canvases,share#c=${typeof payload === 'string' ? payload : await payload()}`);
+      await other.goto(`?ff=editor,canvases#c=${typeof payload === 'string' ? payload : await payload()}`);
 
       const failed = new LinkFailedPage(other);
       await expect(failed.title).toBeVisible();
@@ -448,9 +434,9 @@ test.describe('journey 5: a link that cannot be opened', () => {
     visitor,
   }) => {
     const other = await visitor();
-    await other.goto('?ff=editor,canvases,share#c=not-a-link');
+    await other.goto('?ff=editor,canvases#c=not-a-link');
     const failed = new LinkFailedPage(other);
-    await expect(failed.home).toHaveAttribute('href', /\/RabbitMqPlayground\/\?ff=editor,canvases,share$/);
+    await expect(failed.home).toHaveAttribute('href', /\/RabbitMqPlayground\/\?ff=editor,canvases$/);
 
     await failed.home.click();
 
@@ -458,7 +444,7 @@ test.describe('journey 5: a link that cannot be opened', () => {
     const mine = new CanvasesPage(other);
     await mine.editorReady();
     expect(other.url()).not.toContain('#c=');
-    expect(other.url()).toContain('?ff=editor,canvases,share');
+    expect(other.url()).toContain('?ff=editor,canvases');
     await expect(failed.title).toHaveCount(0);
   });
 });

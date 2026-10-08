@@ -105,7 +105,7 @@ describe('App', () => {
   });
 
   describe('a link in the address (ADR-0078)', () => {
-    const HOME = 'https://learner.test/app/?ff=editor,share';
+    const HOME = 'https://learner.test/app/?ff=editor';
     const addressOf = (hash: string): PageAddress => ({
       base: () => 'https://learner.test/app/',
       home: () => HOME,
@@ -130,15 +130,15 @@ describe('App', () => {
       return { ...base, providers: [...base.providers, { provide: PAGE_ADDRESS, useValue: addressOf(hash) }] };
     };
     const withState = (state: LinkState) => {
-      const base = options('editor,share');
+      const base = options('editor');
       return {
         ...base,
         providers: [...base.providers, { provide: LinkOpening, useValue: { state: signal(state), leave: vi.fn() } }],
       };
     };
 
-    it('opens the shared canvas, with a banner that says so and the editor under it, when the flags are editor and share', async () => {
-      await render(App, withLink('editor,share', await hashOf()));
+    it('opens the shared canvas, with a banner that says so and the editor under it', async () => {
+      await render(App, withLink('editor', await hashOf()));
 
       expect(await screen.findByTestId('shared-name')).toHaveTextContent('Shared canvas “Orders flow”');
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
@@ -148,25 +148,10 @@ describe('App', () => {
     });
 
     it('opens it with the flag canvases on too, and the shared canvas is not among the canvases of the learner', async () => {
-      await render(App, withLink('editor,share,canvases', await hashOf()));
+      await render(App, withLink('editor,canvases', await hashOf()));
 
       expect(await screen.findByTestId('shared-name')).toBeInTheDocument();
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
-    });
-
-    it('ignores the link without the flag share: the fragment is nothing to the page, which is what it was', async () => {
-      await render(App, withLink('editor', await hashOf()));
-
-      expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
-      expect(screen.queryByTestId('shared-name')).not.toBeInTheDocument();
-    });
-
-    it('ignores the link without the flag editor, and shows the placeholder', async () => {
-      await render(App, withLink('share', await hashOf()));
-
-      expect(screen.getByText(/Under construction/)).toBeInTheDocument();
-      expect(screen.queryByTestId('shared-name')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('link-failed')).not.toBeInTheDocument();
     });
 
     it('says that it is opening the canvas while the link is unpacked, and shows nothing else', async () => {
@@ -179,7 +164,7 @@ describe('App', () => {
     });
 
     it('is a page of its own, with the reason and a way out, when the link cannot be opened, and opens nothing', async () => {
-      await render(App, withLink('editor,share', '#c=v1.@@@@'));
+      await render(App, withLink('editor', '#c=v1.@@@@'));
 
       expect(
         await screen.findByRole('heading', { level: 2, name: 'This link could not be opened' }),
@@ -192,7 +177,7 @@ describe('App', () => {
     });
 
     it('is the page as it was, with no sign of a link, when the address has no link', async () => {
-      await render(App, withLink('editor,share', '#something-else'));
+      await render(App, withLink('editor', '#something-else'));
 
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.queryByTestId('shared-name')).not.toBeInTheDocument();

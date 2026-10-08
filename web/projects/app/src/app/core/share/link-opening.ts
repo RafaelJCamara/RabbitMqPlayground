@@ -1,11 +1,10 @@
 import { DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import type { Outcome, Shared, ShareError } from '@rmq/persistence';
-import { FeatureFlags } from '../flags/feature-flags';
 import { PAGE_ADDRESS } from './page-address';
 
 /** What the address of the page says to open (ADR-0078). */
 export type LinkState =
-  /** The address has no link, or the flags that open one are off: the page is as it was. */
+  /** The address has no link: the page is as it was. */
   | { readonly kind: 'none' }
   /** The link is being unpacked. */
   | { readonly kind: 'opening' }
@@ -16,7 +15,7 @@ export type LinkState =
 
 /**
  * How a link is unpacked. The default loads the codec of the persistence library when there is a link to open and not before: this service is in the root of the page, and the library with everything it needs (the schemas
- * of the document, the engine) is the weight of the editor, which a visitor without a link, or without the flags, must not download (ADR-0030). A spec gives its own.
+ * of the document, the engine) is the weight of the editor, which the first chunk of the page must not carry (ADR-0030, ADR-0080). A spec gives its own.
  */
 export type LinkDecoder = (payload: string) => Promise<Outcome<Shared, ShareError>>;
 
@@ -32,7 +31,7 @@ export const LINK_DECODER = new InjectionToken<LinkDecoder>('LINK_DECODER', {
 export const LINK_PREFIX = '#c=';
 
 /**
- * The link in the address of the page (ADR-0078, ADR-0077). A page whose address has `#c=` is a shared canvas when the flags `share` and `editor` are on, and without them the fragment is ignored. The
+ * The link in the address of the page (ADR-0078, ADR-0077). A page whose address has `#c=` is a shared canvas. The
  * address is read once, when the page starts, and the page is loaded again when the fragment changes, so that a link pasted over another one opens as the first thing does and the code that opens a link runs once.
  */
 @Injectable({ providedIn: 'root' })
@@ -43,10 +42,6 @@ export class LinkOpening {
   readonly state = this.current.asReadonly();
 
   constructor() {
-    const flags = inject(FeatureFlags);
-    if (!flags.isEnabled('share') || !flags.isEnabled('editor')) {
-      return;
-    }
     inject(DestroyRef).onDestroy(this.address.onHashChange(() => this.address.reload()));
     const hash = this.address.hash();
     if (!hash.startsWith(LINK_PREFIX)) {

@@ -32,7 +32,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
       const report = JSON.parse(fixture(`export/${name}.report.json`)) as Report;
       await seedCanvas(page, canvasFromText(commands), `Golden ${name}`);
       const editor = new EditorPage(page);
-      await editor.goto('?ff=editor,share');
+      await editor.goto('?ff=editor');
       const exporting = new ExportPage(page);
 
       await expect(exporting.button).toHaveAttribute('aria-haspopup', 'dialog');
@@ -67,7 +67,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   }) => {
     await seedCanvas(page, canvasFromText(fixture('export/orders.commands')), 'Orders');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor,share');
+    await editor.goto('?ff=editor');
     const exporting = new ExportPage(page);
     await exporting.open();
     await exporting.vhost.fill('');
@@ -95,7 +95,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   }) => {
     await seedCanvas(page, emptyDocument(), 'Nothing yet');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor,share');
+    await editor.goto('?ff=editor');
     const exporting = new ExportPage(page);
     await exporting.open();
 
@@ -110,7 +110,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   test('is closed with Escape, and the cursor goes back to the button that opened it', async ({ page }) => {
     await seedCanvas(page, canvasFromText(fixture('export/orders.commands')), 'Orders');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor,share');
+    await editor.goto('?ff=editor');
     const exporting = new ExportPage(page);
 
     await exporting.button.focus();
@@ -121,14 +121,5 @@ test.describe('journey 6: the definitions file of a canvas', () => {
 
     await expect(exporting.dialog).toHaveCount(0);
     await expect(exporting.button).toBeFocused();
-  });
-
-  test('is not offered without the flag share: the top bar has neither button', async ({ page }) => {
-    const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
-
-    await expect(page.getByRole('button', { name: 'Export…', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Share…', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('group', { name: 'Share' })).toHaveCount(0);
   });
 });

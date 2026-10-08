@@ -46,17 +46,17 @@ const editor: EditorDebugSources = {
 
 describe('createDebugHandle', () => {
   it('names the app and lists the flags that are on', () => {
-    const handle = createDebugHandle(flagsWith('editor,share'));
+    const handle = createDebugHandle(flagsWith('editor,headers'));
 
     expect(handle.app).toBe(APP_NAME);
-    expect([...handle.flags()].sort()).toEqual(['editor', 'share']);
+    expect([...handle.flags()].sort()).toEqual(['editor', 'headers']);
   });
 
   it('is frozen, and hands out a copy of the flags, so a test cannot change the app through it', () => {
     const handle = createDebugHandle(flagsWith('editor'));
 
     expect(Object.isFrozen(handle)).toBe(true);
-    (handle.flags() as string[]).push('share');
+    (handle.flags() as string[]).push('headers');
     expect(handle.flags()).toEqual(['editor']);
   });
 

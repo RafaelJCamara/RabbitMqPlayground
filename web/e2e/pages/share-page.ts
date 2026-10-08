@@ -3,7 +3,7 @@ import { expect, type Download, type Locator, type Page } from '@playwright/test
 import { EditorPage } from './editor-page';
 
 /**
- * Sharing a canvas (ADR-0013, ADR-0078, ADR-0079), behind the flags `editor` and `share`: the panel that makes a link, the dialog that exports for a broker, and the page that a link opens.
+ * Sharing a canvas (ADR-0013, ADR-0078, ADR-0079), behind the flag `editor`: the panel that makes a link, the dialog that exports for a broker, and the page that a link opens.
  * Paths are relative to the base path (`/RabbitMqPlayground/`).
  */
 

@@ -110,7 +110,7 @@ function setup(options: Options = {}) {
         },
       },
       { provide: LinkOpening, useValue: { leave } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor,share' } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor' } },
     ],
   });
   const canvas = TestBed.createComponent(Host).componentInstance.canvas;
@@ -171,7 +171,7 @@ describe('SharedCanvas (ADR-0078)', () => {
     });
 
     it('has nothing to say of messages, a name or a copy before there is a link, whatever the flags', async () => {
-      const { canvas } = setup({ flags: 'editor,share' });
+      const { canvas } = setup({ flags: 'editor' });
 
       expect(canvas.notice()).toBeNull();
       expect(canvas.messages()).toBeNull();
@@ -216,7 +216,7 @@ describe('SharedCanvas (ADR-0078)', () => {
 
     it('gives the snapshot of the link to the simulation, and says nothing while it is put back', async () => {
       const snapshot = snapshotAfter(traffic(), 180);
-      const { canvas } = await opened({ flags: 'editor,share,simulation' }, { ...canvasOf(), simulation: snapshot });
+      const { canvas } = await opened({ flags: 'editor,simulation' }, { ...canvasOf(), simulation: snapshot });
 
       expect(canvas.messages()?.snapshot).toBe(snapshot);
       expect(canvas.notice()).toBeNull();
@@ -224,7 +224,7 @@ describe('SharedCanvas (ADR-0078)', () => {
 
     it('says that they could not be put back, and why, when the simulation says so: the canvas is shown without them', async () => {
       const { canvas } = await opened(
-        { flags: 'editor,share,simulation' },
+        { flags: 'editor,simulation' },
         { ...canvasOf(), simulation: snapshotAfter(traffic(), 180) },
       );
 
@@ -237,7 +237,7 @@ describe('SharedCanvas (ADR-0078)', () => {
 
     it('says that the simulation is not switched on, and how many messages the link carries, when the flag is off', async () => {
       const snapshot = snapshotAfter(traffic(2), 180);
-      const { canvas } = await opened({ flags: 'editor,share' }, { ...canvasOf(), simulation: snapshot });
+      const { canvas } = await opened({ flags: 'editor' }, { ...canvasOf(), simulation: snapshot });
 
       expect(copiesIn(snapshot)).toBe(2);
       expect(canvas.notice()).toBe(
@@ -247,14 +247,14 @@ describe('SharedCanvas (ADR-0078)', () => {
 
     it('says one message in the singular', async () => {
       const snapshot = snapshotAfter(traffic(1), 180);
-      const { canvas } = await opened({ flags: 'editor,share' }, { ...canvasOf(), simulation: snapshot });
+      const { canvas } = await opened({ flags: 'editor' }, { ...canvasOf(), simulation: snapshot });
 
       expect(canvas.notice()).toMatch(/^This link carries 1 message, but /);
     });
 
     it('does not complain of the flag when the snapshot of the link has no message in it', async () => {
       const { canvas } = await opened(
-        { flags: 'editor,share' },
+        { flags: 'editor' },
         { ...canvasOf(), simulation: snapshotAfter(canvasOf().document, 0) },
       );
 

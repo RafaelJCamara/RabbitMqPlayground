@@ -23,7 +23,7 @@ describe('FeatureFlags', () => {
 
     expect(flags.isEnabled('editor')).toBe(true);
     expect(flags.isEnabled('simulation')).toBe(true);
-    expect(flags.isEnabled('share')).toBe(false);
+    expect(flags.isEnabled('headers')).toBe(false);
     expect([...flags.enabled].sort()).toEqual(['editor', 'simulation']);
   });
 
@@ -56,10 +56,10 @@ describe('FeatureFlags', () => {
     });
 
     it('reads ?ff= from the address', () => {
-      window.history.replaceState(null, '', '/?ff=share,canvases');
+      window.history.replaceState(null, '', '/?ff=headers,canvases');
       const flags = TestBed.inject(FeatureFlags);
 
-      expect(flags.isEnabled('share')).toBe(true);
+      expect(flags.isEnabled('headers')).toBe(true);
       expect(flags.isEnabled('canvases')).toBe(true);
       expect(flags.isEnabled('editor')).toBe(false);
     });

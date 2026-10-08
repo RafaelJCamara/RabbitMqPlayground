@@ -4,7 +4,6 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { CanvasSession, type SaveState } from '../core/session/canvas-session';
 import { ICONS } from '../core/ui/icons';
@@ -16,7 +15,7 @@ import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { EditorActions } from './actions';
 import { TopBar } from './top-bar';
 
-async function renderBar(options: { readonly flags?: string } = {}) {
+async function renderBar() {
   const save = signal<SaveState>({ kind: 'saved' });
   const calls: string[] = [];
   const view = await render(TopBar, {
@@ -29,7 +28,6 @@ async function renderBar(options: { readonly flags?: string } = {}) {
       EditorActions,
       ...RUNTIME_SERVICES,
       { provide: CanvasSession, useValue: { save } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? null } },
     ],
   });
   const viewport = TestBed.inject(FlowViewport);
@@ -57,16 +55,8 @@ async function renderBar(options: { readonly flags?: string } = {}) {
 
 describe('TopBar', () => {
   describe('sharing (ADR-0078, ADR-0079)', () => {
-    it('has neither button without the flag, so that a visitor who has not asked for it sees nothing of it', async () => {
+    it('has a Share button and an Export button, in a group, each of which says that it opens a dialog', async () => {
       await renderBar();
-
-      expect(screen.queryByRole('button', { name: 'Share…' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Export…' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('group', { name: 'Share' })).not.toBeInTheDocument();
-    });
-
-    it('has a Share button and an Export button with the flag, in a group, each of which says that it opens a dialog', async () => {
-      await renderBar({ flags: 'editor,share' });
 
       const group = screen.getByRole('group', { name: 'Share' });
       for (const name of ['Share…', 'Export…']) {
@@ -77,7 +67,7 @@ describe('TopBar', () => {
     });
 
     it('asks the editor for the panel that makes a link when Share is pressed, and for the dialog that exports when Export is', async () => {
-      const { user } = await renderBar({ flags: 'editor,share' });
+      const { user } = await renderBar();
       const actions = TestBed.inject(EditorActions);
       const share = vi.spyOn(actions, 'share').mockImplementation(() => undefined);
       const exporting = vi.spyOn(actions, 'exportDefinitions').mockImplementation(() => undefined);
@@ -90,7 +80,7 @@ describe('TopBar', () => {
     });
 
     it('says in words, when the pointer rests on them, what each of them does', async () => {
-      await renderBar({ flags: 'editor,share' });
+      await renderBar();
 
       expect(screen.getByRole('button', { name: 'Share…' })).toHaveAttribute('title', 'Make a link to this canvas');
       expect(screen.getByRole('button', { name: 'Export…' })).toHaveAttribute(
