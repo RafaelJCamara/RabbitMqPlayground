@@ -93,6 +93,30 @@ describe('TopBar', () => {
     expect(screen.getByRole('group', { name: 'Edit' })).toBeInTheDocument();
   });
 
+  describe('clear (ADR-0074)', () => {
+    it('is not there outside a workspace, where nothing offers to bring the canvas back', async () => {
+      await renderBar();
+
+      expect(screen.queryByRole('button', { name: 'Clear canvas' })).not.toBeInTheDocument();
+    });
+
+    it('is a button of the group Edit in a workspace, named in words, that takes everything off the canvas', async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: CANVAS_HOST, useValue: { canvasToOpen: () => undefined, attach: () => () => undefined } },
+        ],
+      });
+      const { user } = await renderBar();
+      const clear = vi.spyOn(TestBed.inject(EditorActions), 'clear').mockImplementation(() => undefined);
+
+      const button = within(screen.getByRole('group', { name: 'Edit' })).getByRole('button', { name: 'Clear canvas' });
+      expect(button).toHaveTextContent('Clear');
+      await user.click(button);
+
+      expect(clear).toHaveBeenCalledExactlyOnceWith('toolbar');
+    });
+  });
+
   it('has two groups of buttons, each with a name: what is done to the canvas, and how it is looked at', async () => {
     await renderBar();
 

@@ -91,6 +91,41 @@ describe('EditorActions', () => {
     });
   });
 
+  describe('clear (ADR-0074)', () => {
+    it('takes everything off the canvas with the command, as one step that undo brings back', () => {
+      const applied = vi.spyOn(TestBed.inject(CommandBus), 'apply');
+
+      actions.clear('toolbar');
+
+      expect(applied).toHaveBeenCalledExactlyOnceWith({ type: 'clear' }, 'toolbar');
+      expect(Object.keys(store.document().queues)).toEqual([]);
+      expect(store.undoLabel()).toBeDefined();
+      actions.undo('toolbar');
+      expect(Object.keys(store.document().queues)).not.toEqual([]);
+    });
+
+    it('is told with the origin of whoever asked', () => {
+      const applied = vi.spyOn(TestBed.inject(CommandBus), 'apply');
+
+      actions.clear('typed');
+
+      expect(applied).toHaveBeenCalledExactlyOnceWith({ type: 'clear' }, 'typed');
+    });
+
+    it('says that the canvas is already empty when there is nothing on it, and does nothing', () => {
+      actions.clear('toolbar');
+      const applied = vi.spyOn(TestBed.inject(CommandBus), 'apply');
+      const before = store.document();
+
+      actions.clear('toolbar');
+
+      expect(applied).not.toHaveBeenCalled();
+      expect(store.document()).toBe(before);
+      expect(announcer.announce).toHaveBeenLastCalledWith('The canvas is already empty.');
+      expect(TestBed.inject(StatusStore).notice()).toEqual({ kind: 'message', text: 'The canvas is already empty.' });
+    });
+  });
+
   describe('the command bar and the cheat-sheet', () => {
     it('are opened by the editor, which has them, when a key or a button asks', () => {
       actions.openCommandBar();

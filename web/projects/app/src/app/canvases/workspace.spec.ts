@@ -254,6 +254,100 @@ describe('Workspace (ADR-0072)', () => {
     });
   });
 
+  describe('clearing a canvas (ADR-0074)', () => {
+    it('takes everything off the canvas with a button of the top bar, says so in a notice that has an Undo, and the Undo brings it back', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      expect(screen.queryByTestId('canvas-empty')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Clear canvas' }));
+
+      const notices = await screen.findByRole('region', { name: 'Notices' });
+      expect(within(notices).getByText('Cleared the canvas.')).toBeInTheDocument();
+      expect(screen.getByTestId('canvas-empty')).toBeInTheDocument();
+      await user.click(within(notices).getByRole('button', { name: 'Undo' }));
+
+      await waitFor(() => expect(screen.queryByTestId('canvas-empty')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Notices' })).not.toBeInTheDocument());
+    });
+
+    it('says that the canvas is already empty, and makes no notice, when there is nothing to clear', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+
+      await user.click(screen.getByRole('button', { name: 'Clear canvas' }));
+
+      expect(await screen.findByText('The canvas is already empty.')).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Notices' })).not.toBeInTheDocument();
+    });
+
+    it('takes the notice away when the learner goes to another view, because its Undo would be for a canvas that is not open', async () => {
+      const { user } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+      await user.click(screen.getByRole('button', { name: 'Queue' }));
+      await user.click(screen.getByRole('button', { name: 'Clear canvas' }));
+      await screen.findByRole('region', { name: 'Notices' });
+
+      await user.click(within(strip()).getByRole('button', { name: 'My canvases' }));
+      await screen.findByRole('main', { name: 'My canvases' });
+
+      expect(screen.queryByRole('region', { name: 'Notices' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('deleting a canvas (ADR-0074)', () => {
+    it('asks first, deletes, says so in a notice, and takes the delete back with the Undo of the notice or with the keys', async () => {
+      const { user, memory } = await renderWorkspace({ seed: ['Alpha', 'Beta'] });
+      await screen.findByLabelText('Toolbox');
+      await user.click(within(strip()).getByRole('button', { name: 'My canvases' }));
+      await screen.findByRole('main', { name: 'My canvases' });
+
+      await user.click(screen.getByRole('button', { name: 'Delete Alpha' }));
+      const dialog = await screen.findByRole('alertdialog', { name: 'Delete “Alpha”?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Delete canvas' }));
+
+      const notices = await screen.findByRole('region', { name: 'Notices' });
+      expect(within(notices).getByText('Deleted “Alpha”.')).toBeInTheDocument();
+      expect(screen.queryByRole('article', { name: /Alpha/ })).not.toBeInTheDocument();
+      expect((await memory.get('alpha')).ok).toBe(false);
+
+      await user.click(within(notices).getByRole('button', { name: 'Undo' }));
+
+      expect(await screen.findByRole('button', { name: 'Open Alpha' })).toBeInTheDocument();
+      expect((await memory.get('alpha')).ok).toBe(true);
+    });
+
+    it('takes the delete back with Control and Z on the home', async () => {
+      const { user, memory } = await renderWorkspace({ seed: ['Alpha', 'Beta'] });
+      await screen.findByLabelText('Toolbox');
+      await user.click(within(strip()).getByRole('button', { name: 'My canvases' }));
+      await screen.findByRole('main', { name: 'My canvases' });
+      await user.click(screen.getByRole('button', { name: 'Delete Alpha' }));
+      await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete canvas' }));
+      await screen.findByRole('region', { name: 'Notices' });
+
+      await user.keyboard('{Control>}z{/Control}');
+
+      expect(await screen.findByRole('button', { name: 'Open Alpha' })).toBeInTheDocument();
+      expect((await memory.get('alpha')).ok).toBe(true);
+    });
+
+    it('deletes nothing when the learner says no', async () => {
+      const { user, memory } = await renderWorkspace({ seed: ['Alpha'] });
+      await screen.findByLabelText('Toolbox');
+      await user.click(within(strip()).getByRole('button', { name: 'My canvases' }));
+      await screen.findByRole('main', { name: 'My canvases' });
+
+      await user.click(screen.getByRole('button', { name: 'Delete Alpha' }));
+      await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(screen.queryByRole('region', { name: 'Notices' })).not.toBeInTheDocument();
+      expect((await memory.get('alpha')).ok).toBe(true);
+    });
+  });
+
   describe('leaving a canvas', () => {
     it('writes what was changed to the canvas before it goes, and finds it there when it is opened again', async () => {
       const { user, memory } = await renderWorkspace({ seed: ['Alpha'] });

@@ -1,5 +1,5 @@
 import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
-import { kindOf, nameOf, type Id } from '@rmq/domain';
+import { elementCount, kindOf, nameOf, type Id } from '@rmq/domain';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
 import { Simulation } from '../core/runtime/simulation';
@@ -45,6 +45,18 @@ export class EditorActions {
 
   redo(origin: CommandOrigin): void {
     this.bus.redo(origin);
+  }
+
+  /**
+   * Takes everything off the canvas (ADR-0074): the command `clear`, with the origin of whoever asked. A canvas that has nothing on it has nothing to clear, which it says,
+   * because a button that does nothing and says nothing is the one that a learner presses again.
+   */
+  clear(origin: CommandOrigin): void {
+    if (elementCount(this.store.document()) === 0) {
+      this.bus.say('The canvas is already empty.');
+      return;
+    }
+    this.bus.apply({ type: 'clear' }, origin);
   }
 
   /** Puts every node in its place, and then shows all of them: the fit has to wait until they are where they were put. */

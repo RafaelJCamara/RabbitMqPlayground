@@ -49,6 +49,7 @@ import { EditorActions, type ActionSurface } from './actions';
 import { BindingConditions } from './binding-conditions';
 import { BindingKey, type GiveUp } from './binding-key';
 import { CheatSheetService } from './cheat-sheet';
+import { ClearNotice } from './clear-notice';
 import { contextItems, ContextMenu, type MenuChoice } from './context-menu';
 import { HintBar } from './hint-bar';
 import { HowToLink, HowToLinkCard } from './how-to-link';
@@ -151,6 +152,7 @@ interface Peek {
     EditorActions,
     KeyboardService,
     CheatSheetService,
+    ClearNotice,
     ...RUNTIME_SERVICES,
     ...EXPLAIN_SERVICES,
   ],
@@ -333,6 +335,10 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   constructor() {
     // The log of equivalent commands listens to the bus from the start, so that nothing that the learner does is missing from it.
     inject(CommandLog);
+    if (this.inWorkspace) {
+      // In a workspace a `clear` is followed by a notice with an Undo (ADR-0074).
+      inject(ClearNotice);
+    }
     void this.session.open();
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.peekTimer);

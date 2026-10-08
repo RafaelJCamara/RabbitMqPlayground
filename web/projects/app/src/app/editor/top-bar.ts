@@ -62,6 +62,18 @@ const BUTTON =
             <rmq-icon name="layout" [size]="18" />
             <span>Auto-layout</span>
           </button>
+          @if (inWorkspace) {
+            <button
+              type="button"
+              [class]="button"
+              aria-label="Clear canvas"
+              data-testid="clear"
+              (click)="actions.clear('toolbar')"
+            >
+              <rmq-icon name="trash" [size]="18" />
+              <span>Clear</span>
+            </button>
+          }
         </div>
         <div class="flex items-center gap-1.5" role="group" aria-label="View">
           <button
