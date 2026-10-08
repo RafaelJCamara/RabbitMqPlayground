@@ -65,6 +65,16 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
         </button>
         <button
           type="button"
+          [class]="button"
+          [attr.aria-label]="'Save as file ' + canvas().name"
+          data-testid="card-save"
+          (click)="save.emit()"
+        >
+          <rmq-icon name="send" [size]="16" />
+          <span>Save as file</span>
+        </button>
+        <button
+          type="button"
           [class]="danger"
           [attr.aria-label]="'Delete ' + canvas().name"
           data-testid="card-delete"
@@ -84,6 +94,7 @@ export class CanvasCard {
   readonly open = output();
   readonly rename = output();
   readonly duplicate = output();
+  readonly save = output();
   readonly delete = output();
 
   private readonly now = inject(NOW);

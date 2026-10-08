@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { succeed, type UnreadableCanvas } from '@rmq/persistence';
+import { failure, succeed, type Outcome, type RestoreReport, type UnreadableCanvas } from '@rmq/persistence';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -26,6 +26,8 @@ const canvas = (id: string, change: Partial<CanvasSummary> = {}): CanvasSummary 
   ...change,
 });
 
+const NOTHING_RESTORED: RestoreReport = { restored: [], alreadyHere: [], copies: [], unreadable: [], failed: [] };
+
 /** The part of the library that the home reads and calls, with a record of the calls. */
 function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly UnreadableCanvas[] = []) {
   const list = signal(canvases);
@@ -37,6 +39,17 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
     canvases: list.asReadonly(),
     problemText: problem.asReadonly(),
     unreadable: broken.asReadonly(),
+    memoryReason: signal<string | undefined>(undefined).asReadonly(),
+    quota: signal(null).asReadonly(),
+    persistence: signal(null).asReadonly(),
+    reminder: signal({ due: false as const }).asReadonly(),
+    usage: signal(null).asReadonly(),
+    exportBackup: vi.fn(async (_options?: { say?: boolean }) => succeed({ file: 'b.json', count: 1, left: 0 })),
+    snoozeReminder: vi.fn(async () => undefined),
+    saveAsFile: vi.fn(async (_id: string) => succeed('a.rmq.json')),
+    openFile: vi.fn(async (_file: File): Promise<Outcome<undefined, string>> => succeed(undefined)),
+    restoreFile: vi.fn(async (_file: File): Promise<Outcome<RestoreReport, string>> => succeed(NOTHING_RESTORED)),
+    deleteAll: vi.fn(async () => true),
     delete: vi.fn(async (id: string) => {
       list.update((all) => all.filter((canvas) => canvas.id !== id));
       broken.update((all) => all.filter((item) => item.id !== id));
@@ -511,5 +524,206 @@ describe('Home, canvases that could not be opened (ADR-0073)', () => {
 
     expect(library.delete).not.toHaveBeenCalled();
     expect(screen.getByTestId('home-unreadable')).toBeInTheDocument();
+  });
+});
+
+describe('Home, files and backups (ADR-0075)', () => {
+  const file = (name = 'orders.rmq.json') => new File(['{}'], name, { type: 'application/json' });
+  const pick = (testid: string) => screen.getByTestId(testid) as HTMLInputElement;
+
+  it('has a button for each of the acts that concern every canvas, named in words', async () => {
+    await renderHome([canvas('a')]);
+
+    for (const name of ['New canvas', 'Open a file…', 'Restore a backup…', 'Back up everything', 'Delete all…']) {
+      expect(screen.getByRole('button', { name })).toBeEnabled();
+    }
+  });
+
+  it('has a button to save each canvas as a file', async () => {
+    const { library, user } = await renderHome([canvas('a', { name: 'Alpha' })]);
+
+    await user.click(screen.getByRole('button', { name: 'Save as file Alpha' }));
+
+    expect(library.saveAsFile).toHaveBeenCalledExactlyOnceWith('a');
+  });
+
+  it('backs everything up', async () => {
+    const { library, user } = await renderHome([canvas('a')]);
+
+    await user.click(screen.getByRole('button', { name: 'Back up everything' }));
+
+    expect(library.exportBackup).toHaveBeenCalledOnce();
+  });
+
+  describe('opening a file', () => {
+    it('has a field for it that takes JSON, that is not in the way, and is opened by its button', async () => {
+      const { user } = await renderHome([canvas('a')]);
+      const field = pick('open-file');
+      const click = vi.spyOn(field, 'click');
+
+      await user.click(screen.getByRole('button', { name: 'Open a file…' }));
+
+      expect(field).toHaveAttribute('accept', '.json,application/json');
+      expect(field).toHaveAttribute('hidden');
+      expect(click).toHaveBeenCalledOnce();
+    });
+
+    it('gives the file that was chosen to the library', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+
+      await user.upload(pick('open-file'), file());
+
+      expect(library.openFile).toHaveBeenCalledOnce();
+      expect(library.openFile.mock.calls[0]?.[0].name).toBe('orders.rmq.json');
+    });
+
+    it('can choose the same file twice, because the field is emptied', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+
+      await user.upload(pick('open-file'), file());
+      expect(pick('open-file').value).toBe('');
+      await user.upload(pick('open-file'), file());
+
+      expect(library.openFile).toHaveBeenCalledTimes(2);
+    });
+
+    it('says in a dialog why a file could not be opened, with the reason, named by the file', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.openFile.mockResolvedValue(failure('This is not JSON, so it cannot be a canvas.'));
+      const problem = vi.spyOn(TestBed.inject(CanvasDialogs), 'problem').mockImplementation(async () => undefined);
+
+      await user.upload(pick('open-file'), file('broken.json'));
+
+      expect(problem).toHaveBeenCalledExactlyOnceWith({
+        title: '“broken.json” could not be opened',
+        body: ['This is not JSON, so it cannot be a canvas.'],
+      });
+    });
+
+    it('says nothing when the file was opened, because the canvas opening is the answer', async () => {
+      const { user } = await renderHome([canvas('a')]);
+      const problem = vi.spyOn(TestBed.inject(CanvasDialogs), 'problem').mockImplementation(async () => undefined);
+
+      await user.upload(pick('open-file'), file());
+
+      expect(problem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoring a backup', () => {
+    it('has a field for it, opened by its button', async () => {
+      const { user } = await renderHome([canvas('a')]);
+      const field = pick('restore-file');
+      const click = vi.spyOn(field, 'click');
+
+      await user.click(screen.getByRole('button', { name: 'Restore a backup…' }));
+
+      expect(field).toHaveAttribute('accept', '.json,application/json');
+      expect(click).toHaveBeenCalledOnce();
+    });
+
+    it('says in a dialog why a file could not be put back', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.restoreFile.mockResolvedValue(
+        failure('This is the file of one canvas, and not a backup of several. Open it as a canvas.'),
+      );
+      const problem = vi.spyOn(TestBed.inject(CanvasDialogs), 'problem').mockImplementation(async () => undefined);
+      const restored = vi.spyOn(TestBed.inject(CanvasDialogs), 'restored').mockImplementation(async () => undefined);
+
+      await user.upload(pick('restore-file'), file('one.json'));
+
+      expect(problem).toHaveBeenCalledExactlyOnceWith({
+        title: '“one.json” could not be put back',
+        body: ['This is the file of one canvas, and not a backup of several. Open it as a canvas.'],
+      });
+      expect(restored).not.toHaveBeenCalled();
+    });
+
+    it('says what came of it in a report, titled "Backup restored" when anything was put back or copied', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.restoreFile.mockResolvedValue(succeed({ ...NOTHING_RESTORED, restored: [{ id: 'x', name: 'X' }] }));
+      const restored = vi.spyOn(TestBed.inject(CanvasDialogs), 'restored').mockImplementation(async () => undefined);
+
+      await user.upload(pick('restore-file'), file('backup.json'));
+
+      expect(restored).toHaveBeenCalledExactlyOnceWith({
+        title: 'Backup restored',
+        view: { summary: ['Put back 1 canvas.'], problems: [], more: 0 },
+      });
+    });
+
+    it('also calls it "Backup restored" when only copies were made', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.restoreFile.mockResolvedValue(
+        succeed({ ...NOTHING_RESTORED, copies: [{ id: 'n', name: 'X (restored)', of: 'X' }] }),
+      );
+      const restored = vi.spyOn(TestBed.inject(CanvasDialogs), 'restored').mockImplementation(async () => undefined);
+
+      await user.upload(pick('restore-file'), file('backup.json'));
+
+      expect(restored.mock.calls[0]?.[0].title).toBe('Backup restored');
+    });
+
+    it('titles the report "Nothing was put back" when nothing was', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.restoreFile.mockResolvedValue(succeed({ ...NOTHING_RESTORED, alreadyHere: [{ id: 'x', name: 'X' }] }));
+      const restored = vi.spyOn(TestBed.inject(CanvasDialogs), 'restored').mockImplementation(async () => undefined);
+
+      await user.upload(pick('restore-file'), file('backup.json'));
+
+      expect(restored.mock.calls[0]?.[0].title).toBe('Nothing was put back');
+    });
+  });
+
+  describe('deleting everything', () => {
+    it('is offered only when there is something to delete: a canvas, or one that cannot be opened', async () => {
+      await renderHome([]);
+      expect(screen.queryByRole('button', { name: 'Delete all…' })).not.toBeInTheDocument();
+      document.body.replaceChildren();
+      TestBed.resetTestingModule();
+
+      await renderHome([], [{ id: 'x', error: { kind: 'not-json', message: 'Not JSON.' } }]);
+      expect(screen.getByRole('button', { name: 'Delete all…' })).toBeInTheDocument();
+    });
+
+    it('asks first, with how many canvases can be opened and how many cannot, and offers a backup that does not say anything itself', async () => {
+      const { library, user } = await renderHome(
+        [canvas('a'), canvas('b')],
+        [{ id: 'x', error: { kind: 'not-json', message: 'Not JSON.' } }],
+      );
+      const ask = vi.spyOn(TestBed.inject(CanvasDialogs), 'deleteAll').mockImplementation(async () => false);
+
+      await user.click(screen.getByRole('button', { name: 'Delete all…' }));
+
+      expect(ask).toHaveBeenCalledOnce();
+      const data = ask.mock.calls[0]?.[0];
+      expect(data).toMatchObject({ readable: 2, unreadable: 1 });
+      await data?.backup();
+      expect(library.exportBackup).toHaveBeenCalledExactlyOnceWith({ say: false });
+      expect(library.deleteAll).not.toHaveBeenCalled();
+    });
+
+    it('deletes everything when the learner says yes, and puts the cursor on the button that makes a canvas', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      vi.spyOn(TestBed.inject(CanvasDialogs), 'deleteAll').mockImplementation(async () => true);
+
+      await user.click(screen.getByRole('button', { name: 'Delete all…' }));
+
+      expect(library.deleteAll).toHaveBeenCalledOnce();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'New canvas' })).toHaveFocus());
+    });
+
+    it('leaves the cursor where it is when the delete did not happen', async () => {
+      const { library, user } = await renderHome([canvas('a')]);
+      library.deleteAll.mockResolvedValue(false);
+      vi.spyOn(TestBed.inject(CanvasDialogs), 'deleteAll').mockImplementation(async () => true);
+      const button = screen.getByRole('button', { name: 'Delete all…' });
+
+      await user.click(button);
+
+      expect(library.deleteAll).toHaveBeenCalledOnce();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(screen.getByRole('button', { name: 'New canvas' })).not.toHaveFocus();
+    });
   });
 });

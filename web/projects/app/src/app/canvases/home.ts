@@ -2,10 +2,12 @@ import { afterNextRender, Component, computed, ElementRef, inject, Injector, sig
 import { Icon } from '../core/ui/icon';
 import { Toasts } from '../core/ui/toasts';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
+import { restoreView } from './backup-words';
 import { CanvasCard, elementsText } from './card';
 import type { UnreadableCanvas } from '@rmq/persistence';
 import { CanvasLibrary } from './library';
 import { CanvasDialogs } from './dialogs';
+import { HomeNotices } from './home-notices';
 import { PAGE, searchSummaries, SORTS, sortSummaries, type CanvasSummary, type SortKey } from './summary';
 
 const FIELD = 'border-border bg-surface rounded-md border px-2 py-1.5';
@@ -19,7 +21,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
  */
 @Component({
   selector: 'rmq-home',
-  imports: [CanvasCard, Icon],
+  imports: [CanvasCard, HomeNotices, Icon],
   template: `
     <main class="bg-surface text-fg h-full overflow-y-auto" aria-labelledby="rmq-home-title">
       <div class="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6">
@@ -30,8 +32,40 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
               <rmq-icon name="plus" [size]="16" />
               <span>New canvas</span>
             </button>
+            <button type="button" [class]="button" data-testid="home-open-file" (click)="openPicker.click()">
+              Open a file…
+            </button>
+            <button type="button" [class]="button" data-testid="home-restore" (click)="restorePicker.click()">
+              Restore a backup…
+            </button>
+            <button type="button" [class]="button" data-testid="home-backup" (click)="library.exportBackup()">
+              Back up everything
+            </button>
+            @if (library.canvases().length + library.unreadable().length > 0) {
+              <button type="button" [class]="danger" data-testid="home-delete-all" (click)="deleteEverything()">
+                Delete all…
+              </button>
+            }
           </div>
         </div>
+        <input
+          #openPicker
+          type="file"
+          accept=".json,application/json"
+          hidden
+          data-testid="open-file"
+          (change)="onOpenFile($event)"
+        />
+        <input
+          #restorePicker
+          type="file"
+          accept=".json,application/json"
+          hidden
+          data-testid="restore-file"
+          (change)="onRestoreFile($event)"
+        />
+
+        <rmq-home-notices />
 
         @if (library.problem(); as problem) {
           <div
@@ -86,6 +120,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
                     (open)="library.openCanvas(canvas.id)"
                     (rename)="rename(canvas)"
                     (duplicate)="library.duplicate(canvas.id)"
+                    (save)="library.saveAsFile(canvas.id)"
                     (delete)="deleteCanvas(canvas)"
                   />
                 </li>
@@ -268,6 +303,58 @@ export class Home {
       },
       { injector: this.injector },
     );
+  }
+
+  /** Opens the file that the learner chose as a new canvas. A file that cannot be opened is said in a dialog, with the reason, and nothing was added. */
+  protected async onOpenFile(event: Event): Promise<void> {
+    const file = this.chosen(event);
+    if (file === undefined) {
+      return;
+    }
+    const opened = await this.library.openFile(file);
+    if (!opened.ok) {
+      await this.dialogs.problem({ title: `“${file.name}” could not be opened`, body: [opened.error] });
+    }
+  }
+
+  /** Puts the backup that the learner chose back, and says what came of it in a dialog, or why it could not be done. */
+  protected async onRestoreFile(event: Event): Promise<void> {
+    const file = this.chosen(event);
+    if (file === undefined) {
+      return;
+    }
+    const report = await this.library.restoreFile(file);
+    if (!report.ok) {
+      await this.dialogs.problem({ title: `“${file.name}” could not be put back`, body: [report.error] });
+      return;
+    }
+    const changed = report.value.restored.length + report.value.copies.length > 0;
+    await this.dialogs.restored({
+      title: changed ? 'Backup restored' : 'Nothing was put back',
+      view: restoreView(report.value),
+    });
+  }
+
+  /** Asks once, offering a backup first, and then deletes every canvas, which the notice that follows can bring back. */
+  protected async deleteEverything(): Promise<void> {
+    const sure = await this.dialogs.deleteAll({
+      readable: this.library.canvases().length,
+      unreadable: this.library.unreadable().length,
+      backup: () => this.library.exportBackup({ say: false }),
+    });
+    if (sure && (await this.library.deleteAll())) {
+      afterNextRender(() => this.element.querySelector<HTMLElement>('[data-testid="home-new"]')?.focus(), {
+        injector: this.injector,
+      });
+    }
+  }
+
+  /** The file that was chosen, if any. The field is emptied, so that choosing the same file again is a choice. */
+  private chosen(event: Event): File | undefined {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    return file;
   }
 
   protected rename(canvas: CanvasSummary): void {
