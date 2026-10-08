@@ -1,5 +1,5 @@
 import { headerValueIssue, RABBITMQ_BASELINE, type HeaderCondition } from '@rmq/engine';
-import { z } from 'zod';
+import { z } from '../zod';
 
 /**
  * The canvas document: everything that a canvas is, and nothing that a simulation is (queue contents and counters are

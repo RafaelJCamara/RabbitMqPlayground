@@ -1,5 +1,5 @@
 import { bindingSignature, createEngine, SNAPSHOT_VERSION, snapshotIssue, type EngineSnapshot } from '@rmq/engine';
-import { z } from 'zod';
+import { z } from './zod';
 import { sameValue } from './commands/helpers';
 import { headerArgumentsSchema, headerValueSchema, LIMITS, type CanvasDocument } from './document/schema';
 import { reconcile } from './reconcile';
