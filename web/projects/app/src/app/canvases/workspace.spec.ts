@@ -131,6 +131,20 @@ describe('Workspace (ADR-0072)', () => {
       expect(strip().closest('header')).toContainElement(screen.getByRole('heading', { level: 1 }));
     });
 
+    it('has one banner, which is the strip, and the tools of the editor in a region of their own, so that no page content is outside a landmark', async () => {
+      await renderWorkspace();
+      await screen.findByLabelText('Toolbox');
+
+      // A `header` is a banner unless it is inside a section, an article, an aside, a main or a nav.
+      const banners = [...document.querySelectorAll('header')].filter(
+        (header) => !header.closest('section, article, aside, main, nav'),
+      );
+      expect(banners).toHaveLength(1);
+      expect(banners[0]).toContainElement(strip());
+      const tools = screen.getByRole('region', { name: 'Editor tools' });
+      expect(within(tools).getByRole('group', { name: 'Edit' })).toBeInTheDocument();
+    });
+
     it('lets the editor fill what is under the strip, and not the whole window', async () => {
       const { container } = await renderWorkspace();
       await screen.findByLabelText('Toolbox');

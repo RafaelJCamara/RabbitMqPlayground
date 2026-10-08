@@ -158,7 +158,12 @@ interface Peek {
   ],
   template: `
     <div class="bg-surface text-fg flex flex-col" [class.h-dvh]="!inWorkspace" [class.h-full]="inWorkspace">
-      <rmq-top-bar />
+      @if (inWorkspace) {
+        <!-- In a workspace the strip of open canvases has the banner, and the top bar of the editor is a region of its own (ADR-0072). -->
+        <section aria-label="Editor tools"><rmq-top-bar /></section>
+      } @else {
+        <rmq-top-bar />
+      }
       @if (simulation.enabled) {
         <rmq-simulation-bar>
           @if (explain.enabled) {
