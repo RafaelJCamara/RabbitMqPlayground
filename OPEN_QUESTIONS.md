@@ -7,15 +7,17 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#6](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/6)) S5
 ([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)), S6
 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)), S7
-([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)) and S8
-([#10](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/10)). Each one says what is open, why, what the options
+([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)), S8
+([#10](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/10)) and S9
+([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
-[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 6, 8 and 9 are missing:
+[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 6, 8, 9 and 10 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
 [ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md),
 [ADR-0050](docs/adr/0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) and
-[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), and 6 by
-[ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md).
+[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), 6 by
+[ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) and 10 by
+[ADR-0073](docs/adr/0073-the-home-is-a-grid-of-cards-from-one-read-and-a-canvas-that-cannot-be-read-is-listed-with-its-reason.md).
 
 | # | Question | Settled by |
 |---|---|---|
@@ -23,7 +25,6 @@ they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-re
 | 4 | How should a new scenario reach the Nightly record run, when the offline fixture spec refuses scenarios that have no fixture? | the repo owner |
 | 5 | Should the repository pin its line endings with a `.gitattributes`? | the repo owner |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
-| 10 | What do the home screen, the backup and "delete all" do with a canvas that cannot be read? | S9 ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) |
 
 ## 3. Values that the scenario vocabulary cannot write
 
@@ -302,22 +303,6 @@ The scripts are the ones of S7, plus `hand-list-s8.mjs`, `hand-list-s8b.mjs`, `u
 case yet for keeping them where a pattern that does not parse is refused: the sweeps found one thing that a learner would have met (the ticks of a binding made from a message that were not forgotten for the second message of a producer, which the first journey of the panel found and the sweeps then held), the browser found three more
 before them (a chip that was under the nodes, a chosen mode that turned to white on grey under the pointer, ticks too small to press), and the sweeps took about five hours of a machine with 32 threads.
 
-## 10. Canvases that cannot be read
-
-`list()` answers the canvases that it can read, and, apart from them, the ones that it cannot: their id, their name if the
-record still has one, and why ([ADR-0028](docs/adr/0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md)). The
-learner can delete one, and "delete all" puts a tombstone on it too. A backup is made of the canvases that can be read, so it
-cannot hold one that a newer version of the app wrote, or one that is damaged.
-
-Open: what the home screen shows for such a canvas and what it offers (the reason, "delete", perhaps "download what is
-there"); whether "delete all" has to say that it will delete canvases that no backup can hold; and whether a backup should
-carry the record of an unreadable canvas as it is, so that a newer version of the app can read it later. The last would need
-`list()` to give the raw record, which it does not. S9 builds the screens that have to say it.
-
-What S4 does meanwhile, which S9 may keep or change: the editor opens the canvas that was open last if it can be read, else the
-most recent one that can, else it makes one, and it leaves every canvas that cannot be read untouched. It says how many there
-are, in a line of the status strip, with the reason that nothing was changed, and offers nothing to do about them.
-
 ## Decisions taken in S1 that are easy to revisit
 
 - `route()` throws a `RangeError` for a routing key over 255 bytes and for a header value that is not exact, and does not
@@ -561,6 +546,31 @@ write the same line, with the type chosen and not guessed, and the composer of S
 What S9 inherits ([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)): nothing is added to what is saved. A binding that has conditions was already in the document (`headers` of a binding, `message.headers` of a producer), so a canvas that S8 makes is read by S9's screens as any other, and a backup or a file has the same shape. What S10 inherits is the `exists` condition, which the export has to leave out and list.
 The home screen of S9 shows canvases that may have headers exchanges; nothing there needs the flag `headers`.
 
+## Decisions taken in S9 that are easy to revisit
+
+- **Several canvases are a strip of open canvases around one editor that is made again for each canvas** ([ADR-0072](docs/adr/0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md)). Switching to the home and back, or to another canvas, loses the undo history and the simulation of the canvas that was left: it comes back as it was saved, with the clock at 0 and nothing in the queues.
+  The other way keeps an editor alive for each open canvas and hides the ones that are not shown, which keeps both and costs a Foblex canvas, an engine and a frame loop for each tab. A learner who has twenty canvases open pays for one.
+- **The strip is a `nav` of plain buttons and not the ARIA tabs pattern**, so Tab reaches every item, and the arrow keys do not move between them. A tab may not hold a button (the close button would be inside it) and needs a panel that it controls. If the strip becomes tabs, the close button has to leave the tab.
+- **The app starts on a canvas and never on the home**: the canvas that was open last if it is in the strip, else the first of the strip, else the most recent, else a new "Untitled canvas". A learner who wants to start on "My canvases" has to press it. A canvas that is gone, or cannot be read, is dropped from the strip.
+- **Names**: a new canvas is "Untitled canvas", "Untitled canvas 2" and so on, and a copy is "Orders (copy)", "Orders (copy 2)" cut at a character to fit the cap of 200. Two canvases may have the same name, because a rename does not refuse a name that is taken, and the tab and the card say the same words.
+- **The home reads the repository once and keeps a summary of each canvas and not its document** ([ADR-0073](docs/adr/0073-the-home-is-a-grid-of-cards-from-one-read-and-a-canvas-that-cannot-be-read-is-listed-with-its-reason.md)): the drawing is data, at most 150 nodes and 300 edges, and the rest of a bigger canvas is not drawn. It draws 48 cards and "Show more" for 48 more, the search is on the name only and does not mind case or accents, and the four sorts are a total order (a tie goes by name, then id).
+  A learner who searches for what is inside a canvas finds nothing. Search by the names of the nodes needs the documents, or a field of the summary.
+- **A canvas that cannot be read is listed apart, by name or id, with the reason, and can be deleted but not opened, saved or looked at** (question 10, [ADR-0073](docs/adr/0073-the-home-is-a-grid-of-cards-from-one-read-and-a-canvas-that-cannot-be-read-is-listed-with-its-reason.md)). A backup holds only canvases that can be read, and says how many it left out; the raw record of an unreadable canvas is not in it, because `list()` does not give it and the format would have to change with it.
+- **Delete asks once, in a dialog that starts on Cancel; Clear asks nothing; delete all asks with the numbers and offers "Export a backup first" as a button** ([ADR-0074](docs/adr/0074-delete-clear-and-delete-all-ask-once-and-can-be-taken-back-with-an-undo-that-says-how-long-it-lasts.md)). Clear is one step of Undo from whole, and the others are a tombstone for a minute. The Undo is a notice that goes after 30 seconds, and the keys Ctrl or Cmd and Z take it back on the home when the cursor is not in a field of text.
+  A learner who is slower than 30 seconds has no Undo, and the canvas is still in the repository for 30 seconds more, which nothing offers. A longer notice, or an "Undo delete" in the home, would use the rest of the minute.
+- **Notices are in the flow of the page, under the view, at most three, and a notice makes the view shorter while it is there** ([ADR-0076](docs/adr/0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md)). The corner over the page, where the first build had them, covered the button of the card under it. The time stops while the pointer or the focus is in a notice, and starts again from the whole 30 seconds when they leave.
+- **A canvas file always opens as a new canvas, and a backup never writes over anything** ([ADR-0075](docs/adr/0075-a-canvas-file-opens-as-a-new-canvas-a-backup-is-put-back-without-writing-over-anything-and-the-reminder-asks-after-two-weeks.md)). An id that is taken by a canvas that is different, or by one that cannot be read, makes "Orders (restored)" and says so in the report. A learner who wants a backup to replace what is here has to delete it first. Nothing asks "replace?".
+- **The reminder is on the home and nowhere else, due after 14 days without a backup when something changed, and put off for a week** ([ADR-0075](docs/adr/0075-a-canvas-file-opens-as-a-new-canvas-a-backup-is-put-back-without-writing-over-anything-and-the-reminder-asks-after-two-weeks.md)). If there never was a backup the 14 days are counted from the oldest canvas that has an element on it ([ADR-0076](docs/adr/0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md)), so a canvas made empty a month ago does not make a learner who started to build today a defaulter.
+  The numbers are two constants of one file.
+- **A tab can be renamed with a double click or F2; Save as file is on the card and not on the tab** ([ADR-0076](docs/adr/0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md)). A second place for the file would be a second thing to keep the same; the tab is for the canvas that is being built.
+- **`create` takes a name and a document**, which is the one door that the templates of S11 use: a canvas made from a template needs no code of its own in the library. The checklist of #11 says that creating from a template is S11's.
+- **A change of view is said aloud** ("Showing “Orders”."), politely, and the first view at the start is not ([ADR-0076](docs/adr/0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md)). Closing a tab puts the cursor on the item that is shown now.
+- **The numbers**: the home of 300 canvases of seven elements draws its first 48 cards 399 ms after the click and searches, clears and sorts in 126 ms, against the budget of three seconds of the big canvas. S12 measures on hardware.
+- **A canvas that is saved keeps no simulation** ([ADR-0072](docs/adr/0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md)), which settles the question that S6 left for S9: the seed and the three latencies are in the document's settings, so they are in every file, and a canvas that is opened has a new engine with the clock at 0.
+
+What S10 inherits ([#12](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/12)): a way to make a canvas from a document that was not typed, `CanvasLibrary.create({ name, document })`, which a share link opens with after `loadCanvas` (so that the caps, the versions and the errors are the same as a file's), and a card of the home on which a Share button can go beside Save as file.
+The condition `exists` of a headers binding, which the export has to leave out and list, is as S8 left it. Sharing with messages needs the engine's `snapshot()` and `restore()` (ADR-0052), which nothing in the app calls yet, and a canvas that is saved keeps none. What S11 inherits is the same `create({ name, document })`, and the "New canvas" buttons of the strip and the home, which make a blank one.
+
 ## Follow-ups that are already owned
 
 These are not questions. S2 replays the refusals at declare and bind time against the fixtures, through the commands: the
@@ -579,10 +589,10 @@ S3 hands on what the app has to wire, in the order that the slices come
   autosave of the one implicit canvas, calls `flush()` when the page is hidden (`visibilitychange`, `pagehide`), shows what each
   write came to, and asks `requestPersistence(navigator.storage)` after the first save, and not at start. It shows
   `quotaWarning` when a save fails with `quota-exceeded`, or from `readUsage`.
-- **S9** builds the screens on `softDelete`, `softDeleteAll`, `restore` and `restoreAll` for the Undo toasts, the backup on
-  `writeBackup` and `parseBackup` (what to do with an id that is taken is its choice, and `put` is the door), and the JSON
+- **S9** (done, [ADR-0072](docs/adr/0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md) to [ADR-0076](docs/adr/0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md)) built the screens on `softDelete`, `softDeleteAll`, `restore` and `restoreAll` for the Undo notices, the backup on
+  `writeBackup` and `parseBackup` (an id that is taken makes a copy, and `put` is the door for the others), and the JSON
   files on `writeCanvasFile` and `parseCanvasFile`. It owns the reminder to make a backup, which the meta store only holds the
-  times of. It decides question 10.
+  times of. It decided question 10.
 - **S10** ends the decoding of a share link in `loadCanvas` and nothing of its own, so that the caps, the versions and the
   errors are the same as a file's. The limits of the codec itself are bytes before there is any data, and are its own.
 
@@ -592,8 +602,8 @@ S6 hands on what the next slices read, in the order that they come ([ADR-0052](d
   each. The `routed` and `unroutable` events have the `trace` of S1 and `routed` has the `paths` that its message took ([ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) settled the shape of the trace and of `explainMiss`). The log of equivalent commands already holds the lines of the
   runtime verbs, in the same store, which is where S7 shows them beside the events (ADR-0046).
 - **S8** (headers, done, [ADR-0066](docs/adr/0066-a-headers-binding-is-made-in-a-popover-and-edited-in-the-inspector-from-one-draft-and-an-edit-is-one-batch.md) to [ADR-0071](docs/adr/0071-what-building-s8-settled-a-chip-fits-between-two-nodes-a-binding-from-a-message-starts-with-the-queue-that-missed-and-three-defects.md)) gave the composer its table of headers, behind the flag `headers`, and the grammar, the engine and `reconcile` are as they were.
-- **S9** (the screens of the canvases) and **S10** (share and export) have no engine in what is saved: a canvas that is opened has a new engine, and nothing of a simulation that was running is kept with the canvas or in a
-  file. The share panel of S10 offers the topology "only or with messages", and the messages are the engine's snapshot (versioned JSON, `snapshot()` and `restore()`, ADR-0052), which the app does not call yet. S9 has
-  to decide whether a canvas that is saved keeps one. The seed and the three latencies are in the document's settings, and so they are in every file.
+- **S9** (the screens of the canvases, done) and **S10** (share and export) have no engine in what is saved: a canvas that is opened has a new engine, and nothing of a simulation that was running is kept with the canvas or in a
+  file. The share panel of S10 offers the topology "only or with messages", and the messages are the engine's snapshot (versioned JSON, `snapshot()` and `restore()`, ADR-0052), which the app does not call yet. S9 decided that a canvas
+  that is saved does not keep one ([ADR-0072](docs/adr/0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md)), so S10 keeps the snapshot in the link or the file that it makes and not in the canvas. The seed and the three latencies are in the document's settings, and so they are in every file.
 - **S11** (the tour and the templates) can start a template with `pause` and drive the simulation with `publish` and `step`, as the tests of the browser do, since they are commands.
 - **S12** measures the frame rates of the overlay on real hardware, with the burst and the big canvas that `e2e/performance.spec.ts` has, whose budget of three seconds to draw 200 nodes and 500 edges holds with the flag on.

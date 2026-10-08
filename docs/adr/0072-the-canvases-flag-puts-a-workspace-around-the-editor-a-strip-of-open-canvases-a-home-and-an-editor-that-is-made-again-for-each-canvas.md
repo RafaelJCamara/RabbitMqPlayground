@@ -1,6 +1,6 @@
 # ADR-0072: The `canvases` flag puts a workspace around the editor: a strip of open canvases, a home, and an editor that is made again for each canvas
 
-- **Status:** Accepted
+- **Status:** Accepted. The notices are the last of the column, in the flow, under the view; the strip is the banner and the tools of the editor are a region; a change of view is said aloud; a tab can be renamed; and `create` takes a name and a document: [ADR-0076](0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md).
 - **Date:** 2026-10-08
 - **Deciders:** @RafaelJCamara
 - **Extends:** "UI (M1)" and "Storage" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md), the folders and the lazy chunk of [ADR-0030](0030-the-editors-folders-and-how-it-is-loaded-behind-its-flag.md), and the session of
