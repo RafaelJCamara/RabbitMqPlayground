@@ -1,9 +1,11 @@
-import { Component, computed, ElementRef, inject, signal, afterNextRender, Injector } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { Icon } from '../core/ui/icon';
+import { Toasts } from '../core/ui/toasts';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
-import { CanvasCard } from './card';
+import { CanvasCard, elementsText } from './card';
+import type { UnreadableCanvas } from '@rmq/persistence';
 import { CanvasLibrary } from './library';
-import { CanvasDialogs } from './name-dialog';
+import { CanvasDialogs } from './dialogs';
 import { PAGE, searchSummaries, SORTS, sortSummaries, type CanvasSummary, type SortKey } from './summary';
 
 const FIELD = 'border-border bg-surface rounded-md border px-2 py-1.5';
@@ -84,6 +86,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
                     (open)="library.openCanvas(canvas.id)"
                     (rename)="rename(canvas)"
                     (duplicate)="library.duplicate(canvas.id)"
+                    (delete)="deleteCanvas(canvas)"
                   />
                 </li>
               }
@@ -97,20 +100,55 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
         } @else {
           <p class="text-muted" data-testid="home-empty">You have no canvases yet. Make one with “New canvas”.</p>
         }
+
+        @if (library.unreadable().length > 0) {
+          <section class="flex flex-col gap-2" aria-labelledby="rmq-home-unreadable" data-testid="home-unreadable">
+            <h2 id="rmq-home-unreadable" class="text-lg font-semibold">Canvases that could not be opened</h2>
+            <p class="text-muted">
+              These are in this browser, and this version of the app cannot read them. Nothing was changed. A backup
+              cannot hold them either.
+            </p>
+            <ul class="flex flex-col gap-2" aria-label="Canvases that could not be opened">
+              @for (item of library.unreadable(); track item.id) {
+                <li
+                  class="border-border bg-surface flex flex-wrap items-start gap-3 rounded-md border p-3"
+                  [attr.data-unreadable]="item.id"
+                >
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-semibold">{{ item.name ?? item.id }}</h3>
+                    <p class="text-muted text-sm">{{ item.error.message }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    [class]="danger"
+                    [attr.aria-label]="'Delete ' + (item.name ?? item.id)"
+                    data-testid="unreadable-delete"
+                    (click)="deleteUnreadable(item)"
+                  >
+                    <rmq-icon name="trash" [size]="16" />
+                    <span>Delete</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
       </div>
     </main>
   `,
-  host: { class: 'block h-full' },
+  host: { class: 'block h-full', '(document:keydown)': 'onKey($event)' },
 })
 export class Home {
   protected readonly library = inject(CanvasLibrary);
   private readonly dialogs = inject(CanvasDialogs);
+  private readonly toasts = inject(Toasts);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
 
   protected readonly button = BUTTON;
   protected readonly primary = BUTTON_PRIMARY;
   protected readonly field = FIELD;
+  protected readonly danger = `${BUTTON} text-danger`;
   protected readonly sorts = SORTS;
 
   protected readonly query = signal('');
@@ -157,6 +195,79 @@ export class Home {
         { injector: this.injector },
       );
     }
+  }
+
+  /**
+   * Control or Command and Z take back the newest notice that has an Undo, the delete of a canvas, when the cursor is not in a field of text, which keeps its own Undo
+   * (ADR-0074). In the editor the same keys are the document's Undo, and this is not heard there.
+   */
+  protected onKey(event: KeyboardEvent): void {
+    const target = event.target;
+    const inField =
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !== null;
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      !event.shiftKey &&
+      !event.altKey &&
+      event.key.toLowerCase() === 'z' &&
+      !inField
+    ) {
+      const latest = this.toasts.latestUndo();
+      if (latest !== undefined) {
+        event.preventDefault();
+        void this.toasts.undo(latest.id);
+      }
+    }
+  }
+
+  /** Asks once, and then deletes the canvas, which the notice that follows can bring back; the focus goes to the card that takes its place. */
+  protected async deleteCanvas(canvas: CanvasSummary): Promise<void> {
+    const sure = await this.dialogs.confirm({
+      title: `Delete “${canvas.name}”?`,
+      body: [`It has ${elementsText(canvas.elements)}.`, 'You can take this back for a short while after.'],
+      confirm: 'Delete canvas',
+    });
+    if (sure) {
+      await this.deleteAndMoveFocus(canvas.id, canvas.id);
+    }
+  }
+
+  protected async deleteUnreadable(item: UnreadableCanvas): Promise<void> {
+    const label = item.name ?? item.id;
+    const sure = await this.dialogs.confirm({
+      title: `Delete “${label}”?`,
+      body: [
+        'This version of the app cannot open it, so a backup could not have kept it.',
+        'You can take this back for a short while after.',
+      ],
+      confirm: 'Delete canvas',
+    });
+    if (sure) {
+      await this.deleteAndMoveFocus(item.id, undefined);
+    }
+  }
+
+  /** Deletes a canvas, and puts the focus on what takes its place: the next card, or the one before, or the search, or the button that makes a canvas. */
+  private async deleteAndMoveFocus(id: string, card: string | undefined): Promise<void> {
+    const cards = this.visible();
+    const at = cards.findIndex((canvas) => canvas.id === card);
+    const neighbour = at < 0 ? undefined : (cards[at + 1] ?? cards[at - 1]);
+    await this.library.delete(id);
+    afterNextRender(
+      () => {
+        const open =
+          neighbour === undefined
+            ? null
+            : this.element.querySelector<HTMLElement>(`[data-canvas="${neighbour.id}"] [data-testid="card-open"]`);
+        const target =
+          open ??
+          this.element.querySelector<HTMLElement>('[data-testid="home-search"]') ??
+          this.element.querySelector<HTMLElement>('[data-testid="home-new"]');
+        target?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected rename(canvas: CanvasSummary): void {

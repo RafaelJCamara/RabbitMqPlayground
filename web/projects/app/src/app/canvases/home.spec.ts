@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { succeed } from '@rmq/persistence';
-import { render, screen, waitFor, within } from '@testing-library/angular';
+import { succeed, type UnreadableCanvas } from '@rmq/persistence';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { NOW } from '../core/session/canvas-session';
+import { Toasts } from '../core/ui/toasts';
 import { Home } from './home';
 import { CanvasLibrary } from './library';
-import { CanvasDialogs } from './name-dialog';
+import { CanvasDialogs } from './dialogs';
 import { PAGE, type CanvasSummary } from './summary';
 import { EMPTY_THUMBNAIL } from './thumbnail';
 
@@ -26,14 +27,21 @@ const canvas = (id: string, change: Partial<CanvasSummary> = {}): CanvasSummary 
 });
 
 /** The part of the library that the home reads and calls, with a record of the calls. */
-function fakeLibrary(canvases: readonly CanvasSummary[]) {
+function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly UnreadableCanvas[] = []) {
   const list = signal(canvases);
   const problem = signal<string | null>(null);
+  const broken = signal(unreadable);
   return {
     list,
     problem,
     canvases: list.asReadonly(),
     problemText: problem.asReadonly(),
+    unreadable: broken.asReadonly(),
+    delete: vi.fn(async (id: string) => {
+      list.update((all) => all.filter((canvas) => canvas.id !== id));
+      broken.update((all) => all.filter((item) => item.id !== id));
+      return true;
+    }),
     create: vi.fn(async () => undefined),
     openCanvas: vi.fn(async (_id: string) => undefined),
     duplicate: vi.fn(async (_id: string) => undefined),
@@ -42,8 +50,8 @@ function fakeLibrary(canvases: readonly CanvasSummary[]) {
   };
 }
 
-async function renderHome(canvases: readonly CanvasSummary[]) {
-  const library = fakeLibrary(canvases);
+async function renderHome(canvases: readonly CanvasSummary[], unreadable: readonly UnreadableCanvas[] = []) {
+  const library = fakeLibrary(canvases, unreadable);
   const view = await render(Home, {
     providers: [
       { provide: CanvasLibrary, useValue: { ...library, problem: library.problemText } },
@@ -288,5 +296,220 @@ describe('Home (ADR-0073)', () => {
       expect(names()).toEqual(['Canvas 099']);
       expect(screen.getByRole('status')).toHaveTextContent('1 of 100 canvases');
     });
+  });
+});
+
+describe('Home, deleting (ADR-0074)', () => {
+  const some = () => [
+    canvas('a', { name: 'Alpha', updatedAt: CLOCK - HOUR }),
+    canvas('b', { name: 'Beta', updatedAt: CLOCK - 2 * HOUR }),
+    canvas('c', { name: 'Gamma', updatedAt: CLOCK - 3 * HOUR }),
+  ];
+
+  /** Answers the question that the home asks, and records what was asked. */
+  const answering = (sure: boolean) =>
+    vi.spyOn(TestBed.inject(CanvasDialogs), 'confirm').mockImplementation(async () => sure);
+
+  it('asks first, with the name and how much is on the canvas, and what can be done about it', async () => {
+    const { user } = await renderHome(some());
+    const confirm = answering(false);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
+
+    expect(confirm).toHaveBeenCalledExactlyOnceWith({
+      title: 'Delete “Beta”?',
+      body: ['It has 3 elements.', 'You can take this back for a short while after.'],
+      confirm: 'Delete canvas',
+    });
+  });
+
+  it('deletes nothing when the learner says no', async () => {
+    const { library, user } = await renderHome(some());
+    answering(false);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
+
+    expect(library.delete).not.toHaveBeenCalled();
+    expect(names()).toEqual(['Alpha', 'Beta', 'Gamma']);
+  });
+
+  it('deletes the canvas of the card when the learner says yes, and no other', async () => {
+    const { library, user } = await renderHome(some());
+    answering(true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
+
+    expect(library.delete).toHaveBeenCalledExactlyOnceWith('b');
+    await waitFor(() => expect(names()).toEqual(['Alpha', 'Gamma']));
+  });
+
+  it('puts the focus on the card that takes its place, which is the next one', async () => {
+    const { user } = await renderHome(some());
+    answering(true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open Gamma' })).toHaveFocus());
+  });
+
+  it('puts the focus on the card before it when the one that was deleted was the last', async () => {
+    const { user } = await renderHome(some());
+    answering(true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Gamma' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open Beta' })).toHaveFocus());
+  });
+
+  it('puts the focus on the search when it was the card that was drawn alone with others hidden by a search', async () => {
+    const { user } = await renderHome(some());
+    answering(true);
+    await user.type(screen.getByRole('searchbox', { name: 'Search canvases' }), 'Beta');
+
+    await user.click(screen.getByRole('button', { name: 'Delete Beta' }));
+
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search canvases' })).toHaveFocus());
+  });
+
+  it('puts the focus on the button that makes a canvas when no canvas is left', async () => {
+    const { user } = await renderHome([canvas('a', { name: 'Alpha' })]);
+    answering(true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Alpha' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'New canvas' })).toHaveFocus());
+    expect(screen.getByText(/You have no canvases yet/)).toBeInTheDocument();
+  });
+
+  describe('taking it back with the keys', () => {
+    const undoable = () => {
+      const run = vi.fn(async () => succeed(undefined));
+      TestBed.inject(Toasts).show({ message: 'Deleted “Beta”.', undo: { label: 'Undo', keys: 'Ctrl+Z', run } });
+      return run;
+    };
+
+    it('takes back the newest notice that has an Undo with Control and Z, and the key is the home’s', async () => {
+      await renderHome(some());
+      const run = undoable();
+
+      const left = fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+
+      expect(left).toBe(false);
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('does the same with Command and Z, in either case of the letter', async () => {
+      await renderHome(some());
+      const run = undoable();
+
+      fireEvent.keyDown(document.body, { key: 'Z', metaKey: true });
+
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('leaves the key to a field of text, which has an Undo of its own', async () => {
+      const { user } = await renderHome(some());
+      const run = undoable();
+      await user.click(screen.getByRole('searchbox', { name: 'Search canvases' }));
+
+      const left = fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Search canvases' }), {
+        key: 'z',
+        ctrlKey: true,
+      });
+
+      expect(left).toBe(true);
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it('leaves the key alone when there is no notice, or when Shift or Alt is held, or the letter is another', async () => {
+      await renderHome(some());
+      expect(fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true })).toBe(true);
+      const run = undoable();
+
+      expect(fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, shiftKey: true })).toBe(true);
+      expect(fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, altKey: true })).toBe(true);
+      expect(fireEvent.keyDown(document.body, { key: 'y', ctrlKey: true })).toBe(true);
+      expect(fireEvent.keyDown(document.body, { key: 'z' })).toBe(true);
+
+      expect(run).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('Home, canvases that could not be opened (ADR-0073)', () => {
+  const newer = (id: string, name?: string): UnreadableCanvas => ({
+    id,
+    ...(name === undefined ? {} : { name }),
+    error: {
+      kind: 'newer-version',
+      of: 'schema',
+      found: 9,
+      understood: 1,
+      message: 'This canvas was saved by a newer version of this app.',
+    },
+  });
+
+  it('has no such section when every canvas can be opened', async () => {
+    await renderHome([canvas('a')]);
+
+    expect(screen.queryByTestId('home-unreadable')).not.toBeInTheDocument();
+  });
+
+  it('lists them apart, by name or by id, with the reason, a section with a heading and a list that have a name', async () => {
+    await renderHome([canvas('a')], [newer('x1', 'From a newer app'), newer('x2')]);
+
+    const section = screen.getByTestId('home-unreadable');
+    expect(
+      within(section).getByRole('heading', { level: 2, name: 'Canvases that could not be opened' }),
+    ).toBeInTheDocument();
+    const list = within(section).getByRole('list', { name: 'Canvases that could not be opened' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(list).getByRole('heading', { level: 3, name: 'From a newer app' })).toBeInTheDocument();
+    expect(within(list).getByRole('heading', { level: 3, name: 'x2' })).toBeInTheDocument();
+    expect(within(list).getAllByText('This canvas was saved by a newer version of this app.')).toHaveLength(2);
+    expect(within(section).getByText(/A backup cannot hold them either/)).toBeInTheDocument();
+  });
+
+  it('shows them even when there is no canvas that can be opened, and says that there is none beside them', async () => {
+    await renderHome([], [newer('x1', 'From a newer app')]);
+
+    expect(screen.getByText(/You have no canvases yet/)).toBeInTheDocument();
+    expect(screen.getByTestId('home-unreadable')).toBeInTheDocument();
+  });
+
+  it('has no Open and no Rename for them, and a Delete that names them', async () => {
+    await renderHome([canvas('a')], [newer('x1', 'From a newer app')]);
+
+    const section = screen.getByTestId('home-unreadable');
+    expect(within(section).getAllByRole('button')).toHaveLength(1);
+    expect(within(section).getByRole('button', { name: 'Delete From a newer app' })).toBeInTheDocument();
+  });
+
+  it('asks before it deletes one, and says that a backup could not have kept it', async () => {
+    const { library, user } = await renderHome([canvas('a')], [newer('x1', 'From a newer app')]);
+    const confirm = vi.spyOn(TestBed.inject(CanvasDialogs), 'confirm').mockImplementation(async () => true);
+
+    await user.click(screen.getByRole('button', { name: 'Delete From a newer app' }));
+
+    expect(confirm).toHaveBeenCalledExactlyOnceWith({
+      title: 'Delete “From a newer app”?',
+      body: [
+        'This version of the app cannot open it, so a backup could not have kept it.',
+        'You can take this back for a short while after.',
+      ],
+      confirm: 'Delete canvas',
+    });
+    expect(library.delete).toHaveBeenCalledExactlyOnceWith('x1');
+    await waitFor(() => expect(screen.queryByTestId('home-unreadable')).not.toBeInTheDocument());
+  });
+
+  it('deletes nothing when the learner says no', async () => {
+    const { library, user } = await renderHome([canvas('a')], [newer('x1')]);
+    vi.spyOn(TestBed.inject(CanvasDialogs), 'confirm').mockImplementation(async () => false);
+
+    await user.click(screen.getByRole('button', { name: 'Delete x1' }));
+
+    expect(library.delete).not.toHaveBeenCalled();
+    expect(screen.getByTestId('home-unreadable')).toBeInTheDocument();
   });
 });

@@ -12,6 +12,8 @@ import {
 import { Announcer } from '../core/announcer';
 import type { CanvasHost, OpenEditor } from '../core/session/canvas-host';
 import { CanvasStorage } from '../core/session/canvas-storage';
+import { Toasts } from '../core/ui/toasts';
+import { formatChord } from '../editor/keyboard';
 import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
 import { summarise, type CanvasSummary } from './summary';
 
@@ -39,6 +41,7 @@ const sameView = (a: View, b: View): boolean =>
 export class CanvasLibrary implements CanvasHost {
   private readonly storage = inject(CanvasStorage);
   private readonly announcer = inject(Announcer);
+  private readonly toasts = inject(Toasts);
 
   private readonly summaries = signal<readonly CanvasSummary[]>([]);
   private readonly unreadableCanvases = signal<readonly UnreadableCanvas[]>([]);
@@ -240,6 +243,55 @@ export class CanvasLibrary implements CanvasHost {
     await this.openCanvas(summary.id);
     this.announcer.announce(`Made “${summary.name}”, a copy of “${original.value.name}”.`);
     return succeed(summary);
+  }
+
+  /**
+   * Deletes a canvas, one that can be read or one that cannot (ADR-0074): it leaves the strip and the home at once, and the repository keeps it for a minute as a tombstone
+   * (ADR-0028), which a notice offers to bring back. If the browser refuses, nothing has changed except that the tab is closed, and it says why. It answers whether it was deleted.
+   */
+  async delete(id: string): Promise<boolean> {
+    const name =
+      this.summaries().find((canvas) => canvas.id === id)?.name ??
+      this.unreadableCanvases().find((canvas) => canvas.id === id)?.name ??
+      id;
+    const place = this.openIds().indexOf(id);
+    if (place >= 0) {
+      // Out of the strip first, which makes the editor write and shows another view, so that nothing saves a canvas that has gone.
+      await this.closeTab(id);
+    }
+    const repository = await this.storage.repository();
+    const done = await repository.softDelete(id);
+    if (!done.ok) {
+      this.report(`“${name}” could not be deleted. ${done.error.message}`);
+      return false;
+    }
+    this.summaries.update((canvases) => canvases.filter((canvas) => canvas.id !== id));
+    this.unreadableCanvases.update((canvases) => canvases.filter((canvas) => canvas.id !== id));
+    this.toasts.show({
+      message: `Deleted “${name}”.`,
+      undo: { label: 'Undo', keys: formatChord({ key: 'z', mod: true }), run: () => this.restore(id, name, place) },
+    });
+    return true;
+  }
+
+  /** Brings a deleted canvas back, to the home and, if it was open, to its place in the strip. A canvas whose minute is over is gone, and that is said. */
+  private async restore(id: string, name: string, place: number): Promise<Outcome<void, string>> {
+    const repository = await this.storage.repository();
+    const done = await repository.restore(id);
+    if (!done.ok) {
+      return failure(
+        done.error.kind === 'not-found'
+          ? `“${name}” is gone for good: it was deleted more than a minute ago.`
+          : done.error.message,
+      );
+    }
+    await this.refresh();
+    if (place >= 0 && this.summaries().some((canvas) => canvas.id === id)) {
+      this.openIds.update((ids) => [...ids.slice(0, place), id, ...ids.slice(place)]);
+      this.saveStrip();
+    }
+    this.announcer.announce(`“${name}” is back.`);
+    return succeed(undefined);
   }
 
   /** Reads the canvases again, for the home to show them as they are now. A canvas that is open has been written before this is asked. */

@@ -3,7 +3,8 @@ import { failure, succeed, type Outcome } from '@rmq/persistence';
 import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CanvasDialogs, type NameDialogData } from './name-dialog';
+import { CanvasDialogs } from './dialogs';
+import type { NameDialogData } from './name-dialog';
 
 afterEach(() => {
   document.body.replaceChildren();

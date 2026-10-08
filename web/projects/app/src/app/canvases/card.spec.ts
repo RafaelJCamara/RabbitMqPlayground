@@ -28,6 +28,7 @@ async function renderCard(summary: CanvasSummary = canvas()) {
       open: () => events.push('open'),
       rename: () => events.push('rename'),
       duplicate: () => events.push('duplicate'),
+      delete: () => events.push('delete'),
     },
     providers: [{ provide: NOW, useValue: () => CLOCK }],
   });
@@ -73,6 +74,15 @@ describe('CanvasCard (ADR-0073)', () => {
     expect(open).toHaveTextContent('Open');
     expect(screen.getByRole('button', { name: 'Rename Orders flow' })).toHaveTextContent('Rename');
     expect(screen.getByRole('button', { name: 'Duplicate Orders flow' })).toHaveTextContent('Duplicate');
+    expect(screen.getByRole('button', { name: 'Delete Orders flow' })).toHaveTextContent('Delete');
+  });
+
+  it('says Delete in words, and not only in a colour', async () => {
+    await renderCard();
+
+    const remove = screen.getByRole('button', { name: 'Delete Orders flow' });
+    expect(remove.className).toContain('text-danger');
+    expect(remove).toHaveTextContent('Delete');
   });
 
   it('tells what was pressed, and nothing else', async () => {
@@ -81,8 +91,9 @@ describe('CanvasCard (ADR-0073)', () => {
     await user.click(screen.getByRole('button', { name: 'Open Orders flow' }));
     await user.click(screen.getByRole('button', { name: 'Rename Orders flow' }));
     await user.click(screen.getByRole('button', { name: 'Duplicate Orders flow' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Orders flow' }));
 
-    expect(events).toEqual(['open', 'rename', 'duplicate']);
+    expect(events).toEqual(['open', 'rename', 'duplicate', 'delete']);
   });
 
   it('opens nothing when the name or the drawing is pressed, so that reading a card does not open it', async () => {

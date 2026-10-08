@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { emptyDocument } from '@rmq/domain';
 import { createMemoryRepository, type CanvasRepository, type Outcome, type RepositoryError } from '@rmq/persistence';
-import { documentOf, idSequence, manualClock, queueRecord, type ManualClock } from '@rmq/testing';
+import { documentOf, idSequence, manualClock, manualTimer, queueRecord, type ManualClock } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { Announcer, type Politeness } from '../core/announcer';
 import type { OpenEditor } from '../core/session/canvas-host';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
+import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
 import { CanvasLibrary, type View } from './library';
 
 const unavailable: RepositoryError = {
@@ -25,6 +26,7 @@ interface Harness {
   readonly clock: ManualClock;
   readonly announce: Mock<(message: string, politeness?: Politeness) => void>;
   readonly made: { browser: number; memory: number };
+  readonly toasts: Toasts;
 }
 
 type Wrap = (repository: CanvasRepository) => CanvasRepository;
@@ -52,10 +54,18 @@ function setup(options: { readonly browser?: Wrap; readonly memory?: Wrap } = {}
         },
       },
       { provide: STORAGE_MANAGER, useValue: undefined },
+      { provide: TOAST_TIMER, useValue: manualTimer() },
     ],
   });
   const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
-  return { library: TestBed.inject(CanvasLibrary), repository: browser, clock, announce, made };
+  return {
+    library: TestBed.inject(CanvasLibrary),
+    repository: browser,
+    clock,
+    announce,
+    made,
+    toasts: TestBed.inject(Toasts),
+  };
 }
 
 /** A repository that answers like the one given, except that some calls fail. */
@@ -168,7 +178,7 @@ describe('CanvasLibrary', () => {
               ? {
                   ok: true,
                   value: {
-                    canvases: listed.value.canvases.filter(({ id }) => id !== 'beta'),
+                    canvases: listed.value.canvases.filter(({ id }) => id !== 'beta' && id !== 'nameless'),
                     unreadable: [
                       {
                         id: 'beta',
@@ -702,6 +712,217 @@ describe('CanvasLibrary', () => {
       expect(copy.ok).toBe(false);
       expect(harness.library.problem()).toBe(`The canvas could not be copied. ${broken.message}`);
       expect(harness.library.canvases()).toHaveLength(1);
+    });
+  });
+
+  describe('deleting a canvas (ADR-0074)', () => {
+    /** The notice that the last delete made, which is the only one on the screen. */
+    const notice = (harness: Harness) => {
+      const [toast] = harness.toasts.visible();
+      return toast;
+    };
+
+    it('takes a canvas out of the home, the strip and the browser, and keeps it for a minute as a tombstone', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.repository.setMeta('openCanvases', ['alpha', 'beta']);
+      await harness.repository.setMeta('lastOpenCanvas', 'alpha');
+      await harness.library.start();
+      await harness.library.show(HOME);
+
+      const deleted = await harness.library.delete('beta');
+      await settle();
+
+      expect(deleted).toBe(true);
+      expect(harness.library.canvases().map(({ id }) => id)).toEqual(['alpha']);
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha']);
+      expect(await strip(harness.repository)).toEqual(['alpha']);
+      expect((await harness.repository.get('beta')).ok).toBe(false);
+      expect((await harness.repository.restore('beta')).ok).toBe(true);
+    });
+
+    it('offers to take it back, with the name of the canvas, an Undo, and the keys, and says so aloud', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      await harness.library.show(HOME);
+
+      await harness.library.delete('beta');
+
+      expect(notice(harness)).toMatchObject({
+        message: 'Deleted “Beta”.',
+        undo: { label: 'Undo', keys: 'Ctrl+Z' },
+      });
+      expect(harness.announce).toHaveBeenCalledWith('Deleted “Beta”. Press Ctrl+Z to undo.');
+    });
+
+    it('brings it back with the Undo of the notice, to the home and to the place it had in the strip, and says so', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('openCanvases', ['alpha', 'beta', 'gamma']);
+      await harness.repository.setMeta('lastOpenCanvas', 'alpha');
+      await harness.library.start();
+      await harness.library.show(HOME);
+      await harness.library.delete('beta');
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha', 'gamma']);
+
+      await harness.toasts.undo(notice(harness)?.id ?? 0);
+      await settle();
+
+      expect(
+        harness.library
+          .canvases()
+          .map(({ id }) => id)
+          .sort(),
+      ).toEqual(['alpha', 'beta', 'gamma']);
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha', 'beta', 'gamma']);
+      expect(await strip(harness.repository)).toEqual(['alpha', 'beta', 'gamma']);
+      expect(harness.toasts.visible()).toEqual([]);
+      expect(harness.announce).toHaveBeenCalledWith('“Beta” is back.');
+      expect(harness.library.view()).toEqual(HOME);
+    });
+
+    it('does not put a canvas back in the strip that was not in it, and does not open it', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.repository.setMeta('openCanvases', ['alpha']);
+      await harness.repository.setMeta('lastOpenCanvas', 'alpha');
+      await harness.library.start();
+      await harness.library.show(HOME);
+      await harness.library.delete('beta');
+
+      await harness.toasts.undo(notice(harness)?.id ?? 0);
+
+      expect(
+        harness.library
+          .canvases()
+          .map(({ id }) => id)
+          .sort(),
+      ).toEqual(['alpha', 'beta']);
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha']);
+      expect(harness.library.view()).toEqual(HOME);
+    });
+
+    it('says that a canvas is gone for good when its minute is over, and keeps the notice', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      await harness.library.show(HOME);
+      await harness.library.delete('beta');
+      harness.clock.advance(61_000);
+      await harness.repository.purgeExpired();
+
+      await harness.toasts.undo(notice(harness)?.id ?? 0);
+
+      expect(notice(harness)?.problem).toBe('“Beta” is gone for good: it was deleted more than a minute ago.');
+      expect(harness.library.canvases().map(({ id }) => id)).toEqual(['alpha']);
+    });
+
+    it('says why, in the words of the browser, when it cannot bring the canvas back for another reason', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      await harness.library.show(HOME);
+      await harness.library.delete('beta');
+      vi.spyOn(harness.repository, 'restore').mockResolvedValue({ ok: false, error: broken });
+
+      await harness.toasts.undo(notice(harness)?.id ?? 0);
+
+      expect(notice(harness)?.problem).toBe(broken.message);
+    });
+
+    it('closes the tab of a canvas that is shown, and shows the one next to it, before it is deleted', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.repository.setMeta('openCanvases', ['alpha', 'beta']);
+      await harness.repository.setMeta('lastOpenCanvas', 'beta');
+      await harness.library.start();
+      const { editor, finish } = editorOf('beta');
+      harness.library.attach(editor);
+
+      const deleting = harness.library.delete('beta');
+      await settle();
+      expect(editor.flush).toHaveBeenCalled();
+      expect((await harness.repository.get('beta')).ok).toBe(true);
+      finish();
+      await deleting;
+
+      expect(harness.library.view()).toEqual(canvasView('alpha'));
+      expect((await harness.repository.get('beta')).ok).toBe(false);
+    });
+
+    it('shows the home when the only canvas in the strip is deleted', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.delete('alpha');
+
+      expect(harness.library.view()).toEqual(HOME);
+      expect(harness.library.canvases()).toEqual([]);
+    });
+
+    it('deletes a canvas that cannot be read, by its name or its id, and offers to bring it back', async () => {
+      const harness = setup({
+        browser: (memory) => ({
+          ...memory,
+          list: async () => {
+            const listed = await memory.list();
+            return listed.ok
+              ? {
+                  ok: true,
+                  value: {
+                    canvases: listed.value.canvases.filter(({ id }) => id !== 'beta' && id !== 'nameless'),
+                    unreadable: [
+                      {
+                        id: 'beta',
+                        name: 'From a newer app',
+                        error: { kind: 'newer-version', of: 'schema', found: 9, understood: 1, message: 'Newer.' },
+                      },
+                      { id: 'nameless', error: { kind: 'not-json', message: 'Not JSON.' } },
+                    ],
+                  },
+                }
+              : listed;
+          },
+        }),
+      });
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.repository.create({ id: 'nameless', name: 'x', document: emptyDocument() });
+      await harness.library.start();
+      expect(harness.library.unreadable().map(({ id }) => id)).toEqual(['beta', 'nameless']);
+
+      await harness.library.delete('beta');
+      expect(notice(harness)?.message).toBe('Deleted “From a newer app”.');
+      await harness.library.delete('nameless');
+
+      expect(harness.toasts.visible().map(({ message }) => message)).toEqual([
+        'Deleted “From a newer app”.',
+        'Deleted “nameless”.',
+      ]);
+      expect(harness.library.unreadable()).toEqual([]);
+      expect((await harness.repository.get('beta')).ok).toBe(false);
+    });
+
+    it('says why, and changes nothing, when the browser refuses to delete', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+      await harness.library.show(HOME);
+      vi.spyOn(harness.repository, 'softDelete').mockResolvedValue({ ok: false, error: broken });
+
+      const deleted = await harness.library.delete('beta');
+
+      expect(deleted).toBe(false);
+      expect(harness.library.problem()).toBe(`“Beta” could not be deleted. ${broken.message}`);
+      expect(harness.announce).toHaveBeenCalledWith(`“Beta” could not be deleted. ${broken.message}`, 'assertive');
+      expect(
+        harness.library
+          .canvases()
+          .map(({ id }) => id)
+          .sort(),
+      ).toEqual(['alpha', 'beta']);
+      expect(harness.toasts.visible()).toEqual([]);
     });
   });
 

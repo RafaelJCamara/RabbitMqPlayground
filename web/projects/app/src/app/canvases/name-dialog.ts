@@ -1,5 +1,5 @@
-import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { afterNextRender, Component, ElementRef, inject, Injectable, signal, viewChild } from '@angular/core';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { afterNextRender, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import type { Outcome } from '@rmq/persistence';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
 import { nameProblem } from './names';
@@ -95,23 +95,5 @@ export class NameDialog {
   private refuse(problem: string): void {
     this.error.set(problem);
     this.field().nativeElement.focus();
-  }
-}
-
-/** Opens the dialogs of the canvases, one at a time (ADR-0072, ADR-0074). */
-@Injectable({ providedIn: 'root' })
-export class CanvasDialogs {
-  private readonly dialog = inject(Dialog);
-
-  /** Asks for the new name of a canvas. */
-  rename(data: NameDialogData): void {
-    this.dialog.open(NameDialog, {
-      data,
-      ariaModal: true,
-      ariaLabelledBy: NAME_DIALOG_TITLE_ID,
-      backdropClass: 'cdk-overlay-dark-backdrop',
-      autoFocus: 'first-tabbable',
-      restoreFocus: true,
-    });
   }
 }

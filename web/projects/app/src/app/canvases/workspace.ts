@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { APP_NAME } from '../core/app-info';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { Icon } from '../core/ui/icon';
+import { ToastHost } from '../core/ui/toast-host';
 import { Editor } from '../editor/editor';
 import { BUTTON, tabClass } from './buttons';
 import { Home } from './home';
@@ -14,7 +15,7 @@ import { CanvasLibrary } from './library';
  */
 @Component({
   selector: 'rmq-workspace',
-  imports: [Editor, Home, Icon],
+  imports: [Editor, Home, Icon, ToastHost],
   providers: [CanvasLibrary, { provide: CANVAS_HOST, useExisting: CanvasLibrary }],
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
@@ -64,6 +65,7 @@ import { CanvasLibrary } from './library';
           </ul>
         </nav>
       </header>
+      <rmq-toast-host />
       <div class="min-h-0 flex-1">
         @if (library.ready()) {
           @if (home()) {

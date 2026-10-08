@@ -63,6 +63,16 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
           <rmq-icon name="plus" [size]="16" />
           <span>Duplicate</span>
         </button>
+        <button
+          type="button"
+          [class]="danger"
+          [attr.aria-label]="'Delete ' + canvas().name"
+          data-testid="card-delete"
+          (click)="delete.emit()"
+        >
+          <rmq-icon name="trash" [size]="16" />
+          <span>Delete</span>
+        </button>
       </div>
     </article>
   `,
@@ -74,11 +84,14 @@ export class CanvasCard {
   readonly open = output();
   readonly rename = output();
   readonly duplicate = output();
+  readonly delete = output();
 
   private readonly now = inject(NOW);
 
   protected readonly button = BUTTON;
   protected readonly primary = BUTTON_PRIMARY;
+  /** Deleting is a plain button in the colour of a warning, and it also says Delete in words (WCAG 1.4.1). */
+  protected readonly danger = `${BUTTON} text-danger`;
   protected readonly edited = computed(() => ago(this.now(), this.canvas().updatedAt));
   protected readonly iso = computed(() => new Date(this.canvas().updatedAt).toISOString());
   protected readonly exact = computed(() => new Date(this.canvas().updatedAt).toLocaleString());
