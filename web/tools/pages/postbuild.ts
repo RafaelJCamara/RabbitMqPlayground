@@ -1,10 +1,13 @@
-import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { withContentSecurityPolicy } from './csp';
 
 /**
  * What a Pages build needs on top of `ng build`:
  *
+ * - A content security policy (ADR-0078), in a `<meta>` of `index.html`, made from the page that the build made: the hash of each inline script
+ *   is in it, and a page with something the policy would break is refused here and not in a visitor's browser.
  * - `404.html`, a copy of `index.html`. GitHub Pages serves it for every path it has no file for, so a deep link
  *   still loads the single-page app.
  * - `build-info.json`, which says which commit the build came from. The post-deploy smoke test polls it, because
@@ -32,6 +35,7 @@ export function addPagesFiles(distDir: string, info: BuildInfo): void {
   if (!existsSync(index)) {
     throw new Error(`There is no index.html in ${distDir}. Build the app first.`);
   }
+  writeFileSync(index, withContentSecurityPolicy(readFileSync(index, 'utf8')));
   copyFileSync(index, join(distDir, '404.html'));
   writeFileSync(join(distDir, 'build-info.json'), `${JSON.stringify(info, null, 2)}\n`);
 }
@@ -43,5 +47,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(2);
   }
   addPagesFiles(distDir, createBuildInfo(process.env, new Date()));
-  console.log(`Added 404.html and build-info.json to ${distDir}`);
+  console.log(`Added the content security policy, 404.html and build-info.json to ${distDir}`);
 }
