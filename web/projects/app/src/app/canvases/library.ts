@@ -1,0 +1,315 @@
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { emptyDocument } from '@rmq/domain';
+import {
+  failure,
+  succeed,
+  type CanvasRecord,
+  type CanvasRepository,
+  type Outcome,
+  type RepositoryError,
+  type UnreadableCanvas,
+} from '@rmq/persistence';
+import { Announcer } from '../core/announcer';
+import type { CanvasHost, OpenEditor } from '../core/session/canvas-host';
+import { CanvasStorage } from '../core/session/canvas-storage';
+import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { summarise, type CanvasSummary } from './summary';
+
+/** What the workspace shows: the home, or one canvas in the editor (ADR-0072). */
+export type View = { readonly kind: 'home' } | { readonly kind: 'canvas'; readonly id: string };
+
+/** One item of the strip of open canvases. */
+export interface Tab {
+  readonly id: string;
+  readonly name: string;
+}
+
+const HOME: View = { kind: 'home' };
+
+const sameView = (a: View, b: View): boolean =>
+  a.kind === b.kind && (a.kind === 'home' || (b.kind === 'canvas' && a.id === b.id));
+
+/**
+ * The canvases of the browser, as the screens see them (ADR-0072, ADR-0073): which exist, which are open in the strip, which is shown, and what is
+ * done to them. It lists, makes, renames and duplicates canvases through the repository of the page, and keeps what the home shows of each; it does
+ * not touch the document of the canvas that is open, which the session saves. It is the host that the editor's session asks which canvas to open, and
+ * it waits for the editor that is open to finish writing before it changes what is shown.
+ */
+@Injectable()
+export class CanvasLibrary implements CanvasHost {
+  private readonly storage = inject(CanvasStorage);
+  private readonly announcer = inject(Announcer);
+
+  private readonly summaries = signal<readonly CanvasSummary[]>([]);
+  private readonly unreadableCanvases = signal<readonly UnreadableCanvas[]>([]);
+  private readonly openIds = signal<readonly string[]>([]);
+  private readonly current = signal<View>(HOME);
+  private readonly started = signal(false);
+  private readonly trouble = signal<string | null>(null);
+  private editor: OpenEditor | undefined;
+  /** Counts the changes of what is shown, so that one that waited for an editor to write does not undo a later one. */
+  private showing = 0;
+
+  /** Every canvas that can be read, as the home knows them. */
+  readonly canvases = this.summaries.asReadonly();
+  /** The canvases that are in the browser and cannot be read (ADR-0073). */
+  readonly unreadable = this.unreadableCanvases.asReadonly();
+  readonly view = this.current.asReadonly();
+  /** Whether the library has read the browser's canvases and decided what to show, which is when the workspace can show anything. */
+  readonly ready = this.started.asReadonly();
+  /** Why the canvases could not be read or what could not be done, in words, or `null`. */
+  readonly problem = this.trouble.asReadonly();
+  /** The open canvases, in the order of the strip, with the names they have now. */
+  readonly tabs = computed<readonly Tab[]>(() => {
+    const names = new Map(this.summaries().map(({ id, name }) => [id, name]));
+    return this.openIds().flatMap((id) => {
+      const name = names.get(id);
+      return name === undefined ? [] : [{ id, name }];
+    });
+  });
+
+  // The host of the editor's session (ADR-0072).
+
+  canvasToOpen(): string | undefined {
+    const view = this.current();
+    return view.kind === 'canvas' ? view.id : undefined;
+  }
+
+  attach(editor: OpenEditor): () => void {
+    this.editor = editor;
+    const view = this.current();
+    if (view.kind === 'canvas' && view.id !== editor.id) {
+      // The canvas that was wanted was not there any more, and the session opened another: the strip follows it.
+      this.replace(view.id, editor.id);
+    }
+    return () => {
+      if (this.editor === editor) {
+        this.editor = undefined;
+      }
+    };
+  }
+
+  /**
+   * Reads the canvases of the browser, and decides what to show: the canvas that was open last if it is in the strip, else the first of the strip, else the
+   * most recent canvas, else a canvas that it makes (the first run). It never shows the home at start: the learner came to build.
+   */
+  async start(): Promise<void> {
+    const loaded = await this.load();
+    if (!loaded.ok) {
+      this.trouble.set(`The canvases of this browser could not be opened. ${loaded.error.message}`);
+      return;
+    }
+    let repository = await this.storage.repository();
+    const { canvases } = loaded.value;
+    const [stored, last] = await Promise.all([
+      repository.getMeta('openCanvases'),
+      repository.getMeta('lastOpenCanvas'),
+    ]);
+    const readable = new Set(canvases.map(({ id }) => id));
+    const open = (stored.ok ? (stored.value ?? []) : []).filter((id) => readable.has(id));
+    const lastId = last.ok ? last.value : undefined;
+
+    let shown = lastId !== undefined && open.includes(lastId) ? lastId : open[0];
+    shown ??= lastId !== undefined && readable.has(lastId) ? lastId : canvases[0]?.id;
+    if (shown === undefined) {
+      let made = await this.makeBlank(repository);
+      if (!made.ok && this.storage.memoryReason() === undefined) {
+        repository = await this.storage.fallBack(made.error.message);
+        made = await this.makeBlank(repository);
+      }
+      if (!made.ok) {
+        this.trouble.set(`A canvas could not be made. ${made.error.message}`);
+        return;
+      }
+      this.add(made.value);
+      shown = made.value.id;
+    }
+    const ids = open.includes(shown) ? open : [...open, shown];
+    this.openIds.set(ids);
+    this.current.set({ kind: 'canvas', id: shown });
+    if (stored.ok ? !sameList(stored.value, ids) : true) {
+      this.saveStrip();
+    }
+    this.started.set(true);
+  }
+
+  /** Shows the home or a canvas, after the editor that is open has finished writing. Showing what is shown changes nothing. */
+  async show(view: View): Promise<void> {
+    if (sameView(view, this.current())) {
+      return;
+    }
+    const turn = (this.showing += 1);
+    await this.editor?.flush();
+    if (view.kind === 'home') {
+      await this.refresh();
+    }
+    if (turn !== this.showing) {
+      return;
+    }
+    this.current.set(view);
+    if (view.kind === 'canvas') {
+      const repository = await this.storage.repository();
+      void repository.setMeta('lastOpenCanvas', view.id);
+    }
+  }
+
+  /** Opens a canvas in the strip, if it is not there, and shows it. */
+  async openCanvas(id: string): Promise<void> {
+    if (!this.summaries().some((canvas) => canvas.id === id)) {
+      return;
+    }
+    if (!this.openIds().includes(id)) {
+      this.openIds.update((ids) => [...ids, id]);
+      this.saveStrip();
+    }
+    await this.show({ kind: 'canvas', id });
+  }
+
+  /**
+   * Takes a canvas out of the strip, which does not delete it. Closing the one that is shown shows the one on its left, or on its right if it was the first, or
+   * the home if it was the only one.
+   */
+  async closeTab(id: string): Promise<void> {
+    const ids = this.openIds();
+    const index = ids.indexOf(id);
+    if (index < 0) {
+      return;
+    }
+    const view = this.current();
+    const remaining = ids.filter((open) => open !== id);
+    const next = remaining[index - 1] ?? remaining[index];
+    if (view.kind === 'canvas' && view.id === id) {
+      await this.show(next === undefined ? HOME : { kind: 'canvas', id: next });
+    }
+    this.openIds.set(remaining);
+    this.saveStrip();
+  }
+
+  /** Makes a blank canvas called "Untitled canvas", or the first of "Untitled canvas 2" and so on that nobody has, and opens it. */
+  async create(): Promise<Outcome<CanvasSummary, RepositoryError>> {
+    const repository = await this.storage.repository();
+    const made = await this.makeBlank(repository);
+    if (!made.ok) {
+      this.report(`A canvas could not be made. ${made.error.message}`);
+      return made;
+    }
+    const summary = this.add(made.value);
+    await this.openCanvas(summary.id);
+    this.announcer.announce(`Made “${summary.name}”.`);
+    return succeed(summary);
+  }
+
+  /**
+   * Gives a canvas a name. A name that is blank or too long is refused with the reason and nothing changes; white space around a name is not part of it.
+   * Two canvases may have the same name.
+   */
+  async rename(id: string, name: string): Promise<Outcome<void, string>> {
+    const trimmed = name.trim();
+    const wrong = nameProblem(trimmed);
+    if (wrong !== null) {
+      return failure(wrong);
+    }
+    const repository = await this.storage.repository();
+    const saved = await repository.save(id, { name: trimmed });
+    if (!saved.ok) {
+      return failure(saved.error.message);
+    }
+    this.summaries.update((canvases) =>
+      canvases.map((canvas) => (canvas.id === id ? { ...canvas, name: trimmed } : canvas)),
+    );
+    this.announcer.announce(`Renamed to “${trimmed}”.`);
+    return succeed(undefined);
+  }
+
+  /** Makes a copy of a canvas as it is saved, called "<name> (copy)" or the first "(copy 2)" and so on that nobody has, and opens it. */
+  async duplicate(id: string): Promise<Outcome<CanvasSummary, RepositoryError>> {
+    await this.editor?.flush();
+    const repository = await this.storage.repository();
+    const original = await repository.get(id);
+    if (!original.ok) {
+      this.report(`The canvas could not be copied. ${original.error.message}`);
+      return original;
+    }
+    const name = copyName(original.value.name, this.names());
+    const made = await repository.create({ name, document: original.value.document });
+    if (!made.ok) {
+      this.report(`The canvas could not be copied. ${made.error.message}`);
+      return made;
+    }
+    const summary = this.add(made.value);
+    await this.openCanvas(summary.id);
+    this.announcer.announce(`Made “${summary.name}”, a copy of “${original.value.name}”.`);
+    return succeed(summary);
+  }
+
+  /** Reads the canvases again, for the home to show them as they are now. A canvas that is open has been written before this is asked. */
+  async refresh(): Promise<Outcome<void, RepositoryError>> {
+    const repository = await this.storage.repository();
+    const listed = await repository.list();
+    if (!listed.ok) {
+      this.report(`The canvases could not be read. ${listed.error.message}`);
+      return listed;
+    }
+    this.summaries.set(listed.value.canvases.map(summarise));
+    this.unreadableCanvases.set(listed.value.unreadable);
+    return succeed(undefined);
+  }
+
+  /** The problem has been read. */
+  dismissProblem(): void {
+    this.trouble.set(null);
+  }
+
+  /** Says what went wrong, on the screen and aloud, assertively. */
+  protected report(text: string): void {
+    this.trouble.set(text);
+    this.announcer.announce(text, 'assertive');
+  }
+
+  protected names(): string[] {
+    return this.summaries().map(({ name }) => name);
+  }
+
+  /** Puts a canvas that was just made among the ones the home knows, and answers its summary. */
+  protected add(record: CanvasRecord): CanvasSummary {
+    const summary = summarise(record);
+    this.summaries.update((canvases) => [summary, ...canvases.filter(({ id }) => id !== summary.id)]);
+    return summary;
+  }
+
+  private makeBlank(repository: CanvasRepository): Promise<Outcome<CanvasRecord, RepositoryError>> {
+    return repository.create({ name: uniqueName(UNTITLED, this.names()), document: emptyDocument() });
+  }
+
+  /** The canvases of the browser, on the browser's repository or, if that cannot list, in memory, as the session does (ADR-0072). */
+  private async load(): Promise<Outcome<{ readonly canvases: readonly CanvasRecord[] }, RepositoryError>> {
+    let repository = await this.storage.repository();
+    let listed = await repository.list();
+    if (!listed.ok && this.storage.memoryReason() === undefined) {
+      repository = await this.storage.fallBack(listed.error.message);
+      listed = await repository.list();
+    }
+    if (!listed.ok) {
+      return listed;
+    }
+    this.summaries.set(listed.value.canvases.map(summarise));
+    this.unreadableCanvases.set(listed.value.unreadable);
+    return succeed({ canvases: listed.value.canvases });
+  }
+
+  /** The strip has a canvas in the place of another one that was not there. */
+  private replace(gone: string, actual: string): void {
+    this.openIds.update((ids) => [...new Set(ids.map((id) => (id === gone ? actual : id)))]);
+    this.current.set({ kind: 'canvas', id: actual });
+    this.saveStrip();
+  }
+
+  /** Keeps the strip in the browser, so that a reload brings it back. If that fails the strip is what it is, and the next start shows the canvas that was open last. */
+  private saveStrip(): void {
+    const ids = this.openIds();
+    void this.storage.repository().then((repository) => repository.setMeta('openCanvases', ids));
+  }
+}
+
+const sameList = (a: readonly string[] | undefined, b: readonly string[]): boolean =>
+  a !== undefined && a.length === b.length && a.every((id, index) => id === b[index]);

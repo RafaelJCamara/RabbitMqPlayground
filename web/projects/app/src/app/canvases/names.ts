@@ -31,6 +31,19 @@ export function copyName(name: string, taken: Iterable<string>): string {
   }
 }
 
+/**
+ * Why this cannot be the name of a canvas, in words, or `null` if it can (ADR-0028): it needs something in it that is not white space, and it is at most
+ * 200 characters. The root cause comes first, and then what to do.
+ */
+export function nameProblem(name: string): string | null {
+  if (!/\S/.test(name)) {
+    return 'A canvas needs a name, and this one is blank. Type a name.';
+  }
+  return name.length > SIZE_CAPS.name
+    ? `The name has ${name.length} characters, and a name can have at most ${SIZE_CAPS.name}. Shorten the name.`
+    : null;
+}
+
 /** The most that the name of a file says of the name of a canvas. */
 const FILE_NAME_LENGTH = 60;
 
