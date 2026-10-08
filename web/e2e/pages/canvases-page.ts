@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, type Locator, type Page } from '@playwright/test';
 import { EditorPage } from './editor-page';
 
@@ -42,6 +43,18 @@ export class CanvasesPage {
   /** Waits for the editor of the canvas that is shown to have opened it. */
   async editorReady(): Promise<void> {
     await expect(this.editor.saveState).toHaveText('All changes saved');
+  }
+
+  /** Runs an act that gives the learner a file, and answers the name of the file and what is in it. */
+  async downloaded(act: () => Promise<unknown>): Promise<{ readonly name: string; readonly text: string }> {
+    const [download] = await Promise.all([this.page.waitForEvent('download'), act()]);
+    const location = await download.path();
+    return { name: download.suggestedFilename(), text: await readFile(location, 'utf8') };
+  }
+
+  /** Chooses a file in one of the two fields of the home, which are hidden behind their buttons: `open-file` or `restore-file`. */
+  async choose(field: 'open-file' | 'restore-file', name: string, text: string): Promise<void> {
+    await this.page.getByTestId(field).setInputFiles({ name, mimeType: 'application/json', buffer: Buffer.from(text) });
   }
 
   /** The names of the items of the strip, the home first, in order. */

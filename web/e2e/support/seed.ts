@@ -71,6 +71,8 @@ export async function seedLibrary(
   canvases: readonly SeededCanvas[],
   meta: { readonly openCanvases?: readonly string[]; readonly lastOpenCanvas?: string } = {},
 ): Promise<void> {
+  // A canvas that the test does not date was made a minute ago, one after the other, so that the order of the home is known and nothing is old enough to be reminded of.
+  const base = Date.now() - 60_000;
   await page.goto('build-info.json');
   await page.evaluate(
     async ({ records, values }) => {
@@ -100,8 +102,8 @@ export async function seedLibrary(
       records: canvases.map(({ id, name, document, createdAt, updatedAt }, index) => ({
         id,
         name,
-        createdAt: createdAt ?? 1_700_000_000_000 + index,
-        updatedAt: updatedAt ?? 1_700_000_000_000 + index,
+        createdAt: createdAt ?? base + index,
+        updatedAt: updatedAt ?? base + index,
         document: document ?? emptyDocument(),
       })),
       values: Object.fromEntries(Object.entries(meta).filter(([, value]) => value !== undefined)),
