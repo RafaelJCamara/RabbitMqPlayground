@@ -538,7 +538,7 @@ test.describe('what the home says about keeping the canvases (ADR-0075)', () => 
         },
       });
     });
-    await page.goto('?ff=editor,canvases');
+    await page.goto('?ff=editor');
     await skipWelcome(page);
     await canvases.heading.waitFor();
     await expect(canvases.editor.saveState).toContainText('Not kept after you close this tab.');

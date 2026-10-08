@@ -31,20 +31,7 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await expect(canvases.editor.toolbox).toBeVisible();
     await expect(canvases.editor.canvas).toBeVisible();
     await expect.poll(() => canvases.stored()).toEqual(['Untitled canvas']);
-    expect(await page.evaluate(() => [...(window.__rmq?.flags() ?? [])].sort())).toEqual(['canvases', 'editor']);
-  });
-
-  test('is not there without its flag, and does nothing without the editor', async ({ page }) => {
-    const canvases = new CanvasesPage(page);
-
-    await canvases.editor.goto('?ff=editor');
-    await expect(canvases.strip).toHaveCount(0);
-    await expect(canvases.editor.toolbox).toBeVisible();
-
-    await page.goto('?ff=canvases');
-    await expect(page.getByText(/Under construction/)).toBeVisible();
-    await expect(canvases.strip).toHaveCount(0);
-    await expect(canvases.editor.toolbox).toHaveCount(0);
+    expect(await page.evaluate(() => [...(window.__rmq?.flags() ?? [])].sort())).toEqual(['editor']);
   });
 
   test('makes another canvas with New canvas, and shows it in a tab of its own', async ({ page }) => {

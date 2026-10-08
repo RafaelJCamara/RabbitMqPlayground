@@ -342,11 +342,4 @@ test.describe('clearing a canvas, with an Undo (ADR-0074)', () => {
     await expect(page.getByTestId('status-message')).toHaveText('The canvas is already empty.');
     await expect(canvases.notices).toHaveCount(0);
   });
-
-  test('has no button for it, and no notice, without the flag', async ({ page }) => {
-    const canvases = new CanvasesPage(page);
-    await canvases.editor.goto('?ff=editor');
-
-    await expect(page.getByRole('button', { name: 'Clear canvas' })).toHaveCount(0);
-  });
 });

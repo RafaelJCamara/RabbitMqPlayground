@@ -6,7 +6,6 @@ import { ThemeService } from './core/theme/theme-service';
 import { LinkFailed } from './canvases/link-failed';
 import { SharedView } from './canvases/shared-view';
 import { Workspace } from './canvases/workspace';
-import { Editor } from './editor/editor';
 
 /**
  * The root (ADR-0030). Behind the `editor` flag it shows the editor, which the compiler loads as a chunk of its own, so that a
@@ -16,7 +15,7 @@ import { Editor } from './editor/editor';
  */
 @Component({
   selector: 'rmq-root',
-  imports: [Editor, LinkFailed, SharedView, Workspace],
+  imports: [LinkFailed, SharedView, Workspace],
   templateUrl: './app.html',
 })
 export class App {
@@ -24,8 +23,6 @@ export class App {
   protected readonly disclaimer = APP_DISCLAIMER;
   private readonly flags = inject(FeatureFlags);
   protected readonly editor = this.flags.isEnabled('editor');
-  /** With the flag `canvases` (and the editor) the editor is inside a workspace of several canvases (ADR-0072). */
-  protected readonly canvases = this.flags.isEnabled('canvases');
 
   private readonly link = inject(LinkOpening);
   /** The link in the address is being unpacked. */

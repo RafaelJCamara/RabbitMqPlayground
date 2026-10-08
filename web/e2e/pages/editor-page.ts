@@ -59,9 +59,13 @@ export class EditorPage {
     this.howToLink = page.getByRole('region', { name: 'How to link' });
   }
 
-  /** Opens the editor, and waits until it has opened the canvas and says that its changes are saved. */
+  /**
+   * Opens the editor, which is in the workspace of the canvases, answers the question of a first run by building from scratch (ADR-0084), and waits until it has opened the
+   * canvas and says that its changes are saved.
+   */
   async goto(path = '?ff=editor'): Promise<void> {
     await this.page.goto(path);
+    await skipWelcome(this.page);
     await this.heading.waitFor();
     await expect(this.saveState).toHaveText('All changes saved');
   }

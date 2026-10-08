@@ -172,7 +172,9 @@ test.describe('Foblex contract: the live viewport (workaround 1 of ADR-0016)', (
     await open(page);
     await nextFrame(page);
     const before = await page.evaluate(() => window.__rmq?.viewport());
-    const start = { x: (await flow(page).boundingBox())!.x + 40, y: (await flow(page).boundingBox())!.y + 500 };
+    const box = (await flow(page).boundingBox())!;
+    // Near the bottom of the canvas, which has the strip of open canvases above it and is not as tall as it was without them.
+    const start = { x: box.x + 40, y: box.y + box.height - 40 };
 
     await page.mouse.move(start.x, start.y);
     await page.mouse.down();

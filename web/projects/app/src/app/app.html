@@ -10,17 +10,9 @@
   } @error {
     <p class="bg-surface text-danger p-6" role="alert">The editor could not be loaded. Reload the page to try again.</p>
   }
-} @else if (editor && canvases) {
-  @defer (on immediate) {
-    <rmq-workspace />
-  } @loading {
-    <p class="bg-surface text-muted p-6" role="status">Loading the editor…</p>
-  } @error {
-    <p class="bg-surface text-danger p-6" role="alert">The editor could not be loaded. Reload the page to try again.</p>
-  }
 } @else if (editor) {
   @defer (on immediate) {
-    <rmq-editor />
+    <rmq-workspace />
   } @loading {
     <p class="bg-surface text-muted p-6" role="status">Loading the editor…</p>
   } @error {

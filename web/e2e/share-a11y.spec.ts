@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { canvasFromText, snapshotAfter } from '@rmq/testing';
-import { EditorPage } from './pages/editor-page';
+import { EditorPage, skipWelcome } from './pages/editor-page';
 import { ExportPage, LinkFailedPage, SharedViewPage, SharePage } from './pages/share-page';
 import { SimulationPage } from './pages/simulation-page';
 import { expectNoAxeViolations } from './support/axe';
@@ -249,6 +249,8 @@ test.describe('the keyboard', () => {
     await expect(shared.leave).toBeFocused();
     await other.keyboard.press('Enter');
 
+    // The page that the learner comes back to is a first run, and asks what to start with (ADR-0082, ADR-0084).
+    await skipWelcome(other);
     await new EditorPage(other).saveState.filter({ hasText: 'All changes saved' }).waitFor();
     expect(other.url()).not.toContain('#c=');
   });

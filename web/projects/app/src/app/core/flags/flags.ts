@@ -14,11 +14,6 @@ export const FLAGS = {
     default: false,
     description: 'Running the simulation: messages in flight, consumers, queues that fill (slice S6).',
   },
-  canvases: {
-    default: false,
-    description:
-      'Several canvases around the editor: a strip of open canvases, the home, delete and clear with an Undo, files and backups. It needs the flag editor (slice S9).',
-  },
 } as const satisfies Record<string, { readonly default: false; readonly description: string }>;
 // `default: false` is a literal type, so turning a flag on by default does not compile. A test checks it at runtime too.
 

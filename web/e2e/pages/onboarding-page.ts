@@ -4,7 +4,7 @@ import { EditorPage } from './editor-page';
 import { SimulationPage } from './simulation-page';
 
 /** The flags that the first run, the templates and the tour need (ADR-0082). */
-export const ONBOARDING_PATH = '?ff=editor,canvases,simulation';
+export const ONBOARDING_PATH = '?ff=editor,simulation';
 
 /**
  * What a learner meets first (ADR-0081 to ADR-0083), behind the flags `editor`, `canvases` and `simulation`: the chooser that asks what to start with, the templates it

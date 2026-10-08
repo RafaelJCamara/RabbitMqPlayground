@@ -326,7 +326,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
           await seedLibrary(page, state.canvases);
         }
         if (state.inMemory === true) {
-          await page.goto('?ff=editor,canvases');
+          await page.goto('?ff=editor');
           await skipWelcome(page);
           await canvases.heading.waitFor();
           await expect(canvases.editor.saveState).toContainText('Not kept after you close this tab.');

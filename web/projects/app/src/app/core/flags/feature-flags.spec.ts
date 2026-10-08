@@ -23,7 +23,6 @@ describe('FeatureFlags', () => {
 
     expect(flags.isEnabled('editor')).toBe(true);
     expect(flags.isEnabled('simulation')).toBe(true);
-    expect(flags.isEnabled('canvases')).toBe(false);
     expect([...flags.enabled].sort()).toEqual(['editor', 'simulation']);
   });
 
@@ -50,17 +49,16 @@ describe('FeatureFlags', () => {
     });
 
     it('reads local storage', () => {
-      window.localStorage.setItem(FLAGS_STORAGE_KEY, 'canvases');
+      window.localStorage.setItem(FLAGS_STORAGE_KEY, 'simulation');
 
-      expect(TestBed.inject(FeatureFlags).isEnabled('canvases')).toBe(true);
+      expect(TestBed.inject(FeatureFlags).isEnabled('simulation')).toBe(true);
     });
 
     it('reads ?ff= from the address', () => {
-      window.history.replaceState(null, '', '/?ff=simulation,canvases');
+      window.history.replaceState(null, '', '/?ff=simulation');
       const flags = TestBed.inject(FeatureFlags);
 
       expect(flags.isEnabled('simulation')).toBe(true);
-      expect(flags.isEnabled('canvases')).toBe(true);
       expect(flags.isEnabled('editor')).toBe(false);
     });
 

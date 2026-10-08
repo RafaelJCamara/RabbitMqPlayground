@@ -77,30 +77,15 @@ describe('App', () => {
     });
   });
 
-  describe('behind the canvases flag (ADR-0072)', () => {
-    it('shows the editor alone, with no strip of open canvases, when only the editor flag is on', async () => {
+  describe('the workspace of several canvases (ADR-0072)', () => {
+    it('puts the editor in a workspace, with the strip and the one heading', async () => {
       await render(App, options('editor'));
-
-      expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
-      expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
-    });
-
-    it('puts the editor in a workspace, with the strip and the one heading, when the flags are editor and canvases', async () => {
-      await render(App, options('editor,canvases'));
 
       expect(await screen.findByRole('navigation', { name: 'Open canvases' })).toBeInTheDocument();
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
       expect(screen.getByRole('button', { name: 'My canvases' })).toBeInTheDocument();
       expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
-    });
-
-    it('does nothing without the editor: the placeholder, and none of the workspace, because canvases need the editor', async () => {
-      await render(App, options('canvases'));
-
-      expect(screen.getByText(/Under construction/)).toBeInTheDocument();
-      expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
     });
   });
 
@@ -147,8 +132,8 @@ describe('App', () => {
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
     });
 
-    it('opens it with the flag canvases on too, and the shared canvas is not among the canvases of the learner', async () => {
-      await render(App, withLink('editor,canvases', await hashOf()));
+    it('opens it in the editor that keeps nothing, and the shared canvas is not among the canvases of the learner', async () => {
+      await render(App, withLink('editor', await hashOf()));
 
       expect(await screen.findByTestId('shared-name')).toBeInTheDocument();
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();

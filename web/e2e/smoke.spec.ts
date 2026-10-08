@@ -1,4 +1,5 @@
 import { AppPage } from './pages/app-page';
+import { EditorPage } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { expect, test } from './support/test';
 
@@ -66,18 +67,16 @@ test.describe('feature flags', () => {
   });
 
   test('can be turned on with ?ff=', async ({ page }) => {
-    const app = new AppPage(page);
-    await app.goto('?ff=editor,simulation');
+    await new EditorPage(page).goto('?ff=editor,simulation');
 
-    expect(await app.flags()).toEqual(['editor', 'simulation']);
+    expect(await new AppPage(page).flags()).toEqual(['editor', 'simulation']);
   });
 
   test('can be turned on in local storage, and add up with ?ff=', async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem('rmq.flags', 'canvases'));
-    const app = new AppPage(page);
-    await app.goto('?ff=simulation');
+    await page.addInitScript(() => window.localStorage.setItem('rmq.flags', 'editor'));
+    await new EditorPage(page).goto('?ff=simulation');
 
-    expect(await app.flags()).toEqual(['canvases', 'simulation']);
+    expect(await new AppPage(page).flags()).toEqual(['editor', 'simulation']);
   });
 
   test('ignore a name they do not know, and say so in the console', async ({ page }) => {
