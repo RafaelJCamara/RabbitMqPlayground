@@ -43,30 +43,3 @@ export function nameProblem(name: string): string | null {
     ? `The name has ${name.length} characters, and a name can have at most ${SIZE_CAPS.name}. Shorten the name.`
     : null;
 }
-
-/** The most that the name of a file says of the name of a canvas. */
-const FILE_NAME_LENGTH = 60;
-
-/** What is left of a name when it is made fit to be a file: its letters and digits, in lower case, with a hyphen between the runs of the rest, or `canvas` if nothing is left. */
-export function slug(name: string): string {
-  const words = name
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-+|-+$/g, '');
-  const cut = Array.from(words).slice(0, FILE_NAME_LENGTH).join('').replace(/-+$/, '');
-  return cut === '' ? 'canvas' : cut;
-}
-
-/** The extension of the file of one canvas. It ends in `.json`, so that a file picker offers it. */
-export const CANVAS_FILE_EXTENSION = '.rmq.json';
-
-/** The name of the file that a canvas is saved as: `orders-flow.rmq.json`. */
-export const canvasFileName = (name: string): string => `${slug(name)}${CANVAS_FILE_EXTENSION}`;
-
-const two = (number: number): string => String(number).padStart(2, '0');
-
-/** The name of the file of a backup: `rmq-playground-backup-2026-10-08.json`, with the date of the learner's own day. */
-export function backupFileName(time: number): string {
-  const day = new Date(time);
-  return `rmq-playground-backup-${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}.json`;
-}

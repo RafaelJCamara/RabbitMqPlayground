@@ -26,9 +26,10 @@ import { CanvasStorage, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { Toasts } from '../core/ui/toasts';
 import { formatChord } from '../editor/keyboard';
 import { backupDone, type BackupDone } from './backup-words';
-import { FILE_DOWNLOADER } from './downloader';
+import { FILE_DOWNLOADER } from '../core/files/downloader';
 import { readText, tooBigToRead } from './file-text';
-import { backupFileName, canvasFileName, copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { backupFileName, canvasFileName } from '../core/files/file-names';
+import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
 import { backupReminder, SNOOZE_MS } from './reminder';
 import { summarise, type CanvasSummary } from './summary';
 

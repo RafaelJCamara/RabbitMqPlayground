@@ -19,7 +19,7 @@ import type { OpenEditor } from '../core/session/canvas-host';
 import { NOW } from '../core/session/canvas-session';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
-import { FILE_DOWNLOADER } from './downloader';
+import { FILE_DOWNLOADER } from '../core/files/downloader';
 import { CanvasLibrary, type View } from './library';
 
 const unavailable: RepositoryError = {
