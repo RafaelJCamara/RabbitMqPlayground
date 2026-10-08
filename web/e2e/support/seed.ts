@@ -52,3 +52,59 @@ export async function seedCanvas(page: Page, document: CanvasDocument, name = 'S
     { record: { id: 'seeded', name, createdAt: 1_700_000_000_000, updatedAt: 1_700_000_000_000, document } },
   );
 }
+
+/** A canvas to put in the database: the document is empty unless the test gives one, and the times are fixed so that the order of the home is known. */
+export interface SeededCanvas {
+  readonly id: string;
+  readonly name: string;
+  readonly document?: CanvasDocument;
+  readonly createdAt?: number;
+  readonly updatedAt?: number;
+}
+
+/**
+ * Writes several canvases into the database of the app, and what the workspace keeps of the strip (ADR-0072), the way `seedCanvas` does: to a page of the same
+ * origin that is not the app, before the app starts. Without `meta` the app opens the most recent canvas, and its strip is that one.
+ */
+export async function seedLibrary(
+  page: Page,
+  canvases: readonly SeededCanvas[],
+  meta: { readonly openCanvases?: readonly string[]; readonly lastOpenCanvas?: string } = {},
+): Promise<void> {
+  await page.goto('build-info.json');
+  await page.evaluate(
+    async ({ records, values }) => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const open = indexedDB.open('rmq-playground', 1);
+        open.onupgradeneeded = () => {
+          open.result.createObjectStore('canvases', { keyPath: 'id' });
+          open.result.createObjectStore('meta');
+        };
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(['canvases', 'meta'], 'readwrite');
+        for (const record of records) {
+          transaction.objectStore('canvases').put(record);
+        }
+        for (const [key, value] of Object.entries(values)) {
+          transaction.objectStore('meta').put(value, key);
+        }
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+      database.close();
+    },
+    {
+      records: canvases.map(({ id, name, document, createdAt, updatedAt }, index) => ({
+        id,
+        name,
+        createdAt: createdAt ?? 1_700_000_000_000 + index,
+        updatedAt: updatedAt ?? 1_700_000_000_000 + index,
+        document: document ?? emptyDocument(),
+      })),
+      values: Object.fromEntries(Object.entries(meta).filter(([, value]) => value !== undefined)),
+    },
+  );
+}
