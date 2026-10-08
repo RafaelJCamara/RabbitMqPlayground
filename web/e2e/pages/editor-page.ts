@@ -98,9 +98,11 @@ export class EditorPage {
    * warning`, ADR-0044), and it is the same node, so the label may be followed by `, ` and what else is said.
    */
   node(label: string, options: { exact?: boolean } = {}): Locator {
+    // A JSON string is a CSS string too, so a label with a quote or a backslash in it (a name is any text) is looked for as it is.
+    const exactly = `[data-node-id][aria-label=${JSON.stringify(label)}]`;
     return options.exact === true
-      ? this.page.locator(`[data-node-id][aria-label="${label}"]`)
-      : this.page.locator(`[data-node-id][aria-label="${label}"], [data-node-id][aria-label^="${label}, "]`);
+      ? this.page.locator(exactly)
+      : this.page.locator(`${exactly}, [data-node-id][aria-label^=${JSON.stringify(`${label}, `)}]`);
   }
 
   /** A node by its id (`x1`), for the tests that say what the document has. */
