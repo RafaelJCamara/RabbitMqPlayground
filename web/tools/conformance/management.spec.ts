@@ -69,6 +69,30 @@ describe('ManagementApi', () => {
     expect(seen[1]?.url).toBe('/api/permissions/a%20b%2Fc/guest');
   });
 
+  it('imports a definitions file exactly as it was written, and gives guest full permissions on the vhost that it made', async () => {
+    const file = '{\n  "vhosts": [{ "name": "a b" }],\n  "n": 1.0\n}\n';
+
+    await api().importDefinitions('a b', file);
+
+    expect(seen.map(({ method, url }) => `${method} ${url}`)).toEqual([
+      'POST /api/definitions',
+      'PUT /api/permissions/a%20b/guest',
+    ]);
+    // A float that is written 1.0 has to reach the broker as 1.0, so the text is not parsed and written again.
+    expect(seen[0]?.body).toBe(file);
+    expect(seen[0]?.authorization).toBe(`Basic ${Buffer.from('guest:guest').toString('base64')}`);
+    expect(JSON.parse(seen[1]?.body ?? '')).toEqual({ configure: '.*', write: '.*', read: '.*' });
+  });
+
+  it('says what the broker answered when it refuses a file, and does not go on to give permissions on a vhost that was not made', async () => {
+    respond = () => ({ status: 400, body: { error: 'bad_request', reason: 'null_not_allowed' } });
+
+    await expect(api().importDefinitions('v', '{}')).rejects.toThrow(
+      'POST /api/definitions answered 400: {"error":"bad_request","reason":"null_not_allowed"}',
+    );
+    expect(seen).toHaveLength(1);
+  });
+
   it('deletes a vhost, which also closes its connections', async () => {
     await api().deleteVhost('v');
 

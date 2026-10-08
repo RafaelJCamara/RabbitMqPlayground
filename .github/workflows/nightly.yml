@@ -2,6 +2,8 @@
 #
 #   conformance  plays the recorded scenarios against a real RabbitMQ and compares what it does with the fixtures.
 #                Any difference fails the job and is investigated. A fixture is never re-recorded to make a failure go away.
+#                It also imports the definitions file that the app exports for each scenario that a file can say into the broker,
+#                and plays the publishes against it: the file has to route as the broker did (ADR-0079).
 #   fuzz         runs the property-based suites of the libraries and of the app with a random seed and many more runs.
 #
 # Run it by hand from the Actions tab: mode "record" records new fixtures (see below), "verify" is the nightly check.

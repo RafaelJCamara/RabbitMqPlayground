@@ -14,6 +14,11 @@ export interface LiveBroker {
   readonly info: BrokerInfo;
   /** Creates the vhost, connects to it, and, when the session is closed, deletes the vhost. */
   openSession(vhost: string): Promise<BrokerSession>;
+  /**
+   * Imports a definitions file (the export of the app, ADR-0079) as the management UI does, which creates the vhost that the file names, connects to it, and, when the session is closed, deletes
+   * the vhost. What the file declares is there already, so the session is for playing what is done after it.
+   */
+  openImportedSession(vhost: string, definitions: string): Promise<BrokerSession>;
   stop(): Promise<void>;
 }
 
@@ -27,13 +32,18 @@ export class ManagementApi {
   ) {}
 
   private async request(method: string, path: string, body?: unknown): Promise<Response> {
+    return this.send(method, path, body === undefined ? undefined : JSON.stringify(body));
+  }
+
+  /** A request whose body is the text that is given, as it is: a definitions file is sent as it was written. */
+  private async send(method: string, path: string, text?: string): Promise<Response> {
     const response = await fetch(`${this.baseUrl}/api/${path}`, {
       method,
       headers: {
         authorization: `Basic ${Buffer.from(`${CREDENTIALS.username}:${CREDENTIALS.password}`).toString('base64')}`,
         'content-type': 'application/json',
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(text === undefined ? {} : { body: text }),
     });
     if (!response.ok) {
       throw new Error(`${method} /api/${path} answered ${response.status}: ${await response.text()}`);
@@ -43,6 +53,19 @@ export class ManagementApi {
 
   async createVhost(vhost: string): Promise<void> {
     await this.request('PUT', `vhosts/${encodeURIComponent(vhost)}`);
+    await this.request('PUT', `permissions/${encodeURIComponent(vhost)}/${CREDENTIALS.username}`, {
+      configure: '.*',
+      write: '.*',
+      read: '.*',
+    });
+  }
+
+  /**
+   * Imports a definitions file, the way the management UI's "Import definitions" does: to the broker, which creates the vhosts that the file names. The file is sent as it is written, because
+   * a float that is written `1.0` must reach the broker as `1.0`. The user gets full permissions on the vhost, as on one that was made by `createVhost`.
+   */
+  async importDefinitions(vhost: string, definitions: string): Promise<void> {
+    await this.send('POST', 'definitions', definitions);
     await this.request('PUT', `permissions/${encodeURIComponent(vhost)}/${CREDENTIALS.username}`, {
       configure: '.*',
       write: '.*',
@@ -96,6 +119,12 @@ export async function connectBroker(address: BrokerAddress): Promise<LiveBroker>
     },
     async openSession(vhost) {
       await management.createVhost(vhost);
+      return AmqpSession.connect({ hostname: address.hostname, port: address.amqpPort, vhost, ...CREDENTIALS }, () =>
+        management.deleteVhost(vhost),
+      );
+    },
+    async openImportedSession(vhost, definitions) {
+      await management.importDefinitions(vhost, definitions);
       return AmqpSession.connect({ hostname: address.hostname, port: address.amqpPort, vhost, ...CREDENTIALS }, () =>
         management.deleteVhost(vhost),
       );

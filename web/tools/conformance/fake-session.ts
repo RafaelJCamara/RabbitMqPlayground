@@ -91,6 +91,8 @@ export class FakeBroker implements LiveBroker {
   readonly info = { image: 'fake:1', imageDigest: 'sha256:fake', serverVersion: '9.9.9', erlangVersion: '99' };
   readonly vhosts: string[] = [];
   readonly sessions: FakeSession[] = [];
+  /** The definitions files that were imported, with the vhost each one was imported to. */
+  readonly imported: { readonly vhost: string; readonly definitions: string }[] = [];
   stopped = false;
 
   openSession(vhost: string): Promise<BrokerSession> {
@@ -98,6 +100,11 @@ export class FakeBroker implements LiveBroker {
     const session = new FakeSession();
     this.sessions.push(session);
     return Promise.resolve(session);
+  }
+
+  openImportedSession(vhost: string, definitions: string): Promise<BrokerSession> {
+    this.imported.push({ vhost, definitions });
+    return this.openSession(vhost);
   }
 
   stop(): Promise<void> {

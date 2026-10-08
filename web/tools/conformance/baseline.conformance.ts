@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { RABBITMQ_BASELINE } from '@rmq/engine';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { startRabbitMq } from './container';
+import { observeExported, whyNotExportable } from './export';
 import { readFixtureSet, toFixture, toScenario, writeFixtureSet, type Fixture } from './fixtures';
 import { connectBroker, type LiveBroker } from './management';
 import { buildManifest, CONFORMANCE_IMAGE, observe, parseMode } from './run';
@@ -17,6 +18,9 @@ import { checkManifest, describeDrift, verifyCase, writeDiffs, type Verdict } fr
  *
  * It needs Docker, which a developer machine or the cloud container may not have. There it is skipped, with a notice,
  * unless CONFORMANCE_REQUIRED=true, which the nightly job sets so that a missing Docker is a failure there.
+ *
+ * In verify mode it asks a second question of the same fixtures (ADR-0079): the definitions file that the app exports for each routing scenario that only declares, binds and publishes is imported into the broker, the way the
+ * management UI imports one, and the publishes are played against the vhost it made. The queues must get what the fixture recorded. A difference is drift of the file or of the model, and a person finds out which.
  *
  * To debug against a broker that is already running, set CONFORMANCE_BROKER_HOST (and, if they differ from the
  * defaults, CONFORMANCE_AMQP_PORT and CONFORMANCE_MANAGEMENT_URL). Such a broker is not the pinned image, so the
@@ -87,6 +91,7 @@ describe.skipIf(!runtime.available && !required)(`conformance against RabbitMQ $
   } else {
     const { fixtures, manifest } = readFixtureSet(fixturesRoot, RABBITMQ_BASELINE);
     const verdicts: Verdict[] = [];
+    const exported = fixtures.filter((fixture) => whyNotExportable(fixture) === null);
 
     it('has fixtures to check', () => {
       expect(fixtures.length).toBeGreaterThan(0);
@@ -97,6 +102,19 @@ describe.skipIf(!runtime.available && !required)(`conformance against RabbitMQ $
       async (_id, fixture) => {
         const verdict = verifyCase(fixture, await observe(broker, toScenario(fixture)));
         verdicts.push(verdict);
+        expect(verdict.drifted ? describeDrift(verdict) : 'no drift').toBe('no drift');
+      },
+    );
+
+    it('has scenarios that a definitions file can say', () => {
+      expect(exported.length).toBeGreaterThan(30);
+    });
+
+    it.each(exported.map((fixture) => [fixture.id, fixture] as const))(
+      '%s, exported and imported, routes as recorded',
+      async (_id, fixture) => {
+        const verdict = verifyCase(fixture, await observeExported(broker, fixture));
+        verdicts.push({ ...verdict, id: `export-${verdict.id}` });
         expect(verdict.drifted ? describeDrift(verdict) : 'no drift').toBe('no drift');
       },
     );
