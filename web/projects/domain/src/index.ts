@@ -194,3 +194,5 @@ export { wordText } from './lib/syntax/words';
 export type { CommandSpec } from './lib/syntax/spec';
 export { parseDocument, validateDocument, type ParsedDocument } from './lib/document/validate';
 export { readSnapshot, snapshotDisagrees, type SnapshotRead } from './lib/snapshot';
+export { buildTemplate } from './lib/templates/build';
+export { TEMPLATES, templateById, type Template, type TemplateId } from './lib/templates/templates';
