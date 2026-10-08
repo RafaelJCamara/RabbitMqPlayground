@@ -1,11 +1,12 @@
 import type { Page } from '@playwright/test';
 import { edgeKeys } from '@rmq/domain';
+import { CanvasesPage } from './pages/canvases-page';
 import { EditorPage } from './pages/editor-page';
 import { Conditions, HeadersPage } from './pages/headers-page';
 import { SimulationPage } from './pages/simulation-page';
 import { TesterPage } from './pages/tester-page';
 import { BIG_CANVAS, BIG_EDGES, BIG_HEADERS_CANVAS, BIG_NODES } from './support/big-canvas';
-import { seedCanvas } from './support/seed';
+import { buildDocument, seedCanvas, seedLibrary, type SeededCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -307,3 +308,75 @@ async function openBigHeaders(page: Page): Promise<HeadersPage> {
   await page.getByRole('region', { name: 'Simulation' }).getByRole('button', { name: 'Pause' }).click();
   return new HeadersPage(new SimulationPage(editor));
 }
+
+/**
+ * The home with many canvases (ADR-0073): three hundred canvases of seven elements each, which is more than a learner makes and a good part of the thousand that a backup may hold. The home reads the repository once, keeps a
+ * summary of each canvas and not its document, draws 48 cards, and the thumbnail of a card is drawn from the layout as data. The budget is the same three seconds as the big canvas: a guard and not a benchmark.
+ */
+test.describe('the home, with three hundred canvases', () => {
+  const MANY = 300;
+  const document = buildDocument([
+    {
+      type: 'declare-exchange',
+      name: 'orders',
+      exchangeType: 'direct',
+      durable: true,
+      autoDelete: false,
+      internal: false,
+    },
+    { type: 'declare-queue', name: 'billing', durable: true },
+    { type: 'add-producer', name: 'sender' },
+    { type: 'add-consumer', name: 'worker' },
+    { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'k' },
+    { type: 'link', producer: 'sender', target: { kind: 'exchange', name: 'orders' } },
+    { type: 'subscribe', consumer: 'worker', queue: 'billing' },
+  ]);
+  const library = (): SeededCanvas[] =>
+    Array.from({ length: MANY }, (_, index) => ({
+      id: `c${String(index).padStart(3, '0')}`,
+      name: `Canvas ${String(index).padStart(3, '0')}`,
+      document,
+    }));
+
+  test(`draws its first page of cards within ${BUDGET_MS} ms of the click that shows it`, async ({ page }) => {
+    await seedLibrary(page, library());
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+
+    const started = await page.evaluate(() => performance.now());
+    await canvases.tab('My canvases').click();
+    await expect(canvases.home.getByRole('article')).toHaveCount(48);
+    await expect(canvases.home.getByTestId('thumbnail').first()).toBeVisible();
+    const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
+
+    test
+      .info()
+      .annotations.push({ type: 'home', description: `${elapsed} ms for the first 48 cards of ${MANY} canvases` });
+    expect(elapsed, `the home of ${MANY} canvases took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
+    await expect(canvases.count).toHaveText(`${MANY} canvases`);
+  });
+
+  test(`searches and sorts all of them within ${BUDGET_MS} ms, and draws the rest on a button`, async ({ page }) => {
+    await seedLibrary(page, library());
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.showHome();
+
+    const started = await page.evaluate(() => performance.now());
+    await canvases.search.fill('Canvas 29');
+    await expect(canvases.home.getByRole('article')).toHaveCount(10);
+    await canvases.search.fill('');
+    await canvases.sort.selectOption('name');
+    await expect(canvases.home.getByRole('article')).toHaveCount(48);
+    const elapsed = Math.round((await page.evaluate(() => performance.now())) - started);
+
+    test
+      .info()
+      .annotations.push({ type: 'home', description: `${elapsed} ms to search, clear and sort ${MANY} canvases` });
+    expect(elapsed, `searching and sorting took ${elapsed} ms`).toBeLessThan(BUDGET_MS);
+    for (let page_ = 1; page_ < Math.ceil(MANY / 48); page_ += 1) {
+      await canvases.home.getByRole('button', { name: 'Show more' }).click();
+    }
+    await expect(canvases.home.getByRole('article')).toHaveCount(MANY);
+  });
+});
