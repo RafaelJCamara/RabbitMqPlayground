@@ -314,7 +314,8 @@ export class Simulation implements RuntimeHost {
     try {
       this.engine.restore(shared.snapshot);
     } catch (error) {
-      shared.failed(error instanceof Error ? error.message : String(error));
+      // `restore` throws a RangeError, with the reason in its message, and nothing else (ADR-0077).
+      shared.failed((error as RangeError).message);
       return;
     }
     this.real = this.engine.now();

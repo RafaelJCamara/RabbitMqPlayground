@@ -198,11 +198,10 @@ export class SharePanel {
     return fileInstead(link.error);
   }
 
+  /** A radio button says `change` only when it is chosen and was not, so a choice is always another one. */
   protected choose(withMessages: boolean): void {
-    if (withMessages !== this.withMessages()) {
-      this.withMessages.set(withMessages);
-      void this.make();
-    }
+    this.withMessages.set(withMessages);
+    void this.make();
   }
 
   protected select(): void {
