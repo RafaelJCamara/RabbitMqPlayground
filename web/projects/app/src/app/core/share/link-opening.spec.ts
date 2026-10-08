@@ -38,7 +38,19 @@ const payload = async (): Promise<string> => {
   return made.value;
 };
 
-const settled = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
+/**
+ * Waits until the link is not being opened any more. The platform inflates it in a task of its own, and how long that takes is up to a machine that may be busy (the Nightly runs every property
+ * 5,000 times beside it), so a wait of a fixed time is a wait for a machine that is not.
+ */
+async function settled(opening: LinkOpening): Promise<void> {
+  const until = Date.now() + 10_000;
+  do {
+    await new Promise<void>((resolve) => setTimeout(resolve, 5));
+  } while (opening.state().kind === 'opening' && Date.now() < until);
+}
+
+/** A moment in which nothing is expected to happen, for a spec that says that nothing does. */
+const quiet = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 
 describe('LinkOpening', () => {
   beforeEach(() => TestBed.resetTestingModule());
@@ -54,7 +66,7 @@ describe('LinkOpening', () => {
     const { opening } = setup({ hash: `#c=${await payload()}` });
 
     expect(opening.state()).toEqual({ kind: 'opening' });
-    await settled();
+    await settled(opening);
 
     const state = opening.state();
     expect(state.kind).toBe('shared');
@@ -65,7 +77,7 @@ describe('LinkOpening', () => {
   it('fails in words for a link that is not one, and keeps what the codec said', async () => {
     const { opening } = setup({ hash: '#c=not-a-link' });
 
-    await settled();
+    await settled(opening);
 
     const state = opening.state();
     expect(state.kind).toBe('failed');
@@ -75,13 +87,13 @@ describe('LinkOpening', () => {
 
   it('fails as a link from a newer app for a link of format 2, and as a link that is damaged for one that is cut', async () => {
     const newer = setup({ hash: '#c=v2.whatever' });
-    await settled();
+    await settled(newer.opening);
     expect(newer.opening.state()).toMatchObject({ kind: 'failed', error: { kind: 'newer-version', of: 'link' } });
 
     TestBed.resetTestingModule();
     const whole = await payload();
     const cut = setup({ hash: `#c=${whole.slice(0, whole.length - 9)}` });
-    await settled();
+    await settled(cut.opening);
     expect(cut.opening.state()).toMatchObject({ kind: 'failed', error: { kind: 'damaged' } });
   });
 
@@ -97,7 +109,7 @@ describe('LinkOpening', () => {
     TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
 
     const { opening } = setup({ hash: '#c=v1.abc=def' });
-    await settled();
+    await settled(opening);
 
     expect(decode).toHaveBeenCalledExactlyOnceWith('v1.abc=def');
     expect(opening.state()).toMatchObject({ kind: 'shared', shared: { name: 'Given' } });
@@ -111,7 +123,7 @@ describe('LinkOpening', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [{ provide: LINK_DECODER, useValue: decode }] });
     setup({ hash: '#c=v1.abc', flags: 'editor' });
-    await settled();
+    await quiet();
 
     expect(decode).not.toHaveBeenCalled();
   });
@@ -120,7 +132,7 @@ describe('LinkOpening', () => {
     const address = shareLink('https://learner.test/app/', await payload());
 
     const { opening } = setup({ hash: new URL(address).hash });
-    await settled();
+    await settled(opening);
 
     expect(opening.state().kind).toBe('shared');
   });
@@ -129,7 +141,7 @@ describe('LinkOpening', () => {
     'ignores the fragment, and does not listen for it to change, without the flags: only %j is on',
     async (flags) => {
       const { opening, listeners } = setup({ hash: `#c=${await payload()}`, flags });
-      await settled();
+      await quiet();
 
       expect(opening.state()).toEqual({ kind: 'none' });
       expect(listeners.size).toBe(0);
