@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { APP_DISCLAIMER, APP_NAME } from './core/app-info';
 import { FeatureFlags } from './core/flags/feature-flags';
 import { ThemeService } from './core/theme/theme-service';
+import { Workspace } from './canvases/workspace';
 import { Editor } from './editor/editor';
 
 /**
@@ -11,13 +12,16 @@ import { Editor } from './editor/editor';
  */
 @Component({
   selector: 'rmq-root',
-  imports: [Editor],
+  imports: [Editor, Workspace],
   templateUrl: './app.html',
 })
 export class App {
   protected readonly name = APP_NAME;
   protected readonly disclaimer = APP_DISCLAIMER;
-  protected readonly editor = inject(FeatureFlags).isEnabled('editor');
+  private readonly flags = inject(FeatureFlags);
+  protected readonly editor = this.flags.isEnabled('editor');
+  /** With the flag `canvases` (and the editor) the editor is inside a workspace of several canvases (ADR-0072). */
+  protected readonly canvases = this.flags.isEnabled('canvases');
 
   constructor() {
     inject(ThemeService);

@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
+import { CANVAS_HOST } from '../core/session/canvas-host';
 import { CanvasSession, type SaveState } from '../core/session/canvas-session';
 import { ICONS } from '../core/ui/icons';
 import { CommandBus } from '../core/state/command-bus';
@@ -79,6 +80,17 @@ describe('TopBar', () => {
     await renderBar();
 
     expect(screen.getByRole('heading', { level: 1, name: 'RabbitMQ Playground' })).toBeInTheDocument();
+  });
+
+  it('has no heading of its own in a workspace, where the strip of open canvases has the name of the product (ADR-0072)', async () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: CANVAS_HOST, useValue: { canvasToOpen: () => undefined, attach: () => () => undefined } }],
+    });
+
+    await renderBar();
+
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Edit' })).toBeInTheDocument();
   });
 
   it('has two groups of buttons, each with a name: what is done to the canvas, and how it is looked at', async () => {

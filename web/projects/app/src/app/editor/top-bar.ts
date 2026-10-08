@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { APP_NAME } from '../core/app-info';
+import { CANVAS_HOST } from '../core/session/canvas-host';
 import { CanvasSession } from '../core/session/canvas-session';
 import { DocumentStore } from '../core/state/document-store';
 import { ThemeService } from '../core/theme/theme-service';
@@ -26,7 +27,9 @@ const BUTTON =
   imports: [Icon, Switch],
   template: `
     <header class="border-line bg-panel flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2">
-      <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      @if (!inWorkspace) {
+        <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      }
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <div class="flex items-center gap-1.5" role="group" aria-label="Edit">
           <button
@@ -140,6 +143,8 @@ const BUTTON =
 })
 export class TopBar {
   protected readonly name = APP_NAME;
+  /** In a workspace (ADR-0072) the name of the product is the one heading of the page, and it is in the strip of open canvases. */
+  protected readonly inWorkspace = inject(CANVAS_HOST) !== null;
   protected readonly theme = inject(ThemeService);
   protected readonly store = inject(DocumentStore);
   protected readonly actions = inject(EditorActions);

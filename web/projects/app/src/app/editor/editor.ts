@@ -22,6 +22,7 @@ import { popoverPosition, type Point, type Size } from '../canvas/model/transfor
 import { MessageOverlay, type DrawnMarker } from '../canvas/overlay/overlay';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
+import { CANVAS_HOST } from '../core/session/canvas-host';
 import { NO_EMPHASIS } from '../core/explain/emphasis';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
@@ -154,7 +155,7 @@ interface Peek {
     ...EXPLAIN_SERVICES,
   ],
   template: `
-    <div class="bg-surface text-fg flex h-dvh flex-col">
+    <div class="bg-surface text-fg flex flex-col" [class.h-dvh]="!inWorkspace" [class.h-full]="inWorkspace">
       <rmq-top-bar />
       @if (simulation.enabled) {
         <rmq-simulation-bar>
@@ -273,6 +274,8 @@ interface Peek {
 })
 export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private readonly session = inject(CanvasSession);
+  /** In a workspace (ADR-0072) the editor fills what is under the strip of open canvases, and the strip has the name of the product. */
+  protected readonly inWorkspace = inject(CANVAS_HOST) !== null;
   private readonly announcer = inject(Announcer);
   private readonly store = inject(DocumentStore);
   private readonly status = inject(StatusStore);
