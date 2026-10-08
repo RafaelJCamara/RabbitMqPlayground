@@ -59,6 +59,8 @@ describe('sameValue', () => {
     ['null and an object', null, {}, false],
     ['an empty list and an empty object', [], {}, false],
     ['an empty object and an empty list', {}, [], false],
+    ['an empty object and a number, which has no keys either', {}, 0, false],
+    ['an object and the text that has the same keys as it has indexes', { 0: 'a' }, 'a', false],
     ['the same list', [1, [2, 3]], [1, [2, 3]], true],
     ['lists in another order', [1, 2], [2, 1], false],
     ['a list that is longer', [1, 2], [1, 2, 3], false],
@@ -116,9 +118,22 @@ describe('cutName', () => {
     expect(cutName('', 0)).toBe('');
   });
 
+  it('leaves a name that fits as it is even when it ends in half of a character, because only a cut can leave half of one', () => {
+    const half = String.fromCharCode(0xd83d);
+
+    expect(cutName(`ab${half}`, 3)).toBe(`ab${half}`);
+  });
+
   it('cuts a name that is too long to the number of characters that fit', () => {
     expect(cutName('abcd', 3)).toBe('abc');
     expect(cutName('abcd', 0)).toBe('');
+  });
+
+  it('keeps a character whose second half is the first of the second halves, which is where a cut is closest to the first halves', () => {
+    const rat = String.fromCodePoint(0x1f400);
+
+    expect(rat.charCodeAt(1)).toBe(0xdc00);
+    expect(cutName(`ab${rat}cd`, 4)).toBe(`ab${rat}`);
   });
 
   it('does not keep the first half of a character that does not fit, and keeps a whole one that does', () => {
@@ -251,7 +266,7 @@ describe('planRestore', () => {
   it('leaves out the name of a canvas that could not be read when the file did not give one', () => {
     const nameless: BackupEntry = { ok: false, position: 0, error: newer };
 
-    expect(planRestore([nameless], nothing)).toEqual([{ kind: 'unreadable', position: 0, error: newer }]);
+    expect(planRestore([nameless], nothing)).toStrictEqual([{ kind: 'unreadable', position: 0, error: newer }]);
   });
 
   it('plans every canvas of the file, in its order, whatever is here', () => {
@@ -284,7 +299,7 @@ describe('restoreBackup', () => {
 
     const report = await restoreBackup(repository, backupOf(entry(canvas)));
 
-    expect(report.ok && report.value).toEqual({
+    expect(report.ok && report.value).toStrictEqual({
       restored: [{ id: 'a', name: 'Canvas a' }],
       alreadyHere: [],
       copies: [],
@@ -378,7 +393,7 @@ describe('restoreBackup', () => {
 
     const report = await restoreBackup(repository, backupOf(nameless));
 
-    expect(report.ok && report.value.unreadable).toEqual([{ position: 1, message: newer.message }]);
+    expect(report.ok && report.value.unreadable).toStrictEqual([{ position: 1, message: newer.message }]);
   });
 
   it('lists a canvas that could not be written, with the reason, and goes on with the rest', async () => {
