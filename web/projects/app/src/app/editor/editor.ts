@@ -41,6 +41,7 @@ import { StatusStore } from '../core/state/status-store';
 import { CommandBar } from '../command-bar/command-bar';
 import { CommandLog } from '../core/state/command-log';
 import { EventLogPanel } from '../explain/event-log-panel';
+import { Tour, TourController } from '../onboarding/tour';
 import { LogToggle } from '../explain/log-toggle';
 import { MessageInspector } from '../explain/message-inspector';
 import { WhatIfTester } from '../explain/what-if-tester';
@@ -131,6 +132,7 @@ interface Peek {
     LabelCard,
     CommandBar,
     HowToLinkCard,
+    Tour,
     EventLogPanel,
     LogToggle,
     MessageInspector,
@@ -149,6 +151,7 @@ interface Peek {
     IntentHandler,
     CommandLog,
     HowToLink,
+    TourController,
     EditorActions,
     KeyboardService,
     CheatSheetService,
@@ -171,7 +174,10 @@ interface Peek {
           }
         </rmq-simulation-bar>
       }
-      <rmq-how-to-link />
+      <rmq-tour />
+      @if (!tour.active()) {
+        <rmq-how-to-link />
+      }
       <div class="flex min-h-0 flex-1">
         <aside class="border-line bg-panel w-52 shrink-0 overflow-y-auto border-r p-3" aria-label="Toolbox">
           <rmq-toolbox (add)="intents.add($event, 'gesture')" />
@@ -301,6 +307,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private readonly links = inject(LinkFlow);
   protected readonly actions = inject(EditorActions);
   private readonly cheatSheet = inject(CheatSheetService);
+  /** The tour of the first run (ADR-0083): while it is taken, its banner has the place of the card that says how to link. */
+  protected readonly tour = inject(TourController);
   private readonly inspector = viewChild.required(Inspector);
   private readonly commandBar = viewChild.required(CommandBar);
   private readonly overlay = viewChild(MessageOverlay);
