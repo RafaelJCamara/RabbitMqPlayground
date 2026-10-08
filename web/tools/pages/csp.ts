@@ -60,8 +60,7 @@ const markupOf = (html: string): string =>
 /** The text of a script as the browser has it: its line ends are `\n`, which the parser makes of `\r\n` and `\r`, and the hash is of that text. */
 const textOf = (script: string): string => script.replace(/\r\n?/g, '\n');
 
-const hashOf = (script: string): string =>
-  `'sha256-${createHash('sha256').update(textOf(script), 'utf8').digest('base64')}'`;
+const hashOf = (script: string): string => `'sha256-${createHash('sha256').update(textOf(script)).digest('base64')}'`;
 
 /**
  * The hashes of the inline scripts of a page, once each and in the order of the page. It refuses what the policy would break the page with, saying what and where: an inline event handler or a `javascript:` URL
@@ -112,15 +111,13 @@ export function contentSecurityPolicy(html: string): string {
     .join('; ');
 }
 
-const escaped = (value: string): string => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-
 /**
- * The page with its policy, in a `<meta>` right after the character set, or at the start of the head when there is none to follow. A policy that the page had is replaced, so that making the page
+ * The page with its policy, in a `<meta>` (a policy is made of keywords and of base64, which have nothing that an attribute needs written another way) right after the character set, or at the start of the head when there is none to follow. A policy that the page had is replaced, so that making the page
  * twice makes the same page.
  */
 export function withContentSecurityPolicy(html: string): string {
   const page = html.replace(POLICY_META, '');
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${escaped(contentSecurityPolicy(page))}">`;
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy(page)}">`;
   const charset = CHARSET_META.exec(page);
   const head = HEAD.exec(page);
   const after = charset ?? head;

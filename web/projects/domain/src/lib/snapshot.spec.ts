@@ -1,6 +1,7 @@
 import type { EngineSnapshot } from '@rmq/engine';
 import {
   arbDocument,
+  busyEngine,
   arbTypedDamage,
   bindingRecord,
   configureFastCheck,
@@ -114,14 +115,47 @@ describe('readSnapshot (ADR-0077)', () => {
     expect(readSnapshot({ ...snapshot, bindings }).ok).toBe(false);
   });
 
-  it('counts the other problems when there are several', () => {
+  it('says only the first problem when there is one, and counts the others when there are several', () => {
     const snapshot = copy(snapshotAfter(document, 600));
     snapshot['published'] = -1;
+    const one = readSnapshot(snapshot);
     snapshot['now'] = -1;
+    const two = readSnapshot(snapshot);
+    snapshot['seed'] = 2 ** 32;
+    const three = readSnapshot(snapshot);
 
-    const read = readSnapshot(snapshot);
+    expect(!one.ok && one.message).toMatch(/^published: [^(]*$/);
+    // The first is the one that the schema lists first, which is not the one that was damaged first.
+    expect(!two.ok && two.message).toMatch(/^\w+: .* \(and 1 more problem\)$/);
+    expect(!three.ok && three.message).toMatch(/^\w+: .* \(and 2 more problems\)$/);
+  });
 
-    expect(!read.ok && read.message).toMatch(/and \d+ more problems?\)$/);
+  it('says that it is the snapshot that is wrong, when what is wrong is all of it', () => {
+    expect(readSnapshot(42)).toEqual({ ok: false, message: expect.stringMatching(/^The snapshot: /) as string });
+    expect(readSnapshot(null)).toEqual({ ok: false, message: expect.stringMatching(/^The snapshot: /) as string });
+  });
+
+  it('reads the snapshot of an engine that has consumers of both kinds, one that is cancelled and copies in every place', () => {
+    const snapshot = busyEngine().snapshot();
+    expect(snapshot.tags.map(({ ack }) => ack).sort()).toEqual(['auto', 'manual', 'manual']);
+
+    const read = readSnapshot(viaJson(snapshot));
+
+    expect(read.ok && read.value).toEqual(snapshot);
+  });
+
+  it('takes the time of the next tick of a producer to be 0, as the engine can have it, and not before that', () => {
+    const snapshot = copy(busyEngine().snapshot());
+    const producers = (snapshot['producers'] as Record<string, unknown>[]).map((producer) => ({ ...producer }));
+
+    producers[0]!['nextTickAt'] = 0;
+    const atZero = readSnapshot({ ...snapshot, producers });
+    producers[0]!['nextTickAt'] = -1;
+    const before = readSnapshot({ ...snapshot, producers });
+
+    // Zero is a time, so it gets as far as the engine, which finds that what is scheduled does not say so.
+    expect(!atZero.ok && atZero.message).not.toContain('nextTickAt');
+    expect(!before.ok && before.message).toContain('producers.0.nextTickAt');
   });
 });
 
@@ -263,6 +297,71 @@ describe('snapshotDisagrees', () => {
     expect(
       snapshotDisagrees(document, { ...snapshot, now: snapshot.now + 1_000, published: snapshot.published + 5 }),
     ).toBeNull();
+  });
+});
+
+describe('snapshotDisagrees, field by field', () => {
+  /** Two of everything, and a consumer with a different way to acknowledge from the other's. */
+  const several = () =>
+    documentOf({
+      exchanges: { E1: exchangeRecord('x', 'topic'), E2: exchangeRecord('y', 'fanout') },
+      queues: { Q1: queueRecord('b'), Q2: queueRecord('a') },
+      bindings: {
+        B1: bindingRecord('E1', { kind: 'queue', id: 'Q1' }, 'k.*'),
+        B2: bindingRecord('E1', { kind: 'queue', id: 'Q2' }, 'k.#'),
+        B3: bindingRecord('E2', { kind: 'queue', id: 'Q1' }),
+      },
+      producers: {
+        P1: producerRecord('p', { kind: 'exchange', id: 'E1' }),
+        P2: producerRecord('o', { kind: 'exchange', id: 'E2' }),
+      },
+      consumers: { C1: consumerRecord('one', ['Q1']), C2: consumerRecord('two', ['Q1', 'Q2']) },
+    });
+
+  type Damage = (s: Record<string, Record<string, unknown>[]>) => void;
+  const CHANGES: readonly (readonly [string, string, Damage])[] = [
+    ['the key of a binding', 'bindings', (s) => (s['bindings']![0]!['key'] = 'another')],
+    ['whether a queue is durable', 'queues', (s) => (s['queues']![0]!['durable'] = !s['queues']![0]!['durable'])],
+    ['the prefetch of a channel', 'channels', (s) => ((s['channels']![0]!['prefetch'] as number) += 1)],
+    ['the time that a channel takes', 'channels', (s) => ((s['channels']![0]!['processingMs'] as number) += 1)],
+    ['the consumers that a channel has', 'channels', (s) => (s['channels']![0]!['tags'] = [])],
+    ['the channel of a consumer', 'tags', (s) => (s['tags']![0]!['channel'] = 'another')],
+    ['the queue of a consumer', 'tags', (s) => (s['tags']![0]!['queue'] = 'another')],
+    [
+      'how a consumer acknowledges',
+      'tags',
+      (s) => (s['tags']![0]!['ack'] = s['tags']![0]!['ack'] === 'auto' ? 'manual' : 'auto'),
+    ],
+    ['where a producer sends to', 'producers', (s) => (s['producers']![0]!['target'] = null)],
+    ['the key of a producer', 'producers', (s) => (s['producers']![0]!['key'] += 'x')],
+    ['the payload of a producer', 'producers', (s) => (s['producers']![0]!['payload'] += 'x')],
+    [
+      'the headers of a producer',
+      'producers',
+      (s) => (s['producers']![0]!['headers'] = [{ key: 'h', value: { t: 'string', v: 'x' } }]),
+    ],
+    ['the burst of a producer', 'producers', (s) => ((s['producers']![0]!['burst'] as number) += 1)],
+    ['the time between a producer’s sends', 'producers', (s) => ((s['producers']![0]!['everyMs'] as number) += 1)],
+    [
+      'whether a producer repeats',
+      'producers',
+      (s) => (s['producers']![0]!['repeat'] = !s['producers']![0]!['repeat']),
+    ],
+  ];
+
+  it.each(CHANGES)('finds %s to be part of what a canvas is', (_what, list, damage) => {
+    const document = several();
+    const snapshot = structuredClone(snapshotAfter(document, 1_200)) as unknown as Record<
+      string,
+      Record<string, unknown>[]
+    >;
+    damage(snapshot);
+
+    const answer = snapshotDisagrees(document, snapshot as unknown as EngineSnapshot);
+
+    expect(answer).toBe(
+      `Its messages are not those of this canvas: they were taken from a canvas whose ${list} was not the same`,
+    );
   });
 });
 

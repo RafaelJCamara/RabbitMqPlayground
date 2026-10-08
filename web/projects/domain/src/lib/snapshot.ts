@@ -173,7 +173,7 @@ export function readSnapshot(raw: unknown): SnapshotRead {
     const more = shape.error.issues.length - 1;
     return {
       ok: false,
-      message: `${where(first.path)}: ${first.message}${more > 0 ? ` (and ${more} more problems)` : ''}`,
+      message: `${where(first.path)}: ${first.message}${more > 0 ? ` (and ${more} more problem${more === 1 ? '' : 's'})` : ''}`,
     };
   }
   const problem = snapshotIssue(shape.data);

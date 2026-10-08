@@ -19,8 +19,11 @@ type Deep<T> = T extends readonly [infer First, infer Second]
       : T;
 type Mutable = Deep<EngineSnapshot>;
 
-/** A snapshot of the busy engine that a spec can break. */
-const busy = (): Mutable => structuredClone(busyEngine().snapshot()) as Mutable;
+/**
+ * A snapshot of the busy engine that a spec can break, as a link carries it: through JSON, so that a copy that the engine holds in two places is two objects here, as it is when it is read, and a spec that damages one is
+ * not also damaging the other (a structured clone keeps the two as one, and the check of the second hid the check of the first).
+ */
+const busy = (): Mutable => JSON.parse(JSON.stringify(busyEngine().snapshot())) as Mutable;
 
 const issueOf = (snapshot: Mutable): string | null => snapshotIssue(snapshot);
 
@@ -228,6 +231,96 @@ const CASES: readonly (readonly [string, (s: Mutable) => void, string | RegExp])
     'a number for the next thing scheduled that is already something’s',
     (s) => (s.nextSeq = 5),
     /^The number of the next thing to be scheduled is 5, and something is scheduled as \d+$/,
+  ],
+  [
+    'a copy that waits in a channel to acknowledge that its consumer does not hold',
+    (s) => s.channels[0]!.waiting.push({ ...structuredClone(s.channels[0]!.working!), order: 99 }),
+    'A message that “c-slow” has to acknowledge is not among the messages that it has not acknowledged',
+  ],
+  [
+    'a copy that is on its way to a consumer to acknowledge that the consumer does not hold',
+    (s) => {
+      const delivery = s.heap.find(({ task }) => task.kind === 'receive')!;
+      Object.assign((delivery.task as { held: object }).held, {
+        tag: 'c-slow',
+        queue: 'jobs',
+        ack: 'manual',
+        order: 99,
+      });
+    },
+    'A message that “c-slow” has to acknowledge is not among the messages that it has not acknowledged',
+  ],
+  [
+    'a handling that is scheduled for a channel that is not there',
+    (s) => ((s.heap.find(({ task }) => task.kind === 'finish')!.task as { channel: string }).channel = 'ghost'),
+    'A delivery is scheduled to the channel “ghost”, which is not in the snapshot',
+  ],
+  [
+    'a message numbered the number of the next one',
+    (s) => (s.queues[0]!.nextOrder = s.queues[0]!.ready[s.queues[0]!.ready.length - 1]!.order),
+    'The queue “jobs” holds a message that is numbered above the number of the next one',
+  ],
+  [
+    'a producer that repeats and has no time for the next and nothing scheduled',
+    (s) => {
+      s.producers[0]!.nextTickAt = null;
+      s.heap = s.heap.filter(({ task }) => !(task.kind === 'tick' && task.producer === 'p1'));
+    },
+    'The producer “p1” does not repeat as what is scheduled says',
+  ],
+  [
+    'a producer that does not repeat and has something scheduled',
+    (s) => {
+      const last = s.heap[s.heap.length - 1]!;
+      s.heap.push({ at: last.at + 1, seq: s.nextSeq, task: { kind: 'tick', producer: 'p3' } });
+      s.nextSeq += 1;
+    },
+    'The producer “p3” does not repeat as what is scheduled says',
+  ],
+  [
+    'a message in a queue that is numbered above the number of the next message',
+    (s) => (s.queues[0]!.ready[0]!.message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a message that a consumer holds that is numbered above the number of the next message',
+    (s) => (s.tags[0]!.unacked[0]!.message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a message that a channel is handling that is numbered above the number of the next message',
+    (s) => (s.channels[1]!.working!.message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a message on its way to a consumer that is numbered above the number of the next message',
+    (s) =>
+      ((
+        s.heap.find(({ task }) => task.kind === 'receive')!.task as { held: { message: { id: number } } }
+      ).held.message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a message that is arriving that is numbered above the number of the next message',
+    (s) =>
+      ((s.heap.find(({ task }) => task.kind === 'arrive')!.task as { message: { id: number } }).message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a message that is being put in queues that is numbered above the number of the next message',
+    (s) =>
+      ((s.heap.find(({ task }) => task.kind === 'enqueue')!.task as { message: { id: number } }).message.id = 1_000),
+    'The number of the next message is 22, and a message is numbered 1000',
+  ],
+  [
+    'a number for the next message that is the number of the last',
+    (s) => (s.nextMessageId = 21),
+    'The number of the next message is 21, and a message is numbered 21',
+  ],
+  [
+    'a number for the next thing scheduled that is the number of the last',
+    (s) => (s.nextSeq = Math.max(...s.heap.map(({ seq }) => seq))),
+    /^The number of the next thing to be scheduled is \d+, and something is scheduled as \d+$/,
   ],
 ];
 

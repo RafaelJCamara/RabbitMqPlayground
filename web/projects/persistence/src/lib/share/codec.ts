@@ -51,7 +51,8 @@ function envelopeText(shared: Shared): string {
     version: SHARE_VERSION,
     name: shared.name,
     document: shared.document,
-    ...(shared.simulation === undefined ? {} : { simulation: shared.simulation }),
+    // JSON leaves out a key that has no value.
+    simulation: shared.simulation,
   });
 }
 

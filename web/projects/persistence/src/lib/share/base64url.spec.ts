@@ -73,6 +73,13 @@ describe('fromBase64Url', () => {
     expect(fromBase64Url(input)).toEqual({ ok: false, reason: 'alphabet', at, char });
   });
 
+  it('refuses the first code beyond ASCII, which is the one that a table of 128 is shortest of', () => {
+    const first = String.fromCharCode(128);
+
+    expect(fromBase64Url(`Zm9${first}`)).toEqual({ ok: false, reason: 'alphabet', at: 3, char: first });
+    expect(fromBase64Url(String.fromCharCode(127))).toEqual({ ok: false, reason: 'alphabet', at: 0, char: '\u007f' });
+  });
+
   it('refuses a length that no base64 text has: one more than a whole number of groups of four', () => {
     for (const input of ['Z', 'Zm9vY', 'Zm9vYmFyY']) {
       expect(fromBase64Url(input)).toEqual({ ok: false, reason: 'length' });

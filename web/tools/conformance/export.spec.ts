@@ -107,6 +107,7 @@ describe('the routing scenarios that a definitions file can say', () => {
     ['an exclusive queue', 'exclusive', /exclusive queue/],
     ['binds on exists', 'exists', /header that has to exist/],
     ['changes the topology between publishes', 'between', /between its publishes/],
+    ['declares after it publishes', 'publishes first', /between its publishes/],
     ['opens a channel to consume', 'consume', /channel\.open step/],
   ])('say why a scenario that %s is not one', (_what, which, pattern) => {
     const base = { kind: 'routing' as const, title: 't', observed: { routes: [] } };
@@ -129,6 +130,7 @@ describe('the routing scenarios that a definitions file can say', () => {
         },
       ],
       between: [...declare, { op: 'basic.publish', exchange: 'x', body: 'a' }, { op: 'queue.declare', name: 'r' }],
+      'publishes first': [{ op: 'basic.publish', exchange: 'x', body: 'a' }, ...declare],
       consume: [
         ...declare,
         { op: 'channel.open', channel: 'c' },
@@ -240,6 +242,33 @@ describe('alreadyDeclared', () => {
 
     expect(session.calls).toEqual(['publish a', 'settle', 'drain q']);
     expect(played.vhost).toBe(session.vhost);
+  });
+
+  it('answers a declaration as a call that is done, so that whoever waits for it is not left with nothing', async () => {
+    const played = alreadyDeclared(new FakeSession());
+
+    await expect(
+      played.declareExchange({ op: 'exchange.declare', name: 'x', type: 'direct' }),
+    ).resolves.toBeUndefined();
+    await expect(played.declareQueue({ op: 'queue.declare', name: 'q' })).resolves.toBeUndefined();
+    await expect(
+      played.bind({ op: 'bind', source: 'x', destination: { kind: 'queue', name: 'q' } }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('calls the other methods of the session as the session, so that what it keeps to itself is still its own', async () => {
+    class Private extends FakeSession {
+      readonly #kept = 'kept';
+      override async settle(): Promise<void> {
+        await super.settle();
+        this.calls.push(this.#kept);
+      }
+    }
+    const session = new Private();
+
+    await alreadyDeclared(session).settle();
+
+    expect(session.calls).toEqual(['settle', 'kept']);
   });
 });
 

@@ -78,6 +78,17 @@ describe('inlineScriptHashes', () => {
     expect(inlineScriptHashes(page('<SCRIPT TYPE="Module">alert(1)</SCRIPT>'))).toEqual([ALERT]);
   });
 
+  it('reads the names of attributes in any case, as the browser does', () => {
+    expect(inlineScriptHashes(page('<script SRC="other.js">alert(1)</script>'))).toEqual([]);
+    expect(inlineScriptHashes(page('<script TYPE="application/json">{}</script>'))).toEqual([]);
+    expect(inlineScriptHashes(page("<script Type='module'>alert(1)</script>"))).toEqual([ALERT]);
+    expect(inlineScriptHashes(page('<script type=module>alert(1)</script>'))).toEqual([ALERT]);
+  });
+
+  it('counts a script of the type application/javascript', () => {
+    expect(inlineScriptHashes(page('<script type="application/javascript">alert(1)</script>'))).toEqual([ALERT]);
+  });
+
   it('leaves out a script that is data: the browser does not run it', () => {
     expect(inlineScriptHashes(page('<script type="application/json" id="ng-state">{"a":1}</script>'))).toEqual([]);
     expect(inlineScriptHashes(page('<script type="application/ld+json">{}</script>'))).toEqual([]);
@@ -94,6 +105,11 @@ describe('inlineScriptHashes', () => {
       inlineScriptHashes(page('', '    <link rel="stylesheet" href="s.css" onload="this.media=\'all\'">\n')),
     ).toThrow(/inline event handler \(onload\).*'unsafe-inline'/);
     expect(() => inlineScriptHashes(page('<button onclick="go()">x</button>'))).toThrow(/\(onclick\)/);
+  });
+
+  it('refuses an event handler on a style, which is a tag as much as any, and does not take what is in the style for one', () => {
+    expect(() => inlineScriptHashes(page('', '    <style onload="go()">a{}</style>\n'))).toThrow(/\(onload\)/);
+    expect(inlineScriptHashes(page('', '    <style>/* <b onclick="go()"> */</style>\n'))).toEqual([]);
   });
 
   it('refuses a javascript: URL', () => {

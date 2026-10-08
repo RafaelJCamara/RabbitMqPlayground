@@ -54,10 +54,11 @@ export function fromBase64Url(text: string): Decoded {
   let out = 0;
   for (let at = 0; at < text.length; at += 4) {
     const left = text.length - at;
+    // Past the end of the text a character has no value, and what would be made of it is not written.
     const a = value(at);
     const b = value(at + 1);
-    const c = left > 2 ? value(at + 2) : 0;
-    const d = left > 3 ? value(at + 3) : 0;
+    const c = value(at + 2);
+    const d = value(at + 3);
     bytes[out++] = (a << 2) | (b >> 4);
     if (left > 2) {
       bytes[out++] = ((b & 15) << 4) | (c >> 2);

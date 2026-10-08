@@ -485,6 +485,11 @@ describe('exportDefinitions', () => {
         'The producers “a”, “b” and “c” and the consumer “w” are not in the file: they are the simulator’s, and a broker has clients instead.',
       ],
       [
+        ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
+        [],
+        'The producers “p1”, “p2”, “p3”, “p4”, “p5” and 1 more are not in the file: they are the simulator’s, and a broker has clients instead.',
+      ],
+      [
         ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'],
         ['c1', 'c2'],
         'The producers “p1”, “p2”, “p3”, “p4”, “p5” and 2 more and the consumers “c1” and “c2” are not in the file: they are the simulator’s, and a broker has clients instead.',

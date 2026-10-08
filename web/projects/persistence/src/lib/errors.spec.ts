@@ -165,6 +165,25 @@ describe('the errors of a load', () => {
       );
     });
 
+    it.each([
+      [
+        'link',
+        'This link is 256,001 characters long, and a link that this app opens can be at most 256,000. ',
+        'A canvas that big is sent as a file.',
+      ],
+      [
+        'inflated',
+        'This link holds more than 2,000,000 bytes of text once it is opened, which is more than a canvas can be. ',
+        'A canvas that big is sent as a file.',
+      ],
+    ] as const)('says it for a %s, in words that a person who was sent it can act on', (what, start, remedy) => {
+      const { message } = what === 'link' ? tooLarge(what, 256_001, 256_000) : tooLarge(what, 2_000_001, 2_000_000);
+
+      expect(message).toBe(
+        `${start}It was not opened, so that a damaged or hostile link cannot make the page run out of memory. ${remedy}`,
+      );
+    });
+
     it('says it of a name without the talk of files, because someone typed it', () => {
       expect(tooLarge('name', 201, 200).message).toBe(
         'The name has 201 characters, and a name can have at most 200. Shorten the name.',
