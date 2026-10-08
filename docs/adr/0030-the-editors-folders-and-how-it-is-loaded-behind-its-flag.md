@@ -1,6 +1,6 @@
 # ADR-0030: The editor's folders, and how it is loaded behind its flag
 
-- **Status:** Accepted. What the adapter in `canvas/flow/` is and does is settled by [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md). The folders of the simulation, and where they sit in the order, are settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
+- **Status:** Accepted. What the adapter in `canvas/flow/` is and does is settled by [ADR-0033](0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md). The folders of the simulation, and where they sit in the order, are settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md). The workspace that is loaded in its place with the flag `canvases`, and why there is still no router, are settled by [ADR-0072](0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md).
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** section 1 of the [M1 plan](../plans/m1.md) (the layout of `projects/app`) and [ADR-0018](0018-workspace-layout-and-dependency-rules.md)

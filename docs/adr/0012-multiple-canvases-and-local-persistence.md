@@ -3,7 +3,7 @@
 - **Status:** Accepted. The record, the files and the loader that "Storage" and "Files" need are settled by
   [ADR-0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md), and the repository, the
   tombstones and the autosave by
-  [ADR-0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md).
+  [ADR-0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md). The screens, the strip of open canvases, the home, the delete and the clear, and the files and the reminder are settled by [ADR-0072](0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md), [ADR-0073](0073-the-home-is-a-grid-of-cards-from-one-read-and-a-canvas-that-cannot-be-read-is-listed-with-its-reason.md), [ADR-0074](0074-delete-clear-and-delete-all-ask-once-and-can-be-taken-back-with-an-undo-that-says-how-long-it-lasts.md) and [ADR-0075](0075-a-canvas-file-opens-as-a-new-canvas-a-backup-is-put-back-without-writing-over-anything-and-the-reminder-asks-after-two-weeks.md).
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 
