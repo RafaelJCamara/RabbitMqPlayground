@@ -51,6 +51,11 @@ The issue asks for "tabs; new canvas, rename, duplicate". ADR-0072 gave rename t
   ([#13](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/13)) will make a canvas: they need no code of their own in the library. Creating a canvas from a template is therefore not in S9, and the checklist of #11 says so.
 - **Save as file is on the card of the home and not on the tab.** The file of a canvas is something a learner does from "My canvases", with the other things that leave the browser (open a file, restore a backup, back up everything), and a second place would be a second thing to keep the same.
 
+### The session remembers the canvas that is open last, and the library does not
+
+ADR-0072 says that `show` writes `lastOpenCanvas` when a canvas is shown. The session of the editor writes it as well, when it opens a canvas (S4, ADR-0031), and every canvas that is shown is opened by an editor, so the library's copy changed nothing that a journey, a reload or a
+spec of the workspace could see: a hand change of the browser tier that took it out was not noticed. It is gone from the library. The editor that opens a canvas is the one that knows that it did, and a canvas that is shown but whose editor could not open it is not the canvas that was open last.
+
 ### The reminder counts from the oldest canvas that has something on it
 
 ADR-0075 says that when there has never been a backup the 14 days are counted "since the oldest canvas was made". The first run of the app makes a blank "Untitled canvas", so a learner who opened the page once a month ago and has just started to build would have been told today that they never
