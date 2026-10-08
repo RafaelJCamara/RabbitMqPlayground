@@ -636,6 +636,30 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
       expect(name(1)).toHaveValue('n');
     });
 
+    it('starts again when another producer is shown that has the very same headers, which is another table', async () => {
+      const { user, fixture, store, settle } = await renderTable();
+      store.load({
+        ...canvas(),
+        producers: {
+          ...canvas().producers,
+          L: {
+            ...(canvas().producers['L'] as NonNullable<CanvasDocument['producers'][string]>),
+            message: { payload: '', key: '', headers: [{ key: 'n', value: { t: 'integer', v: 1 } }] },
+          },
+        },
+      } as CanvasDocument);
+      settle();
+      await user.click(screen.getByRole('button', { name: 'Add header' }));
+      await user.type(name(2), 'half');
+      expect(screen.getAllByTestId('header-row')).toHaveLength(2);
+
+      fixture.componentRef.setInput('id', 'L');
+      fixture.detectChanges();
+
+      expect(screen.getAllByTestId('header-row')).toHaveLength(1);
+      expect(name(1)).toHaveValue('n');
+    });
+
     it('starts again when another producer is shown, whatever the first had in the table', async () => {
       const { user, fixture } = await renderTable();
       await user.click(screen.getByRole('button', { name: 'Add header' }));

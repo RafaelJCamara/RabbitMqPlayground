@@ -527,7 +527,7 @@ export class Inspector {
    */
   protected readonly conditionsEnds = computed(() => {
     const edge = this.edge();
-    if (!this.conditionsUi || edge === null || edge.edge !== 'binding') {
+    if (!this.conditionsUi || edge === null) {
       return null;
     }
     const document = this.store.document();

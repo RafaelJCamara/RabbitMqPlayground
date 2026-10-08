@@ -240,10 +240,8 @@ rmq-flow-canvas .rmq-chip-conditions {
   padding: 1px 6px;
   border-radius: 10px;
   line-height: 16px;
-  overflow: visible;
   overflow-wrap: anywhere;
   text-align: center;
-  text-overflow: clip;
   white-space: normal;
 }
 

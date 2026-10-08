@@ -2456,9 +2456,11 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     const bus = fixture.debugElement.injector.get(CommandBus);
     const apply = bus.apply.bind(bus);
-    vi.spyOn(bus, 'apply').mockReturnValueOnce({
-      ok: false,
-      error: { kind: 'canvas-full', message: 'This canvas has all the edges it can hold.' },
+    const error = { kind: 'canvas-full', message: 'This canvas has all the edges it can hold.' } as const;
+    // The bus says a refusal on the status line as it gives it back, which is what the editor takes away again.
+    vi.spyOn(bus, 'apply').mockImplementationOnce((_command, origin) => {
+      bus.refuse(error, origin);
+      return { ok: false, error };
     });
 
     await user.type(screen.getByRole('textbox', { name: 'Name of condition 1' }), 'a');
@@ -2467,6 +2469,8 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
 
     expect(screen.getByTestId('binding-conditions')).toBeInTheDocument();
     expect(screen.getByTestId('conditions-refusal')).toHaveTextContent('This canvas has all the edges it can hold.');
+    // The reason is in the popover, and not also on the status line, where there would be two of it.
+    expect(screen.getAllByTestId('refusal-message')).toHaveLength(1);
     expect(bindings(store)).toEqual([]);
 
     vi.spyOn(bus, 'apply').mockImplementation(apply);
