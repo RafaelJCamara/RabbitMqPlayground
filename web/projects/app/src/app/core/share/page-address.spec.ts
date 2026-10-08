@@ -5,13 +5,23 @@ import { browserAddress, PAGE_ADDRESS } from './page-address';
 /** The address of the page, as the share link reads and changes it (ADR-0078). */
 
 function fakePage(hash = '#c=v1.abc') {
-  const location = { hash, pathname: '/RabbitMqPlayground/', search: '?ff=editor,share', reload: vi.fn() };
+  const location = {
+    hash,
+    origin: 'https://learner.test',
+    pathname: '/RabbitMqPlayground/',
+    search: '?ff=editor,share',
+    reload: vi.fn(),
+  };
   const history = { state: { n: 1 }, replaceState: vi.fn() };
   const view = { location, history, addEventListener: vi.fn(), removeEventListener: vi.fn() };
   return { page: { defaultView: view } as unknown as Document, location, history, view };
 }
 
 describe('browserAddress', () => {
+  it('says the page without its query and its fragment, which is what a link to it is built from', () => {
+    expect(browserAddress(fakePage('#c=v1.abc').page).base()).toBe('https://learner.test/RabbitMqPlayground/');
+  });
+
   it('says the fragment of the address, with its #, and nothing when there is none', () => {
     expect(browserAddress(fakePage('#c=v1.abc').page).hash()).toBe('#c=v1.abc');
     expect(browserAddress(fakePage('').page).hash()).toBe('');
@@ -51,6 +61,7 @@ describe('browserAddress', () => {
     const listener = vi.fn();
 
     expect(address.hash()).toBe('');
+    expect(address.base()).toBe('');
     expect(() => {
       address.clearHash();
       address.reload();
@@ -72,6 +83,7 @@ describe('PAGE_ADDRESS', () => {
     const address = TestBed.inject(PAGE_ADDRESS);
 
     expect(address.hash()).toBe('#c=v1.real');
+    expect(address.base()).toBe(`${window.location.origin}${window.location.pathname}`);
     address.clearHash();
     expect(address.hash()).toBe('');
   });

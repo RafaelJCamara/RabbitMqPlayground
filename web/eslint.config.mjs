@@ -90,6 +90,22 @@ const simulationStaysBelowEditor = {
   message:
     '`simulation/` may not import from `editor/`, `canvas/flow/` or `command-bar/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, editor (ADR-0057).',
 };
+const SHARE_ORDER =
+  'core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, share, editor, canvases';
+const belowShare = {
+  regex: '^(\\.\\./)+share(/|$)',
+  message: `\`core/\`, \`canvas/\`, \`command-bar/\`, \`simulation/\` and \`explain/\` may not import from \`share/\`, which is above them: the folders run ${SHARE_ORDER} (ADR-0078).`,
+};
+/**
+ * `core/share/` is core's, and `share/` is the folder of the panels that is above `explain/`. From a file two folders down in `core/` the first is `../share/` and the second `../../share/`, so only the second is
+ * forbidden there, and from a file directly in `core/` the second is `../share/`.
+ */
+const coreStaysBelowShare = { regex: '^(\\.\\./){2,}share(/|$)', message: belowShare.message };
+const coreFilesStayBelowShare = { regex: '^\\.\\./share(/|$)', message: belowShare.message };
+const shareStaysBelowEditor = {
+  regex: '^(\\.\\./)+editor(/|$)',
+  message: `\`share/\` may not import from \`editor/\`, which is above it: the folders run ${SHARE_ORDER} (ADR-0078).`,
+};
 const belowCanvases = {
   regex: '^(\\.\\./)+canvases(/|$)',
   message:
@@ -239,6 +255,7 @@ const CANVAS_OVERLAY = 'projects/app/src/app/canvas/overlay/**/*.ts';
 const SIMULATION_UI = 'projects/app/src/app/simulation/**/*.ts';
 const COMMAND_BAR = 'projects/app/src/app/command-bar/**/*.ts';
 const EXPLAIN_UI = 'projects/app/src/app/explain/**/*.ts';
+const SHARE_UI = 'projects/app/src/app/share/**/*.ts';
 const CORE_ROOT = 'projects/app/src/app/core/*.ts';
 
 export default defineConfig([
@@ -374,6 +391,7 @@ export default defineConfig([
         belowCommandBar,
         belowSimulation,
         coreStaysBelowExplain,
+        coreStaysBelowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -393,6 +411,7 @@ export default defineConfig([
         belowCommandBar,
         belowSimulation,
         coreFilesStayBelowExplain,
+        coreFilesStayBelowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -413,6 +432,7 @@ export default defineConfig([
         modelStaysBelowFlow,
         modelStaysBelowOverlay,
         belowExplain,
+        belowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -433,6 +453,7 @@ export default defineConfig([
         belowSimulation,
         overlayStaysBelowFlow,
         belowExplain,
+        belowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -450,6 +471,7 @@ export default defineConfig([
         belowCanvases,
         simulationStaysBelowEditor,
         belowExplain,
+        belowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -466,6 +488,23 @@ export default defineConfig([
         noFoblex,
         belowCanvases,
         explainStaysBelowEditor,
+        belowShare,
+      ),
+      ...noOptingOutOfOnPush,
+    },
+  },
+  {
+    // The panels that make a link and export for a broker read core, and the editor and the home open them (ADR-0078, ADR-0079).
+    files: [SHARE_UI],
+    ignores: SPECS,
+    rules: {
+      'no-restricted-imports': restrictImports(
+        noDeepImports,
+        testingIsForTests,
+        reachesIntoAnotherProject('app'),
+        noFoblex,
+        belowCanvases,
+        shareStaysBelowEditor,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -484,6 +523,7 @@ export default defineConfig([
         commandBarStaysBelowEditor,
         belowSimulation,
         belowExplain,
+        belowShare,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -502,6 +542,7 @@ export default defineConfig([
         belowCommandBar,
         belowSimulation,
         belowExplain,
+        belowShare,
       ),
       ...noOptingOutOfOnPush,
     },

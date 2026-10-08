@@ -11,6 +11,7 @@ import { PAGE_ADDRESS, type PageAddress } from './page-address';
 function setup(options: { readonly hash: string; readonly flags?: string }) {
   const listeners = new Set<() => void>();
   const address: PageAddress = {
+    base: () => 'https://learner.test/app/',
     hash: () => options.hash,
     clearHash: vi.fn(),
     reload: vi.fn(),

@@ -49,6 +49,8 @@ const EXPLAIN = 'projects/app/src/app/explain/example.ts';
 const CORE_ROOT = 'projects/app/src/app/core/example.ts';
 const CORE_EXPLAIN = 'projects/app/src/app/core/explain/example.ts';
 const CANVASES = 'projects/app/src/app/canvases/example.ts';
+const SHARE = 'projects/app/src/app/share/example.ts';
+const CORE_SHARE = 'projects/app/src/app/core/share/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -347,6 +349,71 @@ describe('imports', () => {
       '@rmq/testing',
       /only be imported from specs/,
     ],
+    // The panels that make a link and export for a broker have a place of their own between the explanation and the editor (ADR-0078). The link in the address is `core/share/`, which is core's.
+    ['core importing the panels of sharing', CORE, '../../share/share-panel', /may not import from `share\/`/],
+    [
+      'a file directly in core importing the panels of sharing',
+      CORE_ROOT,
+      '../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the link in the address importing the panels of sharing',
+      CORE_SHARE,
+      '../../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the canvas model importing the panels of sharing',
+      MODEL,
+      '../../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the canvas overlay importing the panels of sharing',
+      OVERLAY,
+      '../../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the Foblex adapter importing the panels of sharing',
+      FLOW,
+      '../../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the command bar importing the panels of sharing',
+      COMMAND_BAR,
+      '../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the controls of the simulation importing the panels of sharing',
+      SIMULATION,
+      '../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the components of the explanation importing the panels of sharing',
+      EXPLAIN,
+      '../share/share-panel',
+      /may not import from `share\/`/,
+    ],
+    [
+      'the panels of sharing importing the editor',
+      SHARE,
+      '../editor/editor',
+      /`share\/` may not import from `editor\/`, which is above it/,
+    ],
+    [
+      'the panels of sharing importing the workspace',
+      SHARE,
+      '../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    ['the panels of sharing importing Foblex Flow', SHARE, '@foblex/flow', /only be imported inside `canvas\/flow/],
+    ['the panels of sharing importing the testing library', SHARE, '@rmq/testing', /only be imported from specs/],
+    ['the panels of sharing importing a library by a deep path', SHARE, '@rmq/persistence/src/index', /entry point/],
   ] as const)('%s', (_description, file, source, message) => {
     it('is refused', async () => {
       const found = await violations(file, importing(source));
@@ -424,6 +491,22 @@ describe('imports', () => {
     ['the workspace importing the canvas model', CANVASES, '../canvas/model/shapes'],
     ['the workspace importing its own folder', CANVASES, './library'],
     ['the root of the app importing the workspace', 'projects/app/src/app/example.ts', './canvases/workspace'],
+    ['core importing the link in the address, which is core', CORE, '../share/link-opening'],
+    ['a file directly in core importing the link in the address', CORE_ROOT, './share/link-opening'],
+    ['the link in the address importing core', CORE_SHARE, '../flags/feature-flags'],
+    ['the link in the address importing its own folder', CORE_SHARE, './page-address'],
+    ['the panels of sharing importing core', SHARE, '../core/session/canvas-session'],
+    ['the panels of sharing importing the link in the address', SHARE, '../core/share/page-address'],
+    ['the panels of sharing importing their own folder', SHARE, './link-maker'],
+    ['the panels of sharing importing the notices of core', SHARE, '../core/announcer'],
+    ['the editor importing the panels of sharing', APP, '../share/dialogs'],
+    ['the workspace importing the panels of sharing', CANVASES, '../share/dialogs'],
+    ['the workspace importing the link in the address', CANVASES, '../core/share/link-opening'],
+    [
+      'the root of the app importing the link in the address',
+      'projects/app/src/app/example.ts',
+      './core/share/link-opening',
+    ],
     ['the Foblex adapter importing Foblex Flow', FLOW, '@foblex/flow'],
     ['the Foblex adapter importing a Foblex helper', 'projects/app/src/app/canvas/flow/deep/more.ts', '@foblex/utils'],
   ] as const)('%s', (_description, file, source) => {

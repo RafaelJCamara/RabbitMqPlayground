@@ -5,6 +5,8 @@ import { DOCUMENT, inject, InjectionToken } from '@angular/core';
  * changed. It is behind a token so that a spec gives the link a page that records what is done to it, and a browser test reads the real address.
  */
 export interface PageAddress {
+  /** The address of the page without its query and its fragment, which is where a link to it is built from: `https://learner.test/RabbitMqPlayground/`. */
+  base(): string;
   /** The fragment of the address, with its `#`, or `''` when it has none. */
   hash(): string;
   /** Takes the fragment off the address, in the history entry that the page is in, so that going back does not return to the link. It loads nothing. */
@@ -19,9 +21,16 @@ export interface PageAddress {
 export function browserAddress(page: Document): PageAddress {
   const view = page.defaultView;
   if (view === null) {
-    return { hash: () => '', clearHash: () => undefined, reload: () => undefined, onHashChange: () => () => undefined };
+    return {
+      base: () => '',
+      hash: () => '',
+      clearHash: () => undefined,
+      reload: () => undefined,
+      onHashChange: () => () => undefined,
+    };
   }
   return {
+    base: () => `${view.location.origin}${view.location.pathname}`,
     hash: () => view.location.hash,
     clearHash: () =>
       view.history.replaceState(view.history.state, '', `${view.location.pathname}${view.location.search}`),
