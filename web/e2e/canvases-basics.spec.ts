@@ -104,6 +104,30 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await expect(page.getByTestId('undo')).toBeDisabled();
   });
 
+  test('fills the window under the strip, and the page itself does not scroll', async ({ page }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+
+    const { height, scrollHeight } = await page.evaluate(() => ({
+      height: window.innerHeight,
+      scrollHeight: document.documentElement.scrollHeight,
+    }));
+    const status = await canvases.editor.status.boundingBox();
+
+    expect(scrollHeight).toBeLessThanOrEqual(height);
+    expect(Math.round((status?.y ?? 0) + (status?.height ?? 0))).toBe(height);
+  });
+
+  test('shows on the card what was built in the canvas when the home is shown again', async ({ page }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.editor.add('Queue');
+
+    await canvases.showHome();
+
+    await expect(canvases.card('Untitled canvas').getByTestId('card-size')).toHaveText('1 element');
+  });
+
   test('shows the home with My canvases and a canvas again with its tab, and the strip is there throughout', async ({
     page,
   }) => {
@@ -244,6 +268,34 @@ test.describe('the home, My canvases (ADR-0073)', () => {
     await expect(drawing.locator('path')).toHaveCount(2);
     await expect(drawing.locator('line')).toHaveCount(1);
     await expect(canvases.card('Blank').getByTestId('thumbnail-empty')).toHaveText('Empty');
+  });
+
+  test('scrolls the home and not the page when there are many canvases, so that the strip stays in view', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(
+      page,
+      Array.from({ length: 60 }, (_, index) => ({
+        id: `c${String(index).padStart(2, '0')}`,
+        name: `Canvas ${String(index).padStart(2, '0')}`,
+      })),
+    );
+    await canvases.goto();
+
+    await canvases.showHome();
+
+    await expect(canvases.home.getByRole('article')).toHaveCount(48);
+    const { page: pageOverflow, home: homeOverflow } = await page.evaluate(() => {
+      const home = document.querySelector('main[aria-labelledby="rmq-home-title"]') as HTMLElement;
+      return {
+        page: document.documentElement.scrollHeight - window.innerHeight,
+        home: home.scrollHeight - home.clientHeight,
+      };
+    });
+    expect(pageOverflow).toBeLessThanOrEqual(0);
+    expect(homeOverflow).toBeGreaterThan(0);
+    await expect(canvases.strip).toBeInViewport();
   });
 
   test('opens a canvas from its card, in a tab of its own', async ({ page }) => {

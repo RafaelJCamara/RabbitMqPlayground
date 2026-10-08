@@ -162,6 +162,50 @@ test.describe('deleting a canvas, with an Undo (ADR-0074)', () => {
     await expect.poll(() => canvases.cardNames()).toEqual(['Alpha']);
   });
 
+  test('keeps the notice while the pointer is on it, and waits the half minute again when the pointer leaves', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await page.clock.install();
+    await twoCanvases(canvases);
+    await canvases.action('Beta', 'Delete').click();
+    await canvases.confirmation.getByRole('button', { name: 'Delete canvas' }).click();
+    const notice = canvases.notices.getByTestId('toast');
+    await expect(notice).toBeVisible();
+
+    await notice.hover();
+    await page.clock.fastForward(60_000);
+    await expect(notice).toBeVisible();
+
+    await page.mouse.move(0, 0);
+    await page.clock.fastForward(29_000);
+    await expect(notice).toBeVisible();
+    await page.clock.fastForward(2_000);
+    await expect(canvases.notices).toHaveCount(0);
+  });
+
+  test('keeps the notice while the cursor is in it, and waits the half minute again when the cursor leaves', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await page.clock.install();
+    await twoCanvases(canvases);
+    await canvases.action('Beta', 'Delete').click();
+    await canvases.confirmation.getByRole('button', { name: 'Delete canvas' }).click();
+    const notice = canvases.notices.getByTestId('toast');
+    await expect(notice).toBeVisible();
+
+    await notice.getByRole('button', { name: 'Undo' }).focus();
+    await page.clock.fastForward(60_000);
+    await expect(notice).toBeVisible();
+
+    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+    await page.clock.fastForward(29_000);
+    await expect(notice).toBeVisible();
+    await page.clock.fastForward(2_000);
+    await expect(canvases.notices).toHaveCount(0);
+  });
+
   test('takes the notice away after half a minute, and then the delete cannot be taken back with the keys', async ({
     page,
   }) => {
@@ -270,6 +314,20 @@ test.describe('clearing a canvas, with an Undo (ADR-0074)', () => {
     await page.keyboard.press('Control+z');
 
     await expect(canvases.editor.node('Queue queue1')).toBeVisible();
+    await expect(canvases.notices).toHaveCount(0);
+  });
+
+  test('takes the notice away when the canvas is left, because its Undo would have nothing to undo', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.editor.add('Queue');
+    await page.getByRole('button', { name: 'Clear canvas' }).click();
+    await expect(canvases.notices).toBeVisible();
+
+    await canvases.showHome();
+
     await expect(canvases.notices).toHaveCount(0);
   });
 
