@@ -1,0 +1,244 @@
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { failure, succeed, type Outcome } from '@rmq/persistence';
+import { manualTimer, type ManualTimer } from '@rmq/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Announcer } from '../announcer';
+import { MAX_TOASTS, TOAST_TIMER, TOAST_TTL_MS, Toasts, type ToastUndo } from './toasts';
+
+function setup(ttl = 30_000) {
+  const timer: ManualTimer = manualTimer();
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: TOAST_TIMER, useValue: timer },
+      { provide: TOAST_TTL_MS, useValue: ttl },
+    ],
+  });
+  const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
+  return { toasts: TestBed.inject(Toasts), timer, announce };
+}
+
+const undoing = (
+  result: Outcome<void, string> = succeed(undefined),
+  keys: string | null = 'Ctrl+Z',
+): ToastUndo & { run: ReturnType<typeof vi.fn> } => ({
+  label: 'Undo',
+  ...(keys === null ? {} : { keys }),
+  run: vi.fn(async () => result),
+});
+
+describe('Toasts (ADR-0074)', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  describe('showing a notice', () => {
+    it('shows it, with its message and its action, and gives an id', () => {
+      const { toasts } = setup();
+      const undo = undoing();
+
+      const id = toasts.show({ message: 'Deleted “Orders”.', undo });
+
+      expect(toasts.visible()).toEqual([{ id, message: 'Deleted “Orders”.', undo, problem: null }]);
+    });
+
+    it('gives each notice an id of its own', () => {
+      const { toasts } = setup();
+
+      expect(
+        new Set([toasts.show({ message: 'a' }), toasts.show({ message: 'b' }), toasts.show({ message: 'c' })]).size,
+      ).toBe(3);
+    });
+
+    it('says the message once, politely, and, when the action has keys, how to do it with them', () => {
+      const { toasts, announce } = setup();
+
+      toasts.show({ message: 'Cleared the canvas.' });
+      toasts.show({ message: 'Deleted “Orders”.', undo: undoing() });
+      toasts.show({ message: 'Copied.', undo: undoing(succeed(undefined), null) });
+
+      expect(announce.mock.calls).toEqual([
+        ['Cleared the canvas.'],
+        ['Deleted “Orders”. Press Ctrl+Z to undo.'],
+        ['Copied.'],
+      ]);
+    });
+
+    it('keeps the newest three and lets the oldest go, and stops its time', () => {
+      const { toasts, timer } = setup();
+      const ids = ['a', 'b', 'c', 'd'].map((message) => toasts.show({ message }));
+
+      expect(MAX_TOASTS).toBe(3);
+      expect(toasts.visible().map(({ id }) => id)).toEqual(ids.slice(1));
+      timer.advance(30_000);
+      expect(toasts.visible()).toEqual([]);
+    });
+  });
+
+  describe('how long a notice waits', () => {
+    it('waits 30 seconds, to the millisecond, and then goes', () => {
+      const { toasts, timer } = setup();
+      toasts.show({ message: 'a' });
+
+      timer.advance(29_999);
+      expect(toasts.visible()).toHaveLength(1);
+      timer.advance(1);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('waits as long as the token says', () => {
+      const { toasts, timer } = setup(1_000);
+      toasts.show({ message: 'a' });
+
+      timer.advance(999);
+      expect(toasts.visible()).toHaveLength(1);
+      timer.advance(1);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('has a time of its own for each notice', () => {
+      const { toasts, timer } = setup();
+      toasts.show({ message: 'first' });
+      timer.advance(10_000);
+      toasts.show({ message: 'second' });
+
+      timer.advance(20_000);
+
+      expect(toasts.visible().map(({ message }) => message)).toEqual(['second']);
+    });
+
+    it('stops while the pointer or the focus is on it, and waits the whole time again when they leave', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a' });
+      timer.advance(20_000);
+
+      toasts.pause(id);
+      timer.advance(60_000);
+      expect(toasts.visible()).toHaveLength(1);
+
+      toasts.resume(id);
+      timer.advance(29_999);
+      expect(toasts.visible()).toHaveLength(1);
+      timer.advance(1);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('does not start a time for a notice that is gone', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a' });
+      toasts.dismiss(id);
+
+      toasts.resume(id);
+      const other = toasts.show({ message: 'b' });
+      timer.advance(30_000);
+
+      expect(toasts.visible().map(({ id: seen }) => seen)).not.toContain(other);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('does not mind being paused or resumed twice', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a' });
+
+      toasts.pause(id);
+      toasts.pause(id);
+      toasts.resume(id);
+      toasts.resume(id);
+      timer.advance(30_000);
+
+      expect(toasts.visible()).toEqual([]);
+    });
+  });
+
+  describe('dismissing', () => {
+    it('takes a notice away at once, and only that one', () => {
+      const { toasts } = setup();
+      const first = toasts.show({ message: 'a' });
+      const second = toasts.show({ message: 'b' });
+
+      toasts.dismiss(first);
+
+      expect(toasts.visible().map(({ id }) => id)).toEqual([second]);
+    });
+
+    it('is not a problem for a notice that is not there', () => {
+      const { toasts } = setup();
+
+      expect(() => toasts.dismiss(99)).not.toThrow();
+    });
+  });
+
+  describe('the action of a notice', () => {
+    it('runs it, and takes the notice away when it worked', async () => {
+      const { toasts } = setup();
+      const undo = undoing();
+      const id = toasts.show({ message: 'a', undo });
+
+      await toasts.undo(id);
+
+      expect(undo.run).toHaveBeenCalledOnce();
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('keeps the notice, says why it did not work on the notice and aloud, and can be tried again', async () => {
+      const { toasts, announce } = setup();
+      const undo = undoing(failure('“Orders” is gone for good.'));
+      const id = toasts.show({ message: 'a', undo });
+      announce.mockClear();
+
+      await toasts.undo(id);
+
+      expect(toasts.visible()).toHaveLength(1);
+      expect(toasts.visible()[0]?.problem).toBe('“Orders” is gone for good.');
+      expect(announce).toHaveBeenCalledExactlyOnceWith('“Orders” is gone for good.', 'assertive');
+      undo.run.mockResolvedValue(succeed(undefined));
+      await toasts.undo(id);
+      expect(toasts.visible()).toEqual([]);
+    });
+
+    it('does nothing for a notice that has no action, or is not there', async () => {
+      const { toasts, announce } = setup();
+      const id = toasts.show({ message: 'a' });
+      announce.mockClear();
+
+      await toasts.undo(id);
+      await toasts.undo(99);
+
+      expect(toasts.visible()).toHaveLength(1);
+      expect(announce).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a notice whose action cannot be true any more', () => {
+    it('goes when its condition turns false, and is there while it holds', () => {
+      const { toasts } = setup();
+      const holds = signal(true);
+      toasts.show({ message: 'a', undo: undoing(), stillTrue: holds });
+
+      expect(toasts.visible()).toHaveLength(1);
+      holds.set(false);
+      expect(toasts.visible()).toEqual([]);
+      holds.set(true);
+      expect(toasts.visible()).toHaveLength(1);
+    });
+  });
+
+  describe('the newest action', () => {
+    it('is the newest notice that has one, and is still true', () => {
+      const { toasts } = setup();
+      const old = toasts.show({ message: 'old', undo: undoing() });
+      const holds = signal(true);
+      toasts.show({ message: 'newer', undo: undoing(), stillTrue: holds });
+      toasts.show({ message: 'newest, with nothing to undo' });
+
+      expect(toasts.latestUndo()?.message).toBe('newer');
+      holds.set(false);
+      expect(toasts.latestUndo()?.id).toBe(old);
+    });
+
+    it('is nothing when no notice has one', () => {
+      const { toasts } = setup();
+      toasts.show({ message: 'a' });
+
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+  });
+});
