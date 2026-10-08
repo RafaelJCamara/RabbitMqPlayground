@@ -2,19 +2,34 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { emptyDocument } from '@rmq/domain';
 import {
   failure,
+  parseBackup,
+  parseCanvasFile,
+  quotaWarning,
+  readUsage,
+  restoreBackup,
   succeed,
+  writeBackup,
+  writeCanvasFile,
   type CanvasRecord,
   type CanvasRepository,
   type Outcome,
+  type QuotaWarning,
   type RepositoryError,
+  type RestoreReport,
+  type StorageUsage,
   type UnreadableCanvas,
 } from '@rmq/persistence';
 import { Announcer } from '../core/announcer';
 import type { CanvasHost, OpenEditor } from '../core/session/canvas-host';
-import { CanvasStorage } from '../core/session/canvas-storage';
+import { NOW } from '../core/session/canvas-session';
+import { CanvasStorage, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { Toasts } from '../core/ui/toasts';
 import { formatChord } from '../editor/keyboard';
-import { copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { backupDone, type BackupDone } from './backup-words';
+import { FILE_DOWNLOADER } from './downloader';
+import { readText, tooBigToRead } from './file-text';
+import { backupFileName, canvasFileName, copyName, nameProblem, UNTITLED, uniqueName } from './names';
+import { backupReminder, SNOOZE_MS } from './reminder';
 import { summarise, type CanvasSummary } from './summary';
 
 /** What the workspace shows: the home, or one canvas in the editor (ADR-0072). */
@@ -42,6 +57,9 @@ export class CanvasLibrary implements CanvasHost {
   private readonly storage = inject(CanvasStorage);
   private readonly announcer = inject(Announcer);
   private readonly toasts = inject(Toasts);
+  private readonly downloader = inject(FILE_DOWNLOADER);
+  private readonly now = inject(NOW);
+  private readonly manager = inject(STORAGE_MANAGER);
 
   private readonly summaries = signal<readonly CanvasSummary[]>([]);
   private readonly unreadableCanvases = signal<readonly UnreadableCanvas[]>([]);
@@ -49,6 +67,13 @@ export class CanvasLibrary implements CanvasHost {
   private readonly current = signal<View>(HOME);
   private readonly started = signal(false);
   private readonly trouble = signal<string | null>(null);
+  private readonly backups = signal<{ readonly last: number | undefined; readonly snoozedUntil: number | undefined }>({
+    last: undefined,
+    snoozedUntil: undefined,
+  });
+  private readonly storageUsage = signal<StorageUsage | null>(null);
+  /** The time at which the home was last read, which is what the reminder is judged at (the reminder is not a clock). */
+  private readonly readAt = signal(0);
   private editor: OpenEditor | undefined;
   /** Counts the changes of what is shown, so that one that waited for an editor to write does not undo a later one. */
   private showing = 0;
@@ -62,6 +87,27 @@ export class CanvasLibrary implements CanvasHost {
   readonly ready = this.started.asReadonly();
   /** Why the canvases could not be read or what could not be done, in words, or `null`. */
   readonly problem = this.trouble.asReadonly();
+  /** How much room the browser allows the canvases and how much they use, as of the last read, or `null` if the browser does not say. */
+  readonly usage = this.storageUsage.asReadonly();
+  /** A warning that the room is running out, or `null` (ADR-0075). */
+  readonly quota = computed<QuotaWarning | null>(() => {
+    const usage = this.storageUsage();
+    const warning = usage === null ? null : quotaWarning(usage);
+    return warning === null || warning.level === 'ok' ? null : warning;
+  });
+  /** What the browser said when it was asked to keep the canvases, unless it agreed (ADR-0075). */
+  readonly persistence = this.storage.persistence;
+  /** Why the canvases are kept in memory and will be gone when the tab is closed, or `undefined`. */
+  readonly memoryReason = this.storage.memoryReason;
+  /** The reminder to make a backup, or that it is not due (ADR-0075). */
+  readonly reminder = computed(() =>
+    backupReminder({
+      now: this.readAt(),
+      canvases: this.summaries(),
+      lastBackupAt: this.backups().last,
+      snoozedUntil: this.backups().snoozedUntil,
+    }),
+  );
   /** The open canvases, in the order of the strip, with the names they have now. */
   readonly tabs = computed<readonly Tab[]>(() => {
     const names = new Map(this.summaries().map(({ id, name }) => [id, name]));
@@ -304,7 +350,199 @@ export class CanvasLibrary implements CanvasHost {
     }
     this.summaries.set(listed.value.canvases.map(summarise));
     this.unreadableCanvases.set(listed.value.unreadable);
+    await this.readHomeFacts(repository);
     return succeed(undefined);
+  }
+
+  /** The times of the last backup and of the reminder, and the room that the browser has left. A browser that does not say is an answer: nothing is shown of it. */
+  private async readHomeFacts(repository: CanvasRepository): Promise<void> {
+    const [last, snoozedUntil, usage] = await Promise.all([
+      repository.getMeta('lastBackupAt'),
+      repository.getMeta('backupReminderSnoozedUntil'),
+      readUsage(this.manager),
+    ]);
+    this.backups.set({
+      last: last.ok ? last.value : undefined,
+      snoozedUntil: snoozedUntil.ok ? snoozedUntil.value : undefined,
+    });
+    this.storageUsage.set(usage.ok ? usage.value : null);
+    this.readAt.set(this.now());
+    this.storage.askPersistence();
+  }
+
+  /** Saves a canvas as a file (ADR-0075), as it is saved: the editor that has it open writes first. It answers the name of the file. */
+  async saveAsFile(id: string): Promise<Outcome<string, string>> {
+    await this.editor?.flush();
+    const repository = await this.storage.repository();
+    const record = await repository.get(id);
+    if (!record.ok) {
+      return this.fail(`The canvas could not be saved as a file. ${record.error.message}`);
+    }
+    const written = writeCanvasFile({ name: record.value.name, document: record.value.document });
+    if (!written.ok) {
+      return this.fail(`“${record.value.name}” could not be saved as a file. ${written.error.message}`);
+    }
+    const file = canvasFileName(record.value.name);
+    this.downloader.save(file, written.value);
+    this.toasts.show({ message: `Saved “${record.value.name}” as ${file}.` });
+    return succeed(file);
+  }
+
+  /** Opens a canvas file as a new canvas, always (ADR-0075). A file that cannot be opened changes nothing, and the answer says why, root cause first. */
+  async openFile(file: File): Promise<Outcome<CanvasSummary, string>> {
+    const text = await this.textOf(file);
+    if (!text.ok) {
+      return text;
+    }
+    const parsed = parseCanvasFile(text.value);
+    if (!parsed.ok) {
+      return failure(parsed.error.message);
+    }
+    const repository = await this.storage.repository();
+    const made = await repository.create({ name: parsed.value.name, document: parsed.value.document });
+    if (!made.ok) {
+      return failure(made.error.message);
+    }
+    const summary = this.add(made.value);
+    await this.openCanvas(summary.id);
+    this.announcer.announce(`Opened “${summary.name}” from ${file.name}.`);
+    return succeed(summary);
+  }
+
+  /**
+   * Saves every canvas that can be read as one backup (ADR-0075), says what it came to, and remembers the time. The canvases that cannot be read are not in it, and the
+   * answer says how many. `say: false` leaves the telling to the caller, such as the dialog that offers a backup before it deletes everything.
+   */
+  async exportBackup(options: { readonly say?: boolean } = {}): Promise<Outcome<BackupDone, string>> {
+    const done = await this.makeBackup();
+    if (options.say !== false) {
+      if (done.ok) {
+        this.toasts.show({ message: backupDone(done.value) });
+      } else {
+        this.report(done.error);
+      }
+    }
+    return done;
+  }
+
+  /** Writes the file of the backup and remembers when. It tells no one: that is for whoever asked. */
+  private async makeBackup(): Promise<Outcome<BackupDone, string>> {
+    await this.editor?.flush();
+    const repository = await this.storage.repository();
+    const listed = await repository.list();
+    if (!listed.ok) {
+      return failure(`The backup could not be made. ${listed.error.message}`);
+    }
+    const { canvases, unreadable } = listed.value;
+    if (canvases.length === 0) {
+      return failure('There is nothing to back up: no canvas here can be opened.');
+    }
+    const time = this.now();
+    const written = writeBackup(canvases, { exportedAt: time });
+    if (!written.ok) {
+      return failure(`The backup could not be made. ${written.error.message}`);
+    }
+    const file = backupFileName(time);
+    this.downloader.save(file, written.value);
+    await repository.setMeta('lastBackupAt', time);
+    this.backups.update((times) => ({ ...times, last: time }));
+    return succeed({ file, count: canvases.length, left: unreadable.length });
+  }
+
+  /** "Remind me in a week" (ADR-0075). */
+  async snoozeReminder(): Promise<void> {
+    const until = this.now() + SNOOZE_MS;
+    this.backups.update((times) => ({ ...times, snoozedUntil: until }));
+    const repository = await this.storage.repository();
+    await repository.setMeta('backupReminderSnoozedUntil', until);
+  }
+
+  /** Puts a backup back without writing over anything (ADR-0075). A file that is not a backup changes nothing, and the answer says why; otherwise it answers the report. */
+  async restoreFile(file: File): Promise<Outcome<RestoreReport, string>> {
+    const text = await this.textOf(file);
+    if (!text.ok) {
+      return text;
+    }
+    const parsed = parseBackup(text.value);
+    if (!parsed.ok) {
+      return failure(parsed.error.message);
+    }
+    const repository = await this.storage.repository();
+    const report = await restoreBackup(repository, parsed.value);
+    if (!report.ok) {
+      return failure(report.error.message);
+    }
+    await this.refresh();
+    return succeed(report.value);
+  }
+
+  /**
+   * Deletes every canvas, readable or not (ADR-0074), and shows the home. Each is a tombstone for a minute, and a notice offers to bring them all back, with the strip
+   * as it was. If the browser refuses nothing has changed, and it says why. It answers whether they were deleted.
+   */
+  async deleteAll(): Promise<boolean> {
+    await this.show(HOME);
+    const open = this.openIds();
+    const repository = await this.storage.repository();
+    const done = await repository.softDeleteAll();
+    if (!done.ok) {
+      this.report(`The canvases could not be deleted. ${done.error.message}`);
+      return false;
+    }
+    const ids = done.value;
+    this.summaries.set([]);
+    this.unreadableCanvases.set([]);
+    this.openIds.set([]);
+    this.saveStrip();
+    this.toasts.show({
+      message: ids.length === 1 ? 'Deleted 1 canvas.' : `Deleted all ${ids.length} canvases.`,
+      undo: { label: 'Undo', keys: formatChord({ key: 'z', mod: true }), run: () => this.restoreAll(ids, open) },
+    });
+    return true;
+  }
+
+  /** Brings back the canvases that a delete-all took, as many as are still there, and the strip as it was. A canvas whose minute is over is gone, and that is said. */
+  private async restoreAll(ids: readonly string[], open: readonly string[]): Promise<Outcome<void, string>> {
+    const repository = await this.storage.repository();
+    const done = await repository.restoreAll(ids);
+    if (!done.ok) {
+      return failure(done.error.message);
+    }
+    const back = done.value.length;
+    if (back === 0) {
+      return failure('Nothing could be brought back: every canvas was deleted more than a minute ago.');
+    }
+    await this.refresh();
+    const readable = new Set(this.summaries().map((canvas) => canvas.id));
+    this.openIds.set(open.filter((id) => readable.has(id)));
+    this.saveStrip();
+    this.announcer.announce(
+      back === ids.length
+        ? `${ids.length === 1 ? '1 canvas is' : `${ids.length} canvases are`} back.`
+        : `${back} of ${ids.length} are back: ${ids.length - back === 1 ? '1 was' : `${ids.length - back} were`} deleted for good.`,
+    );
+    return succeed(undefined);
+  }
+
+  /** The text of a file that the learner chose, or why it cannot be read. */
+  private async textOf(file: File): Promise<Outcome<string, string>> {
+    const big = tooBigToRead(file);
+    if (big !== null) {
+      return failure(big);
+    }
+    try {
+      return succeed(await readText(file));
+    } catch (error) {
+      return failure(
+        `The file could not be read. ${error instanceof Error ? error.message : 'The browser did not say why.'}`,
+      );
+    }
+  }
+
+  /** A problem that is said on the screen and aloud, and the answer that carries it. */
+  private fail(text: string): Outcome<never, string> {
+    this.report(text);
+    return failure(text);
   }
 
   /** The problem has been read. */

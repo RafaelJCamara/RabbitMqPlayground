@@ -1,12 +1,24 @@
 import { TestBed } from '@angular/core/testing';
 import { emptyDocument } from '@rmq/domain';
-import { createMemoryRepository, type CanvasRepository, type Outcome, type RepositoryError } from '@rmq/persistence';
+import {
+  createMemoryRepository,
+  parseBackup,
+  parseCanvasFile,
+  writeBackup,
+  writeCanvasFile,
+  type CanvasRepository,
+  type Outcome,
+  type RepositoryError,
+  type StorageManagerLike,
+} from '@rmq/persistence';
 import { documentOf, idSequence, manualClock, manualTimer, queueRecord, type ManualClock } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { Announcer, type Politeness } from '../core/announcer';
 import type { OpenEditor } from '../core/session/canvas-host';
+import { NOW } from '../core/session/canvas-session';
 import { REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-storage';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
+import { FILE_DOWNLOADER } from './downloader';
 import { CanvasLibrary, type View } from './library';
 
 const unavailable: RepositoryError = {
@@ -27,15 +39,20 @@ interface Harness {
   readonly announce: Mock<(message: string, politeness?: Politeness) => void>;
   readonly made: { browser: number; memory: number };
   readonly toasts: Toasts;
+  /** The files that the library gave to the learner, in order. */
+  readonly saved: { readonly name: string; readonly text: string }[];
 }
 
 type Wrap = (repository: CanvasRepository) => CanvasRepository;
 
-function setup(options: { readonly browser?: Wrap; readonly memory?: Wrap } = {}): Harness {
+function setup(
+  options: { readonly browser?: Wrap; readonly memory?: Wrap; readonly manager?: StorageManagerLike } = {},
+): Harness {
   const clock = manualClock(5_000_000);
   const ids = idSequence('c');
   const browser = createMemoryRepository({ now: clock.now, newId: ids });
   const made = { browser: 0, memory: 0 };
+  const saved: { name: string; text: string }[] = [];
   TestBed.configureTestingModule({
     providers: [
       CanvasLibrary,
@@ -53,8 +70,10 @@ function setup(options: { readonly browser?: Wrap; readonly memory?: Wrap } = {}
           },
         },
       },
-      { provide: STORAGE_MANAGER, useValue: undefined },
+      { provide: STORAGE_MANAGER, useValue: options.manager },
       { provide: TOAST_TIMER, useValue: manualTimer() },
+      { provide: NOW, useValue: clock.now },
+      { provide: FILE_DOWNLOADER, useValue: { save: (name: string, text: string) => saved.push({ name, text }) } },
     ],
   });
   const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
@@ -65,6 +84,7 @@ function setup(options: { readonly browser?: Wrap; readonly memory?: Wrap } = {}
     announce,
     made,
     toasts: TestBed.inject(Toasts),
+    saved,
   };
 }
 
@@ -922,6 +942,682 @@ describe('CanvasLibrary', () => {
           .map(({ id }) => id)
           .sort(),
       ).toEqual(['alpha', 'beta']);
+      expect(harness.toasts.visible()).toEqual([]);
+    });
+  });
+
+  describe('saving a canvas as a file (ADR-0075)', () => {
+    it('gives the learner the file of the canvas as it is saved, named after it, and says so in a notice', async () => {
+      const harness = setup();
+      await seed(harness, 'Orders');
+      await harness.repository.save('orders', {
+        name: 'Orders flow',
+        document: documentOf({ queues: { q1: queueRecord('billing') } }),
+      });
+      await harness.library.start();
+
+      const saved = await harness.library.saveAsFile('orders');
+
+      expect(saved).toEqual({ ok: true, value: 'orders-flow.rmq.json' });
+      expect(harness.saved).toHaveLength(1);
+      expect(harness.saved[0]?.name).toBe('orders-flow.rmq.json');
+      const read = parseCanvasFile(harness.saved[0]?.text ?? '');
+      expect(read.ok && read.value.name).toBe('Orders flow');
+      expect(read.ok && Object.keys(read.value.document.queues)).toEqual(['q1']);
+      expect(harness.toasts.visible().map(({ message }) => message)).toEqual([
+        'Saved “Orders flow” as orders-flow.rmq.json.',
+      ]);
+    });
+
+    it('makes the open editor write first, so that the file is what the learner sees', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const { editor, finish } = editorOf('alpha');
+      harness.library.attach(editor);
+
+      const saving = harness.library.saveAsFile('alpha');
+      await settle();
+      expect(harness.saved).toEqual([]);
+      finish();
+      await saving;
+
+      expect(harness.saved).toHaveLength(1);
+    });
+
+    it('calls a canvas whose name has no letters or digits "canvas"', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      await harness.library.rename('alpha', '***');
+
+      const saved = await harness.library.saveAsFile('alpha');
+
+      expect(saved).toEqual({ ok: true, value: 'canvas.rmq.json' });
+    });
+
+    it('says why, on the screen and aloud, and gives no file, when the canvas cannot be read', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      const saved = await harness.library.saveAsFile('nowhere');
+
+      expect(!saved.ok && saved.error).toMatch(
+        /^The canvas could not be saved as a file\. There is no canvas with the id "nowhere"/,
+      );
+      expect(harness.library.problem()).toBe(!saved.ok ? saved.error : null);
+      expect(harness.saved).toEqual([]);
+    });
+  });
+
+  describe('opening a file (ADR-0075)', () => {
+    const fileOf = (text: string, name = 'orders.rmq.json') => new File([text], name);
+    const canvasFile = (name = 'From a file') => {
+      const written = writeCanvasFile({ name, document: documentOf({ queues: { q1: queueRecord('billing') } }) });
+      if (!written.ok) {
+        throw new Error(written.error.message);
+      }
+      return written.value;
+    };
+
+    it('opens it as a new canvas, with the name and the document of the file, in a tab of its own, and says so', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      const opened = await harness.library.openFile(fileOf(canvasFile()));
+
+      expect(opened.ok && opened.value.name).toBe('From a file');
+      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['Alpha', 'From a file']);
+      expect(harness.library.view()).toEqual(canvasView(opened.ok ? opened.value.id : ''));
+      const stored = await harness.repository.get(opened.ok ? opened.value.id : '');
+      expect(stored.ok && Object.keys(stored.value.document.queues)).toEqual(['q1']);
+      expect(harness.announce).toHaveBeenCalledWith('Opened “From a file” from orders.rmq.json.');
+    });
+
+    it('opens it as a new canvas even when a canvas has the same name, and never replaces one', async () => {
+      const harness = setup();
+      await harness.repository.create({ id: 'same', name: 'From a file', document: emptyDocument() });
+      await harness.library.start();
+
+      await harness.library.openFile(fileOf(canvasFile('From a file')));
+
+      expect(harness.library.canvases().map(({ name }) => name)).toEqual(['From a file', 'From a file']);
+    });
+
+    it('refuses a file that is not JSON, in the words of the loader, and changes nothing', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      const opened = await harness.library.openFile(fileOf('this is not JSON'));
+
+      expect(!opened.ok && opened.error).toMatch(/^This is not JSON, so it cannot be a canvas/);
+      expect(harness.library.canvases()).toHaveLength(1);
+      expect(harness.library.problem()).toBeNull();
+    });
+
+    it('says that a backup is a backup, and to open it as one', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const backup = writeBackup([], { exportedAt: 1 });
+
+      const opened = await harness.library.openFile(fileOf(backup.ok ? backup.value : ''));
+
+      expect(!opened.ok && opened.error).toBe(
+        'This is a backup of several canvases, and not the file of one canvas. Open it as a backup.',
+      );
+    });
+
+    it('refuses a file from a newer version, and says to reload the page for the newest', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const newer = JSON.stringify({ ...JSON.parse(canvasFile()), version: 99 });
+
+      const opened = await harness.library.openFile(fileOf(newer));
+
+      expect(!opened.ok && opened.error).toMatch(
+        /saved by a newer version of this app.*Reload the page.*Nothing was loaded and nothing was changed\./,
+      );
+    });
+
+    it('does not read a file that is too big to be one of ours, and says its size', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const big = { name: 'huge.json', size: 300_000_000, text: vi.fn(async () => '') } as unknown as File;
+
+      const opened = await harness.library.openFile(big);
+
+      expect(!opened.ok && opened.error).toMatch(
+        /^This file is 286\.1 MB, which is more than a canvas file or a backup/,
+      );
+      expect(big.text).not.toHaveBeenCalled();
+    });
+
+    it('says that the file could not be read when the browser fails to read it', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const broken = {
+        name: 'x.json',
+        size: 10,
+        text: async () => Promise.reject(new Error('The file is gone.')),
+      } as unknown as File;
+      const nothing = { name: 'y.json', size: 10, text: async () => Promise.reject('no') } as unknown as File;
+
+      const first = await harness.library.openFile(broken);
+      const second = await harness.library.openFile(nothing);
+
+      expect(!first.ok && first.error).toBe('The file could not be read. The file is gone.');
+      expect(!second.ok && second.error).toBe('The file could not be read. The browser did not say why.');
+    });
+
+    it('says why, in the words of the browser, when the canvas cannot be kept', async () => {
+      const harness = setup();
+      await harness.library.start();
+      vi.spyOn(harness.repository, 'create').mockResolvedValue({ ok: false, error: broken });
+
+      const opened = await harness.library.openFile(fileOf(canvasFile()));
+
+      expect(!opened.ok && opened.error).toBe(broken.message);
+    });
+  });
+
+  describe('backing up (ADR-0075)', () => {
+    it('gives the learner one file of every canvas that can be read, named by the day, and says what it came to', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+
+      const done = await harness.library.exportBackup();
+
+      const day = new Date(harness.clock.now());
+      const two = (n: number) => String(n).padStart(2, '0');
+      const file = `rmq-playground-backup-${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}.json`;
+      expect(done).toEqual({ ok: true, value: { file, count: 2, left: 0 } });
+      expect(harness.saved.map(({ name }) => name)).toEqual([file]);
+      const read = parseBackup(harness.saved[0]?.text ?? '');
+      expect(read.ok && read.value.entries.map((entry) => entry.ok && entry.canvas.name).sort()).toEqual([
+        'Alpha',
+        'Beta',
+      ]);
+      expect(read.ok && read.value.exportedAt).toBe(harness.clock.now());
+      expect(harness.toasts.visible().map(({ message }) => message)).toEqual([
+        `Backed up 2 canvases to ${file}. Keep the file somewhere other than this device too: a backup beside the canvases is lost with them.`,
+      ]);
+    });
+
+    it('remembers when it was made, for the reminder', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.exportBackup();
+
+      expect(await harness.repository.getMeta('lastBackupAt')).toEqual({ ok: true, value: harness.clock.now() });
+    });
+
+    it('leaves out the canvases that cannot be read, and says how many', async () => {
+      const harness = setup({
+        browser: (memory) => ({
+          ...memory,
+          list: async () => {
+            const listed = await memory.list();
+            return listed.ok
+              ? {
+                  ok: true,
+                  value: {
+                    canvases: listed.value.canvases.filter(({ id }) => id !== 'beta'),
+                    unreadable: [
+                      {
+                        id: 'beta',
+                        error: { kind: 'newer-version', of: 'schema', found: 9, understood: 1, message: 'Newer.' },
+                      },
+                    ],
+                  },
+                }
+              : listed;
+          },
+        }),
+      });
+      await seed(harness, 'Alpha', 'Beta');
+      await harness.library.start();
+
+      const done = await harness.library.exportBackup();
+
+      expect(done.ok && done.value).toMatchObject({ count: 1, left: 1 });
+      expect(harness.toasts.visible()[0]?.message).toContain('1 canvas could not be opened and is not in the file.');
+    });
+
+    it('makes the open editor write first', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      const { editor, finish } = editorOf('alpha');
+      harness.library.attach(editor);
+
+      const backing = harness.library.exportBackup();
+      await settle();
+      expect(harness.saved).toEqual([]);
+      finish();
+      await backing;
+
+      expect(harness.saved).toHaveLength(1);
+    });
+
+    it('makes no file and says why when no canvas can be read', async () => {
+      const harness = setup({
+        browser: (memory) => ({ ...memory, list: async () => ({ ok: true, value: { canvases: [], unreadable: [] } }) }),
+      });
+      await harness.library.start();
+
+      const done = await harness.library.exportBackup();
+
+      expect(!done.ok && done.error).toBe('There is nothing to back up: no canvas here can be opened.');
+      expect(harness.library.problem()).toBe('There is nothing to back up: no canvas here can be opened.');
+      expect(harness.saved).toEqual([]);
+      expect(await harness.repository.getMeta('lastBackupAt')).toEqual({ ok: true, value: undefined });
+    });
+
+    it('says why, and gives no file, when the browser cannot be read', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      vi.spyOn(harness.repository, 'list').mockResolvedValue({ ok: false, error: broken });
+
+      const done = await harness.library.exportBackup();
+
+      expect(!done.ok && done.error).toBe(`The backup could not be made. ${broken.message}`);
+      expect(harness.saved).toEqual([]);
+    });
+
+    it('leaves the telling to the caller when it is asked to be quiet: no notice', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      const done = await harness.library.exportBackup({ say: false });
+
+      expect(done.ok).toBe(true);
+      expect(harness.toasts.visible()).toEqual([]);
+      expect(harness.saved).toHaveLength(1);
+    });
+
+    it('leaves the telling to the caller when it is asked to be quiet: no problem on the screen either', async () => {
+      const harness = setup({
+        browser: (memory) => ({ ...memory, list: async () => ({ ok: true, value: { canvases: [], unreadable: [] } }) }),
+      });
+      await harness.library.start();
+
+      const failed = await harness.library.exportBackup({ say: false });
+
+      expect(failed.ok).toBe(false);
+      expect(harness.library.problem()).toBeNull();
+    });
+  });
+
+  describe('the reminder to back up (ADR-0075)', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    async function oldLibrary() {
+      const harness = setup();
+      await harness.repository.create({
+        id: 'alpha',
+        name: 'Alpha',
+        document: documentOf({ queues: { q1: queueRecord('billing') } }),
+      });
+      await harness.library.start();
+      harness.clock.advance(15 * DAY);
+      await harness.library.show(HOME);
+      return harness;
+    }
+
+    it('is due when the canvases are two weeks old and there has never been a backup', async () => {
+      const harness = await oldLibrary();
+
+      expect(harness.library.reminder().due).toBe(true);
+    });
+
+    it('is not due on a fresh library, or before the home has been read', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      expect(harness.library.reminder().due).toBe(false);
+      await harness.library.show(HOME);
+      expect(harness.library.reminder().due).toBe(false);
+    });
+
+    it('goes when a backup is made', async () => {
+      const harness = await oldLibrary();
+
+      await harness.library.exportBackup();
+
+      expect(harness.library.reminder().due).toBe(false);
+    });
+
+    it('goes for a week when the learner says later, and the time is kept', async () => {
+      const harness = await oldLibrary();
+
+      await harness.library.snoozeReminder();
+
+      expect(harness.library.reminder().due).toBe(false);
+      expect(await harness.repository.getMeta('backupReminderSnoozedUntil')).toEqual({
+        ok: true,
+        value: harness.clock.now() + 7 * DAY,
+      });
+    });
+
+    it('reads what an earlier visit kept: a backup made a week ago, or a reminder put off', async () => {
+      const harness = setup();
+      await harness.repository.create({
+        id: 'alpha',
+        name: 'Alpha',
+        document: documentOf({ queues: { q1: queueRecord('billing') } }),
+      });
+      await harness.repository.setMeta('backupReminderSnoozedUntil', harness.clock.now() + 20 * DAY);
+      await harness.library.start();
+      harness.clock.advance(15 * DAY);
+
+      await harness.library.show(HOME);
+
+      expect(harness.library.reminder().due).toBe(false);
+    });
+  });
+
+  describe('the room that the browser has left (ADR-0075)', () => {
+    const manager = (usage: number, quota: number): StorageManagerLike => ({
+      persist: async () => true,
+      persisted: async () => false,
+      estimate: async () => ({ usage, quota }),
+    });
+
+    it('is said as of the last time the home was read, and a warning is only for a browser that is running out', async () => {
+      const harness = setup({ manager: manager(10, 1_000) });
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.show(HOME);
+
+      expect(harness.library.usage()).toEqual({ usage: 10, quota: 1_000, fraction: 0.01 });
+      expect(harness.library.quota()).toBeNull();
+    });
+
+    it('warns at 80% and at 95%, in the words of the persistence library', async () => {
+      const low = setup({ manager: manager(850, 1_000) });
+      await seed(low, 'Alpha');
+      await low.library.start();
+      await low.library.show(HOME);
+      expect(low.library.quota()).toMatchObject({ level: 'low' });
+
+      TestBed.resetTestingModule();
+      const critical = setup({ manager: manager(960, 1_000) });
+      await seed(critical, 'Alpha');
+      await critical.library.start();
+      await critical.library.show(HOME);
+      expect(critical.library.quota()).toMatchObject({ level: 'critical' });
+    });
+
+    it('says nothing of the room when the browser does not say', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.show(HOME);
+
+      expect(harness.library.usage()).toBeNull();
+      expect(harness.library.quota()).toBeNull();
+    });
+
+    it('asks the browser to keep the canvases when the home is read, and keeps what it said when it did not agree', async () => {
+      const harness = setup({
+        manager: {
+          persist: async () => false,
+          persisted: async () => false,
+          estimate: async () => ({ usage: 1, quota: 100 }),
+        },
+      });
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.show(HOME);
+      await settle();
+
+      expect(harness.library.persistence()).toMatchObject({ status: 'denied' });
+    });
+  });
+
+  describe('putting a backup back (ADR-0075)', () => {
+    const backupFile = (...names: string[]) => {
+      const records = names.map((name, index) => ({
+        id: name.toLowerCase(),
+        name,
+        createdAt: 1_000 + index,
+        updatedAt: 2_000 + index,
+        document: documentOf({ queues: { q1: queueRecord(name) } }),
+      }));
+      const written = writeBackup(records, { exportedAt: 5 });
+      return new File([written.ok ? written.value : ''], 'backup.json');
+    };
+
+    it('puts back what is not here, shows it on the home, and leaves the strip as it is', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      const report = await harness.library.restoreFile(backupFile('Beta', 'Gamma'));
+
+      expect(report.ok && report.value.restored.map(({ name }) => name)).toEqual(['Beta', 'Gamma']);
+      expect(
+        harness.library
+          .canvases()
+          .map(({ name }) => name)
+          .sort(),
+      ).toEqual(['Alpha', 'Beta', 'Gamma']);
+      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['Alpha']);
+    });
+
+    it('adds a canvas as a copy when its id is taken by another, and leaves the one that is here', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      const report = await harness.library.restoreFile(backupFile('Alpha'));
+
+      expect(report.ok && report.value.copies.map(({ name }) => name)).toEqual(['Alpha (restored)']);
+      expect(
+        harness.library
+          .canvases()
+          .map(({ name }) => name)
+          .sort(),
+      ).toEqual(['Alpha', 'Alpha (restored)']);
+    });
+
+    it('makes nothing new the second time', async () => {
+      const harness = setup();
+      await harness.library.start();
+      await harness.library.restoreFile(backupFile('Beta'));
+
+      const again = await harness.library.restoreFile(backupFile('Beta'));
+
+      expect(again.ok && again.value.alreadyHere).toHaveLength(1);
+      expect(harness.library.canvases().filter(({ name }) => name === 'Beta')).toHaveLength(1);
+    });
+
+    it('says that the file of one canvas is not a backup, and to open it as a canvas', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const one = writeCanvasFile({ name: 'One', document: documentOf() });
+
+      const report = await harness.library.restoreFile(new File([one.ok ? one.value : ''], 'one.json'));
+
+      expect(!report.ok && report.error).toBe(
+        'This is the file of one canvas, and not a backup of several. Open it as a canvas.',
+      );
+    });
+
+    it('refuses a text that is not JSON, and a file that is too big to be read', async () => {
+      const harness = setup();
+      await harness.library.start();
+      const big = { name: 'huge.json', size: 300_000_000, text: vi.fn(async () => '') } as unknown as File;
+
+      const text = await harness.library.restoreFile(new File(['nope'], 'x.json'));
+      const huge = await harness.library.restoreFile(big);
+
+      expect(!text.ok && text.error).toMatch(/^This is not JSON/);
+      expect(!huge.ok && huge.error).toMatch(/^This file is 286\.1 MB/);
+      expect(big.text).not.toHaveBeenCalled();
+    });
+
+    it('says why when the browser cannot be read', async () => {
+      const harness = setup();
+      await harness.library.start();
+      vi.spyOn(harness.repository, 'list').mockResolvedValue({ ok: false, error: broken });
+
+      const report = await harness.library.restoreFile(backupFile('Beta'));
+
+      expect(!report.ok && report.error).toBe(broken.message);
+    });
+  });
+
+  describe('deleting every canvas (ADR-0074)', () => {
+    async function three() {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('openCanvases', ['alpha', 'beta']);
+      await harness.repository.setMeta('lastOpenCanvas', 'alpha');
+      await harness.library.start();
+      return harness;
+    }
+
+    it('deletes them all, closes the strip, shows the home, keeps the strip empty, and says how many', async () => {
+      const harness = await three();
+
+      const deleted = await harness.library.deleteAll();
+      await settle();
+
+      expect(deleted).toBe(true);
+      expect(harness.library.canvases()).toEqual([]);
+      expect(harness.library.tabs()).toEqual([]);
+      expect(harness.library.view()).toEqual(HOME);
+      expect(await strip(harness.repository)).toEqual([]);
+      const listed = await harness.repository.list();
+      expect(listed.ok && listed.value.canvases).toEqual([]);
+      expect(harness.toasts.visible().map(({ message }) => message)).toEqual(['Deleted all 3 canvases.']);
+    });
+
+    it('says "1 canvas" when there is one', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+
+      await harness.library.deleteAll();
+
+      expect(harness.toasts.visible().map(({ message }) => message)).toEqual(['Deleted 1 canvas.']);
+    });
+
+    it('makes the open editor write first, and then shows the home', async () => {
+      const harness = await three();
+      const { editor, finish } = editorOf('alpha');
+      harness.library.attach(editor);
+
+      const deleting = harness.library.deleteAll();
+      await settle();
+      expect(editor.flush).toHaveBeenCalled();
+      const listed = await harness.repository.list();
+      expect(listed.ok && listed.value.canvases).toHaveLength(3);
+      finish();
+      await deleting;
+
+      expect(harness.library.view()).toEqual(HOME);
+    });
+
+    it('brings every canvas back with the Undo of the notice, and the strip as it was, and says how many', async () => {
+      const harness = await three();
+      await harness.library.deleteAll();
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+      await settle();
+
+      expect(
+        harness.library
+          .canvases()
+          .map(({ id }) => id)
+          .sort(),
+      ).toEqual(['alpha', 'beta', 'gamma']);
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha', 'beta']);
+      expect(await strip(harness.repository)).toEqual(['alpha', 'beta']);
+      expect(harness.announce).toHaveBeenCalledWith('3 canvases are back.');
+      expect(harness.toasts.visible()).toEqual([]);
+      expect(harness.library.view()).toEqual(HOME);
+    });
+
+    it('says that one canvas is back, in the singular', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha');
+      await harness.library.start();
+      await harness.library.deleteAll();
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+
+      expect(harness.announce).toHaveBeenCalledWith('1 canvas is back.');
+    });
+
+    it('says how many are back when some were deleted for good meanwhile', async () => {
+      const harness = await three();
+      await harness.library.deleteAll();
+      const restoreAll = harness.repository.restoreAll.bind(harness.repository);
+      vi.spyOn(harness.repository, 'restoreAll').mockImplementation(async (ids) => restoreAll(ids.slice(0, 2)));
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+
+      expect(harness.announce).toHaveBeenCalledWith('2 of 3 are back: 1 was deleted for good.');
+      expect(harness.library.canvases()).toHaveLength(2);
+    });
+
+    it('says how many were deleted for good, in the plural', async () => {
+      const harness = await three();
+      await harness.library.deleteAll();
+      const restoreAll = harness.repository.restoreAll.bind(harness.repository);
+      vi.spyOn(harness.repository, 'restoreAll').mockImplementation(async (ids) => restoreAll(ids.slice(0, 1)));
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+
+      expect(harness.announce).toHaveBeenCalledWith('1 of 3 are back: 2 were deleted for good.');
+    });
+
+    it('says that nothing could be brought back when every canvas has been deleted for good, and keeps the notice', async () => {
+      const harness = await three();
+      await harness.library.deleteAll();
+      harness.clock.advance(61_000);
+      await harness.repository.purgeExpired();
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+
+      expect(harness.toasts.visible()[0]?.problem).toBe(
+        'Nothing could be brought back: every canvas was deleted more than a minute ago.',
+      );
+    });
+
+    it('says why, in the words of the browser, when it cannot bring them back for another reason', async () => {
+      const harness = await three();
+      await harness.library.deleteAll();
+      vi.spyOn(harness.repository, 'restoreAll').mockResolvedValue({ ok: false, error: broken });
+
+      await harness.toasts.undo(harness.toasts.visible()[0]?.id ?? 0);
+
+      expect(harness.toasts.visible()[0]?.problem).toBe(broken.message);
+    });
+
+    it('says why, and changes nothing, when the browser refuses', async () => {
+      const harness = await three();
+      vi.spyOn(harness.repository, 'softDeleteAll').mockResolvedValue({ ok: false, error: broken });
+
+      const deleted = await harness.library.deleteAll();
+
+      expect(deleted).toBe(false);
+      expect(harness.library.problem()).toBe(`The canvases could not be deleted. ${broken.message}`);
+      expect(harness.library.canvases()).toHaveLength(3);
       expect(harness.toasts.visible()).toEqual([]);
     });
   });
