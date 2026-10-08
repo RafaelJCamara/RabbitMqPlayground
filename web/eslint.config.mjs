@@ -90,6 +90,11 @@ const simulationStaysBelowEditor = {
   message:
     '`simulation/` may not import from `editor/`, `canvas/flow/` or `command-bar/`: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, editor (ADR-0057).',
 };
+const belowCanvases = {
+  regex: '^(\\.\\./)+canvases(/|$)',
+  message:
+    '`core/`, `canvas/`, `command-bar/`, `simulation/`, `explain/` and `editor/` may not import from `canvases/`, which is above them: the folders run core, canvas/model, canvas/overlay, canvas/flow, command-bar, simulation, explain, editor, canvases (ADR-0072).',
+};
 const belowExplain = {
   regex: '^(\\.\\./)+explain(/|$)',
   message:
@@ -349,6 +354,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
       ),
       ...noOptingOutOfOnPush,
     },
@@ -363,6 +369,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         coreStaysBelow,
         belowCommandBar,
         belowSimulation,
@@ -381,6 +388,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         coreStaysBelow,
         belowCommandBar,
         belowSimulation,
@@ -398,6 +406,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         canvasStaysBelowEditor,
         belowCommandBar,
         belowSimulation,
@@ -418,6 +427,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         canvasStaysBelowEditor,
         belowCommandBar,
         belowSimulation,
@@ -437,6 +447,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         simulationStaysBelowEditor,
         belowExplain,
       ),
@@ -453,6 +464,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         explainStaysBelowEditor,
       ),
       ...noOptingOutOfOnPush,
@@ -468,6 +480,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         noFoblex,
+        belowCanvases,
         commandBarStaysBelowEditor,
         belowSimulation,
         belowExplain,
@@ -485,6 +498,7 @@ export default defineConfig([
         testingIsForTests,
         reachesIntoAnotherProject('app'),
         canvasStaysBelowEditor,
+        belowCanvases,
         belowCommandBar,
         belowSimulation,
         belowExplain,

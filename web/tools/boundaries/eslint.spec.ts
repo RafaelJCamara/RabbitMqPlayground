@@ -48,6 +48,7 @@ const SIMULATION = 'projects/app/src/app/simulation/example.ts';
 const EXPLAIN = 'projects/app/src/app/explain/example.ts';
 const CORE_ROOT = 'projects/app/src/app/core/example.ts';
 const CORE_EXPLAIN = 'projects/app/src/app/core/explain/example.ts';
+const CANVASES = 'projects/app/src/app/canvases/example.ts';
 
 describe('imports', () => {
   describe.each([
@@ -270,6 +271,52 @@ describe('imports', () => {
       '../explain/event-log-panel',
       /may not import from `explain\/`/,
     ],
+    // The workspace of several canvases is above everything else, the editor included (ADR-0072).
+    ['core importing the workspace', CORE, '../../canvases/workspace', /may not import from `canvases\/`/],
+    [
+      'a file directly in core importing the workspace',
+      CORE_ROOT,
+      '../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    [
+      'the state of the explanation importing the workspace',
+      CORE_EXPLAIN,
+      '../../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    ['the canvas model importing the workspace', MODEL, '../../canvases/workspace', /may not import from `canvases\/`/],
+    [
+      'the canvas overlay importing the workspace',
+      OVERLAY,
+      '../../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    [
+      'the Foblex adapter importing the workspace',
+      FLOW,
+      '../../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    [
+      'the command bar importing the workspace',
+      COMMAND_BAR,
+      '../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    [
+      'the controls of the simulation importing the workspace',
+      SIMULATION,
+      '../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    [
+      'the components of the explanation importing the workspace',
+      EXPLAIN,
+      '../canvases/workspace',
+      /may not import from `canvases\/`/,
+    ],
+    ['the editor importing the workspace', APP, '../canvases/workspace', /may not import from `canvases\/`/],
     [
       'the components of the explanation importing the editor',
       EXPLAIN,
@@ -370,6 +417,13 @@ describe('imports', () => {
     ],
     ['the components of the explanation importing their own folder', EXPLAIN, './event-log-panel'],
     ['the editor importing the components of the explanation', APP, '../explain/event-log-panel'],
+    ['the workspace importing the editor', CANVASES, '../editor/editor'],
+    ['the workspace importing core', CANVASES, '../core/session/canvas-storage'],
+    ['the workspace importing the notices of core', CANVASES, '../core/ui/toasts'],
+    ['the workspace importing the keys of the editor', CANVASES, '../editor/keyboard'],
+    ['the workspace importing the canvas model', CANVASES, '../canvas/model/shapes'],
+    ['the workspace importing its own folder', CANVASES, './library'],
+    ['the root of the app importing the workspace', 'projects/app/src/app/example.ts', './canvases/workspace'],
     ['the Foblex adapter importing Foblex Flow', FLOW, '@foblex/flow'],
     ['the Foblex adapter importing a Foblex helper', 'projects/app/src/app/canvas/flow/deep/more.ts', '@foblex/utils'],
   ] as const)('%s', (_description, file, source) => {
