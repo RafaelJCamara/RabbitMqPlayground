@@ -289,7 +289,7 @@ export class HeadersPage extends ExplainPage {
   }
 
   /**
-   * Opens the editor on this canvas with the flags that are asked for: `editor,headers` alone, the conditions only; with `simulation` the producer's table; with `explain` too the table of recent messages and
+   * Opens the editor on this canvas with the flags that are asked for: `editor` alone, the conditions only; with `simulation` the producer's table; with `explain` too the table of recent messages and
    * the binding made from a message. With the simulation the clock is stopped, as it is for every page of the simulation.
    */
   static override async open(
@@ -302,7 +302,7 @@ export class HeadersPage extends ExplainPage {
       readonly stop?: boolean;
     } = {},
   ): Promise<HeadersPage> {
-    const flags = options.flags ?? 'editor,headers';
+    const flags = options.flags ?? 'editor';
     if (flags.split(',').includes('simulation')) {
       return new HeadersPage(await SimulationPage.open(page, document, { ...options, flags }));
     }
@@ -365,7 +365,7 @@ export class HeadersPage extends ExplainPage {
     return this.page.getByTestId('producer-composer');
   }
 
-  /** The table of the headers of the message that the selected producer sends (with the flag `headers`). */
+  /** The table of the headers of the message that the selected producer sends . */
   get table(): HeaderRows {
     return new HeaderRows(this.composer.getByTestId('composer-headers-table'), 'header');
   }

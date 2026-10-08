@@ -68,19 +68,19 @@ describe('the chips of an edge (ADR-0044)', () => {
     expect(edgeOf(keyed('topic', ['', 'a']), 'x>q')?.chips).toEqual(['(empty key)', 'a']);
   });
 
-  it('say nothing for the empty key of an exchange that ignores it, a fanout or a headers exchange', () => {
+  it('say nothing for the empty key of a fanout, which ignores it, and the mode for a headers exchange, which reads conditions and no key', () => {
     expect(edgeOf(keyed('fanout', ['']), 'x>q')?.chips).toEqual([]);
-    expect(edgeOf(keyed('headers', ['']), 'x>q')?.chips).toEqual([]);
+    expect(edgeOf(keyed('headers', ['']), 'x>q')?.chips).toEqual(['all · no conditions']);
   });
 
   it('say a key that an exchange ignores all the same, because the learner wrote it', () => {
     expect(edgeOf(keyed('fanout', ['ignored']), 'x>q')?.chips).toEqual(['ignored']);
   });
 
-  it('say "headers" once for bindings that have header arguments', () => {
+  it('say "headers" once for bindings of an exchange that does not read them and that have header arguments', () => {
     const document = frozen(
       documentOf({
-        exchanges: { x: exchangeRecord('docs', 'headers') },
+        exchanges: { x: exchangeRecord('docs', 'fanout') },
         queues: { q: queueRecord('archive') },
         bindings: {
           b1: bindingRecord('x', { kind: 'queue', id: 'q' }, '', headerArguments('any', entry('format', str('pdf')))),
@@ -136,14 +136,14 @@ describe('the chips of an edge (ADR-0044)', () => {
       expect(chipsOf('direct', [{ key: '', hasArguments: false }])).toEqual([
         { short: '(empty key)', full: '(empty key)' },
       ]);
-      expect(shorts(chipsOf('headers', [{ key: '', hasArguments: true }]))).toEqual(['headers']);
+      expect(shorts(chipsOf('fanout', [{ key: '', hasArguments: true }]))).toEqual(['headers']);
       expect(chipsOf('topic', [])).toEqual([]);
     });
 
     it('put a "headers" chip after the keys, because it is about every binding that has arguments', () => {
       expect(
         shorts(
-          chipsOf('headers', [
+          chipsOf('fanout', [
             { key: 'k', hasArguments: false },
             { key: '', hasArguments: true },
           ]),
@@ -316,7 +316,6 @@ describe('the default exchange (ADR-0043)', () => {
 });
 
 describe('the chips of a headers binding, with the conditions (ADR-0070)', () => {
-  const OPTIONS = { conditions: true };
   /** A headers exchange `docs` bound to a queue `archive` by bindings with these arguments, and the edge between them. */
   const edgeWith = (...headers: (HeaderArguments | undefined)[]) =>
     buildCanvasVm(
@@ -332,8 +331,6 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
           ),
         }),
       ),
-      undefined,
-      OPTIONS,
     ).edges.find(({ id }) => id === 'x>q');
 
   it.each<[string, HeaderArguments | undefined, string]>([
@@ -426,10 +423,10 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
       }),
     );
 
-    expect(buildCanvasVm(document, undefined, OPTIONS).edges[0]?.chips).toEqual(['order.*', 'all · a=1']);
+    expect(buildCanvasVm(document).edges[0]?.chips).toEqual(['order.*', 'all · a=1']);
   });
 
-  it('is the old chip, "headers" once, without the flag, and none for a headers binding that has no arguments', () => {
+  it('is the chip of the mode and the conditions for a headers binding that has arguments, and of the mode and no conditions for one that has none', () => {
     const document = frozen(
       documentOf({
         exchanges: { x: exchangeRecord('docs', 'headers') },
@@ -443,15 +440,12 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
 
     const { edges } = buildCanvasVm(document);
 
-    expect(edges.find(({ id }) => id === 'x>q')?.chips).toEqual(['headers']);
-    expect(edges.find(({ id }) => id === 'x>r')?.chips).toEqual([]);
+    expect(edges.find(({ id }) => id === 'x>q')?.chips).toEqual(['any · format=pdf']);
+    expect(edges.find(({ id }) => id === 'x>r')?.chips).toEqual(['all · no conditions']);
     expect(edges.every(({ cut }) => !cut)).toBe(true);
-    expect(buildCanvasVm(document, undefined, OPTIONS).edges.find(({ id }) => id === 'x>r')?.chips).toEqual([
-      'all · no conditions',
-    ]);
   });
 
-  it('is the chip "headers" for arguments that an exchange which is not a headers exchange ignores, flag or no flag', () => {
+  it('is the chip "headers" for arguments that an exchange which is not a headers exchange ignores', () => {
     const document = frozen(
       documentOf({
         exchanges: { x: exchangeRecord('orders', 'direct') },
@@ -462,7 +456,7 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
       }),
     );
 
-    expect(buildCanvasVm(document, undefined, OPTIONS).edges[0]?.chips).toEqual(['k', 'headers']);
+    expect(buildCanvasVm(document).edges[0]?.chips).toEqual(['k', 'headers']);
   });
 
   it('says the conditions of every binding in the label of the edge, which is what a screen reader reads of it', () => {
@@ -480,20 +474,6 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
   it('says in the label a mode that was left out as all', () => {
     expect(edgeWith(headerArguments(null, entry('a', int(1))))?.label).toBe(
       'Binding from exchange docs to queue archive, x-match all: a=1',
-    );
-  });
-
-  it('says only that there are header arguments in the label without the flag', () => {
-    const document = frozen(
-      documentOf({
-        exchanges: { x: exchangeRecord('docs', 'headers') },
-        queues: { q: queueRecord('archive') },
-        bindings: { b: bindingRecord('x', { kind: 'queue', id: 'q' }, '', headerArguments('all', entry('a', int(1)))) },
-      }),
-    );
-
-    expect(buildCanvasVm(document).edges[0]?.label).toBe(
-      'Binding from exchange docs to queue archive, with header arguments',
     );
   });
 
@@ -533,8 +513,8 @@ describe('the chips of a headers binding, with the conditions (ADR-0070)', () =>
         bindings: { b: bindingRecord('x', { kind: 'queue', id: 'q' }, '', headerArguments('all', entry('a', int(1)))) },
       }),
     );
-    const first = buildCanvasVm(document, undefined, OPTIONS);
+    const first = buildCanvasVm(document);
 
-    expect(buildCanvasVm(document, first, OPTIONS)).toBe(first);
+    expect(buildCanvasVm(document, first)).toBe(first);
   });
 });

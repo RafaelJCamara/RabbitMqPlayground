@@ -19,11 +19,11 @@ import { expect, test } from './support/test';
  * of a producer's headers; the table of recent messages, empty and full; and the panel that makes a binding from a message, in each thing that it says.
  */
 
-const CONDITIONS = 'editor,headers';
+const CONDITIONS = 'editor';
 const LIGHT_ACCENT = 'rgb(29, 78, 216)';
 const DARK_ACCENT = 'rgb(147, 197, 253)';
-const PRODUCER = 'editor,simulation,headers';
-const MESSAGES = 'editor,simulation,explain,headers';
+const PRODUCER = 'editor,simulation';
+const MESSAGES = 'editor,simulation,explain';
 
 interface State {
   readonly name: string;

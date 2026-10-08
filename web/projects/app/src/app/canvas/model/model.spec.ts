@@ -246,7 +246,7 @@ describe('buildCanvasVm', () => {
     expect(edges[0]?.label).toBe('Binding from exchange orders to queue billing, keys order.*, invoice.#');
   });
 
-  it('says that a binding has header arguments', () => {
+  it('says what a binding of a headers exchange asks, in the label', () => {
     const document = documentOf({
       exchanges: { x: exchangeRecord('docs', 'headers') },
       queues: { q: queueRecord('archive') },
@@ -256,7 +256,7 @@ describe('buildCanvasVm', () => {
     });
 
     expect(buildCanvasVm(document).edges[0]?.label).toBe(
-      'Binding from exchange docs to queue archive, with header arguments',
+      'Binding from exchange docs to queue archive, x-match any: format=pdf',
     );
   });
 

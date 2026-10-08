@@ -162,7 +162,7 @@ describe('MessageInspector (ADR-0063)', () => {
       within(section)
         .getAllByRole('heading', { level: 3 })
         .map((heading) => heading.textContent?.trim()),
-    ).toEqual(['Where it is', 'Payload', 'Headers', 'Route', 'Queues that did not get it']);
+    ).toEqual(['Where it is', 'Payload', 'Headers', 'Bind from this message…', 'Route', 'Queues that did not get it']);
     // Each part of it is a region that is named by its heading, so that a screen reader can go from one to the next.
     for (const name of ['Where it is', 'Payload', 'Headers', 'Route', 'Queues that did not get it']) {
       expect(within(section).getByRole('region', { name }), name).toBeVisible();
@@ -585,18 +585,8 @@ describe('MessageInspector (ADR-0063)', () => {
 });
 
 describe('the binding that a message can make (ADR-0070)', () => {
-  it('is not offered without the flag headers, because the half that has messages is not that flag alone', async () => {
-    const { run, open } = await renderInspector();
-    run({ type: 'pause' });
-    run(PUBLISH);
-
-    open(1);
-
-    expect(screen.queryByTestId('bind-from-message')).not.toBeInTheDocument();
-  });
-
-  it('is offered, between the headers of the message and its route, with the flags of the explanation and the simulation', async () => {
-    const { run, open } = await renderInspector('simulation,explain,headers');
+  it('is offered, between the headers of the message and its route', async () => {
+    const { run, open } = await renderInspector('simulation,explain');
     run({ type: 'pause' });
     run(PUBLISH);
 
@@ -612,7 +602,7 @@ describe('the binding that a message can make (ADR-0070)', () => {
   });
 
   it('starts the binding on the queue that did not get the message, which the inspector knows and the panel is told', async () => {
-    const { run, open, user, store } = await renderInspector('simulation,explain,headers');
+    const { run, open, user, store } = await renderInspector('simulation,explain');
     store.load({ ...traffic(), exchanges: { ...traffic().exchanges, H: exchangeRecord('docs', 'headers') } });
     run({ type: 'pause' });
     run(PUBLISH);
@@ -626,7 +616,7 @@ describe('the binding that a message can make (ADR-0070)', () => {
   });
 
   it('says, when it is opened for a canvas that has no headers exchange, that there is none to bind from', async () => {
-    const { run, open, user } = await renderInspector('simulation,explain,headers');
+    const { run, open, user } = await renderInspector('simulation,explain');
     run({ type: 'pause' });
     run(PUBLISH);
     run({ type: 'step' });

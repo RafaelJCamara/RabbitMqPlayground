@@ -30,7 +30,7 @@ describe('the flag registry', () => {
   });
 
   it('keeps the flag names the M1 plan promises for its slices', () => {
-    expect([...FLAG_NAMES].sort()).toEqual(['canvases', 'editor', 'explain', 'headers', 'simulation'].sort());
+    expect([...FLAG_NAMES].sort()).toEqual(['canvases', 'editor', 'explain', 'simulation'].sort());
   });
 });
 
@@ -61,7 +61,7 @@ describe('resolveFlags', () => {
   });
 
   it('turns on the flags named in the URL', () => {
-    expect(enabled(null, 'simulation,headers')).toEqual(['headers', 'simulation']);
+    expect(enabled(null, 'simulation,canvases')).toEqual(['canvases', 'simulation']);
   });
 
   it('adds the two sources together', () => {

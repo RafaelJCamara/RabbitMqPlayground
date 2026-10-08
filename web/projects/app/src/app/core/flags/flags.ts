@@ -19,11 +19,6 @@ export const FLAGS = {
     description:
       'The what-if and topic testers, and with the simulation the event log, the message inspector and the "Why?" overlay (slice S7).',
   },
-  headers: {
-    default: false,
-    description:
-      "The conditions of a headers binding: the editor and its chips; with the simulation the table of a producer's headers; with the explanation too the table of recent messages and a binding made from a message (slice S8).",
-  },
   canvases: {
     default: false,
     description:

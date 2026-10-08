@@ -20,7 +20,6 @@ import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { NewNode } from '../canvas/model/new-node';
 import { frameOf } from '../canvas/model/shapes';
 import type { Point, Size } from '../canvas/model/transform';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { CommandBus } from '../core/state/command-bus';
 import { DEFAULT_EXCHANGE_ID } from '../core/state/default-exchange';
 import { DocumentStore } from '../core/state/document-store';
@@ -144,8 +143,6 @@ export class LinkFlow {
   private readonly store = inject(DocumentStore);
   private readonly viewport = inject(FlowViewport);
   private readonly focus = inject(NewNodeFocus);
-  /** With the flag, a link to a headers exchange asks for its conditions before it is made. Without it, the binding has none, as before (ADR-0066). */
-  private readonly asksConditions = inject(FeatureFlags).isEnabled('headers');
 
   /** Set by the editor, which owns the popover, the picker and the menu. */
   surface: LinkSurface | undefined;
@@ -161,7 +158,7 @@ export class LinkFlow {
     const command = made.value;
     if (command.type === 'bind') {
       const type = lookup(document.exchanges, source)?.type;
-      if (type === 'headers' && this.asksConditions && this.surface !== undefined) {
+      if (type === 'headers' && this.surface !== undefined) {
         this.askConditions(
           command,
           describeNode(document, source) as string,
@@ -278,7 +275,7 @@ export class LinkFlow {
     };
     if (made.value.type === 'bind') {
       const type = lookup(document.exchanges, source)?.type;
-      if (type === 'headers' && this.asksConditions && this.surface !== undefined) {
+      if (type === 'headers' && this.surface !== undefined) {
         const { width, height } = frameOf(addition.kind);
         this.askConditions(
           made.value,

@@ -4,7 +4,7 @@ import { expect, test } from './support/test';
 
 /**
  * What the label of a headers binding says on the canvas (S8, ADR-0070): a chip with the mode and the first conditions, `+N more` inside it when there are more, the whole of it in the card behind the label and in the
- * name of the edge, and a mark on a condition that the mode does not count. They need the flags `editor` and `headers`.
+ * name of the edge, and a mark on a condition that the mode does not count. They need the flag `editor`.
  */
 
 test.describe('the label of a headers binding (ADR-0070)', () => {

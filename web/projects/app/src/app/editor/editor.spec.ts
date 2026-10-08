@@ -2407,11 +2407,8 @@ describe('Editor', () => {
 });
 
 describe('the conditions of a headers binding (ADR-0066)', () => {
-  async function openEditor(flags: string | null, ...items: string[]) {
-    const view = await renderEditor([
-      ...harness().providers,
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-    ]);
+  async function openEditor(...items: string[]) {
+    const view = await renderEditor(harness().providers);
     await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
     const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
     const user = userEvent.setup();
@@ -2435,7 +2432,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   const bindings = (store: DocumentStore) => Object.values(store.document().bindings);
 
   it('asks for the conditions of a link to a headers exchange in a popover with the cursor in the first row, and makes nothing until they are given', async () => {
-    const { link, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { link, store } = await openEditor('Headers exchange', 'Queue');
 
     link();
 
@@ -2447,7 +2444,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('binds with the conditions that are typed, the mode that is chosen, and the types that they are written with, and gives the focus back to the canvas', async () => {
-    const { canvas, user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { canvas, user, link, fixture, store } = await openEditor('Headers exchange', 'Queue');
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     canvas().calls.length = 0;
@@ -2466,7 +2463,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('keeps the popover open with the reason when the domain refuses, and the status line does not say it twice', async () => {
-    const { user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { user, link, fixture, store } = await openEditor('Headers exchange', 'Queue');
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     const bus = fixture.debugElement.injector.get(CommandBus);
@@ -2497,7 +2494,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('gives the link up on Escape, says so, makes nothing, and gives the focus back to the canvas', async () => {
-    const { canvas, user, link, fixture, store } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { canvas, user, link, fixture, store } = await openEditor('Headers exchange', 'Queue');
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     canvas().calls.length = 0;
@@ -2512,7 +2509,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('gives the link up with the button, and when the focus goes elsewhere, which leaves the focus where the learner put it', async () => {
-    const { canvas, user, link, fixture } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { canvas, user, link, fixture } = await openEditor('Headers exchange', 'Queue');
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     canvas().calls.length = 0;
@@ -2533,7 +2530,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('does not give the link up when the learner clicks on a sentence of the popover', async () => {
-    const { link, fixture, user } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { link, fixture, user } = await openEditor('Headers exchange', 'Queue');
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
 
@@ -2544,7 +2541,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
   });
 
   it('shows one popover at a time: a second link replaces the first, and the key popover with it', async () => {
-    const { link, fixture } = await openEditor('headers', 'Headers exchange', 'Queue');
+    const { link, fixture } = await openEditor('Headers exchange', 'Queue');
     link();
     link();
     fixture.detectChanges();
@@ -2552,33 +2549,19 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
     expect(screen.getAllByTestId('binding-conditions')).toHaveLength(1);
   });
 
-  it('asks for a key, and not for conditions, from a direct exchange, with the flag on', async () => {
-    const { link } = await openEditor('headers', 'Direct exchange', 'Queue');
+  it('asks for a key, and not for conditions, from a direct exchange', async () => {
+    const { link } = await openEditor('Direct exchange', 'Queue');
 
     link();
 
     expect(await screen.findByTestId('binding-key')).toBeInTheDocument();
     expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
   });
-
-  it('binds at once with no conditions, and asks for nothing, without the flag', async () => {
-    const { link, store, fixture } = await openEditor(null, 'Headers exchange', 'Queue');
-
-    link();
-    fixture.detectChanges();
-
-    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
-    expect(bindings(store)).toHaveLength(1);
-    expect(bindings(store)[0]?.headers).toBeUndefined();
-  });
 });
 
 describe('the card of a headers binding that was cut (ADR-0070)', () => {
-  async function openEditorWithConditions(flags: string | null) {
-    const view = await renderEditor([
-      ...harness().providers,
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-    ]);
+  async function openEditorWithConditions() {
+    const view = await renderEditor(harness().providers);
     await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
     const canvas = () => view.fixture.debugElement.query(By.directive(FakeCanvas)).componentInstance as FakeCanvas;
     view.fixture.debugElement.injector.get(CommandBus).apply(
@@ -2614,7 +2597,7 @@ describe('the card of a headers binding that was cut (ADR-0070)', () => {
   }
 
   it('is given to the canvas as a chip that says how many conditions it left out, and a card that has them all', async () => {
-    const { edge } = await openEditorWithConditions('headers');
+    const { edge } = await openEditorWithConditions();
 
     expect(edge.chips).toEqual(['all · a=1 · b=2 · c=3 · +2 more']);
     expect(edge.cards).toEqual(['all · a=1 · b=2 · c=3 · d=4 · e=5']);
@@ -2623,7 +2606,7 @@ describe('the card of a headers binding that was cut (ADR-0070)', () => {
   });
 
   it('lists the whole of the chip in the card while a pointer is over the label, though no chip was left out', async () => {
-    const { canvas, fixture, edge } = await openEditorWithConditions('headers');
+    const { canvas, fixture, edge } = await openEditorWithConditions();
 
     canvas().intent.emit({ type: 'peek', key: edge.id, rect: { x: 100, y: 100, width: 60, height: 20 } });
     fixture.detectChanges();
@@ -2634,14 +2617,5 @@ describe('the card of a headers binding that was cut (ADR-0070)', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['all · a=1 · b=2 · c=3 · d=4 · e=5']);
-  });
-
-  it('is the old chip, and a label that says only that there are arguments, without the flag', async () => {
-    const { edge } = await openEditorWithConditions(null);
-
-    expect(edge.chips).toEqual(['headers']);
-    expect(edge.cards).toEqual(['headers']);
-    expect(edge.cut).toBe(false);
-    expect(edge.label).toBe('Binding from exchange docs to queue archive, with header arguments');
   });
 });

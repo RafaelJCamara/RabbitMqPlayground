@@ -223,7 +223,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await seedCanvas(page, BIG_HEADERS_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
 
-    await page.goto('?ff=editor,simulation,explain,headers');
+    await page.goto('?ff=editor,simulation,explain');
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       polling: 'raf',
       timeout: 30_000,
@@ -300,7 +300,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
 /** Opens the editor with every flag of the headers exchange on the canvas that is seeded, and stops the clock of the simulation. */
 async function openBigHeaders(page: Page): Promise<HeadersPage> {
   const editor = new EditorPage(page);
-  await editor.goto('?ff=editor,simulation,explain,headers');
+  await editor.goto('?ff=editor,simulation,explain');
   await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
     timeout: 30_000,
   });

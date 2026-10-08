@@ -85,11 +85,6 @@ export interface CanvasVm {
 
 export const EMPTY_VM: CanvasVm = { nodes: [], edges: [] };
 
-/** What the view model of the canvas is made with (ADR-0069): the flag `headers` draws the conditions of a headers binding, and without it the arguments are `headers`. */
-export interface VmOptions {
-  readonly conditions?: boolean;
-}
-
 /** Whether two values are the same for the view: the same value, or lists that hold the same values in the same order. */
 function sameValue(a: unknown, b: unknown): boolean {
   return Array.isArray(a) && Array.isArray(b) ? sameItems(a, b) : Object.is(a, b);
@@ -202,7 +197,6 @@ function edgesOf(
   document: CanvasDocument,
   previous: ReadonlyMap<string, EdgeVm>,
   warnings: ReadonlyMap<string, readonly string[]>,
-  conditions: boolean,
 ): EdgeVm[] {
   const edges: EdgeVm[] = [];
   const name = (kind: ElementKind, id: Id): string => nameOf(document, kind, id) ?? id;
@@ -240,7 +234,7 @@ function edgesOf(
     };
     group.keys.push(key);
     group.facts.push({ key, hasArguments: headers !== undefined, ...(headers === undefined ? {} : { headers }) });
-    if (conditions && lookup(document.exchanges, source)?.type === 'headers') {
+    if (lookup(document.exchanges, source)?.type === 'headers') {
       group.conditions.push(headersSentence(headers));
     }
     group.hasArguments ||= headers !== undefined;
@@ -260,7 +254,7 @@ function edgesOf(
         hasArguments,
         conditions: asked,
       }),
-      all: chipsOf(lookup(document.exchanges, from)?.type, facts, conditions),
+      all: chipsOf(lookup(document.exchanges, from)?.type, facts),
     });
   }
   for (const [id, { name: producer, target }] of Object.entries(document.producers)) {
@@ -313,19 +307,10 @@ const sameItems = <T>(a: readonly T[], b: readonly T[]): boolean =>
  * The view model of a document. `previous` is the one that was drawn before, so that what did not change is the same object,
  * and when nothing at all changed, the same view model.
  */
-export function buildCanvasVm(
-  document: CanvasDocument,
-  previous: CanvasVm = EMPTY_VM,
-  options: VmOptions = {},
-): CanvasVm {
+export function buildCanvasVm(document: CanvasDocument, previous: CanvasVm = EMPTY_VM): CanvasVm {
   const warnings = warningsOf(document);
   const nodes = nodesOf(document, new Map(previous.nodes.map((node) => [node.id, node])), warnings.nodes);
-  const edges = edgesOf(
-    document,
-    new Map(previous.edges.map((edge) => [edge.id, edge])),
-    warnings.edges,
-    options.conditions === true,
-  );
+  const edges = edgesOf(document, new Map(previous.edges.map((edge) => [edge.id, edge])), warnings.edges);
   const sameNodes = sameItems(nodes, previous.nodes);
   const sameEdges = sameItems(edges, previous.edges);
   return sameNodes && sameEdges

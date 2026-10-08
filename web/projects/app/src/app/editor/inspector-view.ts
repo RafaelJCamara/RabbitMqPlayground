@@ -1,6 +1,6 @@
 import { defaultPosition, kindOf, lookup, nameOf, type CanvasDocument, type ElementKind, type Id } from '@rmq/domain';
 import type { ExchangeType } from '@rmq/engine';
-import { buildCanvasVm, type EdgeKind, type VmOptions } from '../canvas/model/canvas-vm';
+import { buildCanvasVm, type EdgeKind } from '../canvas/model/canvas-vm';
 import { bindingRows, type BindingRow } from '../core/state/binding-commands';
 import { DEFAULT_EXCHANGE_ID } from '../core/state/default-exchange';
 import { edgeEnds } from '../core/state/refs';
@@ -150,7 +150,7 @@ function nodeView(document: CanvasDocument, id: Id, warnings: readonly string[])
 }
 
 /** What the inspector shows for this selection of this document. What is selected and not on the canvas is not shown. */
-export function inspectorView(document: CanvasDocument, selection: Selection, options: VmOptions = {}): InspectorView {
+export function inspectorView(document: CanvasDocument, selection: Selection): InspectorView {
   const shown = document.settings.showDefaultExchange;
   const nodes = selection.nodes.filter(
     (id) => kindOf(document, id) !== undefined || (shown && id === DEFAULT_EXCHANGE_ID),
@@ -166,11 +166,11 @@ export function inspectorView(document: CanvasDocument, selection: Selection, op
     return { kind: 'default-exchange' };
   }
   if (node !== undefined) {
-    const vm = buildCanvasVm(document, undefined, options).nodes.find(({ id }) => id === node);
+    const vm = buildCanvasVm(document).nodes.find(({ id }) => id === node);
     return nodeView(document, node, vm?.warnings ?? []) ?? NOTHING;
   }
   if (key !== undefined) {
-    const edge = buildCanvasVm(document, undefined, options).edges.find(({ id }) => id === key);
+    const edge = buildCanvasVm(document).edges.find(({ id }) => id === key);
     const ends = edgeEnds(key);
     if (edge === undefined || ends === undefined) {
       return NOTHING;

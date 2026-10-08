@@ -299,8 +299,6 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly simulation = inject(Simulation);
   /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flags `explain` and `simulation`. */
   protected readonly explain = inject(ExplainState);
-  /** With the flag `headers`, the chips and the label of a headers binding say its conditions (ADR-0069, ADR-0070). */
-  private readonly conditionsUi = inject(FeatureFlags).isEnabled('headers');
   /** Whether the tools of the explanation that need no events are there: the what-if tester, the topic tester, and the card that says what the tester lights. They need the flag `explain` alone (ADR-0064). */
   protected readonly explainTools = inject(FeatureFlags).isEnabled('explain');
   private readonly eventLog = inject(EventLog);
@@ -321,9 +319,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
 
   protected readonly ready = computed(() => this.session.save().kind !== 'opening');
   private drawn = EMPTY_VM;
-  protected readonly model = computed(
-    () => (this.drawn = buildCanvasVm(this.store.document(), this.drawn, { conditions: this.conditionsUi })),
-  );
+  protected readonly model = computed(() => (this.drawn = buildCanvasVm(this.store.document(), this.drawn)));
   protected readonly rules = computed(() => linkRules(this.store.document()));
   /** Whether a press on a message that is drawn on the canvas is taken: with the explanation, while the clock is stopped, which is when a message holds still (ADR-0063). */
   protected readonly markersPressable = computed(() => this.explain.enabled && !this.simulation.running());

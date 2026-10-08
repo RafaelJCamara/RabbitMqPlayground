@@ -6,10 +6,10 @@ import { expect, test } from './support/test';
 
 /**
  * The table of the headers of a producer's message, in a real browser (S8, ADR-0069): the rows of its composer, applied as the learner leaves a control, row by row, as the lines that a learner could type
- * (`set sender header:size=10`, `unset sender header:type`), and not at all while the table has something wrong in it. It needs the flags `editor`, `simulation` and `headers`.
+ * (`set sender header:size=10`, `unset sender header:type`), and not at all while the table has something wrong in it. It needs the flags `editor` and `simulation`.
  */
 
-const FLAGS = 'editor,simulation,headers';
+const FLAGS = 'editor,simulation';
 
 async function open(page: Page, document = FILES_BOUND): Promise<HeadersPage> {
   const headers = await HeadersPage.open(page, document, { flags: FLAGS });

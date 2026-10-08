@@ -82,7 +82,7 @@ async function renderEditor(flags: string) {
 
 describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-0070)', () => {
   it('has the table when the simulation and the explanation are on, with the conditions of the draft as its columns', async () => {
-    const { publish } = await renderEditor('simulation,explain,headers');
+    const { publish } = await renderEditor('simulation,explain');
     publish(entry('format', str('pdf')), entry('n', int(1)));
 
     const table = screen.getByTestId('headers-live');
@@ -91,7 +91,7 @@ describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-00
   });
 
   it('follows the draft as it is typed, and the document is as it was', async () => {
-    const { publish, user, fixture } = await renderEditor('simulation,explain,headers');
+    const { publish, user, fixture } = await renderEditor('simulation,explain');
     publish(entry('format', str('pdf')), entry('n', int(1)));
 
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
@@ -115,11 +115,11 @@ describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-00
   });
 
   it('is not there with the simulation alone, or with the explanation alone, because it needs the log', async () => {
-    await renderEditor('simulation,headers');
+    await renderEditor('simulation');
     expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
     TestBed.resetTestingModule();
 
-    await renderEditor('explain,headers');
+    await renderEditor('explain');
     expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
   });
 });

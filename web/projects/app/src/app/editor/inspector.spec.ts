@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { transientQueueReply } from '@rmq/engine';
-import { manualFrames, sampleDocument } from '@rmq/testing';
+import { bindingRecord, documentOf, exchangeRecord, manualFrames, queueRecord, sampleDocument } from '@rmq/testing';
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -777,12 +777,6 @@ describe('Inspector', () => {
       expect(request).toHaveBeenCalledWith('E1', 'Q1', 'inspector');
     });
 
-    it('says that a binding has header arguments, which are not edited here', async () => {
-      await renderInspector({ edges: ['E2>Q2'] });
-
-      expect(within(rows()[0]!).getByTestId('binding-headers')).toHaveTextContent('header arguments');
-    });
-
     it('has no rows for a link or a subscription, which are not bindings, and no button that adds one', async () => {
       const { choose } = await renderInspector({ edges: ['P1>E1'] });
       expect(screen.queryByRole('group', { name: /^Binding \d+ of/ })).not.toBeInTheDocument();
@@ -865,7 +859,15 @@ describe('Inspector', () => {
     });
 
     it('is not there for the bindings of an exchange that is not a topic exchange, which has no wildcards to try', async () => {
-      const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'explain');
+      const { user, store, choose } = await renderInspector({}, 'explain');
+      store.load(
+        documentOf({
+          exchanges: { X: exchangeRecord('jobs', 'direct') },
+          queues: { Q: queueRecord('work') },
+          bindings: { B: bindingRecord('X', { kind: 'queue', id: 'Q' }, 'k') },
+        }),
+      );
+      choose([], ['X>Q']);
 
       await user.click(keyField());
 
@@ -1107,7 +1109,7 @@ describe('Inspector', () => {
   });
 });
 
-describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () => {
+describe('the bindings of a headers edge (ADR-0066)', () => {
   const rows = () => screen.getAllByRole('group', { name: /^Binding \d+ of \d+$/ });
   const editorOf = (row: HTMLElement) => within(row).getByTestId('binding-conditions');
   const bus = () => TestBed.inject(CommandBus);
@@ -1120,7 +1122,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   } as const;
 
   it('puts the editor of the conditions in the place of the key field, for a binding from a headers exchange', async () => {
-    await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    await renderInspector({ edges: ['E2>Q2'] });
 
     const [only] = rows() as [HTMLElement];
     expect(within(only).queryByRole('textbox', { name: 'Key' })).not.toBeInTheDocument();
@@ -1138,7 +1140,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('says in the label of the edge what the conditions are, which is what the canvas says of it', async () => {
-    await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    await renderInspector({ edges: ['E2>Q2'] });
 
     expect(screen.getByTestId('inspector-edge')).toHaveTextContent(
       'Binding from exchange docs to queue archive, x-match any: format=pdf',
@@ -1146,7 +1148,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('tells the editor the key of the binding, which a headers exchange does not read', async () => {
-    const { choose } = await renderInspector({}, 'headers');
+    const { choose } = await renderInspector({});
     bus().apply({ ...SECOND, key: 'legacy' }, 'toolbar');
     choose([], ['E2>Q2']);
 
@@ -1156,23 +1158,15 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
     expect(within(rows()[0]!).queryByTestId('conditions-key')).not.toBeInTheDocument();
   });
 
-  it('is not there without the flag: the key field and the note that the arguments are written with the command bar', async () => {
-    await renderInspector({ edges: ['E2>Q2'] });
-
-    expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
-    expect(within(rows()[0]!).getByRole('textbox', { name: 'Key' })).toBeInTheDocument();
-    expect(within(rows()[0]!).getByTestId('binding-headers')).toBeInTheDocument();
-  });
-
   it('is not there for a binding from an exchange that is not a headers exchange, which keeps its key field', async () => {
-    await renderInspector({ edges: ['E1>Q1'] }, 'headers');
+    await renderInspector({ edges: ['E1>Q1'] });
 
     expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();
     expect(within(rows()[0]!).getByRole('textbox', { name: 'Key' })).toHaveValue('order.*');
   });
 
   it('is there for a binding to an exchange, as well as to a queue', async () => {
-    const { choose } = await renderInspector({}, 'headers');
+    const { choose } = await renderInspector({});
     bus().apply(
       {
         type: 'bind',
@@ -1191,7 +1185,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('gives a binding other conditions when Apply is pressed, as an unbind and a bind in one step, with the inspector as the origin', async () => {
-    const { user, document, store } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user, document, store } = await renderInspector({ edges: ['E2>Q2'] });
     const applied: { origin: string; type: string }[] = [];
     bus().onApplied(({ origin, command }) => applied.push({ origin, type: command.type }));
     const editor = editorOf(rows()[0]!);
@@ -1213,7 +1207,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('is one step of undo, which gives the binding back as it was', async () => {
-    const { user, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user, document } = await renderInspector({ edges: ['E2>Q2'] });
     const before = document().bindings['B2'];
 
     await user.type(within(rows()[0]!).getByRole('textbox', { name: 'Value of condition 1' }), 'x');
@@ -1225,7 +1219,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('shows the binding that came of an edit, with the draft that it has, and not what was typed before', async () => {
-    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user } = await renderInspector({ edges: ['E2>Q2'] });
     await user.click(within(rows()[0]!).getByRole('radio', { name: 'all' }));
     await user.click(within(rows()[0]!).getByRole('button', { name: 'Apply' }));
 
@@ -1235,7 +1229,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('applies nothing, and says so, when nothing was changed', async () => {
-    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user } = await renderInspector({ edges: ['E2>Q2'] });
     const applied: string[] = [];
     bus().onApplied(({ command }) => applied.push(command.type));
 
@@ -1245,7 +1239,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('applies nothing when the arguments are the ones that the binding has, even if the editor sent them', async () => {
-    const { fixture } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { fixture } = await renderInspector({ edges: ['E2>Q2'] });
     const applied: string[] = [];
     bus().onApplied(({ command }) => applied.push(command.type));
     const inspector = fixture.componentInstance as unknown as {
@@ -1261,7 +1255,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('shows the refusal of the domain in the editor, and changes nothing', async () => {
-    const { user, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user, document } = await renderInspector({ edges: ['E2>Q2'] });
     vi.spyOn(bus(), 'apply').mockReturnValue({
       ok: false,
       error: { kind: 'canvas-full', message: 'This canvas has all the edges it can hold.' },
@@ -1277,7 +1271,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('says that two bindings are one when the conditions that were typed are those of another binding between the same two', async () => {
-    const { user, document, choose } = await renderInspector({}, 'headers');
+    const { user, document, choose } = await renderInspector({});
     bus().apply(SECOND, 'toolbar');
     choose([], ['E2>Q2']);
     expect(rows()).toHaveLength(2);
@@ -1295,7 +1289,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('takes a binding off with its own button, which says which, and leaves the others', async () => {
-    const { user, document, choose } = await renderInspector({}, 'headers');
+    const { user, document, choose } = await renderInspector({});
     bus().apply(SECOND, 'toolbar');
     choose([], ['E2>Q2']);
 
@@ -1306,7 +1300,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('opens the popover of the conditions for another binding between the same two, with the inspector as the origin', async () => {
-    const { user } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user } = await renderInspector({ edges: ['E2>Q2'] });
     const request = vi.spyOn(TestBed.inject(LinkFlow), 'request');
 
     await user.click(screen.getByRole('button', { name: 'Add another binding' }));
@@ -1315,7 +1309,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('gives the focus to the mode that is chosen, for the key that edits what is selected', async () => {
-    const { fixture } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { fixture } = await renderInspector({ edges: ['E2>Q2'] });
 
     expect((fixture.componentInstance as Inspector).focusFirst()).toBe(true);
 
@@ -1323,7 +1317,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('leaves for the canvas on Escape, and what was typed and not applied stays out of the document', async () => {
-    const { user, viewport, document } = await renderInspector({ edges: ['E2>Q2'] }, 'headers');
+    const { user, viewport, document } = await renderInspector({ edges: ['E2>Q2'] });
     const focus = vi.spyOn(viewport, 'focus');
 
     await user.type(within(rows()[0]!).getByRole('textbox', { name: 'Value of condition 1' }), 'xyz');
@@ -1334,7 +1328,7 @@ describe('the bindings of a headers edge, with the flag headers (ADR-0066)', () 
   });
 
   it('says the lint of the binding in the inspector as well, as it did, and in the editor as the draft is typed', async () => {
-    const { user, choose } = await renderInspector({}, 'headers');
+    const { user, choose } = await renderInspector({});
     bus().apply(
       {
         type: 'bind',

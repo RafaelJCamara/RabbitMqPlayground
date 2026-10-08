@@ -3,7 +3,6 @@ import { explainQueue, isRouted, lookup, toTopology, type QueueExplanation } fro
 import type { QueueMessage } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { ExplainState } from '../core/explain/explain-state';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { placesOf, placeText, type Place } from '../core/explain/where';
 import { Simulation } from '../core/runtime/simulation';
 import { DocumentStore } from '../core/state/document-store';
@@ -111,14 +110,12 @@ const BUTTON =
             }
           </section>
 
-          @if (binds) {
-            <rmq-bind-from-message
-              [number]="number"
-              [headers]="message.info.headers"
-              [exchange]="message.info.exchange"
-              [unreached]="unreached()"
-            />
-          }
+          <rmq-bind-from-message
+            [number]="number"
+            [headers]="message.info.headers"
+            [exchange]="message.info.exchange"
+            [unreached]="unreached()"
+          />
 
           <section class="flex flex-col gap-2" [attr.aria-labelledby]="titleId + '-route'">
             <h3 class="font-semibold" [id]="titleId + '-route'">Route</h3>
@@ -176,8 +173,6 @@ const BUTTON =
 })
 export class MessageInspector {
   protected readonly explain = inject(ExplainState);
-  /** A binding can be made from a message with the flag `headers`, which with this inspector's flags is the half that has messages (ADR-0069). */
-  protected readonly binds = inject(FeatureFlags).isEnabled('headers');
   private readonly simulation = inject(Simulation);
   private readonly store = inject(DocumentStore);
   private readonly viewport = inject(FlowViewport);

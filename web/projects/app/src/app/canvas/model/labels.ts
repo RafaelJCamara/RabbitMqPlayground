@@ -32,7 +32,7 @@ export interface BindingEnds {
   readonly keys: readonly string[];
   /** Whether a binding between them has header arguments. */
   readonly hasArguments: boolean;
-  /** What each headers binding between them asks, in words (`x-match all: format=pdf`), with the flag `headers` (ADR-0070). Without it, the label says only that there are arguments. */
+  /** What each headers binding between them asks, in words (`x-match all: format=pdf`) (ADR-0070). A binding of an exchange that does not read headers has none, and its label says only that there are arguments. */
   readonly conditions?: readonly string[];
 }
 
@@ -138,15 +138,11 @@ export interface BindingFacts {
 /**
  * What an edge between an exchange and what it is bound to says, as chips (ADR-0044): the key of each binding, in the order that they were made, and
  * the same text once. An empty key is said where it matters, which is for a direct or a topic exchange, and is nothing for one that ignores the key. A
- * binding that has header arguments is a chip `headers`, once, after the keys. With `conditions`, a binding of a headers exchange is a chip of its own that
+ * binding of another exchange that has header arguments is a chip `headers`, once, after the keys. A binding of a headers exchange is a chip of its own that
  * says its mode and its first conditions, after its key (ADR-0070).
  */
-export function chipsOf(
-  type: ExchangeType | undefined,
-  bindings: readonly BindingFacts[],
-  conditions = false,
-): ChipText[] {
-  const detailed = conditions && type === 'headers';
+export function chipsOf(type: ExchangeType | undefined, bindings: readonly BindingFacts[]): ChipText[] {
+  const detailed = type === 'headers';
   const texts: ChipText[] = [];
   for (const { key, headers } of bindings) {
     if (key !== '') {

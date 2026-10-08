@@ -75,7 +75,7 @@ function renderPanel(options: Options = {}) {
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain,headers' } },
+      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },

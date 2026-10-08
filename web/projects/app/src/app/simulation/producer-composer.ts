@@ -1,7 +1,6 @@
 import { Component, computed, effect, inject, input, linkedSignal, untracked } from '@angular/core';
 import { lookup, problemAt, reportMessageRows, rowsOf, sameEntries, type DraftRow, type Id } from '@rmq/domain';
 import type { HeaderEntry, HeaderValue } from '@rmq/engine';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { messageHeadersCommand } from '../core/state/header-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
@@ -68,41 +67,35 @@ import { Fields, NumberField } from './fields';
           }
         </div>
 
-        @if (headersTable) {
-          <div
-            class="flex flex-col gap-1.5"
-            role="group"
-            [attr.aria-labelledby]="fields.id('headers-title')"
-            data-testid="composer-headers-table"
-          >
-            <div class="flex flex-wrap items-center gap-1">
-              <h4 class="text-sm font-medium" [id]="fields.id('headers-title')">Headers</h4>
-              <rmq-help topic="Headers">
-                A header has a name and a value, and a headers exchange compares them with the conditions of its
-                bindings. A number is an integer: 1. With a point it is a float: 1.0. true and false are booleans, and a
-                text in quotes is a string: "1" is not 1.
-              </rmq-help>
-            </div>
-            <rmq-header-rows
-              [rows]="rows()"
-              [reports]="report().rows"
-              noun="header"
-              label="Headers"
-              (rowsChange)="rows.set($event)"
-              (commit)="commitHeaders(p.name, p.message.headers)"
-            />
-            @if (countProblem(); as issue) {
-              <div data-testid="composer-headers-count"><rmq-refusal-notice [issue]="issue" /></div>
-            }
-            @if (problem('headers'); as issue) {
-              <div data-testid="composer-headers-problem"><rmq-refusal-notice [issue]="issue" /></div>
-            }
+        <div
+          class="flex flex-col gap-1.5"
+          role="group"
+          [attr.aria-labelledby]="fields.id('headers-title')"
+          data-testid="composer-headers-table"
+        >
+          <div class="flex flex-wrap items-center gap-1">
+            <h4 class="text-sm font-medium" [id]="fields.id('headers-title')">Headers</h4>
+            <rmq-help topic="Headers">
+              A header has a name and a value, and a headers exchange compares them with the conditions of its bindings.
+              A number is an integer: 1. With a point it is a float: 1.0. true and false are booleans, and a text in
+              quotes is a string: "1" is not 1.
+            </rmq-help>
           </div>
-        } @else {
-          <p class="text-muted text-xs" data-testid="composer-headers">
-            {{ headerWords(p.message.headers.length) }}
-          </p>
-        }
+          <rmq-header-rows
+            [rows]="rows()"
+            [reports]="report().rows"
+            noun="header"
+            label="Headers"
+            (rowsChange)="rows.set($event)"
+            (commit)="commitHeaders(p.name, p.message.headers)"
+          />
+          @if (countProblem(); as issue) {
+            <div data-testid="composer-headers-count"><rmq-refusal-notice [issue]="issue" /></div>
+          }
+          @if (problem('headers'); as issue) {
+            <div data-testid="composer-headers-problem"><rmq-refusal-notice [issue]="issue" /></div>
+          }
+        </div>
 
         <rmq-number-field
           label="Messages at a time"
@@ -169,9 +162,6 @@ export class ProducerComposer {
 
   protected readonly producer = computed(() => lookup(this.store.document().producers, this.id()));
 
-  /** The table of the headers of the message is there with the flag `headers`, and without it the composer says how many there are (ADR-0069). */
-  protected readonly headersTable = inject(FeatureFlags).isEnabled('headers');
-
   /**
    * The rows of the table: the headers of the message, and what is typed on the way to changing them. A row that is complete is applied when its control is left, and the rows keep what
    * is not finished through that; they start again from the message when its headers change from somewhere else (an undo, a typed command), and when another producer is shown (ADR-0069).
@@ -195,11 +185,7 @@ export class ProducerComposer {
   /** Whether the exchange that the producer publishes to does not read the routing key: a headers exchange (ADR-0009, ADR-0069). */
   protected readonly keyIgnored = computed(() => {
     const target = this.producer()?.target;
-    return (
-      this.headersTable &&
-      target?.kind === 'exchange' &&
-      lookup(this.store.document().exchanges, target.id)?.type === 'headers'
-    );
+    return target?.kind === 'exchange' && lookup(this.store.document().exchanges, target.id)?.type === 'headers';
   });
 
   constructor() {
@@ -238,12 +224,6 @@ export class ProducerComposer {
       return;
     }
     this.fields.apply('headers', command);
-  }
-
-  protected headerWords(count: number): string {
-    return count === 0
-      ? 'The message has no headers. A headers exchange looks at them, and the table to edit them is coming with it.'
-      : `The message has ${count} ${count === 1 ? 'header' : 'headers'}. The table to edit them is coming with the headers exchange.`;
   }
 
   /** The payload and the key are text: what was typed is the value, and a refusal puts back what the document has. */

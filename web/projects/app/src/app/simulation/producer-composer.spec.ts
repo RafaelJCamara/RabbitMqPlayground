@@ -92,38 +92,6 @@ describe('ProducerComposer (ADR-0056)', () => {
     expect(screen.getByRole('button', { name: 'Publish now' })).toHaveAttribute('aria-keyshortcuts', 'P');
   });
 
-  it('says how many headers the message has, and that the table for them comes with the headers exchange', async () => {
-    await renderComposer();
-
-    expect(screen.getByTestId('composer-headers')).toHaveTextContent(
-      'The message has 1 header. The table to edit them is coming with the headers exchange.',
-    );
-  });
-
-  it('says that there are none, and that there are several', async () => {
-    const { bus, settle } = await renderComposer();
-
-    bus.apply(
-      {
-        type: 'set',
-        kind: 'producer',
-        name: 'sender',
-        changes: { headers: [{ key: 'm', value: { t: 'string', v: 'x' } }] },
-      },
-      'inspector',
-    );
-    settle();
-    expect(screen.getByTestId('composer-headers')).toHaveTextContent(
-      'The message has 2 headers. The table to edit them is coming with the headers exchange.',
-    );
-
-    bus.apply({ type: 'unset', kind: 'producer', name: 'sender', headers: ['n', 'm'] }, 'inspector');
-    settle();
-    expect(screen.getByTestId('composer-headers')).toHaveTextContent(
-      'The message has no headers. A headers exchange looks at them, and the table to edit them is coming with it.',
-    );
-  });
-
   it('gives each number the limits that the grammar has for it, and the fields of text a name to be read with', async () => {
     await renderComposer();
     const burst = screen.getByRole('spinbutton', { name: 'Messages at a time' });
@@ -317,9 +285,9 @@ describe('ProducerComposer (ADR-0056)', () => {
   });
 });
 
-describe('the table of headers, with the flag headers (ADR-0069)', () => {
-  /** The composer of the producer `sender`, with the flags `simulation` and `headers`. */
-  async function renderTable(flags = 'simulation,headers', id = 'P') {
+describe('the table of headers (ADR-0069)', () => {
+  /** The composer of the producer `sender`, with the simulation. */
+  async function renderTable(flags = 'simulation', id = 'P') {
     const view = await render(ProducerComposer, {
       inputs: { id },
       providers: [
@@ -357,10 +325,9 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
   const value = (index: number) => screen.getByRole('textbox', { name: `Value of header ${index}` });
   const type = (index: number) => screen.getByRole('combobox', { name: `Type of header ${index}` });
 
-  it('shows a row for each header of the message, with its type, in place of the sentence about the table that is coming', async () => {
+  it('shows a row for each header of the message, with its type', async () => {
     await renderTable();
 
-    expect(screen.queryByTestId('composer-headers')).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Headers' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Headers' })).toBeInTheDocument();
     expect(name(1)).toHaveValue('n');
@@ -375,13 +342,6 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
 
     const options = Array.from(type(1).querySelectorAll('option')).map((option) => option.textContent?.trim());
     expect(options).toEqual(['string', 'integer', 'float', 'boolean']);
-  });
-
-  it('is not there without the flag, and the composer says how many headers there are', async () => {
-    await renderTable('simulation');
-
-    expect(screen.queryByTestId('composer-headers-table')).not.toBeInTheDocument();
-    expect(screen.getByTestId('composer-headers')).toHaveTextContent('The message has 1 header.');
   });
 
   it('explains how a value gets its type, in the help', async () => {
@@ -675,8 +635,8 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
   describe('the routing key of a producer that publishes to a headers exchange (ADR-0009)', () => {
     const NOTE = 'Not used by this exchange; still carried for exchange-to-exchange hops and dead-lettering.';
 
-    async function publishingToHeaders(flags = 'simulation,headers') {
-      const view = await renderTable(flags);
+    async function publishingToHeaders() {
+      const view = await renderTable();
       view.store.load({
         ...canvas(),
         exchanges: { ...canvas().exchanges, H: exchangeRecord('docs', 'headers') },
@@ -754,12 +714,6 @@ describe('the table of headers, with the flag headers (ADR-0069)', () => {
       const ids = (field.getAttribute('aria-describedby') ?? '').split(' ');
       expect(ids).toHaveLength(1);
       expect(document.getElementById(ids[0] as string)).toBe(screen.getByTestId('composer-key-note'));
-    });
-
-    it('says nothing without the flag, even for a headers exchange', async () => {
-      await publishingToHeaders('simulation');
-
-      expect(screen.queryByTestId('composer-key-note')).not.toBeInTheDocument();
     });
   });
 });

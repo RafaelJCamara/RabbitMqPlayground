@@ -19,7 +19,7 @@ const BUTTON =
 
 /**
  * The top bar (ADR-0010): the name of the product, which is the one heading of the page, what can be done to the whole canvas (undo and
- * redo, auto-layout, the view), and what concerns keeping it, and, with the flag `share`, Share and Export (ADR-0078, ADR-0079). A button that has a key says which, so that nothing is hidden (ADR-0002), and each is a button with a name in words.
+ * redo, auto-layout, the view), and what concerns keeping it, and Share and Export (ADR-0078, ADR-0079). A button that has a key says which, so that nothing is hidden (ADR-0002), and each is a button with a name in words.
  */
 @Component({
   selector: 'rmq-top-bar',

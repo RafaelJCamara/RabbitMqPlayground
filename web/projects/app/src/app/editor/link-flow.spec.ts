@@ -15,7 +15,6 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CommandBus, type Applied } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
@@ -98,14 +97,13 @@ describe('LinkFlow (ADR-0041, ADR-0042)', () => {
       expect(applied.map(({ origin }) => origin)).toEqual(['gesture', 'menu']);
     });
 
-    it('binds at once from an exchange that ignores the key, with no key, and from a headers exchange, with no conditions', () => {
+    it('binds at once from an exchange that ignores the key and has no conditions, with no key', () => {
       flow.request('E3', 'Q2', 'gesture');
-      flow.request('E2', 'Q1', 'gesture');
 
       expect(surface.key).toBeUndefined();
+      expect(surface.conditions).toBeUndefined();
       const bindings = Object.values(store.document().bindings);
       expect(bindings.find(({ source, dest }) => source === 'E3' && dest.id === 'Q2')?.key).toBe('');
-      expect(bindings.find(({ source, dest }) => source === 'E2' && dest.id === 'Q1')).toBeDefined();
     });
 
     it('asks for the key first when the exchange is a topic or a direct one, and makes nothing until the key is given', () => {
@@ -485,7 +483,7 @@ describe('LinkFlow (ADR-0041, ADR-0042)', () => {
   });
 });
 
-describe('LinkFlow with the flag headers (ADR-0066)', () => {
+describe('LinkFlow and the conditions of a headers binding (ADR-0066)', () => {
   let flow: LinkFlow;
   let store: DocumentStore;
   let status: StatusStore;
@@ -495,16 +493,7 @@ describe('LinkFlow with the flag headers (ADR-0066)', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        DocumentStore,
-        SelectionStore,
-        StatusStore,
-        CommandBus,
-        FlowViewport,
-        NewNodeFocus,
-        LinkFlow,
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'headers' } },
-      ],
+      providers: [DocumentStore, SelectionStore, StatusStore, CommandBus, FlowViewport, NewNodeFocus, LinkFlow],
     });
     flow = TestBed.inject(LinkFlow);
     store = TestBed.inject(DocumentStore);

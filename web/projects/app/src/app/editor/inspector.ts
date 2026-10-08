@@ -476,8 +476,6 @@ export class Inspector {
   protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   /** The tester of a topic key, under the field that is typed in, needs the flag of the explanation alone (ADR-0064). */
   private readonly explainTools = inject(FeatureFlags).isEnabled('explain');
-  /** The editor of the conditions of a headers binding replaces the key field of its rows, with the flag headers (ADR-0066, ADR-0069). */
-  private readonly conditionsUi = inject(FeatureFlags).isEnabled('headers');
   /** The key field of a binding that is being typed in, and what is typed in it, which the tester follows before the key is changed (it is changed when the field is left). */
   protected readonly typing = signal<{ readonly id: string; readonly text: string } | null>(null);
   private readonly uid = `rmq-inspector-${nextInspector++}`;
@@ -504,9 +502,7 @@ export class Inspector {
     },
   ] as const;
 
-  private readonly view = computed(() =>
-    inspectorView(this.store.document(), this.selection.selection(), { conditions: this.conditionsUi }),
-  );
+  private readonly view = computed(() => inspectorView(this.store.document(), this.selection.selection()));
   protected readonly node = computed<NodeView | null>(() => {
     const view = this.view();
     return view.kind === 'node' ? view : null;
@@ -522,12 +518,12 @@ export class Inspector {
   });
 
   /**
-   * The two ends of the bindings of the selected edge, by name, when they are edited with the editor of the conditions: the edge is a binding from a headers exchange and the flag is on. It is one object until the
+   * The two ends of the bindings of the selected edge, by name, when they are edited with the editor of the conditions: the edge is a binding from a headers exchange. It is one object until the
    * document or the selection changes, because it is an input of the editor.
    */
   protected readonly conditionsEnds = computed(() => {
     const edge = this.edge();
-    if (!this.conditionsUi || edge === null) {
+    if (edge === null) {
       return null;
     }
     const document = this.store.document();

@@ -11,11 +11,11 @@ import {
 import { expect, test } from './support/test';
 
 /**
- * The messages half of the flag `headers` in a real browser (S8, ADR-0069, ADR-0070): the table of recent messages against the conditions of a binding, which is in its editor and in the popover that asks for
- * them, and the panel of the message inspector that makes a binding from the message that is open. They need the flags `editor`, `simulation`, `explain` and `headers`.
+ * The messages half of the headers editor in a real browser (S8, ADR-0069, ADR-0070): the table of recent messages against the conditions of a binding, which is in its editor and in the popover that asks for
+ * them, and the panel of the message inspector that makes a binding from the message that is open. They need the flags `editor`, `simulation` and `explain`.
  */
 
-const FLAGS = 'editor,simulation,explain,headers';
+const FLAGS = 'editor,simulation,explain';
 
 test.describe('the table of recent messages against the conditions of a binding (ADR-0070)', () => {
   test('says that no message has been published yet, and what to do about it', async ({ page }) => {

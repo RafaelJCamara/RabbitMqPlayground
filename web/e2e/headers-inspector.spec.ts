@@ -4,7 +4,7 @@ import { expect, test } from './support/test';
 
 /**
  * The editor of the conditions of a headers binding in the inspector, in a real browser (S8, ADR-0066, ADR-0068): it takes the place of the key field of a binding of a headers exchange, shows the mode and
- * the rows as the binding has them, changes the binding when it is told to, as one step of undo, and says what it did. The flags are `editor` and `headers`.
+ * the rows as the binding has them, changes the binding when it is told to, as one step of undo, and says what it did. The flag is `editor`.
  */
 
 test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => {

@@ -19,7 +19,7 @@ import type { HeaderArguments } from '@rmq/engine';
 export interface BindingRow {
   readonly id: Id;
   readonly key: string;
-  /** It has header arguments, which the editor of the conditions edits (ADR-0066), and without the flag the inspector does not. */
+  /** It has header arguments, which the editor of the conditions edits (ADR-0066). */
   readonly hasArguments: boolean;
   /** Its arguments, for the editor of the conditions. */
   readonly headers: HeaderArguments | undefined;

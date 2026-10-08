@@ -484,7 +484,7 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.queryByTestId('conditions-key')).not.toBeInTheDocument();
     });
 
-    it.each(['simulation', 'explain', 'editor,headers'])(
+    it.each(['simulation', 'explain', 'editor'])(
       'has no table of recent messages with the flags %s, because the log needs the simulation and the explanation',
       async (flags) => {
         await renderEditor({ flags });

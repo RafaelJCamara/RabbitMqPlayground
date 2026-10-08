@@ -6,7 +6,7 @@ import { expect, test } from './support/test';
 
 /**
  * What a learner does to give a headers binding its conditions, in a real browser (S8, ADR-0066, ADR-0067, ADR-0068): the popover that asks for them when a link is made, the rows with their types, and
- * what is said under a row that is wrong or that will surprise. The conditions are behind the flags `editor` and `headers`; the simulation is not needed. A test that says that something did not happen
+ * what is said under a row that is wrong or that will surprise. The conditions need the flag `editor`; the simulation is not needed. A test that says that something did not happen
  * waits two frames first, so that it is not true only because it looked too soon.
  */
 
