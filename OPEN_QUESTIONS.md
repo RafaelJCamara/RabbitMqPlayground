@@ -8,43 +8,24 @@ Decisions that are not made yet, collected on 2026-10-06 after S1
 ([#7](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/7)), S6
 ([#8](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/8)), S7
 ([#9](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/9)), S8
-([#10](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/10)) and S9
-([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)). Each one says what is open, why, what the options
+([#10](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/10)), S9
+([#11](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/11)) and S10
+([#12](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/12)). Each one says what is open, why, what the options
 are, and which slice has to settle it. Once a question is answered, the answer goes into an ADR (or into the
-[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 6, 8, 9 and 10 are missing:
+[M1 plan](docs/plans/m1.md)), and the question is deleted from here. Numbers are not reused, so 1, 2, 3, 6, 8, 9 and 10 are missing:
 they were answered by [ADR-0024](docs/adr/0024-a-queue-that-is-not-durable-is-refused-with-the-brokers-reply.md),
 [ADR-0029](docs/adr/0029-the-commands-refuse-at-the-size-caps.md),
 [ADR-0050](docs/adr/0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) and
-[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), 6 by
+[ADR-0051](docs/adr/0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), 3 by
+[ADR-0077](docs/adr/0077-a-share-link-is-v1-and-the-deflated-envelope-in-base64url-it-fails-in-words-and-its-messages-are-checked-before-they-are-restored.md), 6 by
 [ADR-0059](docs/adr/0059-a-topic-miss-is-aligned-from-both-ends-and-explainmiss-gives-each-exchange-once.md) and 10 by
 [ADR-0073](docs/adr/0073-the-home-is-a-grid-of-cards-from-one-read-and-a-canvas-that-cannot-be-read-is-listed-with-its-reason.md).
 
 | # | Question | Settled by |
 |---|---|---|
-| 3 | How are values that the scenario vocabulary cannot write recorded: an invalid `x-match`, an integer beyond 2^53? | S10 ([#12](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/12)) |
 | 4 | How should a new scenario reach the Nightly record run, when the offline fixture spec refuses scenarios that have no fixture? | the repo owner |
 | 5 | Should the repository pin its line endings with a `.gitattributes`? | the repo owner |
 | 7 | Should the mutation-check helper be kept in the repository? | the repo owner |
-
-## 3. Values that the scenario vocabulary cannot write
-
-ADR-0009 says that the broker rejects an `x-match` other than the four modes. I saw that on 4.3.6 by hand on 2026-10-05,
-with a probe that is not in the repository:
-
-- `406 PRECONDITION_FAILED - Invalid x-match field value <<"bogus">>; expected all, any, all-with-x, or any-with-x`;
-- `406 PRECONDITION_FAILED - Invalid x-match field type byte (value 1); expected longstr`.
-
-No fixture records it, because a scenario's `xMatch` can only be one of the four modes or `null`. The same goes for the
-exact comparison of integers beyond 2^53 behind [ADR-0023](docs/adr/0023-header-integers-are-limited-to-safe-integers.md),
-which was also seen only by hand, because a scenario writes a number and a JSON number has the same limit.
-
-Options: widen the vocabulary when a slice needs it (S10's importer), with a raw argument that the engine's replay treats
-as refused by validation; or leave these as notes in the ADRs.
-
-Where S2 left it: the typed command and the document cannot say either value. `x-match` is one of the four modes, an integer
-has to be a safe integer (`headerValueIssue`), and the grammar and the schema refuse the rest
-([ADR-0025](docs/adr/0025-the-command-grammar.md)), so the engine never meets one. What is left is a file that holds one,
-which the importer of that file has to refuse (S10), and whether it is worth a scenario.
 
 ## 4. New scenarios and the Nightly record run
 
