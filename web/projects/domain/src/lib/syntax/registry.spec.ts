@@ -42,6 +42,7 @@ const TYPES: readonly Exclude<Command['type'], 'batch'>[] = [
   'undo',
   'redo',
   'help',
+  'share',
 ];
 
 describe('the command registry (ADR-0011)', () => {
@@ -72,8 +73,13 @@ describe('the command registry (ADR-0011)', () => {
     }
   });
 
-  it('puts undo, redo and help in the scope of the app, the commands that run the simulation in that of the runtime, and every other in that of the document', () => {
-    expect(SPECS.filter(({ scope }) => scope === 'app').map(({ name }) => name)).toEqual(['undo', 'redo', 'help']);
+  it('puts undo, redo, help and share in the scope of the app, the commands that run the simulation in that of the runtime, and every other in that of the document', () => {
+    expect(SPECS.filter(({ scope }) => scope === 'app').map(({ name }) => name)).toEqual([
+      'undo',
+      'redo',
+      'help',
+      'share',
+    ]);
     expect(SPECS.filter(({ scope }) => scope === 'runtime').map(({ name }) => name)).toEqual([
       'publish',
       'purge',
@@ -84,7 +90,7 @@ describe('the command registry (ADR-0011)', () => {
       'clear messages',
       'reset counters',
     ]);
-    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 3 - 8);
+    expect(SPECS.filter(({ scope }) => scope === 'document')).toHaveLength(SPECS.length - 4 - 8);
   });
 
   describe('its examples, which are the examples of docs/commands.md', () => {

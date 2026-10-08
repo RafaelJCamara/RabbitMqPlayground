@@ -7,6 +7,7 @@ import { helpSpec } from './specs/help';
 import { clear, deleteElement, layout, move, moveLabel, redo, rename, undo } from './specs/place';
 import { clearMessages, pause, play, publish, purge, resetCounters, speed, step } from './specs/runtime';
 import { set, unset } from './specs/set';
+import { share } from './specs/share';
 
 /** `help` answers with the names of every command, which are these. */
 const help = helpSpec(() => SPECS.map(({ name }) => name));
@@ -46,6 +47,7 @@ export const SPECS: readonly CommandSpec[] = [
   undo,
   redo,
   help,
+  share,
 ];
 
 /** The commands by what they are called, which is one word or two. */

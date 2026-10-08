@@ -31,6 +31,7 @@ export type {
   DocumentCommand,
   ExchangeChanges,
   Help,
+  Share,
   Layout,
   Link,
   Move,

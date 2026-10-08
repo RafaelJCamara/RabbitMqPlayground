@@ -298,7 +298,7 @@ describe('completion', () => {
   it('offers the names of the commands that start with what is typed, and the two words of those that have two', () => {
     expect(inserts(at('pu'))).toEqual(['publish', 'purge']);
     expect(inserts(at('p'))).toEqual(['publish', 'purge', 'play', 'pause']);
-    expect(inserts(at('s'))).toEqual(['subscribe', 'set', 'step', 'speed']);
+    expect(inserts(at('s'))).toEqual(['subscribe', 'set', 'step', 'speed', 'share']);
     expect(inserts(at('clear '))).toEqual(['messages']);
     expect(inserts(at('reset '))).toEqual(['counters']);
     expect(inserts(at('re'))).toEqual(['rename', 'reset', 'redo']);

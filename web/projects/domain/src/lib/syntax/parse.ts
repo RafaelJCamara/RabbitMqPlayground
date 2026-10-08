@@ -38,6 +38,8 @@ function standsAlone(command: AppCommand | RuntimeCommand): string {
       return 'is about the history and not the canvas';
     case 'help':
       return 'answers a question and does not change the canvas';
+    case 'share':
+      return 'opens a panel and does not change the canvas';
     case 'publish':
     case 'purge':
     case 'play':

@@ -217,8 +217,16 @@ export interface Help {
   readonly command?: string;
 }
 
+/**
+ * Opens the panel that makes a link to the canvas (ADR-0078). It is not about the document either: the app answers it by opening the panel, where the learner chooses what the link
+ * carries, and it changes nothing.
+ */
+export interface Share {
+  readonly type: 'share';
+}
+
 /** A command about the history of the document, or about the commands, and not about the document: the app answers it. */
-export type AppCommand = Undo | Redo | Help;
+export type AppCommand = Undo | Redo | Help | Share;
 
 /**
  * The commands that run the simulation and not the canvas (ADR-0054). They are not applied to the document, so `applyCommand` is not given one: the app

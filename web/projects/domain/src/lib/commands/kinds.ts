@@ -16,7 +16,7 @@ const RUNTIME: ReadonlySet<string> = new Set<RuntimeCommand['type']>([
   'reset-counters',
 ]);
 
-const ABOUT_THE_APP: ReadonlySet<string> = new Set<AppCommand['type']>(['undo', 'redo', 'help']);
+const ABOUT_THE_APP: ReadonlySet<string> = new Set<AppCommand['type']>(['undo', 'redo', 'help', 'share']);
 
 export const isRuntimeCommand = (command: Command): command is RuntimeCommand => RUNTIME.has(command.type);
 

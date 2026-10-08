@@ -294,6 +294,18 @@ set worker ack=manual prefetch=5 processing=250
 set canvas default-exchange=true
 ```
 
+## `share`
+
+Opens the panel that makes a link to the canvas, and to the messages that are queued if you want them. Anyone who has the link can read the whole canvas, with every name in it, and what they change is theirs. It changes nothing, and it cannot be one of several commands.
+
+**Syntax:** `share`
+
+**Examples:**
+
+```
+share
+```
+
 ## `speed`
 
 How fast the virtual clock runs, from a quarter to four times. At 1 a virtual millisecond passes for each real one, so the legs that a message takes (500 ms from a producer, 300 ms in the broker, 500 ms to a consumer, by default) take that long.

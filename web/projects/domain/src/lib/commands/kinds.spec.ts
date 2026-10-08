@@ -22,7 +22,7 @@ const runtime: Command[] = [
   { type: 'clear-messages' },
   { type: 'reset-counters' },
 ];
-const about: Command[] = [{ type: 'undo' }, { type: 'redo' }, { type: 'help' }];
+const about: Command[] = [{ type: 'undo' }, { type: 'redo' }, { type: 'help' }, { type: 'share' }];
 
 describe('the kinds of command', () => {
   it.each(document)(

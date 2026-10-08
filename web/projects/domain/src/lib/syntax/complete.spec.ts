@@ -56,6 +56,7 @@ describe('completeCommand', () => {
         'undo',
         'redo',
         'help',
+        'share',
       ]);
       expect(at('').items.every(({ kind }) => kind === 'command')).toBe(true);
     });
@@ -411,8 +412,8 @@ describe('completeCommand', () => {
     it('offers, after help, the first word of each command', () => {
       expect(inserts(at('help '))).toEqual(
         inserts(at(''))
-          .filter((word) => word !== 'help')
-          .concat('help'),
+          .filter((word) => word !== 'help' && word !== 'share')
+          .concat('help', 'share'),
       );
       expect(at('help ').items.every(({ kind }) => kind === 'command')).toBe(true);
       expect(inserts(at('help bi'))).toEqual(['bind']);

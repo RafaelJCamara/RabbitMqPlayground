@@ -1077,6 +1077,37 @@ describe('parseCommand', () => {
     });
   });
 
+  describe('share', () => {
+    it('reads share, which takes nothing, and writes it back', () => {
+      expect(read('share')).toStrictEqual({ type: 'share' });
+      expect(read('  share  ')).toStrictEqual({ type: 'share' });
+    });
+
+    it('refuses a word after it, because what the link carries is chosen in the panel', () => {
+      const text = 'share messages';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({
+        kind: 'syntax',
+        message: "Unexpected 'messages': there is nothing more to say here.",
+      });
+      expect(pointedAt(text, issue)).toBe('messages');
+      expect(refused('share -> x').message).toBe("Unexpected '->': there is nothing more to say here.");
+    });
+
+    it('cannot be one of several commands, because it opens a panel and changes nothing', () => {
+      const text = 'declare queue a; share';
+      const issue = refused(text);
+
+      expect(issue).toMatchObject({ kind: 'batch', batchIndex: 1 });
+      expect(issue.message).toBe(
+        'share opens a panel and does not change the canvas, so it cannot be one of several commands. Type it by itself.',
+      );
+      expect(pointedAt(text, issue)).toBe('share');
+      expect(refused('share; declare queue a')).toMatchObject({ kind: 'batch', batchIndex: 0 });
+    });
+  });
+
   describe('several commands with ;', () => {
     it('are a batch, and each is read against the canvas that the ones before it made', () => {
       const result = read('declare queue jobs; bind orders -> jobs key=job.#; move jobs x=1 y=2');
