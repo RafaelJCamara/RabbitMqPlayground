@@ -9,6 +9,7 @@ import {
   summarise,
   type LoadError,
 } from '../errors';
+import { SIZE_CAPS } from '../load/caps';
 import { failure, succeed, type Outcome } from '../outcome';
 import { readRecord, type CanvasRecord } from '../record';
 import { CANVAS_ID_PATTERN } from '../shape';
@@ -58,22 +59,35 @@ export interface MetaValues {
   readonly lastBackupAt: number;
   /** The reminder to make a backup stays quiet until this time. */
   readonly backupReminderSnoozedUntil: number;
+  /** The canvases that are open in the strip of the workspace (ADR-0072), by id, in the order of the strip. */
+  readonly openCanvases: readonly string[];
 }
 export type MetaKey = keyof MetaValues;
 
 const isTime = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+const isCanvasId = (value: unknown): value is string => typeof value === 'string' && CANVAS_ID_PATTERN.test(value);
+
+/** A list of ids that are valid, each different from the others, and no more of them than there can be canvases in a backup. */
+const isIdList = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) &&
+  value.length <= SIZE_CAPS.canvases &&
+  value.every(isCanvasId) &&
+  new Set<unknown>(value).size === value.length;
 
 /** What each value has to be, for the sentence that says what is wrong with one. */
 const META_WANTS: Readonly<Record<MetaKey, string>> = {
   lastOpenCanvas: 'the id of a canvas',
   lastBackupAt: 'a time, in milliseconds since 1970',
   backupReminderSnoozedUntil: 'a time, in milliseconds since 1970',
+  openCanvases: 'a list of the ids of canvases, each one once',
 };
 
 const META_CHECKS: { readonly [K in MetaKey]: (value: unknown) => value is MetaValues[K] } = {
-  lastOpenCanvas: (value): value is string => typeof value === 'string' && CANVAS_ID_PATTERN.test(value),
+  lastOpenCanvas: isCanvasId,
   lastBackupAt: isTime,
   backupReminderSnoozedUntil: isTime,
+  openCanvases: isIdList,
 };
 
 /** What the repository holds, as it can tell without opening a canvas. */

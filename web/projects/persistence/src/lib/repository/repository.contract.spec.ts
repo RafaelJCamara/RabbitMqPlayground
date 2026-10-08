@@ -731,6 +731,29 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
         }),
       );
 
+      it('keeps the open canvases as a list, in its order, whatever the caller does to the list afterwards', () =>
+        withHarness(async ({ repository }) => {
+          const strip = ['b', 'a', 'c'];
+          unwrap(await repository.setMeta('openCanvases', strip));
+          strip.reverse();
+
+          expect(unwrap(await repository.getMeta('openCanvases'))).toEqual(['b', 'a', 'c']);
+          unwrap(await repository.setMeta('openCanvases', []));
+          expect(unwrap(await repository.getMeta('openCanvases'))).toEqual([]);
+          unwrap(await repository.deleteMeta('openCanvases'));
+          expect(unwrap(await repository.getMeta('openCanvases'))).toBeUndefined();
+        }));
+
+      it('keeps as many open canvases as a backup may hold, and no more', () =>
+        withHarness(async ({ repository }) => {
+          const ids = (count: number) => Array.from({ length: count }, (_, index) => `c${index}`);
+
+          unwrap(await repository.setMeta('openCanvases', ids(SIZE_CAPS.canvases)));
+          expect(unwrap(await repository.getMeta('openCanvases'))).toHaveLength(SIZE_CAPS.canvases);
+          expect(errorKind(await repository.setMeta('openCanvases', ids(SIZE_CAPS.canvases + 1)))).toBe('invalid');
+          expect(unwrap(await repository.getMeta('openCanvases'))).toHaveLength(SIZE_CAPS.canvases);
+        }));
+
       it('keeps each value apart from the others, and from the canvases', () =>
         withHarness(async ({ repository }) => {
           await repository.create({ id: 'lastOpenCanvas', name: 'n', document: emptyDocument() });
@@ -750,6 +773,10 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
         ['lastBackupAt', -1, 'a time, in milliseconds since 1970', '-1'],
         ['lastBackupAt', 'yesterday', 'a time, in milliseconds since 1970', '"yesterday"'],
         ['backupReminderSnoozedUntil', NaN, 'a time, in milliseconds since 1970', 'NaN'],
+        ['openCanvases', 'c1', 'a list of the ids of canvases, each one once', '"c1"'],
+        ['openCanvases', ['c1', 'c1'], 'a list of the ids of canvases, each one once', 'a list'],
+        ['openCanvases', ['c1', 'not an id'], 'a list of the ids of canvases, each one once', 'a list'],
+        ['openCanvases', ['c1', 7], 'a list of the ids of canvases, each one once', 'a list'],
       ] as const)('does not keep %s as %j, and says what it has to be', (key, value, wants, shown) =>
         withHarness(async ({ repository }) => {
           const result = await repository.setMeta(key as MetaKey, value as never);
@@ -770,11 +797,13 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
             await tx.putMeta('lastOpenCanvas', { not: 'an id' });
             await tx.putMeta('lastBackupAt', 'yesterday');
             await tx.putMeta('backupReminderSnoozedUntil', -5);
+            await tx.putMeta('openCanvases', ['a', 'a']);
           });
 
           expect(unwrap(await harness.repository.getMeta('lastOpenCanvas'))).toBeUndefined();
           expect(unwrap(await harness.repository.getMeta('lastBackupAt'))).toBeUndefined();
           expect(unwrap(await harness.repository.getMeta('backupReminderSnoozedUntil'))).toBeUndefined();
+          expect(unwrap(await harness.repository.getMeta('openCanvases'))).toBeUndefined();
         }));
     });
 
