@@ -7,10 +7,9 @@ import { MESSAGE_BODY_ID, MESSAGE_TITLE_ID, MessageDialog, type MessageData } fr
 import { NAME_DIALOG_TITLE_ID, NameDialog, type NameDialogData } from './name-dialog';
 import { RESTORE_TITLE_ID, RestoreDialog, type RestoreDialogData } from './restore-dialog';
 
-/** What every dialog of the canvases is opened with: modal, with a backdrop, the focus given back to what had it. */
+/** What every dialog of the canvases is opened with: modal, with the dark backdrop that the overlay gives, the focus given back to what had it. */
 const MODAL = {
   ariaModal: true,
-  backdropClass: 'cdk-overlay-dark-backdrop',
   autoFocus: 'first-tabbable',
   restoreFocus: true,
 } as const;
