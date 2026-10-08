@@ -3,7 +3,7 @@ import { emptyDocument } from '@rmq/domain';
 import { createMemoryRepository, type CanvasRepository, type RepositoryError } from '@rmq/persistence';
 import { idSequence, manualClock } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { CanvasStorage, REPOSITORIES, STORAGE_MANAGER } from './canvas-storage';
+import { CanvasStorage, MEMORY_ONLY, REPOSITORIES, STORAGE_MANAGER } from './canvas-storage';
 
 const unavailable: RepositoryError = {
   kind: 'unavailable',
@@ -25,6 +25,7 @@ function setup(
     readonly browser?: (memory: CanvasRepository) => CanvasRepository;
     readonly persisted?: boolean;
     readonly persist?: boolean | Error;
+    readonly memoryOnly?: string;
   } = {},
 ): Harness {
   const clock = manualClock(1_000);
@@ -49,6 +50,7 @@ function setup(
     providers: [
       { provide: REPOSITORIES, useValue: { browser: () => make('browser'), memory: () => make('memory') } },
       { provide: STORAGE_MANAGER, useValue: manager },
+      ...(options.memoryOnly === undefined ? [] : [{ provide: MEMORY_ONLY, useValue: options.memoryOnly }]),
     ],
   });
   return { storage: TestBed.inject(CanvasStorage), made, manager };
@@ -93,6 +95,19 @@ describe('CanvasStorage', () => {
       await storage.repository();
 
       expect(purge).toHaveBeenCalledTimes(1);
+    });
+
+    it('works in memory from the start, never opens the browser’s, and says why, when it was made to (ADR-0078)', async () => {
+      const { storage, made, manager } = setup({ memoryOnly: 'A shared canvas is not kept.' });
+
+      const repository = await storage.repository();
+      storage.askPersistence();
+
+      expect(made.map(({ kind }) => kind)).toEqual(['memory']);
+      expect(made[0]?.repository).toBe(repository);
+      expect(storage.memoryReason()).toBe('A shared canvas is not kept.');
+      expect(manager.persist).not.toHaveBeenCalled();
+      expect(await repository.create({ name: 'Shared', document: emptyDocument() })).toMatchObject({ ok: true });
     });
 
     it('works in memory, and says why, when the browser does not let the site keep anything', async () => {

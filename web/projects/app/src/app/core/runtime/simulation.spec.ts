@@ -1,18 +1,21 @@
 import { createEnvironmentInjector, EnvironmentInjector, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { emptyDocument, findId, nameOf, type CanvasDocument, type RuntimeCommand } from '@rmq/domain';
-import type { EngineEvent } from '@rmq/engine';
+import type { EngineEvent, EngineSnapshot } from '@rmq/engine';
 import {
   bindingRecord,
   consumerRecord,
   documentOf,
+  engineFor,
   exchangeRecord,
   manualFrames,
   producerRecord,
   queueRecord,
+  snapshotAfter,
 } from '@rmq/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
+import { SHARED_MESSAGES, type SharedMessages } from '../share/shared-messages';
 import { CommandBus } from '../state/command-bus';
 import { DocumentStore } from '../state/document-store';
 import { SelectionStore } from '../state/selection-store';
@@ -54,7 +57,7 @@ const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', nam
 /** What the simulation is made of, with frames that the spec runs. */
 const services = (
   frames: ReturnType<typeof manualFrames>,
-  options: { readonly flag?: boolean; readonly reduced?: boolean } = {},
+  options: { readonly flag?: boolean; readonly reduced?: boolean; readonly shared?: SharedMessages } = {},
 ): Provider[] => [
   DocumentStore,
   SelectionStore,
@@ -66,6 +69,7 @@ const services = (
   // The flags are the root's unless this one is given, and a spec that makes its own injector reads them from here.
   FeatureFlags,
   { provide: FRAME_SOURCE, useValue: frames },
+  ...(options.shared === undefined ? [] : [{ provide: SHARED_MESSAGES, useValue: options.shared }]),
   { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flag === false ? null : 'simulation' } },
   {
     provide: MOTION_QUERY,
@@ -78,7 +82,12 @@ const services = (
 ];
 
 function setup(
-  options: { readonly flag?: boolean; readonly reduced?: boolean; readonly document?: CanvasDocument } = {},
+  options: {
+    readonly flag?: boolean;
+    readonly reduced?: boolean;
+    readonly document?: CanvasDocument;
+    readonly shared?: SharedMessages;
+  } = {},
 ) {
   const frames = manualFrames();
   TestBed.configureTestingModule({ providers: services(frames, options) });
@@ -930,6 +939,114 @@ describe('Simulation', () => {
         { leg: 'publish', message: 1, producer: 'P', exchange: 'orders', from: 0, to: 100 },
         { leg: 'publish', message: 2, from: 0, to: 100 },
       ]);
+    });
+  });
+
+  describe('the messages of a shared canvas (ADR-0078)', () => {
+    const shared = (snapshot: EngineSnapshot) => {
+      const failed = vi.fn<(reason: string) => void>();
+      return { failed, messages: { snapshot, failed } as SharedMessages };
+    };
+
+    it('are given to the engine when the canvas first loads: paused, with the clock where the sender left it, and the messages where they were', () => {
+      const snapshot = snapshotAfter(traffic(), 180);
+      const { messages, failed } = shared(snapshot);
+      expect(snapshot.now).toBe(180);
+
+      const { simulation, frames } = setup({ shared: messages });
+      frames.frame(10_000);
+
+      expect(failed).not.toHaveBeenCalled();
+      expect(simulation.running()).toBe(false);
+      expect(simulation.now()).toBe(180);
+      expect(simulation.time()).toBe(100);
+      expect(simulation.snapshot()).toEqual(snapshot);
+      expect(simulation.messageCount()).toBeGreaterThan(0);
+      // Paused, the clock does not move, whatever the frames say.
+      expect(simulation.now()).toBe(180);
+    });
+
+    it('go on from there when the learner plays, as the engine that the snapshot was taken from would have', () => {
+      const snapshot = snapshotAfter(traffic(), 180);
+      const original = engineFor(traffic());
+      original.restore(snapshot);
+      const { messages } = shared(snapshot);
+      const { simulation, run, elapse } = setup({ shared: messages });
+
+      run({ type: 'play' });
+      elapse(220);
+      original.advanceTo(400);
+
+      expect(simulation.running()).toBe(true);
+      expect(simulation.now()).toBe(400);
+      expect(simulation.snapshot()).toEqual(original.snapshot());
+    });
+
+    it('are given only to the first canvas that loads, and the next canvas starts as every canvas does', () => {
+      const snapshot = snapshotAfter(traffic(), 180);
+      const { messages } = shared(snapshot);
+      const { simulation, store } = setup({ shared: messages });
+      expect(simulation.messageCount()).toBeGreaterThan(0);
+
+      store.load(traffic());
+
+      expect(simulation.messageCount()).toBe(0);
+      expect(simulation.now()).toBe(0);
+    });
+
+    it('are left out, and the view is told why, when the engine does not take them: the canvas is as it would be without them and runs', () => {
+      const { messages, failed } = shared({
+        ...snapshotAfter(traffic(), 180),
+        version: 2,
+      } as unknown as EngineSnapshot);
+
+      const { simulation } = setup({ shared: messages });
+
+      expect(failed).toHaveBeenCalledTimes(1);
+      expect(failed.mock.calls[0]?.[0]).toBe('This engine reads snapshots of version 1, and this one is version 2');
+      expect(simulation.running()).toBe(true);
+      expect(simulation.now()).toBe(0);
+      expect(simulation.messageCount()).toBe(0);
+    });
+
+    it('are left alone when the engine does not follow the canvas: nothing is given to a simulation that is not switched on', () => {
+      const { messages, failed } = shared(snapshotAfter(traffic(), 180));
+
+      const { simulation } = setup({ shared: messages, flag: false });
+
+      expect(failed).not.toHaveBeenCalled();
+      expect(simulation.now()).toBe(0);
+    });
+  });
+
+  describe('what a link carries (ADR-0077)', () => {
+    it('is the engine as it is: its snapshot is the same as the engine of the document makes, and it changes as the run goes on', () => {
+      const { simulation, run, elapse } = setup();
+      const before = simulation.snapshot();
+      expect(before.now).toBe(0);
+      expect(before.published).toBe(0);
+
+      run(PUBLISH);
+      elapse(120);
+
+      expect(simulation.snapshot().published).toBe(2);
+      expect(simulation.snapshot().now).toBeGreaterThan(0);
+      expect(before.published).toBe(0);
+    });
+
+    it('is counted in messages: those on their way, those waiting in queues, and those a consumer holds, and none when there are none', () => {
+      const { simulation, run, elapse } = setup();
+      expect(simulation.messageCount()).toBe(0);
+
+      run(PUBLISH);
+      expect(simulation.messageCount()).toBe(2);
+
+      elapse(160);
+      // One is at the consumer, which holds it until it has finished and acknowledged it, and one waits in the queue.
+      expect(simulation.messageCount()).toBe(2);
+
+      elapse(1_000, 170);
+      expect(simulation.messageCount()).toBe(0);
     });
   });
 

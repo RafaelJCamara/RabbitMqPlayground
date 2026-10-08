@@ -3,6 +3,16 @@
  * spec. A stream is read as it comes, so the size of what a link opens into is counted before it is made, and a link that opens into too much is stopped and not inflated.
  */
 
+/** The bytes as a stream that has them and ends, which is how a compressor is given its input. It is made by hand and not from a `Blob`, which not every platform that has streams can make one from. */
+function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array<ArrayBuffer>> {
+  return new ReadableStream<Uint8Array<ArrayBuffer>>({
+    start(controller) {
+      controller.enqueue(bytes as Uint8Array<ArrayBuffer>);
+      controller.close();
+    },
+  });
+}
+
 /** Whether this platform can compress, which a very old browser cannot. */
 export const canCompress = (): boolean =>
   typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
@@ -45,7 +55,7 @@ function join(chunks: readonly Uint8Array[]): Uint8Array {
 
 /** The bytes, compressed. They are a few kilobytes at most, because the text was kept under the cap first. */
 export async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  const stream = streamOf(bytes).pipeThrough(new CompressionStream('deflate-raw'));
   return join((await readAll(stream as ReadableStream<Uint8Array>, Infinity)).chunks);
 }
 
@@ -59,7 +69,7 @@ export type Inflated =
 /** Inflates, and stops at `limit` bytes without making the rest. */
 export async function inflate(bytes: Uint8Array, limit: number): Promise<Inflated> {
   try {
-    const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    const stream = streamOf(bytes).pipeThrough(new DecompressionStream('deflate-raw'));
     const { chunks, seen, over } = await readAll(stream as ReadableStream<Uint8Array>, limit);
     return over ? { ok: false, reason: 'too-large', seen } : { ok: true, bytes: join(chunks) };
   } catch (error) {

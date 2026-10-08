@@ -29,6 +29,15 @@ export const STORAGE_MANAGER = new InjectionToken<StorageManagerLike | undefined
 });
 
 /**
+ * Why a storage keeps nothing, when it was made to (ADR-0078): the shared view looks at a canvas and lets the learner change it in memory, and what is changed there never reaches the canvases in the browser. A storage that
+ * is given a reason works in memory from the start and says why, as one does that the browser would not let keep anything. Left out, the storage is the page's.
+ */
+export const MEMORY_ONLY = new InjectionToken<string | null>('MEMORY_ONLY', {
+  providedIn: 'root',
+  factory: () => null,
+});
+
+/**
  * Where the canvases of this page are kept (ADR-0072): one repository for the page, whoever asks, so that the session that saves the canvas
  * that is open and the library that lists, makes and deletes canvases see the same ones. It is the browser's if the browser lets the site
  * keep anything, and a repository in memory if not, and it keeps why. It also holds what the browser said when it was asked to keep the
@@ -38,6 +47,7 @@ export const STORAGE_MANAGER = new InjectionToken<StorageManagerLike | undefined
 export class CanvasStorage implements OnDestroy {
   private readonly factories = inject(REPOSITORIES);
   private readonly manager = inject(STORAGE_MANAGER);
+  private readonly memoryOnly = inject(MEMORY_ONLY);
 
   private current: Promise<CanvasRepository> | undefined;
   private readonly reason = signal<string | undefined>(undefined);
@@ -91,6 +101,10 @@ export class CanvasStorage implements OnDestroy {
   }
 
   private async choose(): Promise<CanvasRepository> {
+    if (this.memoryOnly !== null) {
+      this.reason.set(this.memoryOnly);
+      return this.factories.memory();
+    }
     const browser = this.factories.browser();
     const probe = await browser.purgeExpired();
     if (probe.ok) {

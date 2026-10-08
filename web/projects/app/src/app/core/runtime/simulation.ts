@@ -5,13 +5,16 @@ import {
   type Engine,
   type EngineCommand,
   type EngineEvent,
+  type EngineSnapshot,
   type Flight,
   type QueueMessage,
   type RuntimeView,
 } from '@rmq/engine';
 import { FeatureFlags } from '../flags/feature-flags';
+import { SHARED_MESSAGES, type SharedMessages } from '../share/shared-messages';
 import { CommandBus, type RuntimeHost, type RuntimeOutcome } from '../state/command-bus';
 import { DocumentStore, type ChangeCause } from '../state/document-store';
+import { copiesIn } from './copies';
 import { FrameLoop } from './frame-loop';
 import { MotionPreference } from './motion';
 import { describeStep, namesOf } from './sentences';
@@ -59,6 +62,8 @@ export class Simulation implements RuntimeHost {
   private readonly frames = inject(FrameLoop);
   private readonly stats = inject(SimStats);
   private readonly motion = inject(MotionPreference);
+  /** The messages of a shared canvas, until the document of the canvas has loaded and they have been given to the engine (ADR-0078). */
+  private shared: SharedMessages | null = inject(SHARED_MESSAGES);
 
   readonly enabled = inject(FeatureFlags).isEnabled('simulation');
 
@@ -121,6 +126,16 @@ export class Simulation implements RuntimeHost {
   /** What a queue holds, ready first and then held, at most `limit`. */
   messages(queue: string, limit: number): QueueMessage[] {
     return this.engine.messages(queue, limit);
+  }
+
+  /** The engine as it is, with what it holds and the clock, for a link that carries the messages (ADR-0077). */
+  snapshot(): EngineSnapshot {
+    return this.engine.snapshot();
+  }
+
+  /** How many copies of messages the canvas holds, each once: what a link with its messages carries (ADR-0078). */
+  messageCount(): number {
+    return copiesIn(this.engine.snapshot());
   }
 
   /** The engine's clock in whole virtual milliseconds, which is what a line of the log says when it was (ADR-0061). */
@@ -270,6 +285,7 @@ export class Simulation implements RuntimeHost {
   private follow(document: CanvasDocument, cause: ChangeCause): void {
     if (cause === 'load') {
       this.rebuild(document);
+      this.restoreShared();
       return;
     }
     const before = this.held;
@@ -282,6 +298,28 @@ export class Simulation implements RuntimeHost {
     }
     // A node that is new, or has another name, has numbers of its own though nothing was said.
     this.refresh(events, true, before);
+    this.frames.wake();
+  }
+
+  /**
+   * The first canvas to load in a shared view is the shared one, and the engine is given its messages: they are put back as they were, and the clock stands still where the sender left it (ADR-0078). If the engine does not
+   * take them, which the reader of the link makes sure that it does, the canvas is without its messages and the view is told, so that it can say so.
+   */
+  private restoreShared(): void {
+    const shared = this.shared;
+    this.shared = null;
+    if (shared === null) {
+      return;
+    }
+    try {
+      this.engine.restore(shared.snapshot);
+    } catch (error) {
+      shared.failed(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    this.real = this.engine.now();
+    this.playing.set(false);
+    this.refresh([], true);
     this.frames.wake();
   }
 
