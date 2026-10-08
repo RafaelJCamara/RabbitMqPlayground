@@ -182,7 +182,10 @@ export class CanvasLibrary implements CanvasHost {
     this.started.set(true);
   }
 
-  /** Shows the home or a canvas, after the editor that is open has finished writing. Showing what is shown changes nothing. */
+  /**
+   * Shows the home or a canvas, after the editor that is open has finished writing. Showing what is shown changes nothing. The canvas that is open last is written by the
+   * session of the editor that opens it, which is the one that knows that it did.
+   */
   async show(view: View): Promise<void> {
     if (sameView(view, this.current())) {
       return;
@@ -197,10 +200,6 @@ export class CanvasLibrary implements CanvasHost {
     }
     this.current.set(view);
     this.announcer.announce(view.kind === 'home' ? 'Showing My canvases.' : `Showing “${this.nameOf(view.id)}”.`);
-    if (view.kind === 'canvas') {
-      const repository = await this.storage.repository();
-      void repository.setMeta('lastOpenCanvas', view.id);
-    }
   }
 
   /** Opens a canvas in the strip, if it is not there, and shows it. */

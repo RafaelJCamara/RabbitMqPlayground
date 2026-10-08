@@ -384,18 +384,6 @@ describe('CanvasLibrary', () => {
       expect(list).not.toHaveBeenCalled();
     });
 
-    it('remembers the canvas that is shown, for the next start', async () => {
-      const harness = setup();
-      await seed(harness, 'Alpha', 'Beta');
-      await harness.library.start();
-      expect(harness.library.view()).toEqual(canvasView('beta'));
-
-      await harness.library.show(canvasView('alpha'));
-      await settle();
-
-      expect(await harness.repository.getMeta('lastOpenCanvas')).toEqual({ ok: true, value: 'alpha' });
-    });
-
     it('says aloud what is shown now: the home, or a canvas by its name', async () => {
       const harness = setup();
       await seed(harness, 'Alpha', 'Beta');
