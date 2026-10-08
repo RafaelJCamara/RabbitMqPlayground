@@ -322,6 +322,24 @@ test.describe('a binding made from a message (ADR-0070)', () => {
     await expect(panel.line).toHaveText('bind files -> pdfs x-match=all-with-x format=pdf x-region=eu');
   });
 
+  test('says the lint of the binding that it would make: any with nothing that counts matches no message', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES_WITH_X, { flags: FLAGS });
+    await headers.openLastMessage('unroutable');
+    const panel = headers.bind;
+    await panel.show();
+    await panel.tick('format').uncheck();
+    await expect(panel.lint).toHaveCount(0);
+
+    await panel.mode.choose('any');
+
+    await expect(panel.lint).toContainText('Worth a look');
+    await expect(panel.lint).toContainText(
+      "The binding from 'files' to 'pdfs' has x-match=any and no condition that counts, so it matches no message: with nothing to match, 'any' matches none.",
+    );
+  });
+
   test('forgets what was ticked and chosen when another message is opened, and shuts', async ({ page }) => {
     const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
     await headers.openLastMessage('unroutable');

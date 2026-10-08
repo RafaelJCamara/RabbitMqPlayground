@@ -191,6 +191,44 @@ test.describe('the table of the headers of a message (ADR-0069)', () => {
     await expect(table.value(3)).toHaveValue('7');
   });
 
+  test('applies a name that is changed when the name is left, as the header that went and the header that came, in one step', async ({
+    page,
+  }) => {
+    const headers = await open(page);
+    const { table } = headers;
+
+    await table.name(2).fill('kind');
+    await table.name(2).press('Tab');
+
+    await expect
+      .poll(() => headers.producerHeaders())
+      .toEqual([
+        { key: 'format', value: { t: 'string', v: 'pdf' } },
+        { key: 'kind', value: { t: 'string', v: 'report' } },
+      ]);
+    expect(await headers.commands()).toEqual(['unset sender header:type; set sender header:kind=report']);
+  });
+
+  test('is another table for another producer that has the very same headers, and what was typed in the first is not carried over', async ({
+    page,
+  }) => {
+    const headers = await open(page);
+    await headers.editor.openCommandBar();
+    await headers.editor.runCommand('add producer twin');
+    await headers.editor.runCommand('set twin header:format=pdf header:type=report');
+    await page.keyboard.press('Escape');
+    await headers.editor.select('Producer sender');
+    const { table } = headers;
+    await table.add.click();
+    await table.name(3).fill('half');
+    await expect(table.rows).toHaveCount(3);
+
+    await headers.editor.select('Producer twin');
+
+    await expect(table.rows).toHaveCount(2);
+    await expect(table.name(1)).toHaveValue('format');
+  });
+
   test('is the table of the producer that is selected, and what was typed in the table of another is not carried over', async ({
     page,
   }) => {

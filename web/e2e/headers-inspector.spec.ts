@@ -307,4 +307,17 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
       'unbind files -> pdfs key=legacy x-match=all format=pdf; bind files -> pdfs key=legacy x-match=any format=pdf',
     ]);
   });
+
+  test('gives the keyboard to the canvas on Escape, from a field of the editor, as the other fields of the inspector do', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES_BOUND);
+    await headers.selectBinding('x1>q1');
+    await headers.conditions().name(1).focus();
+
+    await page.keyboard.press('Escape');
+
+    await expect(headers.editor.flow).toBeFocused();
+    await expect(headers.conditions().scope).toBeVisible();
+  });
 });

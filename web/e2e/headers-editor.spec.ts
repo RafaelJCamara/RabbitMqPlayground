@@ -40,6 +40,13 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     );
     // The sentence is what describes the group of modes, and the group is named by its legend.
     await expect(popover.modes).toHaveAttribute('aria-describedby', (await popover.modeHelp.getAttribute('id'))!);
+    // It is whole inside the canvas, by the node that the link goes to, as the size that it is asked for says: a popover that is placed as the one for a key is would be cut at the right edge.
+    const canvas = (await headers.editor.canvas.boundingBox())!;
+    const box = (await popover.scope.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(canvas.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(canvas.x + canvas.width);
+    expect(box.y).toBeGreaterThanOrEqual(canvas.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(canvas.y + canvas.height);
     expect(await headers.editor.edges(), 'nothing is made until Bind').toEqual(['sender -> files']);
     expect(await headers.bindings()).toEqual([]);
   });
@@ -56,6 +63,8 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     await popover.submit.click();
 
     await expect(popover.scope).toHaveCount(0);
+    // The keyboard is the canvas's again, as it is when a key is given.
+    await expect(headers.editor.flow).toBeFocused();
     await expect
       .poll(() => headers.bindings())
       .toEqual([
@@ -98,6 +107,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     await expect(popover.value(1)).toBeFocused();
     await expect(popover.value(1)).toHaveAttribute('aria-invalid', 'true');
     await expect(popover.problem(1, 'value')).toBeVisible();
+    await expect(popover.value(1)).toHaveAccessibleDescription(/A header needs a value/);
     await expect(headers.assertive).toContainText('A header needs a value');
     await expect(popover.scope).toBeVisible();
     // Nothing was made (the log is read with the command bar, whose button takes the focus and so would give the popover up).
@@ -148,9 +158,26 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
     await expect(popover.scope).toBeVisible();
     await expect(popover.name(1)).toHaveValue('format');
 
-    await headers.editor.toolbox.getByRole('button', { name: 'Queue', exact: true }).focus();
+    const elsewhere = headers.editor.toolbox.getByRole('button', { name: 'Queue', exact: true });
+    await elsewhere.focus();
 
     await expect(popover.scope).toHaveCount(0);
+    // The focus is where the learner put it, and is not taken back to the canvas.
+    await expect(elsewhere).toBeFocused();
+    expect(await headers.bindings()).toEqual([]);
+  });
+
+  test('is given up by a click on something that cannot take the focus, and the focus is not taken to the canvas, where the learner did not put it', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+    const popover = await askForConditions(headers);
+    await popover.fill(1, 'format', 'pdf');
+
+    await headers.editor.inspector.getByTestId('inspector-title').click();
+
+    await expect(popover.scope).toHaveCount(0);
+    await expect(headers.editor.flow).not.toBeFocused();
     expect(await headers.bindings()).toEqual([]);
   });
 
@@ -331,11 +358,15 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
     await popover.append('format', 'tiff');
+    await expect(headers.polite).toHaveText('Condition 2 added.');
 
     await expect(popover.problem(1, 'key')).toHaveText(/The header 'format' is there twice/);
     await expect(popover.problem(2, 'key')).toHaveText(/The header 'format' is there twice/);
     await expect(popover.name(1)).toHaveAttribute('aria-invalid', 'true');
     await expect(popover.name(2)).toHaveAttribute('aria-invalid', 'true');
+    await expect(popover.name(1)).toHaveAccessibleDescription(/The header 'format' is there twice/);
+    // The button that takes a row off says which row, and by its name.
+    await expect(popover.remove(2)).toHaveAccessibleName('Remove condition 2, format');
 
     await popover.submit.click();
 
@@ -345,6 +376,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
 
     // Taking one off clears both, and the binding can be made.
     await popover.remove(2).click();
+    await expect(headers.polite).toHaveText('Removed condition 2, format.');
     await expect(popover.problem(1, 'key')).toHaveCount(0);
     await expect(popover.name(1)).toBeFocused();
     await popover.submit.click();
