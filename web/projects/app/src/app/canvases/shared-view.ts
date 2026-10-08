@@ -21,8 +21,8 @@ import { SHARED_CANVAS_PROVIDERS, SharedCanvas } from './shared-canvas';
       <header class="border-line bg-panel flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2">
         <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
         <p class="min-w-0 flex-1" data-testid="shared-banner">
-          <strong class="font-semibold" data-testid="shared-name">Shared canvas “{{ canvas.name() }}”</strong>
-          <span class="text-muted"> You can look around, change things and play. Nothing here is saved.</span>
+          <strong class="font-semibold" data-testid="shared-name">Shared canvas “{{ canvas.name() }}”</strong
+          ><span class="text-muted">. You can look around, change things and play. Nothing here is saved.</span>
         </p>
         <button
           type="button"
