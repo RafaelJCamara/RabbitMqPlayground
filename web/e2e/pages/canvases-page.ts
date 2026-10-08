@@ -14,6 +14,10 @@ export class CanvasesPage {
   readonly sort: Locator;
   readonly count: Locator;
   readonly dialog: Locator;
+  /** The dialog that asks before something is taken away. */
+  readonly confirmation: Locator;
+  /** The region of the notices, which is there only while there is one. */
+  readonly notices: Locator;
 
   constructor(readonly page: Page) {
     this.editor = new EditorPage(page);
@@ -24,6 +28,8 @@ export class CanvasesPage {
     this.sort = this.home.getByRole('combobox', { name: 'Sort by' });
     this.count = this.home.getByTestId('home-count');
     this.dialog = page.getByRole('dialog');
+    this.confirmation = page.getByRole('alertdialog');
+    this.notices = page.getByRole('region', { name: 'Notices' });
   }
 
   /** Opens the workspace, and waits until an editor has opened a canvas and says that its changes are saved. */
@@ -90,6 +96,7 @@ export class CanvasesPage {
   /** The names of the cards that are drawn, in order. */
   cardNames(): Promise<string[]> {
     return this.home
+      .getByRole('article')
       .getByRole('heading', { level: 3 })
       .evaluateAll((headings) => headings.map((heading) => heading.textContent?.trim() ?? ''));
   }
@@ -114,9 +121,53 @@ export class CanvasesPage {
     await expect(this.dialog).toHaveCount(0);
   }
 
-  /** The names of the canvases that IndexedDB holds, sorted, whatever the screen shows. */
+  /** The names of the canvases that IndexedDB holds and that are not deleted, sorted, whatever the screen shows. A deleted one is a tombstone for a minute. */
   stored(): Promise<string[]> {
-    return this.editor.canvasNames().then((names) => [...names].sort());
+    return this.records().then((records) =>
+      records
+        .filter((record) => record.deletedAt === undefined)
+        .map((record) => record.name)
+        .sort(),
+    );
+  }
+
+  /** The names of the canvases that are tombstones, sorted. */
+  tombstones(): Promise<string[]> {
+    return this.records().then((records) =>
+      records
+        .filter((record) => record.deletedAt !== undefined)
+        .map((record) => record.name)
+        .sort(),
+    );
+  }
+
+  private records(): Promise<{ name: string; deletedAt?: number }[]> {
+    return this.page.evaluate(
+      () =>
+        new Promise<{ name: string; deletedAt?: number }[]>((resolve, reject) => {
+          const open = indexedDB.open('rmq-playground');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const database = open.result;
+            const all = database.transaction('canvases', 'readonly').objectStore('canvases').getAll();
+            all.onerror = () => reject(all.error);
+            all.onsuccess = () => {
+              database.close();
+              resolve(all.result as { name: string; deletedAt?: number }[]);
+            };
+          };
+        }),
+    );
+  }
+
+  /** The message of the notice that is there, or `undefined`. */
+  noticeText(): Promise<string | undefined> {
+    return this.notices
+      .getByTestId('toast-message')
+      .first()
+      .textContent({ timeout: 2000 })
+      .then((text) => text?.trim())
+      .catch(() => undefined);
   }
 
   /** The ids the strip is kept as in IndexedDB, or `undefined`. */
