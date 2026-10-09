@@ -954,7 +954,7 @@ describe('reconcile', () => {
       expect(only(events, 'delivered')).toMatchObject([{ consumer: 'C/q', redelivered: true, autoAck: true }]);
     });
 
-    it('subscribes again to a queue that it was unsubscribed from while it still held a message, and the engine takes it up where it was (ADR-0088)', () => {
+    it('subscribes again to a queue that it was unsubscribed from while it still held a message, and the engine starts a new consumer under the tag that still holds it (ADR-0088, ADR-0089)', () => {
       // The Nightly of 2026-10-09 found this with a random seed: undo of a subscription cancels the consumer, which holds what it has not finished with, and the redo asks the engine to consume with the same tag.
       const before = deepFreeze(
         documentOf({

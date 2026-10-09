@@ -144,6 +144,23 @@ describe('readSnapshot (ADR-0077)', () => {
     expect(read.ok && read.value).toEqual(snapshot);
   });
 
+  it('reads how many messages of a consumer are not counted (ADR-0089), refuses a number that is not whole, and has the engine refuse more than the queue gave out', () => {
+    const snapshot = copy(busyEngine().snapshot());
+    const tags = structuredClone(snapshot['tags']) as { unacked: unknown[]; uncounted?: unknown }[];
+
+    tags[0]!.uncounted = 1;
+    const read = readSnapshot({ ...snapshot, tags });
+    expect(read.ok && read.value.tags[0]?.uncounted).toBe(1);
+
+    tags[0]!.uncounted = 1000;
+    const beyond = readSnapshot({ ...snapshot, tags });
+    expect(!beyond.ok && beyond.message).toContain('messages that an earlier consumer of its tag held');
+
+    tags[0]!.uncounted = 1.5;
+    const fraction = readSnapshot({ ...snapshot, tags });
+    expect(!fraction.ok && fraction.message).toContain('tags.0.uncounted');
+  });
+
   it('takes the time of the next tick of a producer to be 0, as the engine can have it, and not before that', () => {
     const snapshot = copy(busyEngine().snapshot());
     const producers = (snapshot['producers'] as Record<string, unknown>[]).map((producer) => ({ ...producer }));

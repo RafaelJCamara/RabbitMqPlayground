@@ -1,4 +1,4 @@
-import { busyEngine, CANVAS_TIMING, newEngine, run } from '@rmq/testing';
+import { busyEngine, CANVAS_TIMING, consume, declareQueue, newEngine, openChannel, publish, run } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import type { Engine } from './engine';
 import { createEngine } from './engine';
@@ -45,6 +45,33 @@ describe('snapshot and restore', () => {
     expect(restored.nextAt()).toBe(original.nextAt());
     expect(restored.messages('jobs')).toEqual(original.messages('jobs'));
     expect(restored.snapshot()).toEqual(original.snapshot());
+  });
+
+  it('keeps what is not counted of what an earlier consumer of a tag held through JSON, leaves it out when there is none, and counts the window of the new consumer as the original did (ADR-0089)', () => {
+    const original = newEngine();
+    run(original, declareQueue('jobs'));
+    run(original, openChannel('ch', 1, null));
+    run(original, consume('ch', 'jobs', 'c1', 'manual'));
+    const post = (engine: Engine, body: string) => run(engine, publish('', 'jobs', body));
+    post(original, 'one');
+    original.advanceTo(original.now() + 1000);
+    expect(JSON.stringify(original.snapshot())).not.toContain('earlier');
+    run(original, { op: 'basic.cancel', consumer: 'c1' });
+    run(original, consume('ch', 'jobs', 'c1', 'manual'));
+
+    const snapshot = JSON.parse(JSON.stringify(original.snapshot())) as EngineSnapshot;
+    const restored = createEngine({ seed: 1, timing: { publishMs: 0, brokerMs: 0, deliverMs: 0 } });
+    restored.restore(snapshot);
+
+    expect(snapshot.tags[0]?.uncounted).toBe(1);
+    expect(restored.snapshot()).toEqual(original.snapshot());
+    for (const engine of [original, restored]) {
+      post(engine, 'two');
+      post(engine, 'three');
+      engine.advanceTo(engine.now() + 1000);
+    }
+    expect(restored.view()).toEqual(original.view());
+    expect(original.view().queues['jobs']).toMatchObject({ ready: 1, unacked: 2 });
   });
 
   it('gives an engine that does what the first would have done: the same events for the same commands and the same time', () => {

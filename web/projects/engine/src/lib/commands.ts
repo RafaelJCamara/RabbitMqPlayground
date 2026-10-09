@@ -258,17 +258,17 @@ function setChannel(core: Core, command: Extract<EngineCommand, { op: 'channel.s
 }
 
 /**
- * A consumer that was cancelled and still holds messages is in the engine until it has settled them, and a consumer of the same tag that its channel starts for the same queue, in the same way, is that
- * consumer again: it takes up where it was, holding what it held, and is dealt to again within its prefetch (ADR-0088). Any other use of a tag that is taken is a mistake.
+ * A consumer that was cancelled and still holds messages is in the engine until it has settled them, and a consumer of the same tag that its channel starts for the same queue, in the same way, is a new
+ * consumer that has what the old one held to settle, and a window that starts at nothing (ADR-0089, as the broker does it). Any other use of a tag that is taken is a mistake.
  */
-const takesUp = (tag: TagState, command: Extract<EngineCommand, { op: 'basic.consume' }>): boolean =>
+const startsAgain = (tag: TagState, command: Extract<EngineCommand, { op: 'basic.consume' }>): boolean =>
   tag.cancelled && tag.channel === command.channel && tag.queue === command.queue && tag.ack === command.ack;
 
 function consume(core: Core, command: Extract<EngineCommand, { op: 'basic.consume' }>): BrokerReply | null {
   const { state } = core;
   const channel = channelOf(core, command.channel);
-  const earlier = state.tags.get(command.consumer);
-  if (earlier !== undefined && !takesUp(earlier, command)) {
+  const cancelled = state.tags.get(command.consumer);
+  if (cancelled !== undefined && !startsAgain(cancelled, command)) {
     throw new RangeError(`The consumer "${command.consumer}" is consuming already`);
   }
   const queue = state.queues.get(command.queue);
@@ -277,18 +277,20 @@ function consume(core: Core, command: Extract<EngineCommand, { op: 'basic.consum
     closeChannel(core, channel, { kind: 'refused', code: reply.code, text: reply.text });
     return reply;
   }
-  if (earlier === undefined) {
+  if (cancelled === undefined) {
     state.tags.set(command.consumer, {
       tag: command.consumer,
       channel: command.channel,
       queue: command.queue,
       ack: command.ack,
       unacked: [],
+      uncounted: 0,
       cancelled: false,
     });
     channel.tags.push(command.consumer);
   } else {
-    earlier.cancelled = false;
+    cancelled.uncounted = cancelled.unacked.length;
+    cancelled.cancelled = false;
   }
   queue.turn.push(command.consumer);
   dispatchQueue(core, queue);
@@ -364,6 +366,7 @@ function clearMessages(core: Core): null {
   for (const tag of state.tags.values()) {
     unacked += tag.unacked.length;
     tag.unacked = [];
+    tag.uncounted = 0;
   }
   let buffered = 0;
   for (const channel of state.channels.values()) {

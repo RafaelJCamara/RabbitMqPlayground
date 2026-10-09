@@ -88,7 +88,8 @@ function referenceIssue(snapshot: EngineSnapshot): string | null {
   }
   for (const tag of snapshot.tags) {
     const channel = channels.get(tag.channel);
-    if (!queues.has(tag.queue) || channel === undefined) {
+    const queue = queues.get(tag.queue);
+    if (queue === undefined || channel === undefined) {
       return `The consumer “${tag.tag}” refers to a queue or a channel that is not in the snapshot`;
     }
     if (!channel.tags.includes(tag.tag)) {
@@ -99,6 +100,11 @@ function referenceIssue(snapshot: EngineSnapshot): string | null {
     }
     if (tag.cancelled && tag.unacked.length === 0) {
       return `The consumer “${tag.tag}” is cancelled and holds nothing, so it would be gone`;
+    }
+    const uncounted = tag.uncounted ?? 0;
+    const given = queue.nextOrder - 1;
+    if (!Number.isInteger(uncounted) || uncounted < 0 || uncounted > given) {
+      return `The consumer “${tag.tag}” does not count ${String(uncounted)} messages that an earlier consumer of its tag held, and the queue “${tag.queue}” has given out ${String(given)}`;
     }
   }
   for (const channel of snapshot.channels) {

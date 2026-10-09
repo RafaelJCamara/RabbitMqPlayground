@@ -455,36 +455,108 @@ describe('cancel', () => {
     expect(types(run(engine, ack('c1')))).toEqual(['acked']);
   });
 
-  describe('and then consuming again with the tag that it had (ADR-0088)', () => {
-    it('takes the consumer up again where it was, when its channel asks again for the same queue in the same way: it still holds what it held, and is dealt to again', () => {
+  describe('and then consuming again with the tag that it had (ADR-0089)', () => {
+    it('starts a new consumer under the tag, when its channel asks again for the same queue in the same way: it still holds what the old one held, and its window starts at nothing', () => {
       const engine = jobs();
-      join(engine, 'c1', { prefetch: 2, ack: 'manual' });
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
       send(engine, 'm1');
       run(engine, { op: 'basic.cancel', consumer: 'c1' });
       expect(given(send(engine, 'm2'))).toEqual({});
 
       const resumed = runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
 
+      // The broker gave m2 to the new consumer while m1 was still unacknowledged on the channel: recorded against RabbitMQ 4.3 in delivery/a-tag-taken-again-after-a-cancel-starts-with-an-empty-window.
       expect(given(resumed)).toEqual({ c1: [2] });
       expect(types(resumed)).not.toContain('consumer.cancelled');
       expect(engine.view().channels['ch-c1']?.consumers).toEqual([
         { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 2, cancelled: false },
       ]);
-      expect(types(run(engine, ack('c1', 1)))).toEqual(['acked']);
-      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
-        { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 1, cancelled: false },
-      ]);
     });
 
-    it('counts what it held against its prefetch, so that it is dealt to again only when it acknowledges', () => {
+    it('takes one off the window of the new consumer for each acknowledgement of anything under the tag, what the old one held included, by order or by number', () => {
       const engine = jobs();
       join(engine, 'c1', { prefetch: 1, ack: 'manual' });
       send(engine, 'm1');
       run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+      expect(given(send(engine, 'm2', 'm3', 'm4'))).toEqual({ c1: [2] });
+
+      expect(given(run(engine, ack('c1')))).toEqual({ c1: [3] });
+      expect(given(run(engine, ack('c1', 2)))).toEqual({ c1: [4] });
+      expect(engine.view().channels['ch-c1']?.consumers).toMatchObject([{ unacked: 2 }]);
+    });
+
+    it('lets the window go below nothing, as the broker does: what the old one held is acknowledged, and the new one is given more than its prefetch', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+      run(engine, ack('c1'));
+      expect(engine.view().channels['ch-c1']?.consumers).toMatchObject([{ unacked: 0 }]);
+
+      // Recorded against RabbitMQ 4.3: with a prefetch of 1 it was given the first two of the three.
+      expect(given(send(engine, 'm2', 'm3', 'm4'))).toEqual({ c1: [2, 3] });
+    });
+
+    it('counts again from nothing every time that the tag is taken again, with what is held by then as what the earlier ones held', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
       send(engine, 'm2');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
 
       expect(given(runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual')))).toEqual({});
-      expect(given(run(engine, ack('c1')))).toEqual({ c1: [2] });
+      expect(given(send(engine, 'm3'))).toEqual({ c1: [3] });
+      expect(engine.view().channels['ch-c1']?.consumers).toMatchObject([{ unacked: 3, cancelled: false }]);
+      expect(given(send(engine, 'm4'))).toEqual({});
+    });
+
+    it('is a consumer that is gone when the last of what it held is acknowledged, if it is cancelled again before that', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+
+      run(engine, ack('c1'));
+
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([]);
+    });
+
+    it('gives back everything that the channel holds when it closes, what the old one held and what the new one holds, redelivered, and the other consumers are served with them', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+      join(engine, 'c2', { prefetch: 5, ack: 'manual' });
+      expect(given(send(engine, 'm2'))).toEqual({ c1: [2] });
+
+      const closed = run(engine, { op: 'channel.close', channel: 'ch-c1' });
+
+      expect(types(closed)).toEqual(['channel.closed', 'requeued', 'requeued', 'delivered', 'delivered']);
+      expect(
+        only(closed, 'delivered').map(({ message, consumer, redelivered }) => [message, consumer, redelivered]),
+      ).toEqual([
+        [1, 'c2', true],
+        [2, 'c2', true],
+      ]);
+    });
+
+    it('forgets what the old one held when the messages are cleared, so that the new one has its whole window', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+      send(engine, 'm2');
+      run(engine, { op: 'sim.clearMessages' });
+
+      expect(given(send(engine, 'm3', 'm4'))).toEqual({ c1: [3] });
     });
 
     it('is a consumer that is gone, and its tag is free for anything, when it held nothing', () => {

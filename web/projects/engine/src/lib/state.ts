@@ -40,6 +40,11 @@ export interface TagState {
   readonly ack: 'auto' | 'manual';
   /** What it holds and has not acknowledged, the oldest first. Always empty for a consumer that acknowledges by itself. */
   unacked: QueueEntry[];
+  /**
+   * How many of the messages in `unacked` are not counted against the prefetch: the ones that an earlier consumer of this tag held when it was cancelled, and that this one took over when its
+   * channel started it again. The window is what it holds less this, and an acknowledgement of any message under the tag takes one off it, so it can be below nothing, as in the broker (ADR-0089).
+   */
+  uncounted: number;
   cancelled: boolean;
 }
 

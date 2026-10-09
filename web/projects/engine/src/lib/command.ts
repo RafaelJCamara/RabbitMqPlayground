@@ -107,7 +107,8 @@ export interface ChannelClose {
 
 /**
  * A consumer of a channel starts consuming from a queue. `consumer` is its tag, which names it until it is gone. A consumer that was cancelled is gone only when it holds nothing, and the same channel
- * that asks again for the same queue, in the same way, under the tag of one that still holds messages takes it up where it was (ADR-0088); a tag that is taken in any other way is refused with a `RangeError`.
+ * that asks again for the same queue, in the same way, under the tag of one that still holds messages starts a new consumer under it: what the old one held is still held, and is left out of the count of the
+ * prefetch of the new one, but an acknowledgement of any of it takes one off that count, as in the broker (ADR-0089); a tag that is taken in any other way is refused with a `RangeError`.
  */
 export interface BasicConsume {
   readonly op: 'basic.consume';

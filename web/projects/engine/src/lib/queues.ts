@@ -7,10 +7,13 @@ import type { ChannelState, Held, QueueEntry, QueueState, TagState } from './sta
  * changes the state and says what it did.
  */
 
-/** Whether a consumer can be given one more message: its channel has no limit, or it holds fewer than the prefetch. One that acknowledges by itself holds nothing. */
+/**
+ * Whether a consumer can be given one more message: its channel has no limit, or it holds fewer than the prefetch. One that acknowledges by itself holds nothing.
+ * What an earlier consumer of the same tag held when the tag was taken again is left out of the count (ADR-0089).
+ */
 export function hasRoom(core: Core, tag: TagState): boolean {
   const { prefetch } = core.state.channels.get(tag.channel) as ChannelState;
-  return prefetch === 0 || tag.unacked.length < prefetch;
+  return prefetch === 0 || tag.unacked.length - tag.uncounted < prefetch;
 }
 
 /**

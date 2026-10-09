@@ -42,6 +42,8 @@ export interface TagSnapshot {
   readonly queue: string;
   readonly ack: 'auto' | 'manual';
   readonly unacked: readonly QueueEntry[];
+  /** How many of the copies in `unacked` are not counted against the prefetch, because an earlier consumer of this tag held them (ADR-0089). Left out when it is 0, so a snapshot that was taken before it is still read. */
+  readonly uncounted?: number;
   readonly cancelled: boolean;
 }
 
@@ -115,7 +117,11 @@ export function takeSnapshot(state: State): EngineSnapshot {
       received: channel.received,
       consumed: channel.consumed,
     })),
-    tags: [...state.tags.values()].map((tag) => ({ ...tag, unacked: tag.unacked.map(copyEntry) })),
+    tags: [...state.tags.values()].map(({ uncounted, ...tag }) => ({
+      ...tag,
+      unacked: tag.unacked.map(copyEntry),
+      ...(uncounted > 0 ? { uncounted } : {}),
+    })),
     producers: [...state.producers.values()].map((producer) => ({ ...producer })),
     exchangeCounters: [...state.exchangeCounters].map(([name, counters]) => [name, { ...counters }] as const),
     heap: state.heap.sorted(),
@@ -176,7 +182,10 @@ export function loadSnapshot(snapshot: EngineSnapshot): State {
       ]),
     ),
     tags: new Map(
-      snapshot.tags.map((tag): [string, TagState] => [tag.tag, { ...tag, unacked: tag.unacked.map(copyEntry) }]),
+      snapshot.tags.map((tag): [string, TagState] => [
+        tag.tag,
+        { ...tag, unacked: tag.unacked.map(copyEntry), uncounted: tag.uncounted ?? 0 },
+      ]),
     ),
     producers: new Map(snapshot.producers.map((producer): [string, ProducerState] => [producer.id, { ...producer }])),
     heap,

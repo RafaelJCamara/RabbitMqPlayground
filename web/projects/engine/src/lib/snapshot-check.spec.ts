@@ -100,6 +100,21 @@ const CASES: readonly (readonly [string, (s: Mutable) => void, string | RegExp])
     'The consumer “c-slow” is cancelled and holds nothing, so it would be gone',
   ],
   [
+    'a consumer that does not count more messages than its queue has given out',
+    (s) => (s.tags[0]!.uncounted = 1000),
+    /^The consumer “c-slow” does not count 1000 messages that an earlier consumer of its tag held, and the queue “jobs” has given out \d+$/,
+  ],
+  [
+    'a consumer that does not count less than nothing',
+    (s) => (s.tags[0]!.uncounted = -1),
+    /^The consumer “c-slow” does not count -1 messages that an earlier consumer of its tag held, and the queue “jobs” has given out \d+$/,
+  ],
+  [
+    'a consumer that does not count a part of a message',
+    (s) => (s.tags[0]!.uncounted = 0.5),
+    /^The consumer “c-slow” does not count 0.5 messages that an earlier consumer of its tag held, and the queue “jobs” has given out \d+$/,
+  ],
+  [
     'a channel that lists a consumer that is not there',
     (s) => s.channels[0]!.tags.push('ghost'),
     'The channel “slow” refers to the consumer “ghost”, which is not in the snapshot',
@@ -409,6 +424,24 @@ describe('snapshotIssue (ADR-0077)', () => {
 
     expect(issueOf(snapshot)).toBeNull();
     expect(JSON.stringify(snapshot)).toBe(before);
+  });
+
+  describe('what an earlier consumer of a tag held, and is not counted (ADR-0089)', () => {
+    it('is accepted when the queue has given out that many, and a snapshot without it is accepted as it always was', () => {
+      const snapshot = busy();
+      expect(snapshot.tags[0]!.uncounted).toBeUndefined();
+
+      const given = snapshot.queues.find(({ name }) => name === snapshot.tags[0]!.queue)!.nextOrder - 1;
+
+      snapshot.tags[0]!.uncounted = given;
+      expect(issueOf(snapshot)).toBeNull();
+
+      snapshot.tags[0]!.uncounted = given + 1;
+      expect(issueOf(snapshot)).toContain(`has given out ${given}`);
+
+      snapshot.tags[0]!.uncounted = 0;
+      expect(issueOf(snapshot)).toBeNull();
+    });
   });
 
   describe('what a consumer that acknowledges by itself has', () => {

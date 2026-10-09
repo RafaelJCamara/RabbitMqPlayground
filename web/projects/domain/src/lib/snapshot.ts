@@ -118,6 +118,7 @@ export const engineSnapshotSchema = z.strictObject({
       queue: name,
       ack: z.enum(['auto', 'manual']),
       unacked: z.array(queueEntry),
+      uncounted: whole.optional(),
       cancelled: z.boolean(),
     }),
   ),

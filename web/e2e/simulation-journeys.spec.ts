@@ -319,8 +319,8 @@ test.describe('the two things that the first simulator got wrong', () => {
   });
 });
 
-test.describe('a consumer that was unsubscribed while it held a message (ADR-0088)', () => {
-  test('takes up again where it was when it is subscribed to the queue again, and the simulation follows the canvas', async ({
+test.describe('a consumer that was unsubscribed while it held a message (ADR-0088, ADR-0089)', () => {
+  test('is a consumer again, and still holds the message, when it is subscribed to the queue again, and the simulation follows the canvas', async ({
     page,
   }) => {
     const simulation = await SimulationPage.open(page, ORDERS);
