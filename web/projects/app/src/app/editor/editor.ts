@@ -18,7 +18,7 @@ import { FlowViewport } from '../canvas/model/flow-viewport';
 import { lowerFirst } from '../canvas/model/labels';
 import type { CanvasIntent, ContextTarget } from '../canvas/model/intents';
 import { newNodeKey } from '../canvas/model/new-node';
-import { popoverPosition, type Point, type Size } from '../canvas/model/transform';
+import { popoverPosition, type Placement, type Point, type Size } from '../canvas/model/transform';
 import { MessageOverlay, type DrawnMarker } from '../canvas/overlay/overlay';
 import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
@@ -326,12 +326,16 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly renaming = signal<Renaming | null>(null);
 
   /** The popover that asks for a key, the picker of "Link to…" and the card of a label, whichever is open. */
-  protected readonly keyAsk = signal<{ readonly ask: KeyAsk; readonly at: Point; readonly test: boolean } | null>(null);
+  protected readonly keyAsk = signal<{
+    readonly ask: KeyAsk;
+    readonly at: Placement;
+    readonly test: boolean;
+  } | null>(null);
   protected readonly keyError = signal<Issue | null>(null);
   /** The popover that asks for the conditions of a headers binding (ADR-0066), and why the last ones were refused. */
-  protected readonly conditionsAsk = signal<{ readonly ask: ConditionsAsk; readonly at: Point } | null>(null);
+  protected readonly conditionsAsk = signal<{ readonly ask: ConditionsAsk; readonly at: Placement } | null>(null);
   protected readonly conditionsError = signal<Issue | null>(null);
-  protected readonly picker = signal<{ readonly ask: TargetAsk; readonly at: Point } | null>(null);
+  protected readonly picker = signal<{ readonly ask: TargetAsk; readonly at: Placement } | null>(null);
   protected readonly peek = signal<Peek | null>(null);
   private peekTimer: ReturnType<typeof setTimeout> | undefined;
   private cardHeld = false;
@@ -672,9 +676,17 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     this.picker.set(null);
   }
 
-  /** Where a popover goes that is by a node: just under it, or over it when there is no room, and inside the canvas. */
-  private placed(anchor: Parameters<typeof popoverPosition>[0], size: Size): Point {
-    return popoverPosition(anchor, size, this.viewport.hostSize() ?? { width: 800, height: 600 });
+  /**
+   * Where a popover goes that is by a node: just under it, or over it when there is no room, inside the canvas and inside the window, and no taller than the room that is
+   * left under its top (it scrolls inside itself when its content is taller).
+   */
+  private placed(anchor: Parameters<typeof popoverPosition>[0], size: Size): Placement {
+    const window = this.page.defaultView;
+    const room = this.viewport.shown({
+      width: window?.innerWidth ?? Infinity,
+      height: window?.innerHeight ?? Infinity,
+    });
+    return popoverPosition(anchor, size, room ?? { x: 0, y: 0, width: 800, height: 600 });
   }
 
   // The card of a label (ADR-0044).

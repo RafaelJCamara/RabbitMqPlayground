@@ -21,7 +21,7 @@ import { armedTargets } from './link-targets';
 import { RMQ_A11Y_MESSAGES } from './messages';
 import { EXCHANGE_TYPES, kindOfNew, newNodeKey } from './new-node';
 import { frameOf, shapePath } from './shapes';
-import { fitViewport, liveViewport, popoverPosition, toCanvas, toScreen } from './transform';
+import { fitViewport, liveViewport, popoverPosition, shownPart, toCanvas, toScreen } from './transform';
 
 describe('connector ids', () => {
   it('make a connector id from a node id, and read the node id back from either', () => {
@@ -557,36 +557,140 @@ describe('fitViewport', () => {
   });
 });
 
-describe('popoverPosition (ADR-0041)', () => {
-  const host = { width: 800, height: 600 };
+describe('popoverPosition (ADR-0041, ADR-0085)', () => {
+  const room = { x: 0, y: 0, width: 800, height: 600 };
   const size = { width: 300, height: 200 };
 
   it('puts the box just below the anchor, at its left edge', () => {
-    expect(popoverPosition({ x: 100, y: 100, width: 140, height: 56 }, size, host)).toEqual({ x: 100, y: 162 });
+    expect(popoverPosition({ x: 100, y: 100, width: 140, height: 56 }, size, room)).toEqual({
+      x: 100,
+      y: 162,
+      maxHeight: 430,
+    });
   });
 
   it('puts the box above the anchor when there is no room below', () => {
-    expect(popoverPosition({ x: 100, y: 500, width: 140, height: 56 }, size, host)).toEqual({ x: 100, y: 294 });
+    expect(popoverPosition({ x: 100, y: 500, width: 140, height: 56 }, size, room)).toEqual({
+      x: 100,
+      y: 294,
+      maxHeight: 298,
+    });
   });
 
   it('goes below the anchor while the whole box fits there with the margin to spare, and above it from the first unit that it does not', () => {
     // Below the anchor is at 330 + 56 + 6 = 392, and 392 + 200 is 592, which leaves the margin of 8 of the 600.
-    expect(popoverPosition({ x: 100, y: 330, width: 140, height: 56 }, size, host).y).toBe(392);
-    expect(popoverPosition({ x: 100, y: 331, width: 140, height: 56 }, size, host).y).toBe(125);
+    expect(popoverPosition({ x: 100, y: 330, width: 140, height: 56 }, size, room).y).toBe(392);
+    expect(popoverPosition({ x: 100, y: 331, width: 140, height: 56 }, size, room).y).toBe(125);
   });
 
-  it('keeps the box inside the host, with a margin, on every side', () => {
-    expect(popoverPosition({ x: 700, y: 100, width: 140, height: 56 }, size, host).x).toBe(492);
-    expect(popoverPosition({ x: -50, y: 100, width: 140, height: 56 }, size, host).x).toBe(8);
-    expect(popoverPosition({ x: 100, y: -300, width: 140, height: 56 }, size, host).y).toBeGreaterThanOrEqual(8);
-    expect(popoverPosition({ x: 100, y: 590, width: 140, height: 56 }, size, host).y).toBeLessThanOrEqual(392);
+  it('keeps the box inside the room, with a margin, on every side', () => {
+    expect(popoverPosition({ x: 700, y: 100, width: 140, height: 56 }, size, room).x).toBe(492);
+    expect(popoverPosition({ x: -50, y: 100, width: 140, height: 56 }, size, room).x).toBe(8);
+    expect(popoverPosition({ x: 100, y: -300, width: 140, height: 56 }, size, room).y).toBeGreaterThanOrEqual(8);
+    expect(popoverPosition({ x: 100, y: 590, width: 140, height: 56 }, size, room).y).toBeLessThanOrEqual(392);
   });
 
   it('puts the box in the middle of the top when there is no anchor, which is where a node is that is not drawn', () => {
-    expect(popoverPosition(null, size, host)).toEqual({ x: 250, y: 8 });
+    expect(popoverPosition(null, size, room)).toEqual({ x: 250, y: 8, maxHeight: 584 });
   });
 
-  it('does not push the box out of a host that is smaller than it', () => {
-    expect(popoverPosition(null, size, { width: 100, height: 100 })).toEqual({ x: 8, y: 8 });
+  it('lets the box end where the room does, and no later, whatever its content turns out to be', () => {
+    // The box is thought to be 200 tall, so it goes at 162 under the anchor; if its content is taller it scrolls from 430 on, which ends at the margin of 8 from the bottom.
+    const { y, maxHeight } = popoverPosition({ x: 100, y: 100, width: 140, height: 56 }, size, room);
+
+    expect(y + maxHeight).toBe(600 - 8);
+  });
+
+  it('does not push the box out of a room that is smaller than it', () => {
+    expect(popoverPosition(null, size, { x: 0, y: 0, width: 100, height: 100 })).toEqual({ x: 8, y: 8, maxHeight: 84 });
+  });
+
+  describe('in a room that is shorter than the box (the canvas under a strip and two rows of tools, in a window of 1280 by 720)', () => {
+    const tall = { width: 288, height: 480 };
+    const short = { x: 0, y: 0, width: 900, height: 415 };
+
+    it('puts the box at the top of the room and lets it be as tall as the room is, so that it scrolls and does not run out of the bottom', () => {
+      const anchor = { x: 300, y: 120, width: 140, height: 56 };
+
+      expect(popoverPosition(anchor, tall, short)).toEqual({ x: 300, y: 8, maxHeight: 399 });
+      expect(popoverPosition(null, tall, short)).toEqual({ x: 306, y: 8, maxHeight: 399 });
+    });
+
+    it('does so whether the anchor is near the top, in the middle or at the bottom, because no side of it has room', () => {
+      for (const y of [0, 100, 200, 300, 400]) {
+        const placed = popoverPosition({ x: 300, y, width: 140, height: 56 }, tall, short);
+
+        expect(placed.y, `anchor at ${y}`).toBe(8);
+        expect(placed.y + placed.maxHeight, `anchor at ${y}`).toBe(415 - 8);
+      }
+    });
+
+    it('is placed under the anchor again once the room is tall enough, and the box is then as tall as it was thought to be', () => {
+      const placed = popoverPosition({ x: 300, y: 100, width: 140, height: 56 }, tall, { ...short, height: 700 });
+
+      expect(placed.y).toBe(162);
+      expect(placed.maxHeight).toBe(700 - 8 - 162);
+    });
+  });
+
+  describe('in a room that is a part of the host, the part that the window shows', () => {
+    it('keeps the box inside the part, measured from the host, with the margin from its edges', () => {
+      // The host is 800 by 600, but its top 100 and its left 50 are out of the window.
+      const part = { x: 50, y: 100, width: 750, height: 500 };
+
+      expect(popoverPosition(null, size, part)).toEqual({ x: 275, y: 108, maxHeight: 484 });
+      expect(popoverPosition({ x: 0, y: 0, width: 140, height: 56 }, size, part)).toEqual({
+        x: 58,
+        y: 108,
+        maxHeight: 484,
+      });
+      expect(popoverPosition({ x: 790, y: 590, width: 140, height: 56 }, size, part).x).toBe(492);
+    });
+  });
+});
+
+describe('shownPart', () => {
+  const window = { width: 1280, height: 720 };
+
+  it('is all of a host that is wholly in the window, measured from the top left of the host', () => {
+    expect(shownPart({ x: 250, y: 198, width: 700, height: 415 }, window)).toEqual({
+      x: 0,
+      y: 0,
+      width: 700,
+      height: 415,
+    });
+  });
+
+  it('leaves out what is below and to the right of the window', () => {
+    expect(shownPart({ x: 1000, y: 600, width: 700, height: 415 }, window)).toEqual({
+      x: 0,
+      y: 0,
+      width: 280,
+      height: 120,
+    });
+  });
+
+  it('leaves out what is above and to the left of the window, and starts where the window does', () => {
+    expect(shownPart({ x: -100, y: -40, width: 700, height: 415 }, window)).toEqual({
+      x: 100,
+      y: 40,
+      width: 600,
+      height: 375,
+    });
+  });
+
+  it('is nothing at all of a host that is out of the window', () => {
+    expect(shownPart({ x: 1300, y: 800, width: 700, height: 415 }, window)).toEqual({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    });
+    expect(shownPart({ x: -900, y: -500, width: 700, height: 415 }, window)).toEqual({
+      x: 900,
+      y: 500,
+      width: 0,
+      height: 0,
+    });
   });
 });

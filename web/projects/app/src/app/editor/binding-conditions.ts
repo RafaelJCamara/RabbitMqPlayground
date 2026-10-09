@@ -23,7 +23,7 @@ import {
   type Issue,
 } from '@rmq/domain';
 import type { HeaderArguments, XMatch } from '@rmq/engine';
-import type { Point } from '../canvas/model/transform';
+import type { Placement } from '../canvas/model/transform';
 import { Announcer } from '../core/announcer';
 import { FeatureFlags } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
@@ -160,6 +160,7 @@ const EXPORT_NOTE =
     '[class]': 'hostClass()',
     '[style.left.px]': 'placement()?.x',
     '[style.top.px]': 'placement()?.y',
+    '[style.max-height]': 'maxHeight()',
     '[attr.role]': "placement() ? 'group' : null",
     '[attr.aria-label]': 'placement() ? title() : null',
     '[attr.tabindex]': 'placement() ? -1 : null',
@@ -182,8 +183,8 @@ export class BindingConditions {
   readonly key = input('');
   /** Why the owner refused the arguments that were given, to show until something is changed. */
   readonly error = input<Issue | null>(null);
-  /** Where the popover is, measured from the top left of the canvas. Left out, it is a part of the page. */
-  readonly placement = input<Point | null>(null);
+  /** Where the popover is, measured from the top left of the canvas, and how tall it may be there. Left out, it is a part of the page. */
+  readonly placement = input<Placement | null>(null);
 
   /** The arguments, when the draft has no problem. */
   readonly confirm = output<HeaderArguments>();
@@ -242,8 +243,13 @@ export class BindingConditions {
   protected readonly hostClass = computed(() =>
     this.placement() === null
       ? 'block'
-      : 'border-border bg-panel text-fg absolute z-10 w-[28rem] max-w-[calc(100%-1rem)] max-h-[min(32rem,100%)] overflow-y-auto rounded-md border p-3 text-sm shadow-lg',
+      : 'border-border bg-panel text-fg absolute z-10 w-[28rem] max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border p-3 text-sm shadow-lg',
   );
+  /** As tall as 32rem, and no taller than the room that is left under the popover: it scrolls inside itself when its rows are more. */
+  protected readonly maxHeight = computed(() => {
+    const placement = this.placement();
+    return placement === null ? null : `min(32rem, ${placement.maxHeight}px)`;
+  });
 
   constructor() {
     // A popover opens with the cursor in the name of its first row (ADR-0041).

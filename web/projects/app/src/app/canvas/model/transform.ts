@@ -93,20 +93,47 @@ export function fitViewport(
   };
 }
 
+/** The part of `host`, a box of the page, that a window of this size shows, measured from the top left of the host. A host that is wholly in the window is all of it. */
+export function shownPart(host: Point & Size, window: Size): Point & Size {
+  const x = Math.max(0, -host.x);
+  const y = Math.max(0, -host.y);
+  return {
+    x,
+    y,
+    width: Math.max(0, Math.min(host.width, window.width - host.x) - x),
+    height: Math.max(0, Math.min(host.height, window.height - host.y) - y),
+  };
+}
+
+/** Where a popover goes, and the most height that it may have there. */
+export interface Placement extends Point {
+  /** The popover ends inside its room at this height, and scrolls inside itself when its content is taller. */
+  readonly maxHeight: number;
+}
+
 /**
- * Where a box of this `size` goes so that it is by an `anchor`, inside a host that is `host` big (ADR-0041): just below the anchor, or above it when there is no room
- * below, and kept inside the host with `margin` to spare. Without an anchor it is in the middle of the top of the host.
+ * Where a box of this `size` goes so that it is by an `anchor`, inside the `room` that it has (ADR-0041, ADR-0085): just below the anchor, or above it when there is no room
+ * below, and kept inside the room with `margin` to spare. The room is a part of the host measured from the host's top left, and what the window shows of it: a box is never put
+ * where the learner cannot see it. Without an anchor the box is in the middle of the top of the room. A box that is taller than the room is placed as if it were as tall as the room,
+ * and `maxHeight` is what is left of the room under its top, so that a box whose content is taller than it was thought to be, or than the room, ends inside the room and scrolls.
  */
-export function popoverPosition(anchor: (Point & Size) | null, size: Size, host: Size, margin = 8): Point {
-  const keep = (value: number, length: number, room: number): number =>
-    Math.max(margin, Math.min(value, room - length - margin));
+export function popoverPosition(anchor: (Point & Size) | null, size: Size, room: Point & Size, margin = 8): Placement {
+  const left = room.x + margin;
+  const right = room.x + room.width - margin;
+  const top = room.y + margin;
+  const bottom = room.y + room.height - margin;
+  const height = Math.min(size.height, Math.max(bottom - top, 0));
+  const keep = (value: number, length: number, from: number, to: number): number =>
+    Math.max(from, Math.min(value, to - length));
   if (anchor === null) {
-    return { x: keep((host.width - size.width) / 2, size.width, host.width), y: margin };
+    return {
+      x: keep(room.x + (room.width - size.width) / 2, size.width, left, right),
+      y: top,
+      maxHeight: Math.max(bottom - top, 0),
+    };
   }
   const below = anchor.y + anchor.height + 6;
-  const fits = below + size.height <= host.height - margin;
-  return {
-    x: keep(anchor.x, size.width, host.width),
-    y: keep(fits ? below : anchor.y - size.height - 6, size.height, host.height),
-  };
+  const fits = below + height <= bottom;
+  const y = keep(fits ? below : anchor.y - height - 6, height, top, bottom);
+  return { x: keep(anchor.x, size.width, left, right), y, maxHeight: Math.max(bottom - y, 0) };
 }

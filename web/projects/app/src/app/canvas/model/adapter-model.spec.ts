@@ -293,6 +293,17 @@ describe('FlowViewport', () => {
     expect(viewport.hostSize()).toEqual({ width: 800, height: 600 });
   });
 
+  it('says what a window shows of the host, which is where a popover may go, and nothing until a canvas is attached', () => {
+    const viewport = make();
+    expect(viewport.shown({ width: 1280, height: 720 })).toBeNull();
+
+    viewport.attach(fakeDriver().driver);
+
+    // The host is at (100, 50) and 800 by 600, so a window of 600 by 400 shows 500 by 350 of it, from its top left.
+    expect(viewport.shown({ width: 1280, height: 720 })).toEqual({ x: 0, y: 0, width: 800, height: 600 });
+    expect(viewport.shown({ width: 600, height: 400 })).toEqual({ x: 0, y: 0, width: 500, height: 350 });
+  });
+
   it('passes what the app asks to the canvas', () => {
     const viewport = make();
     const { driver, calls } = fakeDriver();

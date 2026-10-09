@@ -1,6 +1,6 @@
 import { afterNextRender, Component, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import type { Issue } from '@rmq/domain';
-import type { Point } from '../canvas/model/transform';
+import type { Placement } from '../canvas/model/transform';
 import { RefusalNotice } from '../core/ui/refusal-notice';
 import { TopicTester } from '../explain/topic-tester';
 
@@ -20,12 +20,13 @@ export type GiveUp = 'escape' | 'button' | 'blur';
   imports: [RefusalNotice, TopicTester],
   template: `
     <div
-      class="border-border bg-panel text-fg absolute z-10 w-72 rounded-md border p-3 text-sm shadow-lg"
+      class="border-border bg-panel text-fg absolute z-10 w-72 overflow-y-auto rounded-md border p-3 text-sm shadow-lg"
       role="group"
       data-testid="binding-key"
       [attr.aria-label]="title()"
       [style.left.px]="position().x"
       [style.top.px]="position().y"
+      [style.max-height.px]="position().maxHeight"
       (focusout)="leave($event)"
     >
       <form class="flex flex-col gap-2" (submit)="give($event)">
@@ -70,8 +71,8 @@ export class BindingKey {
   readonly title = input.required<string>();
   /** One sentence for the type of the exchange. */
   readonly help = input.required<string>();
-  /** Where it is, measured from the top left of the canvas. */
-  readonly position = input.required<Point>();
+  /** Where it is, measured from the top left of the canvas, and how tall it may be there: it scrolls inside itself when its content is taller. */
+  readonly position = input.required<Placement>();
   /** Why the last key was refused, to show under the field. */
   readonly error = input<Issue | null>(null);
   /** Whether the tester of a topic key is under the field. */

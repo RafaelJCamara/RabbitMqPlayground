@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { TargetOption } from './link-flow';
 import { LinkPicker } from './link-picker';
 
@@ -15,7 +15,7 @@ async function renderPicker(options: readonly TargetOption[] = OPTIONS, reason: 
   const chosen: string[] = [];
   const cancelled: string[] = [];
   const view = await render(LinkPicker, {
-    inputs: { title: 'Link exchange orders to…', options, reason, position: { x: 30, y: 40 } },
+    inputs: { title: 'Link exchange orders to…', options, reason, position: { x: 30, y: 40, maxHeight: 250 } },
     on: { chosen: (id: string) => chosen.push(id), cancelled: (how: string) => cancelled.push(how) },
   });
   return { ...view, chosen, cancelled, user: userEvent.setup() };
@@ -44,6 +44,13 @@ describe('LinkPicker (ADR-0041)', () => {
     const picker = screen.getByRole('dialog');
     expect(picker.style.left).toBe('30px');
     expect(picker.style.top).toBe('40px');
+  });
+
+  it('is no taller than 20rem, nor than the room that it is given, and its list scrolls inside it', async () => {
+    await renderPicker();
+
+    expect(screen.getByRole('dialog').style.maxHeight).toBe('min(20rem, 250px)');
+    expect(screen.getByRole('listbox')).toHaveClass('overflow-y-auto');
   });
 
   it('groups the targets as exchanges and queues, in the order that they are given, each with its name and what the link does', async () => {
@@ -145,6 +152,26 @@ describe('LinkPicker (ADR-0041)', () => {
     await user.keyboard('{Home}');
     expect(active()).toBe(0);
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', screen.getAllByRole('option')[0]?.id);
+  });
+
+  it('keeps the option that the arrow keys are on in view, in a list that scrolls, which it does where the room is short', async () => {
+    const scrolled: Element[] = [];
+    const scrollIntoView = vi.fn(function (this: Element) {
+      scrolled.push(this);
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const { user } = await renderPicker();
+      await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus());
+
+      await user.keyboard('{ArrowDown}{ArrowDown}');
+
+      await waitFor(() => expect(scrolled.at(-1)).toBe(screen.getAllByRole('option')[2]));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scrolled[0]).toBe(screen.getAllByRole('option')[0]);
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 
   it('chooses the active one with Enter', async () => {

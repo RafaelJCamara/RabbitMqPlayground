@@ -3,6 +3,7 @@ import type { Id } from '@rmq/domain';
 import {
   isInView,
   liveViewport,
+  shownPart,
   toCanvas,
   toScreen,
   type Point,
@@ -95,6 +96,12 @@ export class FlowViewport {
   hostSize(): Size | null {
     const host = this.driver?.host();
     return host === undefined ? null : { width: host.width, height: host.height };
+  }
+
+  /** The part of the canvas's host that a window of this size shows, measured from the top left of the host (a popover has to be in it), or `null` when there is no canvas. */
+  shown(window: Size): (Point & Size) | null {
+    const host = this.driver?.host();
+    return host === undefined ? null : shownPart(host, window);
   }
 
   /** Where a rectangle of the canvas is, measured from the top left of the canvas's host, or `null` when there is no canvas. */

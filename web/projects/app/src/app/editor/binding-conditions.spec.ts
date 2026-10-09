@@ -72,7 +72,7 @@ async function renderEditor(options: Options = {}) {
       ...(options.headers === undefined ? {} : { headers: options.headers }),
       ...(options.error === undefined ? {} : { error: options.error }),
       ...(options.key === undefined ? {} : { key: options.key }),
-      ...(popover ? { placement: { x: 120, y: 80 } } : {}),
+      ...(popover ? { placement: { x: 120, y: 80, maxHeight: 400 } } : {}),
     },
     on: {
       confirm: (found: HeaderArguments) => confirmed.push(found),
@@ -108,6 +108,14 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(popover.style.left).toBe('120px');
       expect(popover.style.top).toBe('80px');
       expect(popover.className).toContain('absolute');
+    });
+
+    it('is no taller than 32rem, nor than the room that it is given, and scrolls inside itself when its rows are more', async () => {
+      await renderEditor();
+
+      const popover = screen.getByRole('group', { name: TITLE });
+      expect(popover.style.maxHeight).toBe('min(32rem, 400px)');
+      expect(popover).toHaveClass('overflow-y-auto');
     });
 
     it('has the mode all, written out, chosen, and one empty row with the cursor in its name', async () => {

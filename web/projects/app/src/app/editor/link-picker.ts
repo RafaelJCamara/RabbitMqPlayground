@@ -1,6 +1,19 @@
-import { afterNextRender, Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DOCUMENT,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import type { ElementKind, Id } from '@rmq/domain';
-import type { Point } from '../canvas/model/transform';
+import type { Placement } from '../canvas/model/transform';
 import { Icon } from '../core/ui/icon';
 import type { GiveUp } from './binding-key';
 import type { TargetOption } from './link-flow';
@@ -24,12 +37,13 @@ const GROUPS: readonly { readonly kind: ElementKind; readonly label: string }[] 
   imports: [Icon],
   template: `
     <div
-      class="border-border bg-panel text-fg absolute z-10 flex max-h-80 w-80 flex-col gap-2 rounded-md border p-3 text-sm shadow-lg"
+      class="border-border bg-panel text-fg absolute z-10 flex w-80 flex-col gap-2 rounded-md border p-3 text-sm shadow-lg"
       role="dialog"
       data-testid="link-picker"
       [attr.aria-labelledby]="titleId"
       [style.left.px]="position().x"
       [style.top.px]="position().y"
+      [style.max-height]="'min(20rem, ' + position().maxHeight + 'px)'"
       (focusout)="leave($event)"
     >
       <h3 class="font-medium" [id]="titleId">{{ title() }}</h3>
@@ -102,12 +116,14 @@ export class LinkPicker {
   readonly options = input.required<readonly TargetOption[]>();
   /** Why there is nothing to choose, in the words of the rule. `null` when there is something. */
   readonly reason = input<string | null>(null);
-  /** Where it is, measured from the top left of the canvas. */
-  readonly position = input.required<Point>();
+  /** Where it is, measured from the top left of the canvas, and how tall it may be there: its list scrolls inside it. */
+  readonly position = input.required<Placement>();
 
   readonly chosen = output<Id>();
   readonly cancelled = output<GiveUp>();
 
+  private readonly injector = inject(Injector);
+  private readonly page = inject(DOCUMENT);
   private readonly uid = `rmq-link-picker-${nextPicker++}`;
   protected readonly titleId = `${this.uid}-title`;
   protected readonly listId = `${this.uid}-list`;
@@ -139,6 +155,19 @@ export class LinkPicker {
 
   constructor() {
     afterNextRender(() => this.field().nativeElement.focus());
+    // The option that the arrow keys are on stays in view, in a list that scrolls, which it does when the room is short (the popover is no taller than the room that it has).
+    effect(() => {
+      const id = this.activeId();
+      if (id !== null) {
+        afterNextRender(
+          () => {
+            // jsdom does not scroll, and has no way to say so.
+            this.page.getElementById(id)?.scrollIntoView?.({ block: 'nearest' });
+          },
+          { injector: this.injector },
+        );
+      }
+    });
   }
 
   protected optionId(option: TargetOption): string {

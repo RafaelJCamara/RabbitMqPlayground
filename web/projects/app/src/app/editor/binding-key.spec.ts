@@ -17,7 +17,7 @@ async function renderPopover(error: Issue | null = null, topicTest?: boolean) {
     inputs: {
       title: topic.title,
       help: topic.help,
-      position: { x: 120, y: 80 },
+      position: { x: 120, y: 80, maxHeight: 300 },
       error,
       ...(topicTest === undefined ? {} : { topicTest }),
     },
@@ -50,6 +50,14 @@ describe('BindingKey (ADR-0041)', () => {
     const popover = screen.getByRole('group', { name: topic.title });
     expect(popover.style.left).toBe('120px');
     expect(popover.style.top).toBe('80px');
+  });
+
+  it('is no taller than the room that it is given, and scrolls inside itself when its content is taller', async () => {
+    await renderPopover();
+
+    const popover = screen.getByRole('group', { name: topic.title });
+    expect(popover.style.maxHeight).toBe('300px');
+    expect(popover).toHaveClass('overflow-y-auto');
   });
 
   it('gives the key with Enter, as it was typed', async () => {

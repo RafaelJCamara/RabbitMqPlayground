@@ -202,6 +202,35 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   });
 });
 
+test.describe('the popover of the conditions in a window that is shorter than it is (ADR-0066, ADR-0085)', () => {
+  test.use({ viewport: { width: 1280, height: 540 } });
+
+  test('is inside the canvas and wholly in the window, and scrolls inside itself, with the cursor in view and the buttons reached by Tab', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, FILES);
+
+    const popover = await askForConditions(headers);
+
+    await expect(popover.scope).toBeInViewport({ ratio: 1 });
+    const canvas = (await headers.editor.canvas.boundingBox())!;
+    const box = (await popover.scope.boundingBox())!;
+    expect(box.y, 'top').toBeGreaterThanOrEqual(canvas.y);
+    expect(box.y + box.height, 'bottom').toBeLessThanOrEqual(canvas.y + canvas.height);
+    expect(box.x + box.width, 'right').toBeLessThanOrEqual(canvas.x + canvas.width);
+    expect(
+      await popover.scope.evaluate((element) => element.scrollHeight > element.clientHeight),
+      'the rows, the sentence and the buttons are taller than the room, so the popover scrolls',
+    ).toBe(true);
+    await expect(popover.name(1)).toBeInViewport({ ratio: 1 });
+    await popover.submit.focus();
+    await expect(popover.submit).toBeInViewport({ ratio: 1 });
+    await popover.cancel.focus();
+    await expect(popover.cancel).toBeInViewport({ ratio: 1 });
+    expect(await headers.bindings(), 'nothing is made until Bind').toEqual([]);
+  });
+});
+
 test.describe('every way of making a link asks for the conditions of a headers binding (ADR-0066)', () => {
   test('by "Link to…" in the inspector, which lists the targets and then asks, with the cursor in the first row', async ({
     page,

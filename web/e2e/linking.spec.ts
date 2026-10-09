@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { allowedTargets, explainLink } from '@rmq/domain';
 import { EditorPage } from './pages/editor-page';
 import { buildDocument, seedCanvas } from './support/seed';
@@ -384,5 +384,74 @@ test.describe('journey 3: a drop that is not valid, and a drop on nothing', () =
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
     expect(await editor.edges()).toEqual([]);
+  });
+});
+
+/**
+ * The popovers of linking are no taller than the room that the canvas has (ADR-0085): in a window of 1280 by 540 the canvas is about 235 pixels tall, under the strip, the two rows of tools and the bars, and
+ * the popover of a topic key is about 470 tall with the tester in it. It is put inside the canvas, from top to bottom, and scrolls inside itself, with the field that has the cursor in view.
+ */
+test.describe('journey 3: the popovers in a window that is shorter than they are (ADR-0085)', () => {
+  test.use({ viewport: { width: 1280, height: 540 } });
+
+  /** Says that a box is inside the canvas and wholly in the window, with the box it has, and returns its height. */
+  async function expectInsideTheCanvas(editor: EditorPage, popover: Locator): Promise<number> {
+    await expect(popover).toBeInViewport({ ratio: 1 });
+    const canvas = (await editor.canvas.boundingBox())!;
+    const box = (await popover.boundingBox())!;
+    expect(box.x, 'left').toBeGreaterThanOrEqual(canvas.x);
+    expect(box.x + box.width, 'right').toBeLessThanOrEqual(canvas.x + canvas.width);
+    expect(box.y, 'top').toBeGreaterThanOrEqual(canvas.y);
+    expect(box.y + box.height, 'bottom').toBeLessThanOrEqual(canvas.y + canvas.height);
+    return box.height;
+  }
+
+  const scrolls = (box: Locator) => box.evaluate((element) => element.scrollHeight > element.clientHeight);
+
+  test('puts the popover of a topic key inside the canvas, keeps its field in view, and scrolls the tester inside it', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+
+    await editor.dragLinkTo('x2', await editor.centre(editor.nodeById('q2')));
+
+    const popover = keyPopover(page, 'exchange events', 'queue archive');
+    await expect(popover).toBeVisible();
+    await expect(keyField(page)).toBeFocused();
+    await page.keyboard.type('*.error');
+    await expect(popover.getByTestId('topic-missing')).toContainText('x.errorx');
+    await expectInsideTheCanvas(editor, popover);
+    expect(await scrolls(popover), 'the tester is taller than the room, so the popover scrolls').toBe(true);
+    await expect(keyField(page)).toBeInViewport({ ratio: 1 });
+    // The buttons are under the tester. Tab reaches them and the browser brings the one that has the cursor into view.
+    await page.keyboard.press('Tab');
+    await expect(popover.getByRole('button', { name: 'Bind' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    const cancel = popover.getByRole('button', { name: 'Cancel' });
+    await expect(cancel).toBeFocused();
+    await expect(cancel).toBeInViewport({ ratio: 1 });
+    expect(await editor.edges(), 'nothing is made while the key is typed').toEqual([]);
+  });
+
+  test('puts the picker of "Link to…" inside the canvas, and keeps the target that the arrow keys are on in view in its list', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.select('Exchange orders, direct');
+
+    await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+
+    const picker = page.getByRole('dialog', { name: 'Link exchange orders to…' });
+    await expect(page.getByRole('combobox', { name: 'Search the targets' })).toBeFocused();
+    const height = await expectInsideTheCanvas(editor, picker);
+    expect(height, 'it is as tall as the room and no taller').toBeLessThan(260);
+    const list = picker.getByRole('listbox');
+    expect(await scrolls(list), 'the list is taller than the room, so it scrolls').toBe(true);
+    await page.keyboard.press('End');
+    const last = picker.getByRole('option').last();
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    await expect(last).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Home');
+    await expect(picker.getByRole('option').first()).toBeInViewport({ ratio: 1 });
   });
 });

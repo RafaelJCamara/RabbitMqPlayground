@@ -2138,6 +2138,27 @@ describe('Editor', () => {
       expect(withTester).toBeLessThan(250);
     });
 
+    it('is kept in the window as well as in the canvas: where the window shows less of the canvas than there is, the popover is as tall as that and scrolls inside itself', async () => {
+      const before = window.innerHeight;
+      Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true, writable: true });
+      try {
+        const { canvas, fixture, idOf } = await openEditor('explain', 'Topic exchange', 'Queue');
+
+        canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
+        fixture.detectChanges();
+
+        const popover = await screen.findByRole('group', {
+          name: 'Binding key from exchange exchange1 to queue queue1',
+        });
+        // The canvas is 600 tall and the window shows 300 of it. The popover is thought to be 480 tall, which is more than the room, so it is at the top of the room, 8 from each end.
+        expect(popover.style.top).toBe('8px');
+        expect(popover.style.maxHeight).toBe('284px');
+        expect(popover).toHaveClass('overflow-y-auto');
+      } finally {
+        Object.defineProperty(window, 'innerHeight', { value: before, configurable: true, writable: true });
+      }
+    });
+
     it('has no tester under the field for a direct exchange, which has no wildcards', async () => {
       const direct = await openEditor(null, 'Direct exchange', 'Queue');
       direct
