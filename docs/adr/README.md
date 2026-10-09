@@ -103,6 +103,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0090](0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md) | The manual screen-reader pass does not block v0.1.0 and is tracked in issue #20 | Accepted (the calendar, superseded by 0092) |
 | [0091](0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md) | The frame rate on a mid-range laptop does not block v0.1.0 and is tracked in issue #21 | Accepted (the calendar, superseded by 0092) |
 | [0092](0092-seven-scheduled-nights-in-a-row-are-not-a-condition-of-the-tag-v0-1-0.md) | Seven scheduled nights in a row are not a condition of the tag v0.1.0 | Accepted |
+| [0093](0093-a-node-is-as-wide-as-its-name-needs-up-to-30-characters-and-a-longer-name-is-cut-with-an-ellipsis.md) | A node is as wide as its name needs up to 30 characters, and a longer name is cut with an ellipsis | Accepted |
 
 ## Where to start
 

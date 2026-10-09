@@ -389,7 +389,9 @@ The scripts are `hand-s12.mjs` (the runner) and `hand-list-s12.mjs`, `hand-list-
 
 - **A node is drawn at the size of `NODE_SIZE`**, so the guess of S2 is the size that the canvas draws, and the auto-layout leaves
   room for exactly that ([ADR-0032](docs/adr/0032-the-editors-visual-language-tokens-themes-shapes-and-forms.md)). A longer name is
-  cut with an ellipsis on the canvas, and whole in the inspector and in the label that a screen reader reads.
+  cut with an ellipsis on the canvas, and whole in the inspector and in the label that a screen reader reads. *(Since
+  [ADR-0093](docs/adr/0093-a-node-is-as-wide-as-its-name-needs-up-to-30-characters-and-a-longer-name-is-cut-with-an-ellipsis.md)
+  the size of a kind is the least a node has: it is wider for a name of up to 30 characters, and the cut is at 30.)*
 - **A node dropped from the toolbox lands where the middle of its preview was**, and not under the pointer, because the library puts
   the preview off the pointer when the canvas is not at 100% ([ADR-0033](docs/adr/0033-the-foblex-adapter-one-component-intents-out-and-the-four-workarounds.md)).
   If that costs more workarounds, the first thing to replace is the library's drag from the toolbox with one of our own.
@@ -670,6 +672,16 @@ What S12 inherits ([#14](https://github.com/RafaelJCamara/RabbitMqPlayground/iss
 What nobody checked, and says so: the pass with NVDA or VoiceOver (after S12 the owner decided that it does not block the tag, [ADR-0090](docs/adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md), and it is [#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20)); the frame rate on a mid-range laptop (after S12 the owner decided that it does not block the tag, [ADR-0091](docs/adr/0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md), and it is [#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21); the first record is from an i9-14900HX with an RTX 4070 and is a data point); seven scheduled nights (three when S12 was built; after S12 the owner decided that they are not a condition of the tag, [ADR-0092](docs/adr/0092-seven-scheduled-nights-in-a-row-are-not-a-condition-of-the-tag-v0-1-0.md)); the files of the browser tier against a RabbitMQ of another version than 4.3; and the live site with a screen reader.
 
 What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayground/, with the build of `94e74f7` on 2026-10-09: the deploy job of CI and its smoke job; the `live` project of Playwright (3 of 3, with the commit that it expects); and a walk through it in the browser that the Playwright MCP drives, which is a Chromium, **not Chrome with the extension of Claude (it was not connected)**: the welcome of the first run with its disclaimer, the foot of the home with its three links, Build from scratch, a producer, an exchange, a queue and a consumer from the toolbox, the links made with L and Enter, a binding with the key `eu` asked for in its popover, Space to pause, P to publish, and four presses of the full stop until the consumer had finished the message (routed 1, done 1), a deep link through `404.html` (status 404, the app drawn, the canvas that had been made back), and a share link from the Share panel opened in a second tab (the banner, the four nodes, and a message played through). The page had one error in its console, the 404 of the deep link's own document. Not checked there: a drag, the other ways of linking, the dark theme, a phone, a browser that is not Chromium, and a screen reader.
+
+## Decisions taken after v0.1.0 that are easy to revisit
+
+- **A node is as wide as its name needs, up to 30 characters, and a longer name is cut to 30 with an ellipsis**
+  ([ADR-0093](docs/adr/0093-a-node-is-as-wide-as-its-name-needs-up-to-30-characters-and-a-longer-name-is-cut-with-an-ellipsis.md)).
+  The width is an estimate (`NODE_CHROME` 68 and `NODE_CHARACTER` 8 in `projects/domain/src/lib/layout.ts`), measured with Segoe UI on
+  the author's laptop (a name of 30 ordinary characters takes 210 of the 240 units that the node leaves) and **not measured with the
+  fonts of Linux or macOS**; the CI run of the new browser test is the first look at another font. If a font cuts a name that fits by count,
+  raise `NODE_CHARACTER` there and the pinned numbers in the specs (228, 260, 268 and 308). A node that is added is still put at `COLUMN_X`,
+  320 apart, so a renamed node of 30 characters can touch the next column until the learner presses Auto-layout.
 
 ## Follow-ups that are already owned
 
