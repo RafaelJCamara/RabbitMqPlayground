@@ -19,15 +19,11 @@ import { expect, test } from './support/test';
  * of a producer's headers; the table of recent messages, empty and full; and the panel that makes a binding from a message, in each thing that it says.
  */
 
-const CONDITIONS = 'editor';
 const LIGHT_ACCENT = 'rgb(29, 78, 216)';
 const DARK_ACCENT = 'rgb(147, 197, 253)';
-const PRODUCER = 'editor';
-const MESSAGES = 'editor';
 
 interface State {
   readonly name: string;
-  readonly flags: string;
   readonly document: CanvasDocument;
   readonly enter: (headers: HeadersPage) => Promise<void>;
 }
@@ -52,7 +48,6 @@ async function sendOne(headers: HeadersPage): Promise<void> {
 const states: readonly State[] = [
   {
     name: 'with the popover that asks for conditions, empty',
-    flags: CONDITIONS,
     document: FILES,
     enter: async (headers) => {
       await askForConditions(headers);
@@ -60,7 +55,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the popover and a row of each type, the mode all-with-x and the sentence of what it asks',
-    flags: CONDITIONS,
     document: FILES,
     enter: async (headers) => {
       const popover = await askForConditions(headers);
@@ -77,7 +71,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the popover saying what is wrong with its rows: a value that is missing, a name that is there twice, and x-match as a name',
-    flags: CONDITIONS,
     document: FILES,
     enter: async (headers) => {
       const popover = await askForConditions(headers);
@@ -92,7 +85,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the popover refusing a type that the text cannot have, under its row',
-    flags: CONDITIONS,
     document: FILES,
     enter: async (headers) => {
       const popover = await askForConditions(headers);
@@ -103,7 +95,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the popover telling that an x- name is not counted and what the lint says of it',
-    flags: CONDITIONS,
     document: FILES,
     enter: async (headers) => {
       const popover = await askForConditions(headers);
@@ -115,7 +106,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the editor of a binding in the inspector',
-    flags: CONDITIONS,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.selectBinding('x1>q1');
@@ -124,7 +114,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the editor of a binding in the inspector, changed and not applied, and what is wrong with it',
-    flags: CONDITIONS,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.selectBinding('x1>q1');
@@ -138,7 +127,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the editors of the two bindings of an edge, one above the other',
-    flags: CONDITIONS,
     document: FILES_TWICE,
     enter: async (headers) => {
       await headers.selectBinding('x1>q1');
@@ -147,7 +135,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the chips of two bindings on the canvas, which go on to more lines, and one that is not counted',
-    flags: CONDITIONS,
     document: MANY_CONDITIONS,
     enter: async (headers) => {
       await expect(headers.chips('x1>q1')).toHaveCount(1);
@@ -156,7 +143,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the card of a chip, listing every condition, while the pointer is over its label',
-    flags: CONDITIONS,
     document: MANY_CONDITIONS,
     enter: async (headers) => {
       await headers.label('x1>q1').hover();
@@ -165,7 +151,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the table of the headers of a producer, and the note under its routing key',
-    flags: PRODUCER,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.editor.select('Producer sender');
@@ -175,7 +160,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the table of the headers of a producer saying what is wrong with two of its rows',
-    flags: PRODUCER,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.editor.select('Producer sender');
@@ -188,7 +172,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the table of recent messages in the editor of a binding, with no message yet',
-    flags: MESSAGES,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.selectBinding('x1>q1');
@@ -197,7 +180,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the table of recent messages in the editor of a binding, a message that holds and one that differs',
-    flags: MESSAGES,
     document: FILES_BOUND,
     enter: async (headers) => {
       await headers.selectBinding('x1>q2');
@@ -212,7 +194,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the table of recent messages in the popover that asks for conditions',
-    flags: MESSAGES,
     document: FILES_UNBOUND,
     enter: async (headers) => {
       await headers.openLastMessage('unroutable');
@@ -223,7 +204,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with "Bind from this message" open, the headers of the message ticked and the line that it makes',
-    flags: MESSAGES,
     document: FILES_UNBOUND,
     enter: async (headers) => {
       await headers.openLastMessage('unroutable');
@@ -234,7 +214,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with "Bind from this message" open and an x- header and x-match among the headers',
-    flags: MESSAGES,
     document: FILES_WITH_X,
     enter: async (headers) => {
       await headers.openLastMessage('unroutable');
@@ -246,7 +225,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with "Bind from this message" open for a message that has no headers',
-    flags: MESSAGES,
     document: NUMBERS,
     enter: async (headers) => {
       await headers.openLastMessage('unroutable');
@@ -256,7 +234,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with "Bind from this message" open on a canvas that has no headers exchange',
-    flags: MESSAGES,
     document: DIRECT_WITH_HEADERS,
     enter: async (headers) => {
       await headers.openLastMessage('routed');
@@ -266,7 +243,6 @@ const states: readonly State[] = [
   },
   {
     name: 'with the binding that "Bind from this message" made selected, and its editor in the inspector',
-    flags: MESSAGES,
     document: FILES_UNBOUND,
     enter: async (headers) => {
       await headers.openLastMessage('unroutable');
@@ -284,7 +260,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     for (const state of states) {
       test(`has no axe violations ${state.name}`, async ({ page }) => {
-        const headers = await HeadersPage.open(page, state.document, { flags: state.flags });
+        const headers = await HeadersPage.open(page, state.document);
         await state.enter(headers);
 
         await expectNoAxeViolations(page);
@@ -294,7 +270,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test('really is in the theme that it is tested in, so that the checks above are of this theme', async ({
       page,
     }) => {
-      const headers = await HeadersPage.open(page, FILES_BOUND, { flags: CONDITIONS });
+      const headers = await HeadersPage.open(page, FILES_BOUND, {});
       await headers.selectBinding('x1>q1');
 
       const isDark = await page.evaluate(() => window.matchMedia('(prefers-color-scheme: dark)').matches);

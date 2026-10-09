@@ -17,7 +17,6 @@ import { Announcer } from '../core/announcer';
 import { EventLog, LOG_CAP } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -92,7 +91,6 @@ async function renderPanel(
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },

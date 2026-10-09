@@ -17,7 +17,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { EventLog } from '../core/explain/event-log';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -40,7 +39,7 @@ const canvas = (): CanvasDocument => ({
   settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
 });
 
-async function renderEditor(flags: string) {
+async function renderEditor() {
   TestBed.configureTestingModule({
     providers: [
       DocumentStore,
@@ -51,7 +50,6 @@ async function renderEditor(flags: string) {
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -82,7 +80,7 @@ async function renderEditor(flags: string) {
 
 describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-0070)', () => {
   it('has the table when the simulation and the explanation are on, with the conditions of the draft as its columns', async () => {
-    const { publish } = await renderEditor('simulation,explain');
+    const { publish } = await renderEditor();
     publish(entry('format', str('pdf')), entry('n', int(1)));
 
     const table = screen.getByTestId('headers-live');
@@ -91,7 +89,7 @@ describe('BindingConditions, with the table of recent messages (ADR-0069, ADR-00
   });
 
   it('follows the draft as it is typed, and the document is as it was', async () => {
-    const { publish, user, fixture } = await renderEditor('simulation,explain');
+    const { publish, user, fixture } = await renderEditor();
     publish(entry('format', str('pdf')), entry('n', int(1)));
 
     await user.click(screen.getByRole('button', { name: 'Add condition' }));

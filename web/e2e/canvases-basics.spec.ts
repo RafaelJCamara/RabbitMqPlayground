@@ -31,7 +31,6 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await expect(canvases.editor.toolbox).toBeVisible();
     await expect(canvases.editor.canvas).toBeVisible();
     await expect.poll(() => canvases.stored()).toEqual(['Untitled canvas']);
-    expect(await page.evaluate(() => [...(window.__rmq?.flags() ?? [])].sort())).toEqual(['editor']);
   });
 
   test('makes another canvas with New canvas, and shows it in a tab of its own', async ({ page }) => {

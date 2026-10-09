@@ -26,7 +26,6 @@ import type { CanvasIntent } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
 import { APP_NAME } from '../core/app-info';
 import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { Simulation } from '../core/runtime/simulation';
 import { AUTOSAVE_TIMER, NOW, REPOSITORIES, STORAGE_MANAGER } from '../core/session/canvas-session';
 import { LinkOpening } from '../core/share/link-opening';
@@ -121,7 +120,6 @@ async function renderView(options: Options = {}) {
         },
       },
       { provide: LinkOpening, useValue: { leave } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor' } },
     ],
   });
   vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);

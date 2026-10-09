@@ -4,7 +4,6 @@ import { bindingRecord, documentOf, exchangeRecord, manualFrames, producerRecord
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
@@ -48,7 +47,6 @@ async function renderComposer(id = 'P') {
       CommandLog,
       ...RUNTIME_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
     ],
   });
   const bus = TestBed.inject(CommandBus);
@@ -287,7 +285,7 @@ describe('ProducerComposer (ADR-0056)', () => {
 
 describe('the table of headers (ADR-0069)', () => {
   /** The composer of the producer `sender`, with the simulation. */
-  async function renderTable(flags = 'simulation', id = 'P') {
+  async function renderTable(id = 'P') {
     const view = await render(ProducerComposer, {
       inputs: { id },
       providers: [
@@ -298,7 +296,6 @@ describe('the table of headers (ADR-0069)', () => {
         CommandLog,
         ...RUNTIME_SERVICES,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       ],
     });
     const bus = TestBed.inject(CommandBus);

@@ -51,8 +51,6 @@ export class SimulationPage {
     options: {
       readonly reducedMotion?: boolean;
       readonly theme?: 'light' | 'dark';
-      /** The feature flags, as the address says them. The explanation is `editor,simulation,explain`. */
-      readonly flags?: string;
       /** Whether the clock is stopped, which it is unless a test says that it is not: a canvas that has not been touched has nothing in its log. */
       readonly stop?: boolean;
     } = {},
@@ -68,7 +66,7 @@ export class SimulationPage {
     }
     await seedCanvas(page, document, 'Simulated canvas');
     const editor = new EditorPage(page);
-    await editor.goto(`?ff=${options.flags ?? 'editor'}`);
+    await editor.goto();
     const simulation = new SimulationPage(editor);
     await simulation.bar.waitFor();
     // The edges that are drawn: two bindings of one pair are one edge.

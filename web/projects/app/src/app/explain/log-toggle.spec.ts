@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
@@ -24,7 +23,6 @@ async function renderToggle(inputs: { keys?: string } = {}) {
       CommandLog,
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
     ],
   });
   return { ...view, explain: TestBed.inject(ExplainState), user: userEvent.setup() };

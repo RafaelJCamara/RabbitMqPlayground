@@ -6,17 +6,15 @@ import { documentOf, queueRecord } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 import { APP_NAME } from './core/app-info';
-import { FLAG_SOURCES } from './core/flags/feature-flags';
 import { REPOSITORIES } from './core/session/canvas-session';
 import { LinkOpening, type LinkState } from './core/share/link-opening';
 import { PAGE_ADDRESS, type PageAddress } from './core/share/page-address';
 import { OnboardingDialogs } from './onboarding/dialogs';
 import { BLANK } from './onboarding/template-chooser';
 
-const options = (stored: string | null) => ({
+const options = () => ({
   deferBlockBehavior: DeferBlockBehavior.Playthrough,
   providers: [
-    { provide: FLAG_SOURCES, useValue: { stored, query: null } },
     // The first run asks what to start with (ADR-0082, ADR-0084); here it is answered the way a learner who leaves the question does.
     { provide: OnboardingDialogs, useValue: { choose: async () => BLANK } },
     {
@@ -31,14 +29,14 @@ const options = (stored: string | null) => ({
 
 describe('App', () => {
   it('names the application in its top-level heading', async () => {
-    await render(App, options(null));
+    await render(App, options());
 
     expect(await screen.findByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
   });
 
   describe('the editor (ADR-0030, ADR-0084)', () => {
     it('shows the editor, and the editor has the one heading', async () => {
-      await render(App, options('editor'));
+      await render(App, options());
 
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
@@ -48,7 +46,7 @@ describe('App', () => {
 
   describe('the workspace of several canvases (ADR-0072)', () => {
     it('puts the editor in a workspace, with the strip and the one heading', async () => {
-      await render(App, options('editor'));
+      await render(App, options());
 
       expect(await screen.findByRole('navigation', { name: 'Open canvases' })).toBeInTheDocument();
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
@@ -58,10 +56,9 @@ describe('App', () => {
   });
 
   describe('a link in the address (ADR-0078)', () => {
-    const HOME = 'https://learner.test/app/?ff=editor';
+    const HOME = 'https://learner.test/app/';
     const addressOf = (hash: string): PageAddress => ({
-      base: () => 'https://learner.test/app/',
-      home: () => HOME,
+      base: () => HOME,
       hash: () => hash,
       clearHash: vi.fn(),
       reload: vi.fn(),
@@ -78,12 +75,12 @@ describe('App', () => {
       }
       return `#${SHARE_KEY}=${made.value}`;
     };
-    const withLink = (stored: string | null, hash: string) => {
-      const base = options(stored);
+    const withLink = (hash: string) => {
+      const base = options();
       return { ...base, providers: [...base.providers, { provide: PAGE_ADDRESS, useValue: addressOf(hash) }] };
     };
     const withState = (state: LinkState) => {
-      const base = options('editor');
+      const base = options();
       return {
         ...base,
         providers: [...base.providers, { provide: LinkOpening, useValue: { state: signal(state), leave: vi.fn() } }],
@@ -91,7 +88,7 @@ describe('App', () => {
     };
 
     it('opens the shared canvas, with a banner that says so and the editor under it', async () => {
-      await render(App, withLink('editor', await hashOf()));
+      await render(App, withLink(await hashOf()));
 
       expect(await screen.findByTestId('shared-name')).toHaveTextContent('Shared canvas “Orders flow”');
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
@@ -100,7 +97,7 @@ describe('App', () => {
     });
 
     it('opens it in the editor that keeps nothing, and the shared canvas is not among the canvases of the learner', async () => {
-      await render(App, withLink('editor', await hashOf()));
+      await render(App, withLink(await hashOf()));
 
       expect(await screen.findByTestId('shared-name')).toBeInTheDocument();
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
@@ -115,7 +112,7 @@ describe('App', () => {
     });
 
     it('is a page of its own, with the reason and a way out, when the link cannot be opened, and opens nothing', async () => {
-      await render(App, withLink('editor', '#c=v1.@@@@'));
+      await render(App, withLink('#c=v1.@@@@'));
 
       expect(
         await screen.findByRole('heading', { level: 2, name: 'This link could not be opened' }),
@@ -127,7 +124,7 @@ describe('App', () => {
     });
 
     it('is the page as it was, with no sign of a link, when the address has no link', async () => {
-      await render(App, withLink('editor', '#something-else'));
+      await render(App, withLink('#something-else'));
 
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.queryByTestId('shared-name')).not.toBeInTheDocument();

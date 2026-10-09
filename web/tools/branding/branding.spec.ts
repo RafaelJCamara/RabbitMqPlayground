@@ -27,13 +27,7 @@ describe('the product name', () => {
   });
 
   it('is not repeated as a string literal in the app source', () => {
-    const sources = [
-      'app.ts',
-      'app.html',
-      'core/debug/debug-handle.ts',
-      'core/flags/flags.ts',
-      'core/flags/feature-flags.ts',
-    ];
+    const sources = ['app.ts', 'app.html', 'core/debug/debug-handle.ts'];
     for (const file of sources) {
       expect(read(`../../projects/app/src/app/${file}`), file).not.toContain(appName ?? '');
     }

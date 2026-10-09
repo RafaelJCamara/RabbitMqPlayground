@@ -32,15 +32,11 @@ export class TesterPage extends LitCanvas {
     this.problem = this.section.getByTestId('what-if-problem');
   }
 
-  /** Opens the editor with the explanation on, and the simulation only when the flags say so, on this canvas. */
-  static async open(
-    page: Page,
-    document: CanvasDocument,
-    options: { readonly flags?: string } = {},
-  ): Promise<TesterPage> {
+  /** Opens the editor on this canvas. */
+  static async open(page: Page, document: CanvasDocument): Promise<TesterPage> {
     await seedCanvas(page, document, 'Tested canvas');
     const editor = new EditorPage(page);
-    await editor.goto(`?ff=${options.flags ?? 'editor'}`);
+    await editor.goto();
     await page.locator('rmq-flow-canvas[data-ready]').waitFor();
     await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length ?? 0)).toBe(edgeKeys(document).size);
     await editor.settled();

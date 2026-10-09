@@ -49,7 +49,7 @@ export class LinkFailed {
   protected readonly name = APP_NAME;
   protected readonly disclaimer = APP_DISCLAIMER;
   /** The page without the link, with the query that the learner came with, which a click with the middle button opens in a tab. */
-  protected readonly home = inject(PAGE_ADDRESS).home();
+  protected readonly home = inject(PAGE_ADDRESS).base();
   private readonly link = inject(LinkOpening);
 
   protected readonly text = computed(() => {

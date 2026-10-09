@@ -290,7 +290,6 @@ export class HeadersPage extends ExplainPage {
     page: Page,
     document: CanvasDocument,
     options: {
-      readonly flags?: string;
       readonly theme?: 'light' | 'dark';
       readonly reducedMotion?: boolean;
       readonly stop?: boolean;

@@ -14,7 +14,6 @@ test.describe('the editor (ADR-0030, ADR-0084)', () => {
     for (const region of [editor.toolbox, editor.canvas, editor.inspector, editor.status]) {
       await expect(region).toBeVisible();
     }
-    expect(await page.evaluate(() => window.__rmq?.flags())).toEqual(['editor']);
   });
 });
 

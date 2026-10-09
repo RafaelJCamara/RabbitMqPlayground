@@ -5,7 +5,6 @@
 interface Window {
   readonly __rmq?: {
     readonly app: string;
-    readonly flags: () => readonly string[];
     readonly document: () => unknown;
     readonly selection: () => { readonly nodes: readonly string[]; readonly edges: readonly string[] };
     readonly drawnEdges: () => readonly string[];

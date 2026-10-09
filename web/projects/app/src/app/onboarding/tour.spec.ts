@@ -5,7 +5,6 @@ import { render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
@@ -42,10 +41,6 @@ async function renderTour(options: Options = {}) {
       CommandBus,
       TourController,
       { provide: TourRequests, useValue: { take: () => options.asked ?? true, request: () => undefined } },
-      {
-        provide: FLAG_SOURCES,
-        useValue: { stored: null, query: options.flags ?? 'editor,canvases,simulation' },
-      },
     ],
   });
   const store = TestBed.inject(DocumentStore);

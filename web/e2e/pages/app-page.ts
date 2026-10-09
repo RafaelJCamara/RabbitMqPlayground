@@ -16,9 +16,4 @@ export class AppPage {
     await this.heading.waitFor();
     return response;
   }
-
-  /** The feature flags that are on, according to the e2e build's debug handle. */
-  flags(): Promise<string[]> {
-    return this.page.evaluate(() => [...(window.__rmq?.flags() ?? [])].sort());
-  }
 }

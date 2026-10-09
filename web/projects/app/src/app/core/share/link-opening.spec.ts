@@ -11,7 +11,6 @@ function setup(options: { readonly hash: string }) {
   const listeners = new Set<() => void>();
   const address: PageAddress = {
     base: () => 'https://learner.test/app/',
-    home: () => 'https://learner.test/app/?ff=editor',
     hash: () => options.hash,
     clearHash: vi.fn(),
     reload: vi.fn(),

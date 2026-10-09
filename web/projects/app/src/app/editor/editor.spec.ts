@@ -27,7 +27,6 @@ import { APP_NAME } from '../core/app-info';
 import { NO_EMPHASIS, type Emphasis } from '../core/explain/emphasis';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { CANVAS_CONTEXT, MessageOverlay } from '../canvas/overlay/overlay';
 import {
@@ -1610,13 +1609,12 @@ describe('Editor', () => {
   });
 
   describe('the simulation (ADR-0054, ADR-0056)', () => {
-    async function openEditor(flags: string | null) {
+    async function openEditor() {
       const providers = [
         ...harness().providers,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
         // jsdom cannot draw: the overlay is given no context, which is the page that has none.
         { provide: CANVAS_CONTEXT, useValue: () => null },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       ];
       const view = await renderEditor(providers);
       await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
@@ -1634,7 +1632,7 @@ describe('Editor', () => {
     }
 
     it('has the overlay of the messages over the canvas, in the canvas', async () => {
-      await openEditor('simulation');
+      await openEditor();
 
       const overlay = document.querySelector('rmq-message-overlay');
       expect(overlay).not.toBeNull();
@@ -1643,7 +1641,7 @@ describe('Editor', () => {
     });
 
     it('has the controls under the top bar from the first frame, and the hints say the keys', async () => {
-      await openEditor('simulation');
+      await openEditor();
 
       const bar = screen.getByRole('region', { name: 'Simulation' });
       expect(screen.getByRole('banner').compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1655,7 +1653,7 @@ describe('Editor', () => {
     });
 
     it('plays and pauses on Space, from the canvas, and says so', async () => {
-      const { onCanvas, status } = await openEditor('simulation');
+      const { onCanvas, status } = await openEditor();
       expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
 
       onCanvas({ key: ' ' });
@@ -1668,7 +1666,7 @@ describe('Editor', () => {
     });
 
     it('says that there is nothing to step to when the full stop is pressed and nothing is scheduled', async () => {
-      const { onCanvas, status } = await openEditor('simulation');
+      const { onCanvas, status } = await openEditor();
 
       onCanvas({ key: '.' });
 
@@ -1679,7 +1677,7 @@ describe('Editor', () => {
     });
 
     it('publishes from the producer that is selected on P, and says why a producer that is linked to nothing cannot', async () => {
-      const { onCanvas, user, fixture, status } = await openEditor('simulation');
+      const { onCanvas, user, fixture, status } = await openEditor();
       await user.click(screen.getByRole('button', { name: 'Producer' }));
       fixture.detectChanges();
 
@@ -1689,7 +1687,7 @@ describe('Editor', () => {
     });
 
     it('has the fields of the simulation in the inspector of a producer, and not in that of a queue that has none', async () => {
-      const { user, fixture } = await openEditor('simulation');
+      const { user, fixture } = await openEditor();
 
       await user.click(screen.getByRole('button', { name: 'Producer' }));
       fixture.detectChanges();
@@ -1724,12 +1722,11 @@ describe('Editor', () => {
       settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
     });
 
-    async function openEditor(flags: string | null) {
+    async function openEditor() {
       const providers = [
         ...harness().providers,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
         { provide: CANVAS_CONTEXT, useValue: () => null },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       ];
       const view = await renderEditor(providers);
       await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
@@ -1762,7 +1759,7 @@ describe('Editor', () => {
     }
 
     it('has the button of the log in the strip of the simulation, and the log is closed', async () => {
-      await openEditor('simulation,explain');
+      await openEditor();
 
       const strip = screen.getByRole('region', { name: 'Simulation' });
       const button = within(strip).getByRole('button', { name: 'Event log' });
@@ -1772,7 +1769,7 @@ describe('Editor', () => {
     });
 
     it('opens the log with its button, at the bottom of the editor above the command bar, and closes it with the button again', async () => {
-      const { user, fixture } = await openEditor('simulation,explain');
+      const { user, fixture } = await openEditor();
       const button = screen.getByRole('button', { name: 'Event log' });
 
       await user.click(button);
@@ -1799,7 +1796,7 @@ describe('Editor', () => {
     });
 
     it('shows and hides the log on E, from the canvas, and says which', async () => {
-      const { onCanvas, announcer } = await openEditor('simulation,explain');
+      const { onCanvas, announcer } = await openEditor();
 
       onCanvas({ key: 'e' });
 
@@ -1813,13 +1810,13 @@ describe('Editor', () => {
     });
 
     it('says the key of the log in the hints, and in the cheat-sheet’s table, because the table has it', async () => {
-      await openEditor('simulation,explain');
+      await openEditor();
 
       expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('E Show or hide the event log');
     });
 
     it('lists what happened in the log, and a row that is chosen lights what it is about, on the canvas that the editor draws', async () => {
-      const { routeOne, user, fixture, canvas, onCanvas } = await openEditor('simulation,explain');
+      const { routeOne, user, fixture, canvas, onCanvas } = await openEditor();
       await routeOne();
       onCanvas({ key: 'e' });
       fixture.detectChanges();
@@ -1835,7 +1832,7 @@ describe('Editor', () => {
     });
 
     it('lights the Why? of the message that was routed last, while the clock is stopped, with its card at the top of the inspector, and not over the canvas', async () => {
-      const { routeOne, canvas } = await openEditor('simulation,explain');
+      const { routeOne, canvas } = await openEditor();
 
       await routeOne();
 
@@ -1848,7 +1845,7 @@ describe('Editor', () => {
     });
 
     it('opens the message of a row that is chosen in the inspector region, above what is selected, and closes it with its button', async () => {
-      const { routeOne, user, fixture, onCanvas } = await openEditor('simulation,explain');
+      const { routeOne, user, fixture, onCanvas } = await openEditor();
       await routeOne();
       onCanvas({ key: 'e' });
       fixture.detectChanges();
@@ -1872,7 +1869,7 @@ describe('Editor', () => {
     });
 
     it('keeps a message open while a queue is selected, which is how a learner asks why it did not get there', async () => {
-      const { routeOne, fixture, selection } = await openEditor('simulation,explain');
+      const { routeOne, fixture, selection } = await openEditor();
       await routeOne();
       fixture.debugElement.injector.get(ExplainState).openMessage(1);
 
@@ -1885,7 +1882,7 @@ describe('Editor', () => {
     });
 
     it('takes a press on a message that is drawn on the canvas only while the clock is stopped, and only with the explanation', async () => {
-      const { fixture, onCanvas } = await openEditor('simulation,explain');
+      const { fixture, onCanvas } = await openEditor();
       const overlay = () =>
         fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
       expect(overlay().pressable()).toBe(false);
@@ -1900,7 +1897,7 @@ describe('Editor', () => {
     });
 
     it('opens the message that a press on a shape took, and says of a shape that stands for a crowd that it does and where to open one', async () => {
-      const { routeOne, fixture, announcer } = await openEditor('simulation,explain');
+      const { routeOne, fixture, announcer } = await openEditor();
       await routeOne();
       const overlay = fixture.debugElement.query(By.directive(MessageOverlay)).componentInstance as MessageOverlay;
       const shape = { edge: 'P>E', x: 1, y: 1, count: 1, key: 'new', redelivered: false };
@@ -1918,7 +1915,7 @@ describe('Editor', () => {
     });
 
     it('lets go of what is lit with the button of the card, and lights nothing on the canvas that the editor draws', async () => {
-      const { routeOne, user, fixture, canvas } = await openEditor('simulation,explain');
+      const { routeOne, user, fixture, canvas } = await openEditor();
       await routeOne();
 
       await user.click(screen.getByRole('button', { name: 'Let go' }));
@@ -1929,7 +1926,7 @@ describe('Editor', () => {
     });
 
     it('says what a queue made of the message when it is selected, in the card and on the canvas', async () => {
-      const { routeOne, fixture, canvas, selection } = await openEditor('simulation,explain');
+      const { routeOne, fixture, canvas, selection } = await openEditor();
       await routeOne();
 
       selection.select(['A']);
@@ -1942,12 +1939,11 @@ describe('Editor', () => {
   });
 
   describe('the testers of the explanation (ADR-0064)', () => {
-    async function openEditor(flags: string | null, ...items: string[]) {
+    async function openEditor(...items: string[]) {
       const providers = [
         ...harness().providers,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
         { provide: CANVAS_CONTEXT, useValue: () => null },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       ];
       const view = await renderEditor(providers);
       await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
@@ -1968,7 +1964,7 @@ describe('Editor', () => {
     const lit = (canvas: () => FakeCanvas) => [...canvas().emphasis().nodes.entries()].sort();
 
     it('has the what-if tester under what is selected, in the region of the inspector', async () => {
-      await openEditor('simulation');
+      await openEditor();
 
       const aside = screen.getByRole('complementary', { name: 'Inspector' });
       const tester = within(aside).getByRole('region', { name: 'What if…?' });
@@ -1978,14 +1974,14 @@ describe('Editor', () => {
     });
 
     it('has the tester and the log together, which is what the whole of the explanation is', async () => {
-      await openEditor('simulation');
+      await openEditor();
 
       expect(screen.getByRole('region', { name: 'What if…?' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Event log' })).toBeVisible();
     });
 
     it('answers that it showed the log, and then that it hid it, and says which', async () => {
-      const { fixture, injector } = await openEditor('explain,simulation');
+      const { fixture, injector } = await openEditor();
       const announcer = injector.get(Announcer);
 
       expect(fixture.componentInstance.toggleEventLog()).toBe(true);
@@ -1995,7 +1991,7 @@ describe('Editor', () => {
     });
 
     it('lights the canvas that the editor draws, and says it in a card in the canvas, for as long as the tester is open and its message can be read', async () => {
-      const { user, canvas, fixture, injector } = await openEditor('explain', 'Direct exchange', 'Queue');
+      const { user, canvas, fixture, injector } = await openEditor('Direct exchange', 'Queue');
       injector
         .get(CommandBus)
         .apply(
@@ -2024,7 +2020,7 @@ describe('Editor', () => {
     });
 
     it('publishes nothing and changes nothing: not the canvas, the selection, the history, the log of commands or the log of events', async () => {
-      const { user, fixture, injector } = await openEditor('explain,simulation', 'Direct exchange', 'Queue');
+      const { user, fixture, injector } = await openEditor('Direct exchange', 'Queue');
       const store = injector.get(DocumentStore);
       const selection = injector.get(SelectionStore);
       const commands = injector.get(CommandLog);
@@ -2052,7 +2048,7 @@ describe('Editor', () => {
     });
 
     it('has the tester of a topic key under the field of the popover that asks for it, which follows what is typed', async () => {
-      const { user, canvas, fixture, idOf } = await openEditor('explain', 'Topic exchange', 'Queue');
+      const { user, canvas, fixture, idOf } = await openEditor('Topic exchange', 'Queue');
 
       canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
       fixture.detectChanges();
@@ -2077,10 +2073,10 @@ describe('Editor', () => {
           queues: { Q: queueRecord('errors') },
           nodes: { E: { x: 100, y: 250 }, Q: { x: 400, y: 250 } },
         });
-      const popoverTop = async (flags: string, type: 'topic' | 'direct'): Promise<number> => {
+      const popoverTop = async (type: 'topic' | 'direct'): Promise<number> => {
         TestBed.resetTestingModule();
         document.body.replaceChildren();
-        const { canvas, fixture, injector } = await openEditor(flags);
+        const { canvas, fixture, injector } = await openEditor();
         injector.get(DocumentStore).load(lowDocument(type));
         fixture.detectChanges();
         canvas().intent.emit({ type: 'link', source: 'E', target: 'Q', via: 'drag' });
@@ -2089,8 +2085,8 @@ describe('Editor', () => {
         return parseFloat(popover.style.top);
       };
 
-      const withTester = await popoverTop('simulation', 'topic');
-      const direct = await popoverTop('simulation', 'direct');
+      const withTester = await popoverTop('topic');
+      const direct = await popoverTop('direct');
 
       // The popover with no tester is under the node. The taller one does not fit there, and is put over it, at the top.
       expect(direct).toBeGreaterThan(250);
@@ -2101,7 +2097,7 @@ describe('Editor', () => {
       const before = window.innerHeight;
       Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true, writable: true });
       try {
-        const { canvas, fixture, idOf } = await openEditor('explain', 'Topic exchange', 'Queue');
+        const { canvas, fixture, idOf } = await openEditor('Topic exchange', 'Queue');
 
         canvas().intent.emit({ type: 'link', source: idOf('exchange'), target: idOf('queue'), via: 'drag' });
         fixture.detectChanges();
@@ -2119,7 +2115,7 @@ describe('Editor', () => {
     });
 
     it('has no tester under the field for a direct exchange, which has no wildcards', async () => {
-      const direct = await openEditor(null, 'Direct exchange', 'Queue');
+      const direct = await openEditor('Direct exchange', 'Queue');
       direct
         .canvas()
         .intent.emit({ type: 'link', source: direct.idOf('exchange'), target: direct.idOf('queue'), via: 'drag' });

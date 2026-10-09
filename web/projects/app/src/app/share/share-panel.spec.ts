@@ -6,7 +6,6 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../core/announcer';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { TEXT_CLIPBOARD, type TextClipboard } from '../core/share/clipboard';
 import { PAGE_ADDRESS, type PageAddress } from '../core/share/page-address';
 import { ShareDialogs } from './dialogs';
@@ -44,7 +43,6 @@ async function openPanel(options: Options = {}) {
     providers: [
       { provide: TEXT_CLIPBOARD, useValue: clipboard },
       { provide: PAGE_ADDRESS, useValue: page },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? null } },
       ...(options.maker === undefined ? [] : [{ provide: LINK_MAKER, useValue: options.maker }]),
     ],
   });
@@ -198,13 +196,6 @@ describe('the panel that makes a link (ADR-0078)', () => {
       expect(field().value.startsWith(`${BASE}#c=v1.`)).toBe(true);
       const opened = await decodeShare(payloadIn(field()));
       expect(opened).toEqual({ ok: true, value: { name: 'Orders', document: sampleDocument() } });
-    });
-
-    it('carries the feature flags that are on, for as long as there are any', async () => {
-      const { field, ready } = await openPanel({ flags: 'editor' });
-      await ready();
-
-      expect(field().value.startsWith(`${BASE}?ff=editor#c=v1.`)).toBe(true);
     });
 
     it('selects itself when it gets the cursor, so that it can be copied with the keys', async () => {

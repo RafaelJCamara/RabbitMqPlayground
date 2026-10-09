@@ -15,7 +15,6 @@ import { nextSteps } from '../command-bar/suggestions';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import type { CanvasIntent, LinkVia } from '../canvas/model/intents';
 import { Announcer } from '../core/announcer';
-import { FeatureFlags, FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
@@ -201,9 +200,6 @@ const SERVICES: (Provider | EnvironmentProviders)[] = [
   EditorActions,
   CommandRunner,
   ...RUNTIME_SERVICES,
-  // The flags are the root's unless an injector has its own, and the editor that is made here is one that has the simulation.
-  FeatureFlags,
-  { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
   // No frame ever runs, so that the clock moves only by `step`, which a line can say.
   { provide: FRAME_SOURCE, useValue: manualFrames() },
   { provide: Announcer, useValue: QUIET },

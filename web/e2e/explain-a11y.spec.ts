@@ -193,8 +193,6 @@ const testerStates: readonly {
   readonly name: string;
   readonly enter: (tester: TesterPage) => Promise<void>;
   readonly document?: CanvasDocument;
-  /** The feature flags, as the address says them: the explanation alone unless a state says more. */
-  readonly flags?: string;
 }[] = [
   {
     name: 'with the what-if tester shut',
@@ -254,7 +252,6 @@ const testerStates: readonly {
   },
   {
     name: 'with the what-if tester answering, and the event log open beside it, with the simulation on',
-    flags: 'editor',
     enter: async (tester) => {
       await tester.ask('key=order.new', 'orders (direct)');
       await tester.editor.flow.focus();
@@ -329,9 +326,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     for (const state of testerStates) {
       test(`has no axe violations ${state.name}`, async ({ page }) => {
-        const tester = await TesterPage.open(page, state.document ?? WITH_ARCHIVE, {
-          ...(state.flags === undefined ? {} : { flags: state.flags }),
-        });
+        const tester = await TesterPage.open(page, state.document ?? WITH_ARCHIVE);
         await state.enter(tester);
 
         await expectNoAxeViolations(page);

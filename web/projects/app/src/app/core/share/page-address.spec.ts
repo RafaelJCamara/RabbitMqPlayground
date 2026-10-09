@@ -22,23 +22,17 @@ describe('browserAddress', () => {
     expect(browserAddress(fakePage('#c=v1.abc').page).base()).toBe('https://learner.test/RabbitMqPlayground/');
   });
 
-  it('says the page with its query and without its fragment, which is where a learner goes when they leave a link', () => {
-    expect(browserAddress(fakePage('#c=v1.abc').page).home()).toBe(
-      'https://learner.test/RabbitMqPlayground/?ff=editor,share',
-    );
-  });
-
   it('says the fragment of the address, with its #, and nothing when there is none', () => {
     expect(browserAddress(fakePage('#c=v1.abc').page).hash()).toBe('#c=v1.abc');
     expect(browserAddress(fakePage('').page).hash()).toBe('');
   });
 
-  it('takes the fragment off in the history entry that the page is in, and keeps the path, the query and the state', () => {
+  it('takes the fragment off in the history entry that the page is in, and keeps the path and the state and not the query, which an old link may carry (ADR-0084)', () => {
     const { page, history, location } = fakePage();
 
     browserAddress(page).clearHash();
 
-    expect(history.replaceState).toHaveBeenCalledExactlyOnceWith({ n: 1 }, '', '/RabbitMqPlayground/?ff=editor,share');
+    expect(history.replaceState).toHaveBeenCalledExactlyOnceWith({ n: 1 }, '', '/RabbitMqPlayground/');
     expect(location.reload).not.toHaveBeenCalled();
   });
 
@@ -68,7 +62,6 @@ describe('browserAddress', () => {
 
     expect(address.hash()).toBe('');
     expect(address.base()).toBe('');
-    expect(address.home()).toBe('');
     expect(() => {
       address.clearHash();
       address.reload();
@@ -91,7 +84,6 @@ describe('PAGE_ADDRESS', () => {
 
     expect(address.hash()).toBe('#c=v1.real');
     expect(address.base()).toBe(`${window.location.origin}${window.location.pathname}`);
-    expect(address.home()).toBe(`${window.location.origin}${window.location.pathname}${window.location.search}`);
     address.clearHash();
     expect(address.hash()).toBe('');
   });

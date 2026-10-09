@@ -5,7 +5,6 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { WhatIf } from '../core/explain/what-if';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { WhatIfTester } from './what-if-tester';
@@ -22,14 +21,9 @@ const canvas = (): CanvasDocument =>
     },
   });
 
-async function renderTester(flags: string | null = 'explain,simulation') {
+async function renderTester() {
   const view = await render(WhatIfTester, {
-    providers: [
-      DocumentStore,
-      SelectionStore,
-      WhatIf,
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-    ],
+    providers: [DocumentStore, SelectionStore, WhatIf],
   });
   TestBed.inject(DocumentStore).load(canvas());
   view.fixture.detectChanges();

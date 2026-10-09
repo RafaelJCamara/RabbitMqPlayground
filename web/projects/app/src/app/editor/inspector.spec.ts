@@ -6,7 +6,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
@@ -20,7 +19,7 @@ import { IntentHandler } from './intents';
 import { LinkFlow } from './link-flow';
 import { NewNodeFocus } from './new-node-focus';
 
-async function renderInspector(selected: { nodes?: string[]; edges?: string[] } = {}, flags: string | null = null) {
+async function renderInspector(selected: { nodes?: string[]; edges?: string[] } = {}) {
   const view = await render(Inspector, {
     providers: [
       DocumentStore,
@@ -35,7 +34,6 @@ async function renderInspector(selected: { nodes?: string[]; edges?: string[] } 
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
   });
   // The editor has the simulation from the start, and with the flag it is what the parts of the inspector that are about it read.
@@ -346,7 +344,7 @@ describe('Inspector', () => {
     const shown = () => sections.filter((id) => screen.queryByTestId(id) !== null);
 
     it('has the messages of a queue, the composer of a producer and the settings of a consumer, each for its own kind and for no other', async () => {
-      const { choose } = await renderInspector({}, 'simulation');
+      const { choose } = await renderInspector({});
 
       choose(['Q1']);
       expect(shown()).toEqual(['queue-messages']);
@@ -359,7 +357,7 @@ describe('Inspector', () => {
     });
 
     it('has them before the button that deletes, so that the button stays the last thing of a node', async () => {
-      const { choose } = await renderInspector({}, 'simulation');
+      const { choose } = await renderInspector({});
 
       for (const [node, section] of [
         ['Q1', 'queue-messages'],
@@ -375,7 +373,7 @@ describe('Inspector', () => {
     });
 
     it('is not there for an edge, or for several things', async () => {
-      const { choose } = await renderInspector({}, 'simulation');
+      const { choose } = await renderInspector({});
 
       choose([], ['E1>Q1']);
       expect(shown()).toEqual([]);
@@ -384,7 +382,7 @@ describe('Inspector', () => {
     });
 
     it('forgets what a field was refused for when another node is selected', async () => {
-      const { choose } = await renderInspector({ nodes: ['P1'] }, 'simulation');
+      const { choose } = await renderInspector({ nodes: ['P1'] });
       const burst = screen.getByRole('spinbutton', { name: 'Messages at a time' }) as HTMLInputElement;
       burst.value = '0';
       fireEvent.change(burst);
@@ -789,8 +787,8 @@ describe('Inspector', () => {
     const rows = () => screen.getAllByRole('group', { name: /^Binding \d+ of \d+$/ });
     const keyField = (row = 0) => within(rows()[row]!).getByRole('textbox', { name: 'Key' }) as HTMLInputElement;
     /** Two bindings from the topic exchange `orders` to `billing`, so that there are two fields for the cursor to go between. */
-    const twoKeys = async (flags: string | null = 'explain') => {
-      const view = await renderInspector({ edges: ['E1>Q1'] }, flags);
+    const twoKeys = async () => {
+      const view = await renderInspector({ edges: ['E1>Q1'] });
       TestBed.inject(CommandBus).apply(
         { type: 'bind', source: 'orders', destination: { kind: 'queue', name: 'billing' }, key: 'invoice.#' },
         'toolbar',
@@ -800,7 +798,7 @@ describe('Inspector', () => {
     };
 
     it('is under the field of a binding of a topic exchange while the cursor is in it, with what the key matches, and is gone when the cursor leaves', async () => {
-      const { user } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      const { user } = await renderInspector({ edges: ['E1>Q1'] });
       expect(screen.queryByTestId('topic-tester')).not.toBeInTheDocument();
 
       await user.click(keyField());
@@ -815,7 +813,7 @@ describe('Inspector', () => {
     });
 
     it('follows what is typed, while the key that the binding has is the one that it had, which it changes when the field is left', async () => {
-      const { user, store } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] });
       await user.click(keyField());
 
       await user.clear(keyField());
@@ -854,7 +852,7 @@ describe('Inspector', () => {
     });
 
     it('is not there for the bindings of an exchange that is not a topic exchange, which has no wildcards to try', async () => {
-      const { user, store, choose } = await renderInspector({}, 'explain');
+      const { user, store, choose } = await renderInspector({});
       store.load(
         documentOf({
           exchanges: { X: exchangeRecord('jobs', 'direct') },
@@ -870,7 +868,7 @@ describe('Inspector', () => {
     });
 
     it('does not stop the cursor from reaching the buttons of the row, or the key from being changed with the tester under it', async () => {
-      const { user, store } = await renderInspector({ edges: ['E1>Q1'] }, 'explain');
+      const { user, store } = await renderInspector({ edges: ['E1>Q1'] });
       await user.click(keyField());
 
       await user.clear(keyField());

@@ -11,7 +11,6 @@ import {
 } from '@rmq/testing';
 import { render } from '@testing-library/angular';
 import { describe, expect, it, vi } from 'vitest';
-import { FLAG_SOURCES } from '../../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../../core/runtime/services';
@@ -138,7 +137,6 @@ async function renderOverlay(
       FlowViewport,
       ...RUNTIME_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
       {
         provide: MOTION_QUERY,
         useValue: {

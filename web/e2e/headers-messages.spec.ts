@@ -15,11 +15,9 @@ import { expect, test } from './support/test';
  * them, and the panel of the message inspector that makes a binding from the message that is open. They need the flags `editor`, `simulation` and `explain`.
  */
 
-const FLAGS = 'editor';
-
 test.describe('the table of recent messages against the conditions of a binding (ADR-0070)', () => {
   test('says that no message has been published yet, and what to do about it', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
 
     await headers.selectBinding('x1>q1');
 
@@ -33,7 +31,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   test('has a row for each message, newest first, with a cell for each condition and the verdict of the binding, each in words and with an icon', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
     await headers.publish();
     await headers.simulation.stepThrough();
     await headers.publish();
@@ -59,7 +57,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   });
 
   test('is read again when a message is published, with the binding still selected', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
     await headers.selectBinding('x1>q1');
     const live = headers.conditions().live;
     await expect(live.empty).toBeVisible();
@@ -78,7 +76,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   test('keeps the last ten messages and says how many there were, and a message that is older is not there', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
     await headers.editor.openCommandBar();
     await headers.editor.runCommand('set sender burst=12');
     await headers.editor.runCommand('publish sender');
@@ -96,7 +94,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   test('has the messages that were published to an exchange that leads to the exchange of the binding, and says so', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, THROUGH_AN_EXCHANGE, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, THROUGH_AN_EXCHANGE, {});
     await headers.publish();
     await headers.simulation.stepThrough();
 
@@ -113,7 +111,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   test('is in the popover that asks for the conditions of a binding too, and follows what is typed in it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_UNBOUND, {});
     await headers.publish();
     await headers.simulation.stepThrough();
     const { editor } = headers;
@@ -130,7 +128,7 @@ test.describe('the table of recent messages against the conditions of a binding 
   });
 
   test('can be scrolled with the keyboard, because it is a region that has the focus', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
     await headers.publish();
     await headers.simulation.stepThrough();
     await headers.selectBinding('x1>q1');
@@ -149,7 +147,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('is a section of the message inspector, shut, which opens with its button and lists the headers of the message, all ticked, with their types and values', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_UNBOUND, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
 
@@ -179,7 +177,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   });
 
   test('starts with the first queue that did not get the message, and not with the first queue', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_BOUND, {});
     await headers.openLastMessage('routed');
 
     await headers.bind.show();
@@ -192,7 +190,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('changes what it makes as a header is unticked, another queue is chosen and another mode is, and makes nothing until it is told to', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_UNBOUND, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();
@@ -212,7 +210,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('makes the binding that it says, as one line of the log and one step of undo, selects it, and the next message that is like this one is taken', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_UNBOUND, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();
@@ -246,7 +244,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   });
 
   test('says what is wrong with a message that has no headers, and makes nothing of it', async ({ page }) => {
-    const headers = await HeadersPage.open(page, NUMBERS, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, NUMBERS, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
 
@@ -261,7 +259,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('says that a canvas with no headers exchange has nothing to bind from, and that an exchange that does not read headers does not', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, DIRECT_WITH_HEADERS, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, DIRECT_WITH_HEADERS, {});
     await headers.openLastMessage('routed');
     const panel = headers.bind;
 
@@ -276,7 +274,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('can bind from a headers exchange that the message was not published to, and says where the message went', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, DIRECT_AND_HEADERS, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, DIRECT_AND_HEADERS, {});
     await headers.openLastMessage('routed');
     const panel = headers.bind;
 
@@ -294,7 +292,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('does not let the header called x-match be a condition, because it is the mode of a binding, and says so', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_WITH_X, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_WITH_X, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();
@@ -309,7 +307,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('says whether an x- header is counted by the mode, and what it makes of the binding when it is ticked', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_WITH_X, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_WITH_X, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();
@@ -325,7 +323,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   test('says the lint of the binding that it would make: any with nothing that counts matches no message', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_WITH_X, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_WITH_X, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();
@@ -341,7 +339,7 @@ test.describe('a binding made from a message (ADR-0070)', () => {
   });
 
   test('forgets what was ticked and chosen when another message is opened, and shuts', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_UNBOUND, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, FILES_UNBOUND, {});
     await headers.openLastMessage('unroutable');
     const panel = headers.bind;
     await panel.show();

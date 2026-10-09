@@ -3,12 +3,11 @@ import { Component, ElementRef, inject, signal, viewChild } from '@angular/core'
 import type { CanvasDocument } from '@rmq/domain';
 import type { EngineSnapshot } from '@rmq/engine';
 import { Announcer } from '../core/announcer';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { TEXT_CLIPBOARD } from '../core/share/clipboard';
 import { PAGE_ADDRESS } from '../core/share/page-address';
 import { BUTTON, BUTTON_PRIMARY } from '../core/ui/buttons';
 import { Icon } from '../core/ui/icon';
-import { fileInstead, LINK_MAKER, linkBase, type MadeLink } from './link-maker';
+import { fileInstead, LINK_MAKER, type MadeLink } from './link-maker';
 
 export const SHARE_TITLE_ID = 'rmq-share-title';
 
@@ -163,7 +162,6 @@ export class SharePanel {
   private readonly announcer = inject(Announcer);
   private readonly clipboard = inject(TEXT_CLIPBOARD);
   private readonly page = inject(PAGE_ADDRESS);
-  private readonly flags = inject(FeatureFlags);
   private readonly makeLink = inject(LINK_MAKER);
 
   protected readonly titleId = SHARE_TITLE_ID;
@@ -232,7 +230,7 @@ export class SharePanel {
     const simulation = this.withMessages() && messages !== undefined ? messages.snapshot() : undefined;
     const link = await this.makeLink(
       { name: this.data.name, document: this.data.document, ...(simulation === undefined ? {} : { simulation }) },
-      linkBase(this.page, this.flags),
+      this.page.base(),
     );
     if (turn === this.turn) {
       this.made.set(link);

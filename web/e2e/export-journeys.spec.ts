@@ -32,7 +32,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
       const report = JSON.parse(fixture(`export/${name}.report.json`)) as Report;
       await seedCanvas(page, canvasFromText(commands), `Golden ${name}`);
       const editor = new EditorPage(page);
-      await editor.goto('?ff=editor');
+      await editor.goto();
       const exporting = new ExportPage(page);
 
       await expect(exporting.button).toHaveAttribute('aria-haspopup', 'dialog');
@@ -67,7 +67,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   }) => {
     await seedCanvas(page, canvasFromText(fixture('export/orders.commands')), 'Orders');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     const exporting = new ExportPage(page);
     await exporting.open();
     await exporting.vhost.fill('');
@@ -95,7 +95,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   }) => {
     await seedCanvas(page, emptyDocument(), 'Nothing yet');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     const exporting = new ExportPage(page);
     await exporting.open();
 
@@ -110,7 +110,7 @@ test.describe('journey 6: the definitions file of a canvas', () => {
   test('is closed with Escape, and the cursor goes back to the button that opened it', async ({ page }) => {
     await seedCanvas(page, canvasFromText(fixture('export/orders.commands')), 'Orders');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     const exporting = new ExportPage(page);
 
     await exporting.button.focus();

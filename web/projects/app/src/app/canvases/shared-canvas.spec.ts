@@ -20,7 +20,6 @@ import {
   snapshotAfter,
 } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { REPOSITORIES } from '../core/session/canvas-storage';
 import { LinkOpening } from '../core/share/link-opening';
 import { SHARED_CANVAS_PROVIDERS, SharedCanvas } from './shared-canvas';
@@ -109,7 +108,6 @@ function setup(options: Options = {}) {
         },
       },
       { provide: LinkOpening, useValue: { leave } },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags ?? 'editor' } },
     ],
   });
   const canvas = TestBed.createComponent(Host).componentInstance.canvas;

@@ -40,7 +40,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.describe('the panel that makes a link', () => {
       test('has no axe violations with the link made', async ({ page }) => {
         await seedCanvas(page, ORDERS, 'Orders flow');
-        await new EditorPage(page).goto('?ff=editor');
+        await new EditorPage(page).goto();
         const share = new SharePage(page);
 
         await share.open();
@@ -53,10 +53,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       test('has no axe violations with the choice of messages, either way, and with the choice switched off', async ({
         page,
       }) => {
-        const simulation = await SimulationPage.open(page, ORDERS, {
-          flags: 'editor',
-          theme: colorScheme,
-        });
+        const simulation = await SimulationPage.open(page, ORDERS, { theme: colorScheme });
         const share = new SharePage(page);
         await share.open();
         await expect(share.noMessages).toBeVisible();
@@ -76,7 +73,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       test('has no axe violations with a link too long to send, and the file offered instead', async ({ page }) => {
         await seedCanvas(page, longCanvas(), 'A long one');
-        await new EditorPage(page).goto('?ff=editor');
+        await new EditorPage(page).goto();
         const share = new SharePage(page);
 
         await share.open();
@@ -89,7 +86,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.describe('the dialog that exports for a broker', () => {
       test('has no axe violations with what it leaves out listed', async ({ page }) => {
         await seedCanvas(page, canvasFromText(fixture('export/warnings.commands')), 'Warnings');
-        await new EditorPage(page).goto('?ff=editor');
+        await new EditorPage(page).goto();
         const exporting = new ExportPage(page);
 
         await exporting.open();
@@ -103,7 +100,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         page,
       }) => {
         await seedCanvas(page, canvasFromText(fixture('export/orders.commands')), 'Orders');
-        await new EditorPage(page).goto('?ff=editor');
+        await new EditorPage(page).goto();
         const exporting = new ExportPage(page);
         await exporting.open();
         await expect(exporting.all).toBeVisible();
@@ -118,7 +115,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       test('has no axe violations when there is nothing to put in a file', async ({ page }) => {
         await seedCanvas(page, buildDocument([{ type: 'add-producer', name: 'sender' }]), 'Nothing yet');
-        await new EditorPage(page).goto('?ff=editor');
+        await new EditorPage(page).goto();
         const exporting = new ExportPage(page);
 
         await exporting.open();
@@ -131,7 +128,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.describe('the page that a link opens', () => {
       test('has no axe violations', async ({ visitor }) => {
         const other = await visitor({ colorScheme });
-        await other.goto(`?ff=editor#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+        await other.goto(`#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
         const shared = new SharedViewPage(other);
 
         await shared.ready();
@@ -152,7 +149,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
             },
           });
         });
-        await other.goto(`?ff=editor#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+        await other.goto(`#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
         const shared = new SharedViewPage(other);
         await shared.ready();
 
@@ -168,7 +165,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test('the page of a link that cannot be opened has no axe violations', async ({ visitor }) => {
       const other = await visitor({ colorScheme });
-      await other.goto('?ff=editor#c=not-a-link');
+      await other.goto('#c=not-a-link');
       const failed = new LinkFailedPage(other);
 
       await expect(failed.title).toBeVisible();
@@ -184,7 +181,7 @@ test.describe('the keyboard', () => {
     page,
   }) => {
     await seedCanvas(page, ORDERS, 'Orders flow');
-    await new EditorPage(page).goto('?ff=editor');
+    await new EditorPage(page).goto();
     const share = new SharePage(page);
 
     await share.button.focus();
@@ -208,7 +205,7 @@ test.describe('the keyboard', () => {
 
   test('selects the link when the field gets the cursor, so that the keys can copy it', async ({ page }) => {
     await seedCanvas(page, ORDERS, 'Orders flow');
-    await new EditorPage(page).goto('?ff=editor');
+    await new EditorPage(page).goto();
     const share = new SharePage(page);
     await share.open();
     const link = await share.address();
@@ -223,7 +220,7 @@ test.describe('the keyboard', () => {
 
   test('reaches both buttons of the page of a link, and its Leave, with the keys alone', async ({ visitor }) => {
     const other = await visitor();
-    await other.goto(`?ff=editor#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    await other.goto(`#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
     const shared = new SharedViewPage(other);
     await shared.ready();
 

@@ -1,5 +1,5 @@
 import { AppPage } from './pages/app-page';
-import { EditorPage, welcome } from './pages/editor-page';
+import { welcome } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { expect, test } from './support/test';
 
@@ -71,38 +71,6 @@ test.describe('the debug handle in the e2e build', () => {
       enumerable: false,
       app: await app.heading.textContent(),
     });
-  });
-});
-
-test.describe('feature flags', () => {
-  test('are all off by default', async ({ page }) => {
-    const app = new AppPage(page);
-    await app.goto();
-
-    expect(await app.flags()).toEqual([]);
-  });
-
-  test('can be turned on with ?ff=', async ({ page }) => {
-    await new EditorPage(page).goto('?ff=editor');
-
-    expect(await new AppPage(page).flags()).toEqual(['editor']);
-  });
-
-  test('can be turned on in local storage, and add up with ?ff=', async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem('rmq.flags', 'editor'));
-    await new EditorPage(page).goto('?ff=editor');
-
-    expect(await new AppPage(page).flags()).toEqual(['editor']);
-  });
-
-  test('ignore a name they do not know, and say so in the console', async ({ page }) => {
-    const warnings: string[] = [];
-    page.on('console', (message) => message.type() === 'warning' && warnings.push(message.text()));
-    const app = new AppPage(page);
-    await app.goto('?ff=edtior');
-
-    expect(await app.flags()).toEqual([]);
-    expect(warnings).toContain('Unknown feature flag(s) ignored: edtior');
   });
 });
 

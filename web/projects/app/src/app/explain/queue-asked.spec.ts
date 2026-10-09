@@ -14,7 +14,6 @@ import { describe, expect, it } from 'vitest';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -47,7 +46,7 @@ const traffic = (): CanvasDocument => ({
   settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
 });
 
-async function renderAsked(flags = 'simulation,explain') {
+async function renderAsked() {
   const frames = manualFrames();
   const view = await render(QueueAsked, {
     providers: [
@@ -59,7 +58,6 @@ async function renderAsked(flags = 'simulation,explain') {
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },

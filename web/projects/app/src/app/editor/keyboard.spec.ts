@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONNECT_KEYS, GRAB_KEYS } from '../canvas/model/guard';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { EditorActions } from './actions';
 import {
   formatChord,
@@ -293,8 +292,6 @@ describe('isInCanvas', () => {
 });
 
 describe('KeyboardService', () => {
-  /** The feature flags that are on, as the address says them. */
-  let flags: string | null = null;
   let actions: Record<
     | 'undo'
     | 'redo'
@@ -339,11 +336,7 @@ describe('KeyboardService', () => {
       toggleEventLog: vi.fn(() => true),
     };
     TestBed.configureTestingModule({
-      providers: [
-        KeyboardService,
-        { provide: EditorActions, useValue: actions },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-      ],
+      providers: [KeyboardService, { provide: EditorActions, useValue: actions }],
     });
     service = TestBed.inject(KeyboardService);
     mount();
@@ -416,23 +409,14 @@ describe('KeyboardService', () => {
   });
 
   describe('the keys of the simulation (ADR-0054)', () => {
-    describe('with the flag', () => {
+    describe('on the canvas', () => {
       beforeEach(() => {
         TestBed.resetTestingModule();
-        flags = 'simulation';
         TestBed.configureTestingModule({
-          providers: [
-            KeyboardService,
-            { provide: EditorActions, useValue: actions },
-            { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-          ],
+          providers: [KeyboardService, { provide: EditorActions, useValue: actions }],
         });
         service = TestBed.inject(KeyboardService);
         mount();
-      });
-
-      afterEach(() => {
-        flags = null;
       });
 
       it('play or pause on Space, with the key that asked, and keep the page from scrolling', () => {
@@ -482,23 +466,14 @@ describe('KeyboardService', () => {
   });
 
   describe('the key of the event log (ADR-0061)', () => {
-    describe('with the flags', () => {
+    describe('on the canvas', () => {
       beforeEach(() => {
         TestBed.resetTestingModule();
-        flags = 'explain,simulation';
         TestBed.configureTestingModule({
-          providers: [
-            KeyboardService,
-            { provide: EditorActions, useValue: actions },
-            { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
-          ],
+          providers: [KeyboardService, { provide: EditorActions, useValue: actions }],
         });
         service = TestBed.inject(KeyboardService);
         mount();
-      });
-
-      afterEach(() => {
-        flags = null;
       });
 
       it('shows and hides the log on E, in either case, and keeps the page from acting on the key', () => {

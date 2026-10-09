@@ -1,21 +1,9 @@
 import { decodeShare, payloadOf, SHARE_WARN_AT } from '@rmq/persistence';
 import { documentOf, exchangeRecord, producerRecord, sampleDocument, snapshotAfter } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
-import { fileInstead, linkBase, makeLink } from './link-maker';
+import { fileInstead, makeLink } from './link-maker';
 
 /** The link that the panel makes (ADR-0077, ADR-0078). */
-
-describe('linkBase', () => {
-  const address = { base: () => 'https://learner.test/RabbitMqPlayground/' };
-
-  it('is the page alone when no feature flag is on, which is what every link is once the flags are gone', () => {
-    expect(linkBase(address, { enabled: [] })).toBe('https://learner.test/RabbitMqPlayground/');
-  });
-
-  it('carries the flags that are on, so that a link opens for whoever is sent it as it does for whoever made it', () => {
-    expect(linkBase(address, { enabled: ['editor'] })).toBe('https://learner.test/RabbitMqPlayground/?ff=editor');
-  });
-});
 
 describe('makeLink', () => {
   const base = 'https://learner.test/app/';

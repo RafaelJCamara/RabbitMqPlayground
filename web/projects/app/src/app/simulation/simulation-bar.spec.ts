@@ -12,7 +12,6 @@ import {
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { Simulation } from '../core/runtime/simulation';
@@ -53,7 +52,6 @@ async function renderBar(document: CanvasDocument = traffic()) {
       CommandLog,
       ...RUNTIME_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
     ],
   });
   const store = TestBed.inject(DocumentStore);

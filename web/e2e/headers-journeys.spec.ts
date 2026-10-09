@@ -8,13 +8,11 @@ import { expect, test } from './support/test';
  * Nothing sets the app into a state: the bindings are made in the popover, the message is made in the table of the producer, and what the engine did is read from what the page shows.
  */
 
-const FLAGS = 'editor';
-
 test.describe('"1" is not 1 (ADR-0009, ADR-0067)', () => {
   test('a binding for the number and a binding for the text take different messages, which the table of recent messages says in words', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, NUMBERS, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, NUMBERS, {});
     const { editor, simulation } = headers;
 
     // A learner makes the two bindings in the popover, and the type of what is typed is told at once: 1 is an integer, and "1" is a string.
@@ -80,7 +78,7 @@ test.describe('"1" is not 1 (ADR-0009, ADR-0067)', () => {
   test('follows the conditions as they are typed, before they are applied: the table of the binding for the number says what it would say for the text', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, NUMBERS, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, NUMBERS, {});
     const { editor, simulation } = headers;
     await editor.openCommandBar();
     await editor.runCommand('bind numbers -> ints n=1');
@@ -111,7 +109,7 @@ test.describe('an argument that starts with x- (ADR-0009, ADR-0068)', () => {
   test('is not counted under all and is counted under all-with-x, which the table and the sentence say before the mode is applied, and the message follows it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, EXTRA_KEY, { flags: FLAGS });
+    const headers = await HeadersPage.open(page, EXTRA_KEY, {});
     const { simulation } = headers;
     await expect(headers.chips('x1>q1')).toHaveText(['all · format=pdf · x-region=eu (ignored)']);
 

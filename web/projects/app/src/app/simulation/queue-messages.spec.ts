@@ -14,7 +14,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { SimStats } from '../core/runtime/sim-stats';
@@ -40,7 +39,7 @@ const withWorker = (ack: 'auto' | 'manual' = 'manual') => ({
   C: consumerRecord('worker', ['Q'], { ack, prefetch: 1, processingMs: 1_000 }),
 });
 
-async function renderSection(document: CanvasDocument = canvas(), id = 'Q', flags = 'simulation') {
+async function renderSection(document: CanvasDocument = canvas(), id = 'Q') {
   const view = await render(QueueMessages, {
     inputs: { id },
     providers: [
@@ -52,7 +51,6 @@ async function renderSection(document: CanvasDocument = canvas(), id = 'Q', flag
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     ],
   });
   const bus = TestBed.inject(CommandBus);
@@ -83,7 +81,7 @@ async function renderSection(document: CanvasDocument = canvas(), id = 'Q', flag
 
 describe('QueueMessages and the message inspector (ADR-0063)', () => {
   it('has a button for each message, which opens it in the inspector with what the list says of it and which queue it is in', async () => {
-    const { send, step, user, explain, settle } = await renderSection(canvas(withWorker()), 'Q', 'simulation,explain');
+    const { send, step, user, explain, settle } = await renderSection(canvas(withWorker()), 'Q');
     send('new', 'one');
     send('new', 'two');
     step(4);
@@ -105,7 +103,7 @@ describe('QueueMessages and the message inspector (ADR-0063)', () => {
   });
 
   it('keeps what the message is a button says of it: its number, its key and a cut of its payload, and that it is redelivered or held', async () => {
-    const { send, step } = await renderSection(canvas(withWorker()), 'Q', 'simulation,explain');
+    const { send, step } = await renderSection(canvas(withWorker()), 'Q');
     send('new', 'one');
     step(3);
 

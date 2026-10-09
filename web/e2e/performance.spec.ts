@@ -35,7 +35,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
 
-    await page.goto('?ff=editor');
+    await page.goto('');
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       polling: 'raf',
       timeout: 30_000,
@@ -58,7 +58,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
 
-    await page.goto('?ff=editor');
+    await page.goto('');
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       polling: 'raf',
       timeout: 30_000,
@@ -82,7 +82,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
 
-    await page.goto('?ff=editor');
+    await page.goto('');
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       polling: 'raf',
       timeout: 30_000,
@@ -108,7 +108,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
   }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       timeout: 30_000,
     });
@@ -141,7 +141,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
   test('lights what a message did on a big canvas within the budget, and says why in a card', async ({ page }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       timeout: 30_000,
     });
@@ -168,7 +168,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
   test('answers a what-if on a big canvas within the budget, lights it, and says it in a card', async ({ page }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       timeout: 30_000,
     });
@@ -199,7 +199,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
   }) => {
     await seedCanvas(page, BIG_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
+    await editor.goto();
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       timeout: 30_000,
     });
@@ -223,7 +223,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await seedCanvas(page, BIG_HEADERS_CANVAS, 'Big canvas');
     const editor = new EditorPage(page);
 
-    await page.goto('?ff=editor');
+    await page.goto('');
     await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
       polling: 'raf',
       timeout: 30_000,
@@ -300,7 +300,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
 /** Opens the editor with every flag of the headers exchange on the canvas that is seeded, and stops the clock of the simulation. */
 async function openBigHeaders(page: Page): Promise<HeadersPage> {
   const editor = new EditorPage(page);
-  await editor.goto('?ff=editor');
+  await editor.goto();
   await page.waitForFunction((edges) => (window.__rmq?.drawnEdges().length ?? 0) >= edges, BIG_EDGES, {
     timeout: 30_000,
   });

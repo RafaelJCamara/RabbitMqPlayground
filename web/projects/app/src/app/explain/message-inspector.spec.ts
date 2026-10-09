@@ -22,7 +22,6 @@ import { Announcer } from '../core/announcer';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -63,7 +62,7 @@ const traffic = (): CanvasDocument => ({
 const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', name: 'sender' } };
 const BY_COMMAND: RuntimeCommand = { type: 'publish', from: { kind: 'exchange', name: 'orders' }, key: 'new' };
 
-async function renderInspector(flags = 'simulation,explain') {
+async function renderInspector() {
   const frames = manualFrames();
   TestBed.configureTestingModule({
     providers: [
@@ -76,7 +75,6 @@ async function renderInspector(flags = 'simulation,explain') {
       ...RUNTIME_SERVICES,
       ...EXPLAIN_SERVICES,
       { provide: FRAME_SOURCE, useValue: frames },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
       {
         provide: MOTION_QUERY,
         useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -586,7 +584,7 @@ describe('MessageInspector (ADR-0063)', () => {
 
 describe('the binding that a message can make (ADR-0070)', () => {
   it('is offered, between the headers of the message and its route', async () => {
-    const { run, open } = await renderInspector('simulation,explain');
+    const { run, open } = await renderInspector();
     run({ type: 'pause' });
     run(PUBLISH);
 
@@ -602,7 +600,7 @@ describe('the binding that a message can make (ADR-0070)', () => {
   });
 
   it('starts the binding on the queue that did not get the message, which the inspector knows and the panel is told', async () => {
-    const { run, open, user, store } = await renderInspector('simulation,explain');
+    const { run, open, user, store } = await renderInspector();
     store.load({ ...traffic(), exchanges: { ...traffic().exchanges, H: exchangeRecord('docs', 'headers') } });
     run({ type: 'pause' });
     run(PUBLISH);
@@ -616,7 +614,7 @@ describe('the binding that a message can make (ADR-0070)', () => {
   });
 
   it('says, when it is opened for a canvas that has no headers exchange, that there is none to bind from', async () => {
-    const { run, open, user } = await renderInspector('simulation,explain');
+    const { run, open, user } = await renderInspector();
     run({ type: 'pause' });
     run(PUBLISH);
     run({ type: 'step' });

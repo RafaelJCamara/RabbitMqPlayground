@@ -48,7 +48,7 @@ test.describe('plain text (ADR-0078)', () => {
     const payload = await payloadFor({ name: IMAGE, document: hostile() });
     const other = await visitor();
 
-    await other.goto(`?ff=editor#c=${payload}`);
+    await other.goto(`#c=${payload}`);
 
     const shared = new SharedViewPage(other);
     await shared.ready();
@@ -81,7 +81,7 @@ test.describe('plain text (ADR-0078)', () => {
     const payload = await payloadFor({ name: 'Markup', document, simulation: snapshotAfter(document, 180) });
     const other = await visitor();
 
-    await other.goto(`?ff=editor#c=${payload}`);
+    await other.goto(`#c=${payload}`);
 
     const shared = new SharedViewPage(other);
     await shared.ready();
@@ -96,7 +96,7 @@ test.describe('plain text (ADR-0078)', () => {
   test('shows the reason a link cannot be opened as text, whatever it quotes', async ({ visitor }) => {
     const other = await visitor();
 
-    await other.goto(`?ff=editor#c=${encodeURIComponent(IMAGE)}`);
+    await other.goto(`#c=${encodeURIComponent(IMAGE)}`);
 
     await expect(other.getByTestId('link-failed')).toBeVisible();
     await expect(other.locator('img')).toHaveCount(0);

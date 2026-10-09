@@ -5,10 +5,8 @@ import { DOCUMENT, inject, InjectionToken } from '@angular/core';
  * changed. It is behind a token so that a spec gives the link a page that records what is done to it, and a browser test reads the real address.
  */
 export interface PageAddress {
-  /** The address of the page without its query and its fragment, which is where a link to it is built from: `https://learner.test/RabbitMqPlayground/`. */
+  /** The address of the page without its query and its fragment, which is where a link to it is built from, and where a learner goes when they leave one: `https://learner.test/RabbitMqPlayground/`. */
   base(): string;
-  /** The address of the page with its query and without its fragment, which is where a learner goes when they leave a link: `https://learner.test/RabbitMqPlayground/?ff=editor,share`. */
-  home(): string;
   /** The fragment of the address, with its `#`, or `''` when it has none. */
   hash(): string;
   /** Takes the fragment off the address, in the history entry that the page is in, so that going back does not return to the link. It loads nothing. */
@@ -25,7 +23,6 @@ export function browserAddress(page: Document): PageAddress {
   if (view === null) {
     return {
       base: () => '',
-      home: () => '',
       hash: () => '',
       clearHash: () => undefined,
       reload: () => undefined,
@@ -34,10 +31,8 @@ export function browserAddress(page: Document): PageAddress {
   }
   return {
     base: () => `${view.location.origin}${view.location.pathname}`,
-    home: () => `${view.location.origin}${view.location.pathname}${view.location.search}`,
     hash: () => view.location.hash,
-    clearHash: () =>
-      view.history.replaceState(view.history.state, '', `${view.location.pathname}${view.location.search}`),
+    clearHash: () => view.history.replaceState(view.history.state, '', view.location.pathname),
     reload: () => view.location.reload(),
     onHashChange(listener) {
       view.addEventListener('hashchange', listener);

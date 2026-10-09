@@ -1,8 +1,6 @@
 import { DOCUMENT, type EnvironmentProviders, inject, provideEnvironmentInitializer } from '@angular/core';
 import type { CanvasDocument } from '@rmq/domain';
 import { APP_NAME } from '../app-info';
-import { FeatureFlags } from '../flags/feature-flags';
-import type { FlagName } from '../flags/flags';
 import type { SimulationState } from '../runtime/simulation';
 import {
   DebugSources,
@@ -18,8 +16,6 @@ import {
  */
 export interface RmqDebugHandle {
   readonly app: string;
-  /** The feature flags that are on. */
-  readonly flags: () => readonly FlagName[];
   /** The document that is open, or `null`. */
   readonly document: () => CanvasDocument | null;
   /** The nodes (by id) and edges (by key) that are selected. */
@@ -47,10 +43,9 @@ declare global {
   }
 }
 
-export function createDebugHandle(flags: FeatureFlags, sources: DebugSources = new DebugSources()): RmqDebugHandle {
+export function createDebugHandle(sources: DebugSources = new DebugSources()): RmqDebugHandle {
   return Object.freeze({
     app: APP_NAME,
-    flags: () => [...flags.enabled],
     document: () => sources.current?.document() ?? null,
     selection: () => {
       const selection = sources.current?.selection();
@@ -83,7 +78,7 @@ export function provideDebugHandle(): EnvironmentProviders {
   return provideEnvironmentInitializer(() => {
     const win = inject(DOCUMENT).defaultView;
     if (win) {
-      installDebugHandle(win, createDebugHandle(inject(FeatureFlags), inject(DebugSources)));
+      installDebugHandle(win, createDebugHandle(inject(DebugSources)));
     }
   });
 }

@@ -63,7 +63,7 @@ export class EditorPage {
    * Opens the editor, which is in the workspace of the canvases, answers the question of a first run by building from scratch (ADR-0084), and waits until it has opened the
    * canvas and says that its changes are saved.
    */
-  async goto(path = '?ff=editor'): Promise<void> {
+  async goto(path = ''): Promise<void> {
     await this.page.goto(path);
     await skipWelcome(this.page);
     await this.heading.waitFor();

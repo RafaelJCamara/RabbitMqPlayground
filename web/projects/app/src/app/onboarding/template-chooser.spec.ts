@@ -4,7 +4,6 @@ import { APP_DISCLAIMER } from '../core/app-info';
 import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { OnboardingDialogs } from './dialogs';
 import { BLANK } from './template-chooser';
 
@@ -17,14 +16,12 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-/** The module is configured by the first question of a test, and the flags it names are the ones for the rest of it. */
+/** The module is configured by the first question of a test. */
 let configured = false;
 
-async function ask(first: boolean, flags = 'editor,canvases,simulation,onboarding') {
+async function ask(first: boolean) {
   if (!configured) {
-    TestBed.configureTestingModule({
-      providers: [{ provide: FLAG_SOURCES, useValue: { stored: null, query: flags } }],
-    });
+    TestBed.configureTestingModule({ providers: [] });
     configured = true;
   }
   const opener = document.createElement('button');

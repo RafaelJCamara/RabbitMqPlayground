@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
 import { FILE_DOWNLOADER, type FileDownloader } from '../core/files/downloader';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { Simulation } from '../core/runtime/simulation';
 import { CanvasSession } from '../core/session/canvas-session';
@@ -42,7 +41,6 @@ describe('EditorActions', () => {
         CanvasSession,
         ...RUNTIME_SERVICES,
         { provide: FRAME_SOURCE, useValue: manualFrames() },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
         { provide: FILE_DOWNLOADER, useValue: downloader },
       ],
     });

@@ -11,7 +11,6 @@ import {
 } from '@rmq/testing';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { describe, expect, it } from 'vitest';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { SimStats } from '../core/runtime/sim-stats';
@@ -55,7 +54,6 @@ async function renderSettings(document: CanvasDocument = canvas(), id = 'C') {
       CommandLog,
       ...RUNTIME_SERVICES,
       { provide: FRAME_SOURCE, useValue: manualFrames() },
-      { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
     ],
   });
   const bus = TestBed.inject(CommandBus);

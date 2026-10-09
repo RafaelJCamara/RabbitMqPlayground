@@ -6,7 +6,7 @@ import { LinkOpening } from '../core/share/link-opening';
 import { PAGE_ADDRESS, type PageAddress } from '../core/share/page-address';
 import { LinkFailed } from './link-failed';
 
-const HOME = 'https://learner.test/app/?ff=editor,share';
+const HOME = 'https://learner.test/app/';
 
 const damaged: ShareError = {
   kind: 'damaged',
@@ -19,7 +19,7 @@ async function renderFailed(error: ShareError = damaged) {
   const view = await render(LinkFailed, {
     inputs: { error },
     providers: [
-      { provide: PAGE_ADDRESS, useValue: { home: () => HOME } as PageAddress },
+      { provide: PAGE_ADDRESS, useValue: { base: () => HOME } as PageAddress },
       { provide: LinkOpening, useValue: { leave } },
     ],
   });

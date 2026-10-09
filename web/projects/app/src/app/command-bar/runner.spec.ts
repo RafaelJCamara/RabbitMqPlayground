@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { bindingRecord, documentOf, exchangeRecord, manualFrames, producerRecord, queueRecord } from '@rmq/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE, FrameLoop } from '../core/runtime/frame-loop';
 import { SimStats } from '../core/runtime/sim-stats';
 import { Simulation } from '../core/runtime/simulation';
@@ -163,7 +162,6 @@ describe('CommandRunner (ADR-0045)', () => {
           SimStats,
           Simulation,
           { provide: FRAME_SOURCE, useValue: manualFrames() },
-          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation' } },
         ],
       });
       runner = TestBed.inject(CommandRunner);

@@ -28,7 +28,7 @@ test.describe('the what-if tester (ADR-0064)', () => {
   test('is beside the log, and the keys of the simulation and of the log are said, in the editor that has the simulation', async ({
     page,
   }) => {
-    const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor' });
+    const both = await TesterPage.open(page, WITH_ARCHIVE);
 
     await expect(page.getByRole('region', { name: 'Simulation' })).toBeVisible();
     await expect(both.editor.hints).toContainText('Play or pause the simulation');

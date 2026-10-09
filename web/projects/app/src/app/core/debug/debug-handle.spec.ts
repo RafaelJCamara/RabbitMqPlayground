@@ -4,14 +4,8 @@ import { createEngine } from '@rmq/engine';
 import { documentOf, queueRecord } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { APP_NAME } from '../app-info';
-import { FLAG_SOURCES, FeatureFlags } from '../flags/feature-flags';
 import { createDebugHandle, installDebugHandle, provideDebugHandle } from './debug-handle';
 import { DebugSources, type EditorDebugSources } from './debug-sources';
-
-function flagsWith(stored: string | null): FeatureFlags {
-  TestBed.configureTestingModule({ providers: [{ provide: FLAG_SOURCES, useValue: { stored, query: null } }] });
-  return TestBed.inject(FeatureFlags);
-}
 
 const document = documentOf({ queues: { q1: queueRecord('billing') } });
 const frame = { reducedMotion: true, markers: [] };
@@ -45,23 +39,16 @@ const editor: EditorDebugSources = {
 };
 
 describe('createDebugHandle', () => {
-  it('names the app and lists the flags that are on', () => {
-    const handle = createDebugHandle(flagsWith('editor'));
-
-    expect(handle.app).toBe(APP_NAME);
-    expect([...handle.flags()]).toEqual(['editor']);
+  it('names the app', () => {
+    expect(createDebugHandle().app).toBe(APP_NAME);
   });
 
-  it('is frozen, and hands out a copy of the flags, so a test cannot change the app through it', () => {
-    const handle = createDebugHandle(flagsWith('editor'));
-
-    expect(Object.isFrozen(handle)).toBe(true);
-    (handle.flags() as string[]).push('simulation');
-    expect(handle.flags()).toEqual(['editor']);
+  it('is frozen, so a test cannot change the app through it', () => {
+    expect(Object.isFrozen(createDebugHandle())).toBe(true);
   });
 
   it('knows nothing of the editor until there is one', () => {
-    const handle = createDebugHandle(flagsWith(null));
+    const handle = createDebugHandle();
 
     expect(handle.document()).toBeNull();
     expect(handle.selection()).toEqual({ nodes: [], edges: [] });
@@ -76,7 +63,7 @@ describe('createDebugHandle', () => {
 
   it('says what the editor shows, while it is open, and nothing once it is gone', () => {
     const sources = new DebugSources();
-    const handle = createDebugHandle(flagsWith(null), sources);
+    const handle = createDebugHandle(sources);
     const detach = sources.attach(editor);
 
     expect(handle.document()).toBe(document);
@@ -98,7 +85,7 @@ describe('createDebugHandle', () => {
 
   it('hands out copies of what it lists, so that a test cannot change the editor through them', () => {
     const sources = new DebugSources();
-    const handle = createDebugHandle(flagsWith(null), sources);
+    const handle = createDebugHandle(sources);
     sources.attach(editor);
 
     (handle.selection().nodes as string[]).push('x');
@@ -125,8 +112,7 @@ describe('DebugSources', () => {
 });
 
 describe('installDebugHandle', () => {
-  const flags = () => ({ enabled: [] }) as unknown as FeatureFlags;
-  const handle = () => createDebugHandle(flags());
+  const handle = () => createDebugHandle();
 
   it('defines a property that cannot be reassigned, deleted or redefined, and that is not listed', () => {
     const target: Record<string, unknown> = {};
@@ -158,30 +144,20 @@ describe('provideDebugHandle', () => {
   it('installs the handle on the window when the app starts', () => {
     const fakeWindow = {};
     TestBed.configureTestingModule({
-      providers: [
-        { provide: DOCUMENT, useValue: { defaultView: fakeWindow } },
-        { provide: FLAG_SOURCES, useValue: { stored: 'editor', query: null } },
-        provideDebugHandle(),
-      ],
+      providers: [{ provide: DOCUMENT, useValue: { defaultView: fakeWindow } }, provideDebugHandle()],
     });
-    TestBed.inject(FeatureFlags); // creating the environment injector runs the initializer
+    TestBed.inject(DebugSources); // creating the environment injector runs the initializer
 
-    const installed = (fakeWindow as { __rmq?: { app: string; flags: () => string[]; document: () => unknown } }).__rmq;
+    const installed = (fakeWindow as { __rmq?: { app: string; document: () => unknown } }).__rmq;
     expect(installed?.app).toBe(APP_NAME);
-    expect(installed?.flags()).toEqual(['editor']);
     expect(installed?.document()).toBeNull();
   });
 
   it('reads from the editor that attaches to the sources of the app', () => {
     const fakeWindow = {};
     TestBed.configureTestingModule({
-      providers: [
-        { provide: DOCUMENT, useValue: { defaultView: fakeWindow } },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: null } },
-        provideDebugHandle(),
-      ],
+      providers: [{ provide: DOCUMENT, useValue: { defaultView: fakeWindow } }, provideDebugHandle()],
     });
-    TestBed.inject(FeatureFlags);
     TestBed.inject(DebugSources).attach(editor);
 
     const installed = (fakeWindow as { __rmq?: { drawnEdges: () => unknown } }).__rmq;
@@ -193,6 +169,6 @@ describe('provideDebugHandle', () => {
       providers: [{ provide: DOCUMENT, useValue: { defaultView: null } }, provideDebugHandle()],
     });
 
-    expect(() => TestBed.inject(FeatureFlags)).not.toThrow();
+    expect(() => TestBed.inject(DebugSources)).not.toThrow();
   });
 });
