@@ -61,7 +61,8 @@ jobs:
     name: End-to-end and accessibility
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The 803 tests took 12.5 to 14.3 minutes on two workers, and 15.1 once (the run of ee8d619 was cancelled with one test to go).
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-web
