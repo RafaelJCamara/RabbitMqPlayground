@@ -133,6 +133,28 @@ describe('App', () => {
       expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
     });
 
+    // The shared view is a chunk of its own, with its own waiting pages (the hand sweep of S12 took the heading out of each, and only the workspace's pages had a test).
+    it('is a page with the name of the product as its heading and a main region while the shared view is loaded, and when it could not be loaded', async () => {
+      const { fixture } = await render(App, {
+        ...withState({ kind: 'shared', shared: shared() }),
+        deferBlockBehavior: DeferBlockBehavior.Manual,
+      });
+      const [block] = await fixture.getDeferBlocks();
+
+      await block?.render(DeferBlockState.Loading);
+      expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+      expect(screen.getByRole('main')).toHaveTextContent('Loading the editor…');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading the editor…');
+
+      await block?.render(DeferBlockState.Error);
+      expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+      expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'The editor could not be loaded. Reload the page to try again.',
+      );
+    });
+
     it('is a page of its own, with the reason and a way out, when the link cannot be opened, and opens nothing', async () => {
       await render(App, withLink('#c=v1.@@@@'));
 
