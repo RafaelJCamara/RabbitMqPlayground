@@ -262,9 +262,13 @@ export class AmqpSession implements BrokerSession {
 
   async consume(step: StepOf<'basic.consume'>): Promise<void> {
     const channel = this.channel(step.channel);
-    const state: ConsumerState = { channelName: step.channel, channel, unacked: [] };
+    // A name that is started again after a cancel keeps what it was given and what it has not acknowledged: the messages are the same channel's, and an ack by name finds the oldest (ADR-0089).
+    const earlier = this.consumers.get(step.consumer);
+    const state: ConsumerState = { channelName: step.channel, channel, unacked: earlier?.unacked ?? [] };
     this.consumers.set(step.consumer, state);
-    this.received.set(step.consumer, []);
+    if (!this.received.has(step.consumer)) {
+      this.received.set(step.consumer, []);
+    }
 
     const onMessage = (message: ConsumeMessage | null): void => {
       if (message === null) {

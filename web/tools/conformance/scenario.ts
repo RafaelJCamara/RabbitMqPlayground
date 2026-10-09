@@ -177,7 +177,8 @@ export function validateScenario(scenario: Scenario): void {
   const queues = new Set<string>();
   const channels = new Set<string>();
   const closedChannels = new Set<string>();
-  const consumers = new Map<string, string>(); // consumer -> channel
+  const consumers = new Map<string, Extract<Step, { op: 'basic.consume' }>>(); // consumer -> how it was started
+  const cancelled = new Set<string>(); // the consumers that are cancelled, and have not been started again
   const bodies = new Set<string>();
 
   scenario.steps.forEach((step, index) => {
@@ -294,22 +295,35 @@ export function validateScenario(scenario: Scenario): void {
         }
         channels.add(step.channel);
         break;
-      case 'basic.consume':
+      case 'basic.consume': {
         if (!channels.has(step.channel) || closedChannels.has(step.channel)) {
           fail(`${at}: channel "${step.channel}" is not open`);
         }
         if (!queues.has(step.queue)) {
           fail(`${at}: queue "${step.queue}" is not declared`);
         }
-        if (consumers.has(step.consumer)) {
+        // A tag can be taken again once its consumer is cancelled (the broker lets it, and the engine does for the same channel, queue and way of acknowledging, ADR-0089).
+        const earlier = consumers.get(step.consumer);
+        if (earlier !== undefined && !cancelled.has(step.consumer)) {
           fail(`${at}: consumer "${step.consumer}" is used twice`);
         }
-        consumers.set(step.consumer, step.channel);
+        if (
+          earlier !== undefined &&
+          (earlier.channel !== step.channel || earlier.queue !== step.queue || earlier.ack !== step.ack)
+        ) {
+          fail(
+            `${at}: consumer "${step.consumer}" was cancelled, and is started again on another channel, queue or way of acknowledging than before. The engine takes a tag again only for the same ones (ADR-0089)`,
+          );
+        }
+        cancelled.delete(step.consumer);
+        consumers.set(step.consumer, step);
         break;
+      }
       case 'basic.cancel':
         if (!consumers.has(step.consumer)) {
           fail(`${at}: consumer "${step.consumer}" does not exist`);
         }
+        cancelled.add(step.consumer);
         break;
       case 'basic.ack':
         if (!consumers.has(step.consumer)) {

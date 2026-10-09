@@ -40,7 +40,46 @@ describe('validateScenario', () => {
     ).not.toThrow();
   });
 
+  it('accepts a consumer that is started again under its name once it is cancelled, as often as it is cancelled (ADR-0089)', () => {
+    const cancel: Step = { op: 'basic.cancel', consumer: 'c' };
+
+    expect(() => validateScenario(delivery(queue, channel, consume, cancel, consume))).not.toThrow();
+    expect(() => validateScenario(delivery(queue, channel, consume, cancel, consume, cancel, consume))).not.toThrow();
+    expect(() => validateScenario(delivery(queue, channel, consume, cancel, consume, consume))).toThrow(
+      /consumer "c" is used twice/,
+    );
+  });
+
   it.each<[string, Scenario, RegExp]>([
+    [
+      'starting a cancelled consumer again on another queue',
+      delivery(
+        queue,
+        { op: 'queue.declare', name: 'r' },
+        channel,
+        consume,
+        { op: 'basic.cancel', consumer: 'c' },
+        { ...consume, queue: 'r' },
+      ),
+      /consumer "c" was cancelled, and is started again on another channel, queue or way of acknowledging/,
+    ],
+    [
+      'starting a cancelled consumer again on another channel',
+      delivery(
+        queue,
+        channel,
+        { op: 'channel.open', channel: 'other' },
+        consume,
+        { op: 'basic.cancel', consumer: 'c' },
+        { ...consume, channel: 'other' },
+      ),
+      /started again on another channel/,
+    ],
+    [
+      'starting a cancelled consumer again in another way of acknowledging',
+      delivery(queue, channel, consume, { op: 'basic.cancel', consumer: 'c' }, { ...consume, ack: 'manual' }),
+      /started again on another channel, queue or way of acknowledging/,
+    ],
     ['an id that does not match its kind', { ...routing(exchange), id: 'delivery/x' }, /id must be "routing\//],
     ['an id with upper case or spaces', { ...routing(exchange), id: 'routing/Bad Name' }, /id must be/],
     ['no title', { ...routing(exchange), title: '  ' }, /needs a title/],

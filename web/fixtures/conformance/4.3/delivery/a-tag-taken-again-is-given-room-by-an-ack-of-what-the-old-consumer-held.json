@@ -1,0 +1,91 @@
+{
+  "id": "delivery/a-tag-taken-again-is-given-room-by-an-ack-of-what-the-old-consumer-held",
+  "kind": "delivery",
+  "title": "An acknowledgement of the message that the old consumer of a tag held takes one off the window of the new consumer of the tag, which is then given the next message (ADR-0089)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 1
+    },
+    {
+      "op": "basic.cancel",
+      "consumer": "c1"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c1",
+      "body": "m1"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": []
+    }
+  }
+}

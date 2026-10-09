@@ -1,0 +1,84 @@
+{
+  "id": "delivery/a-tag-taken-again-after-a-cancel-starts-with-an-empty-window",
+  "kind": "delivery",
+  "title": "A consumer that is started under the tag of one that was cancelled and still holds a message is a new consumer: it is given a message although the old one is not acknowledged, and its window is then full (ADR-0089)",
+  "origin": "The Nightly of 2026-10-09 found that the engine refused the tag; ADR-0088 took the old consumer up again, and this is what the broker does instead",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 1
+    },
+    {
+      "op": "basic.cancel",
+      "consumer": "c1"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 2
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": [
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

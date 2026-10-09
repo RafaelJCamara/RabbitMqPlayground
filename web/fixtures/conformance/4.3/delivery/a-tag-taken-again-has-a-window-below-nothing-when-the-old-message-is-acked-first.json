@@ -1,0 +1,98 @@
+{
+  "id": "delivery/a-tag-taken-again-has-a-window-below-nothing-when-the-old-message-is-acked-first",
+  "kind": "delivery",
+  "title": "The window of a consumer that took a tag again counts every acknowledgement under the tag and does not stop at nothing: with a prefetch of 1 it is given two messages (ADR-0089)",
+  "steps": [
+    {
+      "op": "queue.declare",
+      "name": "jobs",
+      "durable": true
+    },
+    {
+      "op": "channel.open",
+      "channel": "ch1",
+      "prefetch": 1
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m1"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 1
+    },
+    {
+      "op": "basic.cancel",
+      "consumer": "c1"
+    },
+    {
+      "op": "basic.consume",
+      "channel": "ch1",
+      "queue": "jobs",
+      "consumer": "c1",
+      "ack": "manual"
+    },
+    {
+      "op": "basic.ack",
+      "consumer": "c1",
+      "body": "m1"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m2"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m3"
+    },
+    {
+      "op": "basic.publish",
+      "exchange": "",
+      "key": "jobs",
+      "body": "m4"
+    },
+    {
+      "op": "await.deliveries",
+      "count": 3
+    }
+  ],
+  "observed": {
+    "deliveries": {
+      "c1": [
+        {
+          "body": "m1",
+          "redelivered": false
+        },
+        {
+          "body": "m2",
+          "redelivered": false
+        },
+        {
+          "body": "m3",
+          "redelivered": false
+        }
+      ]
+    },
+    "ready": {
+      "jobs": [
+        {
+          "body": "m4",
+          "redelivered": false
+        }
+      ]
+    }
+  }
+}

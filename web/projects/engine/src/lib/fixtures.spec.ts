@@ -278,7 +278,7 @@ const named = (id: string): Fixture => fixtures.find((fixture) => fixture.id ===
 describe('the fixtures recorded on RabbitMQ 4.3, replayed through the engine', () => {
   it('are all there, and there are many: the replay below cannot pass by finding none', () => {
     expect(fixtures.filter(({ kind }) => kind === 'routing').length).toBeGreaterThan(80);
-    expect(fixtures.filter(({ kind }) => kind === 'delivery')).toHaveLength(14);
+    expect(fixtures.filter(({ kind }) => kind === 'delivery')).toHaveLength(17);
     expect(inside.length).toBe(fixtures.length - Object.keys(OUTSIDE_THE_MODEL).length);
   });
 
