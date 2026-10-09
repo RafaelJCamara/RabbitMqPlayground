@@ -74,7 +74,7 @@ function declareQueue(core: Core, command: Extract<EngineCommand, { op: 'queue.d
   if (command.name === '') {
     throw new RangeError('A queue needs a name: the simulator does not name queues for a client');
   }
-  if (command.name.startsWith(RESERVED_NAME_PREFIX)) {
+  if (command.name.startsWith(RESERVED_NAME_PREFIX) && command.serverNamed !== true) {
     return reservedNameReply('queue', command.name);
   }
   const there = state.queues.get(command.name);

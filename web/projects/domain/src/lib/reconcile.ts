@@ -68,8 +68,8 @@ function viewOf(document: CanvasDocument): EngineView {
     exchanges.set(name, { op: 'exchange.declare', name, type, durable, autoDelete, internal });
   }
   const queues = new Map<string, QueueDeclare>();
-  for (const { name, durable } of Object.values(document.queues)) {
-    queues.set(name, { op: 'queue.declare', name, durable });
+  for (const { name, durable, serverNamed } of Object.values(document.queues)) {
+    queues.set(name, { op: 'queue.declare', name, durable, ...(serverNamed ? { serverNamed } : {}) });
   }
   const bindings = new Map<string, Bind>();
   for (const binding of Object.values(document.bindings)) {

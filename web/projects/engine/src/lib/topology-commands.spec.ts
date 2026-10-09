@@ -172,6 +172,17 @@ describe('queue.declare', () => {
     expect(engine.view().topology.queues).toEqual([]);
   });
 
+  it('takes a name that starts with amq. when the broker chose it, as a canvas that was made from a broker can say, and only then', () => {
+    const engine = newEngine();
+
+    expect(run(engine, { op: 'queue.declare', name: 'amq.gen-x', durable: true, serverNamed: true })).toEqual([]);
+    expect(
+      refused(engine, { op: 'queue.declare', name: 'amq.other', durable: true, serverNamed: false }),
+    ).toMatchObject(reservedNameReply('queue', 'amq.other'));
+
+    expect(engine.view().topology.queues).toEqual(['amq.gen-x']);
+  });
+
   it('throws for no name, because the simulator does not name queues for a client', () => {
     expect(() => newEngine().dispatch(declareQueue(''))).toThrow(RangeError);
   });

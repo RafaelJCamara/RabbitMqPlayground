@@ -37,6 +37,11 @@ export interface QueueDeclare {
   readonly name: string;
   /** RabbitMQ 4.3 refuses a queue that is not durable, unless it is exclusive (ADR-0021, ADR-0024). */
   readonly durable: boolean;
+  /**
+   * The broker chose the name, as it does for a queue that a client declares with no name (`amq.gen-…`). A client cannot declare a name that starts with `amq.`, but a canvas can hold one that a broker
+   * named (a file or a link made from one), and the simulator takes it as it is (ADR-0026).
+   */
+  readonly serverNamed?: boolean;
 }
 
 /** Deleting a queue deletes the bindings that end at it. */

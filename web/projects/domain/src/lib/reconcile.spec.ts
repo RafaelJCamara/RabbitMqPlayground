@@ -211,6 +211,18 @@ describe('reconcile', () => {
       ]);
     });
 
+    it('says that the broker chose the name of a queue that it named, so that the engine takes the amq. that the name starts with', () => {
+      const document = deepFreeze(
+        documentOf({ queues: { Q: queueRecord('amq.gen-JzTY20BRgKO', { serverNamed: true }), R: queueRecord('r') } }),
+      );
+
+      expect(reconcile(null, document)).toEqual([
+        configure(document),
+        { op: 'queue.declare', name: 'amq.gen-JzTY20BRgKO', durable: true, serverNamed: true },
+        { op: 'queue.declare', name: 'r', durable: true },
+      ]);
+    });
+
     it('binds with the key and the arguments, and with no arguments when there are none to say', () => {
       const withHeaders = headerArguments('any', entry('format', str('pdf')));
       const document = deepFreeze(
