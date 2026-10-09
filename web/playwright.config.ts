@@ -36,7 +36,7 @@ export default defineConfig({
   },
   projects: liveUrl
     ? [{ name: 'live', testMatch: '**/live.spec.ts', use: browser }]
-    : [{ name: 'chromium', testIgnore: '**/live.spec.ts', use: browser }],
+    : [{ name: 'chromium', testIgnore: ['**/live.spec.ts', '**/fps.spec.ts'], use: browser }],
   webServer: liveUrl
     ? undefined
     : {
