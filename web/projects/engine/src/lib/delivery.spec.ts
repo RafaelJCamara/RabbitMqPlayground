@@ -454,6 +454,72 @@ describe('cancel', () => {
     expect(engine.view().channels['ch-c1']).toMatchObject({ received: 1 });
     expect(types(run(engine, ack('c1')))).toEqual(['acked']);
   });
+
+  describe('and then consuming again with the tag that it had (ADR-0088)', () => {
+    it('takes the consumer up again where it was, when its channel asks again for the same queue in the same way: it still holds what it held, and is dealt to again', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 2, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      expect(given(send(engine, 'm2'))).toEqual({});
+
+      const resumed = runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual'));
+
+      expect(given(resumed)).toEqual({ c1: [2] });
+      expect(types(resumed)).not.toContain('consumer.cancelled');
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+        { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 2, cancelled: false },
+      ]);
+      expect(types(run(engine, ack('c1', 1)))).toEqual(['acked']);
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+        { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 1, cancelled: false },
+      ]);
+    });
+
+    it('counts what it held against its prefetch, so that it is dealt to again only when it acknowledges', () => {
+      const engine = jobs();
+      join(engine, 'c1', { prefetch: 1, ack: 'manual' });
+      send(engine, 'm1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      send(engine, 'm2');
+
+      expect(given(runAll(engine, consume('ch-c1', 'jobs', 'c1', 'manual')))).toEqual({});
+      expect(given(run(engine, ack('c1')))).toEqual({ c1: [2] });
+    });
+
+    it('is a consumer that is gone, and its tag is free for anything, when it held nothing', () => {
+      const engine = jobs();
+      run(engine, declareQueue('other'));
+      join(engine, 'c1');
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+
+      runAll(engine, consume('ch-c1', 'other', 'c1', 'manual'));
+
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+        { consumer: 'c1', queue: 'other', ack: 'manual', unacked: 0, cancelled: false },
+      ]);
+    });
+
+    it('is still a mistake to ask for the tag of a consumer that is consuming, and of a cancelled one for another queue, another channel or another way of acknowledging', () => {
+      const engine = jobs();
+      run(engine, declareQueue('other'));
+      join(engine, 'c1', { prefetch: 2, ack: 'manual' });
+      send(engine, 'm1');
+      const mistake = (command: EngineCommand) => () => run(engine, command);
+      const consuming = 'The consumer "c1" is consuming already';
+
+      expect(mistake(consume('ch-c1', 'jobs', 'c1', 'manual'))).toThrow(consuming);
+      run(engine, { op: 'basic.cancel', consumer: 'c1' });
+      run(engine, openChannel('ch-other', 2, null));
+
+      expect(mistake(consume('ch-c1', 'other', 'c1', 'manual'))).toThrow(consuming);
+      expect(mistake(consume('ch-other', 'jobs', 'c1', 'manual'))).toThrow(consuming);
+      expect(mistake(consume('ch-c1', 'jobs', 'c1', 'auto'))).toThrow(consuming);
+      expect(engine.view().channels['ch-c1']?.consumers).toEqual([
+        { consumer: 'c1', queue: 'jobs', ack: 'manual', unacked: 1, cancelled: true },
+      ]);
+    });
+  });
 });
 
 describe('close', () => {

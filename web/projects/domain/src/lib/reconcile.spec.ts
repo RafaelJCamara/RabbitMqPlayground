@@ -953,6 +953,32 @@ describe('reconcile', () => {
       expect(only(events, 'channel.closed')).toMatchObject([{ channel: 'C', requeued: 1 }]);
       expect(only(events, 'delivered')).toMatchObject([{ consumer: 'C/q', redelivered: true, autoAck: true }]);
     });
+
+    it('subscribes again to a queue that it was unsubscribed from while it still held a message, and the engine takes it up where it was (ADR-0088)', () => {
+      // The Nightly of 2026-10-09 found this with a random seed: undo of a subscription cancels the consumer, which holds what it has not finished with, and the redo asks the engine to consume with the same tag.
+      const before = deepFreeze(
+        documentOf({
+          exchanges: { E: exchangeRecord('x', 'fanout') },
+          queues: { Q: queueRecord('q') },
+          bindings: { B: bindingRecord('E', { kind: 'queue', id: 'Q' }) },
+          consumers: { C: consumerRecord('c', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 1000 }) },
+        }),
+      );
+      const engine = brokerFor(before);
+      feed(engine, [{ op: 'basic.publish', exchange: 'x', body: 'one' }]);
+      engine.advanceTo(1500);
+      expect(engine.view().queues['q']).toMatchObject({ ready: 0, unacked: 1 });
+      const left = change(before, { type: 'unsubscribe', consumer: 'c', queue: 'q' });
+
+      feed(engine, reconcile(before, left));
+      expect(engine.view().channels['C']?.consumers).toMatchObject([{ consumer: 'C/q', cancelled: true, unacked: 1 }]);
+      feed(engine, reconcile(left, before));
+
+      expect(engine.view().channels['C']?.consumers).toMatchObject([{ consumer: 'C/q', cancelled: false, unacked: 1 }]);
+      engine.advanceTo(5000);
+      expect(engine.view().queues['q']).toMatchObject({ ready: 0, unacked: 0 });
+      expectHeld(engine, before);
+    });
   });
 
   describe('as the one path for do, undo, redo, load and clear', () => {

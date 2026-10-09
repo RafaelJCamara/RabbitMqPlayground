@@ -318,3 +318,30 @@ test.describe('the two things that the first simulator got wrong', () => {
     await expect(simulation.statsOf('c2')).toHaveText('holds 0 of 1 · done 4');
   });
 });
+
+test.describe('a consumer that was unsubscribed while it held a message (ADR-0088)', () => {
+  test('takes up again where it was when it is subscribed to the queue again, and the simulation follows the canvas', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('publish sender');
+    await simulation.step(3);
+    await expect(simulation.statsOf('c1')).toHaveText('holds 1 of 1 · done 0');
+
+    await simulation.editor.runCommand('unsubscribe worker billing');
+    await expect(simulation.statusText).toContainText('Unsubscribed consumer worker from queue billing.');
+    await expect(simulation.statsOf('c1')).toHaveText('holds 1 of 1 · done 0');
+    await simulation.editor.runCommand('subscribe worker billing');
+
+    // The engine threw for the tag that the cancelled consumer still held, the canvas had the link and the simulation did not, and the status line stayed where it was.
+    await expect(simulation.statusText).toContainText('Subscribed consumer worker to queue billing.');
+    await simulation.step();
+    await expect(simulation.statsOf('c1')).toHaveText('holds 0 of 1 · done 1');
+
+    // And it is a consumer again: a message that is sent now is given to it, which a consumer that was still cancelled would not be given.
+    await simulation.editor.runCommand('publish sender');
+    await simulation.stepThrough();
+    await expect(simulation.statsOf('c1')).toHaveText('holds 0 of 1 · done 2');
+  });
+});
