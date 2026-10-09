@@ -260,6 +260,9 @@ function scheduleIssue(snapshot: EngineSnapshot): string | null {
   const ticks = new Map<string, number[]>();
   let previous: { readonly at: number; readonly seq: number } | undefined;
   for (const scheduled of snapshot.heap) {
+    if (scheduled.at < snapshot.now) {
+      return 'What is scheduled is before the time that it is now';
+    }
     if (
       previous !== undefined &&
       (scheduled.at < previous.at || (scheduled.at === previous.at && scheduled.seq <= previous.seq))

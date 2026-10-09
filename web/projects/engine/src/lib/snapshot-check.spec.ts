@@ -100,6 +100,11 @@ const CASES: readonly (readonly [string, (s: Mutable) => void, string | RegExp])
     'The consumer “c-slow” is cancelled and holds nothing, so it would be gone',
   ],
   [
+    'a clock that is ahead of what is scheduled, which would run it in the past',
+    (s) => (s.now = s.heap[0]!.at + 1),
+    'What is scheduled is before the time that it is now',
+  ],
+  [
     'a consumer that does not count more messages than its queue has given out',
     (s) => (s.tags[0]!.uncounted = 1000),
     /^The consumer “c-slow” does not count 1000 messages that an earlier consumer of its tag held, and the queue “jobs” has given out \d+$/,
