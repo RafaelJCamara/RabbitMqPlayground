@@ -98,6 +98,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0085](0085-targets-are-24-pixels-nothing-that-stays-is-drawn-over-the-canvas-and-every-screen-is-checked-in-both-themes-from-a-list.md) | Targets are 24 pixels, nothing that stays on the screen is drawn over the canvas, and every screen is checked in both themes from a list | Accepted |
 | [0086](0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) | The release waits for a person, a laptop and the calendar, and says exactly what is left | Accepted |
 | [0087](0087-the-disclaimer-moves-from-the-placeholder-to-the-welcome-and-the-foot-of-the-home.md) | The disclaimer moves from the placeholder to the welcome and the foot of the home | Accepted |
+| [0088](0088-a-cancelled-consumer-that-still-holds-messages-takes-up-where-it-was-when-its-channel-consumes-the-same-queue-again.md) | A cancelled consumer that still holds messages takes up where it was when its channel consumes the same queue again | Accepted |
 
 ## Where to start
 
