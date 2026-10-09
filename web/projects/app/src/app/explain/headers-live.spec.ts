@@ -286,7 +286,8 @@ describe('HeadersLive, the table of recent messages (ADR-0070)', () => {
     publish('docs', entry('format', str('doc')));
     const first = screen.getByTestId('headers-live');
     expect(first).toHaveAccessibleName('Recent messages');
-    expect(screen.getByTestId('headers-live-scroll')).toHaveAccessibleName('Recent messages against the conditions');
+    const firstScrolls = screen.getByTestId('headers-live-scroll');
+    expect(firstScrolls).toHaveAccessibleName('Recent messages against the conditions');
 
     const second = TestBed.createComponent(HeadersLive);
     second.componentRef.setInput('exchange', 'docs');
@@ -296,6 +297,12 @@ describe('HeadersLive, the table of recent messages (ADR-0070)', () => {
     const section = second.nativeElement.querySelector('section') as HTMLElement;
     expect(section).toHaveAccessibleName('Recent messages, binding from exchange docs to queue pdf');
     expect(section.getAttribute('aria-label')).not.toBe(first.getAttribute('aria-label'));
+    // The region that scrolls is a landmark too, and two landmarks with one name are what axe's landmark-unique refuses: the sweep of S12 changed this name to ignore what the table is about, and nothing noticed.
+    const scrolls = second.nativeElement.querySelector('[data-testid="headers-live-scroll"]') as HTMLElement;
+    expect(scrolls).toHaveAccessibleName(
+      'Recent messages against the conditions, binding from exchange docs to queue pdf',
+    );
+    expect(scrolls.getAttribute('aria-label')).not.toBe(firstScrolls.getAttribute('aria-label'));
   });
 });
 

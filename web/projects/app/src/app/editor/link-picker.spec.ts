@@ -288,4 +288,16 @@ describe('LinkPicker (ADR-0041)', () => {
     await user.keyboard('{Enter}');
     expect(chosen).toEqual([]);
   });
+
+  it('draws no list while it has a reason, whatever options it was given: the field does not say that it has expanded one, nor point at one that is not in the page', async () => {
+    // The editor gives a reason only when there are no options, but the two are separate inputs and the sentence takes the place of the list whenever there is a reason (the sweep of S12 let the field say
+    // that it had a list here, and nothing noticed).
+    await renderPicker(OPTIONS, 'Add a queue or another exchange first: an exchange is bound to those.');
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus());
+
+    expect(screen.getByTestId('picker-reason')).toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('combobox')).not.toHaveAttribute('aria-controls');
+  });
 });
