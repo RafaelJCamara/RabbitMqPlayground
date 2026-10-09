@@ -35,6 +35,31 @@ const CASES: readonly (readonly [string, (s: Mutable) => void, string | RegExp])
   ['a consumer twice', (s) => s.tags.push(s.tags[0]!), 'The consumer “c-slow” is there twice'],
   ['a producer twice', (s) => s.producers.push(s.producers[0]!), 'The producer “p1” is there twice'],
   [
+    'a producer with an interval of nothing, which would tick again with no time gone',
+    (s) => (s.producers[0]!.everyMs = 0),
+    'The producer “p1” has an interval (everyMs) of 0, and an interval is a whole number of at least 1',
+  ],
+  [
+    'a producer with an interval that is less than nothing, which the Nightly of 2026-10-09 ran the engine out of memory with',
+    (s) => (s.producers[0]!.everyMs = -200),
+    'The producer “p1” has an interval (everyMs) of -200, and an interval is a whole number of at least 1',
+  ],
+  [
+    'a producer with an interval that is not a whole number',
+    (s) => (s.producers[0]!.everyMs = 1.5),
+    'The producer “p1” has an interval (everyMs) of 1.5, and an interval is a whole number of at least 1',
+  ],
+  [
+    'a producer with a burst of nothing',
+    (s) => (s.producers[0]!.burst = 0),
+    'The producer “p1” has a burst of 0, and a burst is a whole number of at least 1',
+  ],
+  [
+    'a producer with a burst that is not a whole number',
+    (s) => (s.producers[0]!.burst = 2.5),
+    'The producer “p1” has a burst of 2.5, and a burst is a whole number of at least 1',
+  ],
+  [
     'the counters of an exchange twice',
     (s) => s.exchangeCounters.push(s.exchangeCounters[1]!),
     'The exchange “e” has its counters twice',

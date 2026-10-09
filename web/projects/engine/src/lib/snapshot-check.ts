@@ -53,6 +53,23 @@ function duplicateIssue(snapshot: EngineSnapshot): string | null {
   );
 }
 
+/**
+ * What a producer may be set to, as `producer.set` asks it: a burst and an interval that are whole numbers of at least 1. An interval of nothing, or less, ticks again with no time gone, so
+ * the engine that was given it would never get to the end of a second (the Nightly of 2026-10-09 ran one out of memory with an interval of -200). A snapshot that came from outside is
+ * refused by `readSnapshot` of the domain before it gets here; this is what the engine holds itself to.
+ */
+function producerIssue(snapshot: EngineSnapshot): string | null {
+  for (const producer of snapshot.producers) {
+    if (!Number.isInteger(producer.burst) || producer.burst < 1) {
+      return `The producer “${producer.id}” has a burst of ${String(producer.burst)}, and a burst is a whole number of at least 1`;
+    }
+    if (!Number.isInteger(producer.everyMs) || producer.everyMs < 1) {
+      return `The producer “${producer.id}” has an interval (everyMs) of ${String(producer.everyMs)}, and an interval is a whole number of at least 1`;
+    }
+  }
+  return null;
+}
+
 /** What refers to what: the bindings, the consumers, the channels and the queues that serve them. */
 function referenceIssue(snapshot: EngineSnapshot): string | null {
   const queues = new Map(snapshot.queues.map((queue) => [queue.name, queue]));
@@ -293,6 +310,7 @@ export function snapshotIssue(snapshot: EngineSnapshot): string | null {
   return (
     duplicateIssue(snapshot) ??
     referenceIssue(snapshot) ??
+    producerIssue(snapshot) ??
     counterIssue(snapshot) ??
     heldIssue(snapshot) ??
     orderIssue(snapshot) ??
