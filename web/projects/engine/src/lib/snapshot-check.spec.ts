@@ -431,6 +431,17 @@ describe('snapshotIssue (ADR-0077)', () => {
     expect(JSON.stringify(snapshot)).toBe(before);
   });
 
+  describe('the least that a producer may have, which producer.set accepts too', () => {
+    it('is a burst of 1 and an interval of 1 ms, and passes', () => {
+      const snapshot = busy();
+
+      snapshot.producers[0]!.burst = 1;
+      snapshot.producers[0]!.everyMs = 1;
+
+      expect(issueOf(snapshot)).toBeNull();
+    });
+  });
+
   describe('what an earlier consumer of a tag held, and is not counted (ADR-0089)', () => {
     it('is accepted when the queue has given out that many, and a snapshot without it is accepted as it always was', () => {
       const snapshot = busy();
