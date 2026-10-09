@@ -1,6 +1,6 @@
 # ADR-0088: A cancelled consumer that still holds messages takes up where it was when its channel consumes the same queue again
 
-- **Status:** Accepted
+- **Status:** Accepted. What the consumer is when its tag is taken again ("takes up where it was") is superseded by [ADR-0089](0089-a-tag-taken-again-after-a-cancel-is-a-new-consumer-whose-window-starts-at-nothing-and-counts-every-ack-under-the-tag.md), and the rest stands
 - **Date:** 2026-10-09
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0008](0008-rabbitmq-fidelity-baseline.md) (rule 16, cancel against close), [ADR-0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md) (a consumer is a channel, and a tag is `<consumer>/<queue>`), [ADR-0053](0053-delivery-the-consumer-at-the-head-prefetch-for-each-tag-and-what-cancel-and-close-do.md) (what cancel leaves) and [ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md) (`reconcile` makes only commands that are valid for the engine).
