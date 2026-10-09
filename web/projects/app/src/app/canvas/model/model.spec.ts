@@ -590,6 +590,13 @@ describe('popoverPosition (ADR-0041, ADR-0085)', () => {
     expect(popoverPosition({ x: 100, y: 590, width: 140, height: 56 }, size, room).y).toBeLessThanOrEqual(392);
   });
 
+  it('keeps the box in the room when the anchor is out of it, above or below (a node that was scrolled out of view): it ends at the bottom margin, or begins at the top one', () => {
+    // 592 is the bottom of the room less its margin, and 200 is the height of the box. The anchor at 700 is under the room, so the box goes above it, which is where the anchor is less the box, and that
+    // is still under the bottom margin unless the box is kept in by its own height.
+    expect(popoverPosition({ x: 100, y: 700, width: 140, height: 56 }, size, room).y).toBe(592 - 200);
+    expect(popoverPosition({ x: 100, y: -300, width: 140, height: 56 }, size, room).y).toBe(8);
+  });
+
   it('puts the box in the middle of the top when there is no anchor, which is where a node is that is not drawn', () => {
     expect(popoverPosition(null, size, room)).toEqual({ x: 250, y: 8, maxHeight: 584 });
   });
