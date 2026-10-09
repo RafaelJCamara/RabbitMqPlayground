@@ -378,32 +378,6 @@ describe('EditorActions', () => {
       expect(shared()?.messages?.snapshot()).toEqual(simulation.snapshot());
     });
 
-    it('offers nothing of messages where there is no simulation', () => {
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          DocumentStore,
-          SelectionStore,
-          StatusStore,
-          CommandBus,
-          FlowViewport,
-          EditorActions,
-          CommandLog,
-          CanvasSession,
-          ...RUNTIME_SERVICES,
-          { provide: FRAME_SOURCE, useValue: manualFrames() },
-          { provide: FLAG_SOURCES, useValue: { stored: null, query: 'editor' } },
-        ],
-      });
-      const withoutSimulation = TestBed.inject(EditorActions);
-      TestBed.inject(DocumentStore).load(sampleDocument());
-      const open = vi.spyOn(TestBed.inject(ShareDialogs), 'share').mockImplementation(() => undefined);
-
-      withoutSimulation.share();
-
-      expect(open.mock.calls[0]?.[0]).not.toHaveProperty('messages');
-    });
-
     it('opens the dialog that exports a definitions file for the canvas as it is on the screen', () => {
       actions.exportDefinitions();
 

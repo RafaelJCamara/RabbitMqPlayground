@@ -81,7 +81,7 @@ test.describe('plain text (ADR-0078)', () => {
     const payload = await payloadFor({ name: 'Markup', document, simulation: snapshotAfter(document, 180) });
     const other = await visitor();
 
-    await other.goto(`?ff=editor,simulation#c=${payload}`);
+    await other.goto(`?ff=editor#c=${payload}`);
 
     const shared = new SharedViewPage(other);
     await shared.ready();

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import type { CanvasDocument } from '@rmq/domain';
+import { edgeKeys, type CanvasDocument } from '@rmq/domain';
 import { seedCanvas } from '../support/seed';
 import { EditorPage } from './editor-page';
 
@@ -68,13 +68,11 @@ export class SimulationPage {
     }
     await seedCanvas(page, document, 'Simulated canvas');
     const editor = new EditorPage(page);
-    await editor.goto(`?ff=${options.flags ?? 'editor,simulation'}`);
+    await editor.goto(`?ff=${options.flags ?? 'editor'}`);
     const simulation = new SimulationPage(editor);
     await simulation.bar.waitFor();
-    const edges =
-      Object.keys(document.bindings).length +
-      Object.values(document.producers).filter(({ target }) => target !== null).length +
-      Object.values(document.consumers).reduce((sum, { queues }) => sum + queues.length, 0);
+    // The edges that are drawn: two bindings of one pair are one edge.
+    const edges = edgeKeys(document).size;
     await page.waitForFunction((count) => (window.__rmq?.drawnEdges().length ?? 0) >= count, edges, {
       timeout: 15_000,
     });

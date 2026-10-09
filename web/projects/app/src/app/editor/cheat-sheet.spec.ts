@@ -4,7 +4,6 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { firstSentence } from '../command-bar/help';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { CheatSheetService, commandRows, keyRows } from './cheat-sheet';
 import { SHORTCUTS } from './keyboard';
 import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
@@ -14,13 +13,13 @@ afterEach(() => {
 });
 
 /** Opens the sheet from a button that has the cursor, as the key or the Help button does. */
-async function openSheet(flags: string | null = null) {
+async function openSheet() {
   const opener = document.createElement('button');
   opener.textContent = 'Opener';
   document.body.append(opener);
   opener.focus();
   TestBed.configureTestingModule({
-    providers: [CheatSheetService, { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } }],
+    providers: [CheatSheetService],
   });
   const service = TestBed.inject(CheatSheetService);
   service.open();
@@ -30,29 +29,17 @@ async function openSheet(flags: string | null = null) {
 
 describe('keyRows (ADR-0047)', () => {
   it('has a row for every row of the table of shortcuts, in its order, whether or not the hint bar shows it', () => {
-    expect(keyRows(false, ['simulation']).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
+    expect(keyRows(false).map((row) => row.id)).toEqual(SHORTCUTS.map((row) => row.id));
   });
 
-  it('leaves out the keys that are for a feature flag that is off, which are the page\u2019s, and says them when it is on', () => {
-    const without = keyRows(false).map((row) => row.id);
-    const withFlag = keyRows(false, ['simulation']).map((row) => row.id);
-
-    expect(without).not.toContain('play');
-    expect(without).not.toContain('step');
-    expect(without).not.toContain('publish');
-    expect(withFlag).toEqual(expect.arrayContaining(['play', 'step', 'publish']));
-    expect(without).not.toContain('event-log');
-  });
-
-  it('says the key of the event log when the simulation is on, and not without it, since there are no events to log', () => {
-    const rows = (enabled: Parameters<typeof keyRows>[1]) => keyRows(false, enabled).map((row) => row.id);
-
-    expect(rows([])).not.toContain('event-log');
-    expect(rows(['simulation'])).toContain('event-log');
+  it('says the keys of the simulation and the key of the event log, which every page has', () => {
+    expect(keyRows(false).map((row) => row.id)).toEqual(
+      expect.arrayContaining(['play', 'step', 'publish', 'event-log']),
+    );
   });
 
   it('writes Space as a word, and the other keys of the simulation as they are', () => {
-    const rows = Object.fromEntries(keyRows(false, ['simulation']).map((row) => [row.id, row.keys]));
+    const rows = Object.fromEntries(keyRows(false).map((row) => [row.id, row.keys]));
 
     expect(rows['play']).toBe('Space');
     expect(rows['step']).toBe('.');
@@ -60,7 +47,7 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('writes the key of the event log as the letter that it is', () => {
-    const rows = Object.fromEntries(keyRows(false, ['simulation']).map((row) => [row.id, row.keys]));
+    const rows = Object.fromEntries(keyRows(false).map((row) => [row.id, row.keys]));
 
     expect(rows['event-log']).toBe('E');
   });
@@ -90,7 +77,7 @@ describe('keyRows (ADR-0047)', () => {
   });
 
   it('says what each does, in the words of the table', () => {
-    expect(keyRows(false, ['simulation']).map((row) => row.label)).toEqual(SHORTCUTS.map((row) => row.label));
+    expect(keyRows(false).map((row) => row.label)).toEqual(SHORTCUTS.map((row) => row.label));
   });
 });
 
@@ -162,9 +149,7 @@ describe('the cheat-sheet (ADR-0047)', () => {
     const table = within(dialog).getByRole('table', { name: 'Keys' });
     const rows = within(table).getAllByRole('row');
 
-    // The keys that are for a feature flag that is off are not the sheet's to say.
-    expect(rows).toHaveLength(keyRows().length + 1);
-    expect(keyRows().length).toBeLessThan(SHORTCUTS.length);
+    expect(rows).toHaveLength(SHORTCUTS.length + 1);
     expect(
       within(rows[0]!)
         .getAllByRole('columnheader')
@@ -181,12 +166,11 @@ describe('the cheat-sheet (ADR-0047)', () => {
     }
   });
 
-  it('says the keys of the simulation and of the explanation when their flags are on', async () => {
-    const { dialog } = await openSheet('simulation');
+  it('says the keys of the simulation and of the explanation', async () => {
+    const { dialog } = await openSheet();
 
     const table = within(dialog).getByRole('table', { name: 'Keys' });
 
-    expect(within(table).getAllByRole('row')).toHaveLength(SHORTCUTS.length + 1);
     expect(within(table).getByText('Play or pause the simulation')).toBeVisible();
     expect(within(table).getByText('Space')).toBeVisible();
     expect(within(table).getByText('Show or hide the event log')).toBeVisible();

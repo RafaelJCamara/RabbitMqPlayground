@@ -21,7 +21,6 @@ import {
 } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FLAG_SOURCES } from '../core/flags/feature-flags';
-import { copiesIn } from '../core/runtime/copies';
 import { REPOSITORIES } from '../core/session/canvas-storage';
 import { LinkOpening } from '../core/share/link-opening';
 import { SHARED_CANVAS_PROVIDERS, SharedCanvas } from './shared-canvas';
@@ -233,32 +232,6 @@ describe('SharedCanvas (ADR-0078)', () => {
       expect(canvas.notice()).toBe(
         'The messages of this link could not be put back (This engine reads snapshots of version 1, and this one is version 2), so the canvas is shown without them.',
       );
-    });
-
-    it('says that the simulation is not switched on, and how many messages the link carries, when the flag is off', async () => {
-      const snapshot = snapshotAfter(traffic(2), 180);
-      const { canvas } = await opened({ flags: 'editor' }, { ...canvasOf(), simulation: snapshot });
-
-      expect(copiesIn(snapshot)).toBe(2);
-      expect(canvas.notice()).toBe(
-        'This link carries 2 messages, but the simulation is not switched on yet, so they are not shown. It is still being built: add ?ff=simulation to the address to try it.',
-      );
-    });
-
-    it('says one message in the singular', async () => {
-      const snapshot = snapshotAfter(traffic(1), 180);
-      const { canvas } = await opened({ flags: 'editor' }, { ...canvasOf(), simulation: snapshot });
-
-      expect(canvas.notice()).toMatch(/^This link carries 1 message, but /);
-    });
-
-    it('does not complain of the flag when the snapshot of the link has no message in it', async () => {
-      const { canvas } = await opened(
-        { flags: 'editor' },
-        { ...canvasOf(), simulation: snapshotAfter(canvasOf().document, 0) },
-      );
-
-      expect(canvas.notice()).toBeNull();
     });
   });
 

@@ -1,6 +1,5 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import type { DebugEventLog } from '../debug/debug-sources';
-import { FeatureFlags } from '../flags/feature-flags';
 import { namesOf } from '../runtime/sentences';
 import { Simulation } from '../runtime/simulation';
 import { CommandLog } from '../state/command-log';
@@ -24,8 +23,6 @@ export const LOG_CAP = 5000;
  * The event log (ADR-0061): the events of the engine and the lines of the log of commands, in one order, with a time on every row. It listens from the moment that the editor opens, so that nothing that happened is missing
  * from it when the panel is opened, and it costs a record for each row and nothing for a panel that is closed. The bus tells it of a command after the simulation has said what the command made, so what was said in a
  * turn is kept, and the line of the command is put before it. It is the session's: a canvas that is opened empties it.
- *
- * It needs the flag `simulation` for the events that it says, and without it it listens to nothing.
  */
 @Injectable()
 export class EventLog {
@@ -33,7 +30,6 @@ export class EventLog {
   private readonly commands = inject(CommandLog);
   private readonly store = inject(DocumentStore);
 
-  readonly enabled: boolean;
   /** The messages that it still holds, each with the canvas that routed it. */
   readonly held = new HeldMessages();
 
@@ -76,10 +72,6 @@ export class EventLog {
   });
 
   constructor() {
-    this.enabled = inject(FeatureFlags).isEnabled('simulation');
-    if (!this.enabled) {
-      return;
-    }
     const stopEvents = this.simulation.onEvents((events, about, cause) => {
       const names = namesOf(about);
       if (cause === 'command') {

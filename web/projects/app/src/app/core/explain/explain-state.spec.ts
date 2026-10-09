@@ -12,7 +12,6 @@ import {
 } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
 import { Announcer } from '../announcer';
-import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
 import { FRAME_SOURCE, FrameLoop } from '../runtime/frame-loop';
 import { MOTION_QUERY } from '../runtime/motion';
 import { SimStats } from '../runtime/sim-stats';
@@ -49,7 +48,7 @@ const traffic = (): CanvasDocument => ({
 
 const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', name: 'sender' } };
 
-function setup(flags: string | null = 'simulation,explain') {
+function setup() {
   const frames = manualFrames();
   const providers: Provider[] = [
     DocumentStore,
@@ -63,9 +62,7 @@ function setup(flags: string | null = 'simulation,explain') {
     EventLog,
     WhatIf,
     ExplainState,
-    FeatureFlags,
     { provide: FRAME_SOURCE, useValue: frames },
-    { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     {
       provide: MOTION_QUERY,
       useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -462,27 +459,6 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       expect(state.openedMessage()).toBeNull();
     });
 
-    it('is nothing without both flags', () => {
-      TestBed.resetTestingModule();
-      const { state } = setup('simulation');
-
-      state.openMessage(1);
-
-      expect(state.openedMessage()).toBeNull();
-    });
-
-    it('lights nothing of a message with the explanation alone, though a list that has the message says what it is: that needs the simulation too', () => {
-      TestBed.resetTestingModule();
-      const { state } = setup('explain');
-      const info = { id: 4242, producer: 'P', exchange: 'orders', key: 'new', headers: [], payload: 'x' };
-
-      state.openMessage(4242, { info, queue: 'billing' });
-
-      expect(state.openedMessage()).toBeNull();
-      expect(state.shown()).toBeNull();
-      expect(state.debugState()).toBeNull();
-    });
-
     it('says which queues a message went to: the ones that routed it, and the one that a list opened it from when the log does not hold it', () => {
       const { state, stoppedAfterOneRouted } = setup();
       stoppedAfterOneRouted();
@@ -535,7 +511,7 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       expect(got).toMatchObject({ message: 1, name: 'billing', explanation: { reached: true } });
     });
 
-    it('is nothing when what is selected is not a queue, when nothing is selected, and without both flags', () => {
+    it('is nothing when what is selected is not a queue, or when nothing is selected', () => {
       const { state, selection, stoppedAfterOneRouted } = setup();
       stoppedAfterOneRouted();
       expect(state.asked()).toBeNull();
@@ -544,11 +520,6 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       expect(state.asked()).toBeNull();
       selection.select(['A', 'Q']);
       expect(state.asked()).toBeNull();
-
-      TestBed.resetTestingModule();
-      const off = setup('explain');
-      off.selection.select(['A']);
-      expect(off.state.asked()).toBeNull();
     });
   });
 
@@ -585,19 +556,6 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
       expect(state.shown()?.source).toBe('auto');
     });
 
-    it('is lit with the flag of the explanation alone, which the rest of what is lit is not, because it needs the simulation', () => {
-      TestBed.resetTestingModule();
-      const { state, whatIf } = setup('explain');
-      expect(state.enabled).toBe(false);
-      expect(state.shown()).toBeNull();
-
-      whatIf.open();
-      whatIf.type('key=new');
-
-      expect(state.shown()?.source).toBe('what-if');
-      expect(state.debugState()).toMatchObject({ source: 'what-if', text: 'Would reach billing.' });
-    });
-
     it('is let go of by shutting it, which the button of its card does, and what was lit before comes back', () => {
       const { state, whatIf, stoppedAfterOneRouted } = setup();
       stoppedAfterOneRouted();
@@ -623,12 +581,5 @@ describe('ExplainState (ADR-0061, ADR-0062)', () => {
     state.openLog();
     expect(state.logOpen()).toBe(true);
     expect(state.toggleLog()).toBe(false);
-  });
-
-  it('lights nothing without the simulation', () => {
-    const { state } = setup(null);
-
-    expect(state.enabled).toBe(false);
-    expect(state.shown()).toBeNull();
   });
 });

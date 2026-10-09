@@ -119,9 +119,7 @@
             <rmq-icon name="alert" [size]="12" />
           </span>
         }
-        @if (simulation) {
-          <rmq-node-stats [id]="node.id" />
-        }
+        <rmq-node-stats [id]="node.id" />
         @if (node.hasInput) {
           <div
             fConnector

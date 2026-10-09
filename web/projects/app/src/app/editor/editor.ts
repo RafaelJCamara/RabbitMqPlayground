@@ -166,13 +166,9 @@ interface Peek {
       } @else {
         <rmq-top-bar />
       }
-      @if (simulation.enabled) {
-        <rmq-simulation-bar>
-          @if (explain.enabled) {
-            <rmq-log-toggle [keys]="logKeys" />
-          }
-        </rmq-simulation-bar>
-      }
+      <rmq-simulation-bar>
+        <rmq-log-toggle [keys]="logKeys" />
+      </rmq-simulation-bar>
       <rmq-tour />
       @if (!tour.active()) {
         <rmq-how-to-link />
@@ -193,7 +189,7 @@ interface Peek {
           } @else {
             <p class="text-muted p-6" data-testid="opening">Opening your canvas…</p>
           }
-          @if (ready() && simulation.enabled) {
+          @if (ready()) {
             <rmq-message-overlay [pressable]="markersPressable()" (pressed)="onMarkerPressed($event)" />
           }
           @if (ready() && model().nodes.length === 0) {
@@ -263,14 +259,12 @@ interface Peek {
           @if (ready()) {
             <rmq-why-card />
           }
-          @if (explain.enabled) {
-            <rmq-message-inspector />
-          }
+          <rmq-message-inspector />
           <rmq-inspector />
           <rmq-what-if />
         </aside>
       </div>
-      @if (explain.enabled && explain.logOpen()) {
+      @if (explain.logOpen()) {
         <rmq-event-log-panel />
       }
       <rmq-command-bar [keys]="commandKeys" (share)="actions.share()" />
@@ -294,7 +288,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly intents = inject(IntentHandler);
   protected readonly keys = inject(KeyboardService);
   protected readonly simulation = inject(Simulation);
-  /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). It needs the flag `simulation`. */
+  /** What the learner asks of the canvas with the explanation: the log, and what is lit and why (ADR-0061, ADR-0062). */
   protected readonly explain = inject(ExplainState);
   private readonly eventLog = inject(EventLog);
   private readonly links = inject(LinkFlow);
@@ -317,7 +311,7 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly model = computed(() => (this.drawn = buildCanvasVm(this.store.document(), this.drawn)));
   protected readonly rules = computed(() => linkRules(this.store.document()));
   /** Whether a press on a message that is drawn on the canvas is taken: with the explanation, while the clock is stopped, which is when a message holds still (ADR-0063). */
-  protected readonly markersPressable = computed(() => this.explain.enabled && !this.simulation.running());
+  protected readonly markersPressable = computed(() => !this.simulation.running());
   /** What Why? lights, which the canvas draws as a look on the edges and the nodes (ADR-0062). */
   protected readonly emphasis = computed(() => this.explain.shown()?.emphasis ?? NO_EMPHASIS);
   private readonly intentLog: CanvasIntent[] = [];
@@ -363,9 +357,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         drawnEdges: () => [...this.viewport.drawn()],
         intents: () => this.intentLog,
         viewport: () => this.viewport.live(),
-        simulationState: () => (this.simulation.enabled ? this.simulation.debugState() : null),
+        simulationState: () => this.simulation.debugState(),
         overlayFrame: () => this.overlay()?.lastFrame() ?? null,
-        explainEventLog: () => (this.explain.enabled ? this.eventLog.debugState() : null),
+        explainEventLog: () => this.eventLog.debugState(),
         explainEmphasis: () => this.explain.debugState(),
       });
       inject(DestroyRef).onDestroy(detach);
@@ -471,11 +465,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     this.cheatSheet.open();
   }
 
-  /** Shows the event log, or hides it, and says which. It answers `false` when there is none, which needs both flags, so that the key is left for the page. */
+  /** Shows the event log, or hides it, and says which. It answers `true`: the key is always taken. */
   toggleEventLog(): boolean {
-    if (!this.explain.enabled) {
-      return false;
-    }
     this.announcer.announce(this.explain.toggleLog() ? 'Event log shown.' : 'Event log hidden.');
     return true;
   }

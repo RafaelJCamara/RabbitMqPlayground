@@ -18,12 +18,13 @@ describe('FeatureFlags', () => {
     expect(flags.isEnabled('editor')).toBe(false);
   });
 
-  it('turns on the flags that the sources name', () => {
-    const flags = flagsFor('editor', 'simulation');
+  it('turns on the flag that a source names, whichever source it is', () => {
+    const stored = flagsFor('editor', null);
+    expect(stored.isEnabled('editor')).toBe(true);
+    expect([...stored.enabled]).toEqual(['editor']);
 
-    expect(flags.isEnabled('editor')).toBe(true);
-    expect(flags.isEnabled('simulation')).toBe(true);
-    expect([...flags.enabled].sort()).toEqual(['editor', 'simulation']);
+    TestBed.resetTestingModule();
+    expect(flagsFor(null, 'editor').isEnabled('editor')).toBe(true);
   });
 
   it('warns once about a flag it does not know, and stays quiet otherwise', () => {
@@ -49,17 +50,15 @@ describe('FeatureFlags', () => {
     });
 
     it('reads local storage', () => {
-      window.localStorage.setItem(FLAGS_STORAGE_KEY, 'simulation');
+      window.localStorage.setItem(FLAGS_STORAGE_KEY, 'editor');
 
-      expect(TestBed.inject(FeatureFlags).isEnabled('simulation')).toBe(true);
+      expect(TestBed.inject(FeatureFlags).isEnabled('editor')).toBe(true);
     });
 
     it('reads ?ff= from the address', () => {
-      window.history.replaceState(null, '', '/?ff=simulation');
-      const flags = TestBed.inject(FeatureFlags);
+      window.history.replaceState(null, '', '/?ff=editor');
 
-      expect(flags.isEnabled('simulation')).toBe(true);
-      expect(flags.isEnabled('editor')).toBe(false);
+      expect(TestBed.inject(FeatureFlags).isEnabled('editor')).toBe(true);
     });
 
     it('has nothing on when neither says anything', () => {

@@ -159,22 +159,12 @@ describe('WhatIfTester (ADR-0064)', () => {
     expect(screen.getByTestId('what-if-answer')).toBeVisible();
   });
 
-  it('has no line for the default exchange, and none without the simulation', async () => {
+  it('has no line for the default exchange', async () => {
     const { toggle, user, message, settle } = await renderTester();
     await user.click(toggle());
     await user.type(message(), 'key=new');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Exchange' }), ['']);
     settle();
-    expect(screen.queryByTestId('what-if-line')).toBeNull();
-
-    TestBed.resetTestingModule();
-    document.body.replaceChildren();
-    const alone = await renderTester('explain');
-    await alone.user.click(alone.toggle());
-    await alone.user.type(alone.message(), 'key=new');
-    alone.settle();
-
-    expect(screen.getByTestId('what-if-answer')).toHaveTextContent('Would reach billing.');
     expect(screen.queryByTestId('what-if-line')).toBeNull();
   });
 

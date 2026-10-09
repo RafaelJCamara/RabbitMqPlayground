@@ -3,16 +3,12 @@
  * releasable. A finished feature's flag is deleted from this registry.
  *
  * Flags are read once per page load from `localStorage['rmq.flags']` and from `?ff=` in the URL. Both hold a list
- * separated by commas or spaces, for example `?ff=editor,simulation`.
+ * separated by commas or spaces, for example `?ff=editor`.
  */
 export const FLAGS = {
   editor: {
     default: false,
     description: 'The editor: toolbox, inspector, canvas, undo, linking and the command bar (slices S4 and S5).',
-  },
-  simulation: {
-    default: false,
-    description: 'Running the simulation: messages in flight, consumers, queues that fill (slice S6).',
   },
 } as const satisfies Record<string, { readonly default: false; readonly description: string }>;
 // `default: false` is a literal type, so turning a flag on by default does not compile. A test checks it at runtime too.

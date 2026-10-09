@@ -2,9 +2,7 @@ import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { Component, inject, Injectable } from '@angular/core';
 import { COMMAND_DOCS } from '@rmq/domain';
 import { firstSentence } from '../command-bar/help';
-import { FeatureFlags } from '../core/flags/feature-flags';
-import type { FlagName } from '../core/flags/flags';
-import { available, keysOf, SHORTCUTS } from './keyboard';
+import { keysOf, SHORTCUTS } from './keyboard';
 import { WAYS_TO_LINK } from '../core/ui/ways-to-link';
 
 /** One key of the table, as the cheat-sheet says it. */
@@ -23,11 +21,10 @@ export interface CommandRow {
 }
 
 /**
- * Every row of the table of shortcuts, in its order, with where it works. The hint bar says only what is worth saying now, and the sheet says everything (ADR-0047),
- * but for a key that is for a feature flag that is off, which is not the sheet's to say.
+ * Every row of the table of shortcuts, in its order, with where it works. The hint bar says only what is worth saying now, and the sheet says everything (ADR-0047).
  */
-export function keyRows(mac?: boolean, enabled: readonly FlagName[] = []): KeyRow[] {
-  return SHORTCUTS.filter((row) => available(row, enabled)).map((row) => ({
+export function keyRows(mac?: boolean): KeyRow[] {
+  return SHORTCUTS.map((row) => ({
     id: row.id,
     keys: keysOf(row, mac),
     label: row.label,
@@ -136,7 +133,7 @@ export class CheatSheet {
   protected readonly ref = inject(DialogRef);
   protected readonly titleId = CHEAT_SHEET_TITLE_ID;
   protected readonly ways = WAYS_TO_LINK.map((way) => way.full);
-  protected readonly keys = keyRows(undefined, inject(FeatureFlags).enabled);
+  protected readonly keys = keyRows();
   protected readonly commands = commandRows();
 }
 

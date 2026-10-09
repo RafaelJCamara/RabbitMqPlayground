@@ -87,9 +87,6 @@ export class ExplainState {
   private readonly announcer = inject(Announcer);
   private readonly whatIf = inject(WhatIf);
 
-  /** Whether the log, the message and Why? are there: they need both flags. */
-  readonly enabled = this.log.enabled;
-
   private readonly logShown = signal(false);
   private readonly focusing = signal<Focus | null>(null);
   private readonly opened = signal<number | null>(null);
@@ -115,7 +112,7 @@ export class ExplainState {
    */
   readonly openedMessage = computed<OpenedMessage | null>(() => {
     const number = this.opened();
-    return number === null || !this.enabled ? null : this.explained(number);
+    return number === null ? null : this.explained(number);
   });
 
   /**
@@ -162,14 +159,11 @@ export class ExplainState {
     return this.log.lastSettled();
   });
 
-  /** What is lit and why, or `null` when nothing is. The tester needs the flag `explain` alone, and the rest needs the simulation too. */
+  /** What is lit and why, or `null` when nothing is. */
   readonly shown = computed<Shown | null>(() => {
     const tester = this.whatIf.lit();
     if (tester !== null) {
       return { source: 'what-if', message: null, ...tester };
-    }
-    if (!this.enabled) {
-      return null;
     }
     const document = this.store.document();
     const focus = this.focusing();
@@ -221,7 +215,7 @@ export class ExplainState {
   /** A queue is selected while a message is chosen: why it got the message, or why it did not. */
   readonly asked = computed<Asked | null>(() => {
     const only = this.selection.only();
-    if (!this.enabled || only?.kind !== 'node') {
+    if (only?.kind !== 'node') {
       return null;
     }
     // Nothing that is selected and is not a queue wakes this when a message is routed, which happens all the time while the clock runs.

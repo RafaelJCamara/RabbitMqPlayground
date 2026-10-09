@@ -30,11 +30,11 @@ export interface RmqDebugHandle {
   readonly intents: () => readonly unknown[];
   /** The live transform of the canvas, or `null`. */
   readonly viewport: () => DebugViewport | null;
-  /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` until the editor has started, and without the flag. */
+  /** The simulation: the clock, whether it runs, how fast, when the next thing is, and the view of the engine. `null` until the editor has started. */
   readonly simulationState: () => SimulationState | null;
   /** What the overlay of the messages drew in its last frame: where each shape was, how many messages it stood for, and whether it was drawn still. `null` without the overlay. */
   readonly overlayFrame: () => DebugOverlayFrame | null;
-  /** The rows of the event log: how many, how many went, and each as it was said. `null` until the editor has started, and without the flags `explain` and `simulation`. */
+  /** The rows of the event log: how many, how many went, and each as it was said. `null` until the editor has started. */
   readonly explainEventLog: () => DebugEventLog | null;
   /** What Why? lights, as marks of the edges and the nodes, and what its card says. `null` when nothing is lit. */
   readonly explainEmphasis: () => DebugEmphasis | null;

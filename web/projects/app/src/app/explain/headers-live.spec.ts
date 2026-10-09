@@ -283,15 +283,21 @@ describe('HeadersLive, the table of recent messages (ADR-0070)', () => {
     );
   });
 
-  it('gives each table a title of its own, so that two on a page are two regions', async () => {
-    renderLive();
-    const first = screen.getByTestId('headers-live').getAttribute('aria-labelledby');
+  it('says what a table is about in the names of its section and of the region that scrolls, so that two on a page are two names and not one name for two places', async () => {
+    const { publish } = renderLive();
+    publish('docs', entry('format', str('doc')));
+    const first = screen.getByTestId('headers-live');
+    expect(first).toHaveAccessibleName('Recent messages');
+    expect(screen.getByTestId('headers-live-scroll')).toHaveAccessibleName('Recent messages against the conditions');
 
     const second = TestBed.createComponent(HeadersLive);
     second.componentRef.setInput('exchange', 'docs');
+    second.componentRef.setInput('about', 'binding from exchange docs to queue pdf');
     second.detectChanges();
 
-    expect(second.nativeElement.querySelector('section').getAttribute('aria-labelledby')).not.toBe(first);
+    const section = second.nativeElement.querySelector('section') as HTMLElement;
+    expect(section).toHaveAccessibleName('Recent messages, binding from exchange docs to queue pdf');
+    expect(section.getAttribute('aria-label')).not.toBe(first.getAttribute('aria-label'));
   });
 });
 

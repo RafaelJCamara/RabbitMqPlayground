@@ -49,8 +49,7 @@ export interface RuntimeHost {
 
 const SIMULATION_OFF: Issue = {
   kind: 'unsupported',
-  message:
-    'The simulation is not switched on yet, so there is nothing to run. It is still being built: add ?ff=simulation to the address to try it.',
+  message: 'There is no simulation on this canvas, so there is nothing to run.',
 };
 
 /** What the learner is told when a change of the canvas took messages with it, after what was done. */

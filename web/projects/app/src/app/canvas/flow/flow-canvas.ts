@@ -33,7 +33,6 @@ import {
 } from '@foblex/flow';
 import type { Id, LinkRules } from '@rmq/domain';
 import { NO_EMPHASIS, type EdgeMark, type Emphasis, type NodeMark } from '../../core/explain/emphasis';
-import { FeatureFlags } from '../../core/flags/feature-flags';
 import { NodeStatsView } from '../overlay/node-stats';
 import { isVirtual } from '../../core/state/default-exchange';
 import { Icon } from '../../core/ui/icon';
@@ -111,8 +110,6 @@ export class FlowCanvas implements AfterViewInit, OnDestroy {
 
   private readonly page = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  /** What the simulation says about each node is under it, with the flag (ADR-0056). */
-  protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   private readonly injector = inject(Injector);
   private readonly changes = inject(ChangeDetectorRef);
   private readonly viewport = inject(FlowViewport);

@@ -14,7 +14,6 @@ import {
   snapshotAfter,
 } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
 import { SHARED_MESSAGES, type SharedMessages } from '../share/shared-messages';
 import { CommandBus } from '../state/command-bus';
 import { DocumentStore } from '../state/document-store';
@@ -57,7 +56,7 @@ const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', nam
 /** What the simulation is made of, with frames that the spec runs. */
 const services = (
   frames: ReturnType<typeof manualFrames>,
-  options: { readonly flag?: boolean; readonly reduced?: boolean; readonly shared?: SharedMessages } = {},
+  options: { readonly reduced?: boolean; readonly shared?: SharedMessages } = {},
 ): Provider[] => [
   DocumentStore,
   SelectionStore,
@@ -66,11 +65,8 @@ const services = (
   FrameLoop,
   SimStats,
   Simulation,
-  // The flags are the root's unless this one is given, and a spec that makes its own injector reads them from here.
-  FeatureFlags,
   { provide: FRAME_SOURCE, useValue: frames },
   ...(options.shared === undefined ? [] : [{ provide: SHARED_MESSAGES, useValue: options.shared }]),
-  { provide: FLAG_SOURCES, useValue: { stored: null, query: options.flag === false ? null : 'simulation' } },
   {
     provide: MOTION_QUERY,
     useValue: {
@@ -83,7 +79,6 @@ const services = (
 
 function setup(
   options: {
-    readonly flag?: boolean;
     readonly reduced?: boolean;
     readonly document?: CanvasDocument;
     readonly shared?: SharedMessages;
@@ -127,37 +122,6 @@ function setup(
 const types = (events: readonly EngineEvent[]): string[] => events.map(({ type }) => type);
 
 describe('Simulation', () => {
-  describe('without the flag', () => {
-    it('does nothing, and the bus refuses the commands of the runtime, saying why', () => {
-      const { bus, frames, simulation, store, status } = setup({ flag: false });
-
-      const result = bus.run({ type: 'play' }, 'key');
-
-      expect(simulation.enabled).toBe(false);
-      expect(!result.ok && result.error.kind).toBe('unsupported');
-      expect(status.refusal()).toMatchObject({ origin: 'key' });
-      expect(status.refusal()?.issue.message).toContain('not switched on');
-      expect(frames.requested).toBe(0);
-      // It does not follow the canvas either, so that a canvas that has no use for it has no cost.
-      store.load(traffic());
-      expect(simulation.view().queues['billing']).toBeUndefined();
-      expect(frames.requested).toBe(0);
-    });
-
-    it('says that no time has passed, nothing is on its way, nothing can be stepped, and nothing was lost', () => {
-      const { simulation } = setup({ flag: false });
-
-      expect([
-        simulation.time(),
-        simulation.travelling(),
-        simulation.revision(),
-        simulation.visualTime(),
-        simulation.takeLost(),
-      ]).toEqual([0, 0, 0, 0, 0]);
-      expect(simulation.canStep()).toBe(false);
-    });
-  });
-
   describe('a canvas that the engine will not take', () => {
     it('is not followed in silence: what reconcile gave the engine and it refused is a bug, and is thrown', () => {
       const { store } = setup();
@@ -166,6 +130,14 @@ describe('Simulation', () => {
       expect(() => store.load(documentOf({ queues: { Q: queueRecord('q', { durable: false }) } }))).toThrow(
         /The simulation could not follow the canvas: queue.declare was refused with 541/,
       );
+    });
+
+    it('follows a canvas that has a queue that a broker named, which a file or a link can hold and whose name starts with amq.', () => {
+      const { store, simulation } = setup();
+
+      store.load(documentOf({ queues: { Q: queueRecord('amq.gen-JzTY20BRgKO', { serverNamed: true }) } }));
+
+      expect(Object.keys(simulation.view().queues)).toEqual(['amq.gen-JzTY20BRgKO']);
     });
   });
 
@@ -1011,15 +983,6 @@ describe('Simulation', () => {
       expect(simulation.running()).toBe(true);
       expect(simulation.now()).toBe(0);
       expect(simulation.messageCount()).toBe(0);
-    });
-
-    it('are left alone when the engine does not follow the canvas: nothing is given to a simulation that is not switched on', () => {
-      const { messages, failed } = shared(snapshotAfter(traffic(), 180));
-
-      const { simulation } = setup({ shared: messages, flag: false });
-
-      expect(failed).not.toHaveBeenCalled();
-      expect(simulation.now()).toBe(0);
     });
   });
 

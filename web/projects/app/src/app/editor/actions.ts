@@ -142,7 +142,7 @@ export class EditorActions {
   }
 
   /**
-   * Opens the panel that makes a link to the canvas as it is on the screen (ADR-0078), with the messages that it holds as a choice where there is a simulation to ask. The panel gives the canvas
+   * Opens the panel that makes a link to the canvas as it is on the screen (ADR-0078), with the messages that it holds as a choice. The panel gives the canvas
    * as a file when a link is too long to send.
    */
   share(): void {
@@ -152,9 +152,7 @@ export class EditorActions {
       name,
       document,
       saveAsFile: () => this.saveAsFile(name, document),
-      ...(this.simulation.enabled
-        ? { messages: { count: this.simulation.messageCount(), snapshot: () => this.simulation.snapshot() } }
-        : {}),
+      messages: { count: this.simulation.messageCount(), snapshot: () => this.simulation.snapshot() },
     });
   }
 

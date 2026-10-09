@@ -1,6 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
 import { kindOf } from '@rmq/domain';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { hintsFor } from './hints';
@@ -29,7 +28,6 @@ import type { SelectionFacts } from './keyboard';
 export class HintBar {
   private readonly store = inject(DocumentStore);
   private readonly selection = inject(SelectionStore);
-  private readonly flags = inject(FeatureFlags);
 
   private readonly facts = computed<SelectionFacts>(() => {
     const { nodes, edges } = this.selection.selection();
@@ -39,5 +37,5 @@ export class HintBar {
     return { nodes: nodes.length, edges: edges.length, kind };
   });
 
-  protected readonly hints = computed(() => hintsFor(this.facts(), undefined, this.flags.enabled));
+  protected readonly hints = computed(() => hintsFor(this.facts()));
 }

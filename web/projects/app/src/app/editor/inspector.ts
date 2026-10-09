@@ -3,7 +3,6 @@ import { KIND_LABEL, lookup, type DocumentCommand, type ExchangeChanges, type Is
 import type { ExchangeType, HeaderArguments } from '@rmq/engine';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { EXCHANGE_TYPES } from '../canvas/model/new-node';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { rebindCommand, rebindHeadersCommand, unbindCommand, type BindingRow } from '../core/state/binding-commands';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
@@ -234,18 +233,16 @@ let nextInspector = 0;
           </div>
         }
 
-        @if (simulation) {
-          @switch (n.element) {
-            @case ('queue') {
-              <rmq-queue-asked />
-              <rmq-queue-messages [id]="n.id" />
-            }
-            @case ('producer') {
-              <rmq-producer-composer [id]="n.id" />
-            }
-            @case ('consumer') {
-              <rmq-consumer-settings [id]="n.id" />
-            }
+        @switch (n.element) {
+          @case ('queue') {
+            <rmq-queue-asked />
+            <rmq-queue-messages [id]="n.id" />
+          }
+          @case ('producer') {
+            <rmq-producer-composer [id]="n.id" />
+          }
+          @case ('consumer') {
+            <rmq-consumer-settings [id]="n.id" />
           }
         }
 
@@ -472,8 +469,6 @@ export class Inspector {
   private readonly links = inject(LinkFlow);
   private readonly viewport = inject(FlowViewport);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  /** The parts of the inspector that the simulation adds are there only with its flag (ADR-0056). */
-  protected readonly simulation = inject(FeatureFlags).isEnabled('simulation');
   /** The key field of a binding that is being typed in, and what is typed in it, which the tester follows before the key is changed (it is changed when the field is left). */
   protected readonly typing = signal<{ readonly id: string; readonly text: string } | null>(null);
   private readonly uid = `rmq-inspector-${nextInspector++}`;

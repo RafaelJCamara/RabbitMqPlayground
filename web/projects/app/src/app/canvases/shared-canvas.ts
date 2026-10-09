@@ -1,8 +1,6 @@
 import { computed, inject, Injectable, signal, type Provider } from '@angular/core';
 import type { EngineSnapshot } from '@rmq/engine';
 import { failure, succeed, type Outcome, type Shared } from '@rmq/persistence';
-import { FeatureFlags } from '../core/flags/feature-flags';
-import { copiesIn } from '../core/runtime/copies';
 import { CANVAS_HOST, type CanvasHost, type OpenEditor } from '../core/session/canvas-host';
 import { CanvasStorage, MEMORY_ONLY } from '../core/session/canvas-storage';
 import { LinkOpening } from '../core/share/link-opening';
@@ -16,8 +14,6 @@ import { sharedName } from './names';
 export const SHARED_MEMORY_REASON =
   'This is a shared canvas, and what is changed here stays here unless you save a copy.';
 
-const plural = (count: number, one: string): string => `${count} ${count === 1 ? one : `${one}s`}`;
-
 /**
  * The shared canvas that the view shows (ADR-0078): the canvas of a link, put into a storage that keeps nothing so that the editor, its session and its autosave work on it as they do on any canvas, and what the learner
  * does here never reaches the canvases of the browser. It is also the host that the session asks which canvas to open (ADR-0072), and it gives the simulation the messages of the link. The view provides it, so it lives as long as
@@ -30,7 +26,6 @@ export class SharedCanvas implements CanvasHost {
   /** The storage of the page, which is the learner's: the one that the view's own storage hides from the editor. */
   private readonly own = inject(CanvasStorage, { skipSelf: true });
   private readonly link = inject(LinkOpening);
-  private readonly simulating = inject(FeatureFlags).isEnabled('simulation');
 
   private readonly shown = signal(false);
   private readonly cause = signal<string | null>(null);
@@ -38,7 +33,6 @@ export class SharedCanvas implements CanvasHost {
   private readonly keeping = signal(false);
   private readonly trouble = signal<string | null>(null);
   private readonly lostMessages = signal<string | null>(null);
-  private readonly carried = signal(0);
 
   private snapshot: EngineSnapshot | undefined;
   private id: string | undefined;
@@ -60,17 +54,13 @@ export class SharedCanvas implements CanvasHost {
     if (reason !== null) {
       return `The messages of this link could not be put back (${reason}), so the canvas is shown without them.`;
     }
-    const count = this.carried();
-    return count > 0 && !this.simulating
-      ? `This link carries ${plural(count, 'message')}, but the simulation is not switched on yet, so they are not shown. It is still being built: add ?ff=simulation to the address to try it.`
-      : null;
+    return null;
   });
 
   /** Puts the canvas of the link in memory, under an id of its own, and takes note of its messages. */
   async open(shared: Shared): Promise<void> {
     this.called.set(shared.name);
     this.snapshot = shared.simulation;
-    this.carried.set(shared.simulation === undefined ? 0 : copiesIn(shared.simulation));
     const repository = await this.memory.repository();
     const made = await repository.create({ name: shared.name, document: shared.document });
     if (!made.ok) {

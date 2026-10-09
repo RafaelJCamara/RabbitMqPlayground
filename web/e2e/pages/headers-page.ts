@@ -1,7 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { edgeKeys, type CanvasDocument } from '@rmq/domain';
-import { seedCanvas } from '../support/seed';
-import { EditorPage } from './editor-page';
+import type { CanvasDocument } from '@rmq/domain';
 import { ExplainPage } from './explain-page';
 import { SimulationPage } from './simulation-page';
 
@@ -279,19 +277,15 @@ export class BindPanel {
 }
 
 /**
- * The conditions of a headers binding in a real browser (S8, ADR-0066 to ADR-0070). It opens the editor with the flags that a test asks for, and has the places where the conditions are drawn: the popover that
- * asks for them, the editor in the inspector, the chips on the label of an edge and the card behind them, the table of a producer's headers, and, with the explanation, the table of recent messages and the
- * panel that makes a binding from a message. It is an explanation page, so that what is lit and what the log says are read in the same way.
+ * The conditions of a headers binding in a real browser (S8, ADR-0066 to ADR-0070). It opens the editor, and has the places where the conditions are drawn: the popover that asks for them, the editor in the
+ * inspector, the chips on the label of an edge and the card behind them, the table of a producer's headers, the table of recent messages and the panel that makes a binding from a message. It is an explanation page, so that what is lit and what the log says are read in the same way.
  */
 export class HeadersPage extends ExplainPage {
   constructor(simulation: SimulationPage) {
     super(simulation);
   }
 
-  /**
-   * Opens the editor on this canvas with the flags that are asked for: `editor` alone, the conditions only; with `simulation` the producer's table; with `explain` too the table of recent messages and
-   * the binding made from a message. With the simulation the clock is stopped, as it is for every page of the simulation.
-   */
+  /** Opens the editor on this canvas, with the clock stopped, as it is for every page of the simulation. */
   static override async open(
     page: Page,
     document: CanvasDocument,
@@ -302,23 +296,7 @@ export class HeadersPage extends ExplainPage {
       readonly stop?: boolean;
     } = {},
   ): Promise<HeadersPage> {
-    const flags = options.flags ?? 'editor';
-    if (flags.split(',').includes('simulation')) {
-      return new HeadersPage(await SimulationPage.open(page, document, { ...options, flags }));
-    }
-    if (options.theme !== undefined || options.reducedMotion === true) {
-      await page.emulateMedia({
-        colorScheme: options.theme ?? null,
-        reducedMotion: options.reducedMotion === true ? 'reduce' : null,
-      });
-    }
-    await seedCanvas(page, document, 'Headers canvas');
-    const editor = new EditorPage(page);
-    await editor.goto(`?ff=${flags}`);
-    await page.locator('rmq-flow-canvas[data-ready]').waitFor();
-    await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length ?? 0)).toBe(edgeKeys(document).size);
-    await editor.settled();
-    return new HeadersPage(new SimulationPage(editor));
+    return new HeadersPage(await SimulationPage.open(page, document, options));
   }
 
   /** The popover that asks for the conditions of a link that is being made, by what a screen reader says of it: `exchange files`, `queue pdfs`. */

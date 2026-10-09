@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { canvasFromText, snapshotAfter } from '@rmq/testing';
+import { canvasFromText } from '@rmq/testing';
 import { EditorPage, skipWelcome } from './pages/editor-page';
 import { ExportPage, LinkFailedPage, SharedViewPage, SharePage } from './pages/share-page';
 import { SimulationPage } from './pages/simulation-page';
@@ -54,7 +54,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         page,
       }) => {
         const simulation = await SimulationPage.open(page, ORDERS, {
-          flags: 'editor,simulation',
+          flags: 'editor',
           theme: colorScheme,
         });
         const share = new SharePage(page);
@@ -137,22 +137,6 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await shared.ready();
 
         await usesTheme(other, colorScheme);
-        await expectNoAxeViolations(other);
-      });
-
-      test('has no axe violations with the notice that the messages are left out', async ({ visitor }) => {
-        const other = await visitor({ colorScheme });
-        const link = await payloadFor({
-          name: 'Orders flow',
-          document: ORDERS,
-          simulation: snapshotAfter(ORDERS, 180),
-        });
-        await other.goto(`?ff=editor#c=${link}`);
-        const shared = new SharedViewPage(other);
-
-        await shared.ready();
-
-        await expect(shared.notice).toBeVisible();
         await expectNoAxeViolations(other);
       });
 

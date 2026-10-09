@@ -17,28 +17,18 @@ const twoFrames = (page: Page): Promise<void> =>
   );
 
 test.describe('the what-if tester (ADR-0064)', () => {
-  test('is in the region of the inspector with the flag of the explanation alone, shut, and there is no strip and no log with it', async ({
-    page,
-  }) => {
+  test('is in the region of the inspector, shut', async ({ page }) => {
     const tester = await TesterPage.open(page, WITH_ARCHIVE);
 
     await expect(tester.editor.inspector.getByRole('region', { name: 'What if…?' })).toBeVisible();
     await expect(tester.toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(tester.message).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Simulation' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Event log' })).toHaveCount(0);
-    // The key of the log is the page's: it is not said, and it does nothing.
-    await expect(tester.editor.hints).not.toContainText('event log');
-    await tester.editor.flow.focus();
-    await page.keyboard.press('e');
-    await twoFrames(page);
-    await expect(page.getByRole('region', { name: 'Event log' })).toHaveCount(0);
   });
 
   test('is beside the log, and the keys of the simulation and of the log are said, in the editor that has the simulation', async ({
     page,
   }) => {
-    const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor,simulation' });
+    const both = await TesterPage.open(page, WITH_ARCHIVE, { flags: 'editor' });
 
     await expect(page.getByRole('region', { name: 'Simulation' })).toBeVisible();
     await expect(both.editor.hints).toContainText('Play or pause the simulation');

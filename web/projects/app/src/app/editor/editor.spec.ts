@@ -1633,23 +1633,7 @@ describe('Editor', () => {
       };
     }
 
-    it('has no controls without its flag, and Space, the full stop and P are the page’s, and the hints do not say them', async () => {
-      const { onCanvas, status } = await openEditor(null);
-
-      expect(screen.queryByRole('region', { name: 'Simulation' })).not.toBeInTheDocument();
-      expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Space');
-      onCanvas({ key: ' ' });
-      onCanvas({ key: '.' });
-      onCanvas({ key: 'p' });
-
-      expect(status.notice()).toBeNull();
-    });
-
-    it('has the overlay of the messages over the canvas, in the canvas, when the flag is on, and none without it', async () => {
-      await openEditor(null);
-      expect(document.querySelector('rmq-message-overlay')).toBeNull();
-      TestBed.resetTestingModule();
-
+    it('has the overlay of the messages over the canvas, in the canvas', async () => {
       await openEditor('simulation');
 
       const overlay = document.querySelector('rmq-message-overlay');
@@ -1776,18 +1760,6 @@ describe('Editor', () => {
         },
       };
     }
-
-    it('has none of it without the simulation: no button in the strip, no log, no card, and E is the page’s', async () => {
-      const { onCanvas, announcer, canvas, routeOne } = await openEditor(null);
-
-      expect(screen.queryByRole('button', { name: 'Event log' })).not.toBeInTheDocument();
-      onCanvas({ key: 'e' });
-      expect(screen.queryByRole('region', { name: 'Event log' })).not.toBeInTheDocument();
-      expect(announcer.last()).not.toMatch(/^Event log/);
-      await routeOne();
-      expect(screen.queryByTestId('why-card')).not.toBeInTheDocument();
-      expect(canvas().emphasis()).toBe(NO_EMPHASIS);
-    });
 
     it('has the button of the log in the strip of the simulation, and the log is closed', async () => {
       await openEditor('simulation,explain');
@@ -1969,7 +1941,7 @@ describe('Editor', () => {
     });
   });
 
-  describe('the testers of the explanation, which need the flag of the explanation alone (ADR-0064)', () => {
+  describe('the testers of the explanation (ADR-0064)', () => {
     async function openEditor(flags: string | null, ...items: string[]) {
       const providers = [
         ...harness().providers,
@@ -1995,37 +1967,24 @@ describe('Editor', () => {
     /** What is lit on the canvas that the editor draws. */
     const lit = (canvas: () => FakeCanvas) => [...canvas().emphasis().nodes.entries()].sort();
 
-    it('has the what-if tester under what is selected, in the region of the inspector, without the simulation, and none of what needs events', async () => {
-      await openEditor(null);
+    it('has the what-if tester under what is selected, in the region of the inspector', async () => {
+      await openEditor('simulation');
 
       const aside = screen.getByRole('complementary', { name: 'Inspector' });
       const tester = within(aside).getByRole('region', { name: 'What if…?' });
       expect(tester).toBeVisible();
       expect(aside.querySelector('rmq-inspector')?.nextElementSibling?.tagName).toBe('RMQ-WHAT-IF');
-      expect(screen.queryByRole('region', { name: 'Simulation' })).not.toBeInTheDocument();
-      expect(document.querySelector('rmq-message-inspector')).toBeNull();
-      // The key of the log is not offered where there is no log to show, and the page keeps the letter.
-      expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Show or hide the event log');
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Show or hide the event log');
     });
 
-    it('has the tester and the log together with the simulation, which is what the whole of the explanation is', async () => {
+    it('has the tester and the log together, which is what the whole of the explanation is', async () => {
       await openEditor('simulation');
 
       expect(screen.getByRole('region', { name: 'What if…?' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Event log' })).toBeVisible();
     });
 
-    it('answers that there is no log to show without the simulation, so that the key is left to the page, and says nothing', async () => {
-      const { fixture, injector } = await openEditor(null);
-      const announcer = injector.get(Announcer);
-      const before = announcer.last();
-
-      expect(fixture.componentInstance.toggleEventLog()).toBe(false);
-
-      expect(announcer.last()).toBe(before);
-    });
-
-    it('answers that it showed the log, and then that it hid it, with both flags, and says which', async () => {
+    it('answers that it showed the log, and then that it hid it, and says which', async () => {
       const { fixture, injector } = await openEditor('explain,simulation');
       const announcer = injector.get(Announcer);
 

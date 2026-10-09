@@ -75,19 +75,11 @@ describe('the chooser (ADR-0082)', () => {
       });
     });
 
-    it('offers building from scratch, and the tour when the simulation is on', async () => {
+    it('offers building from scratch, and the tour', async () => {
       const { dialog } = await ask(true);
 
       expect(within(dialog).getByRole('button', { name: 'Build from scratch' })).toBeEnabled();
       expect(within(dialog).getByRole('button', { name: 'Take the tour (about a minute)' })).toBeEnabled();
-    });
-
-    it('does not offer the tour, nor speak of it, when the simulation is off, because its last steps send a message', async () => {
-      const { dialog } = await ask(true, 'editor,canvases,onboarding');
-
-      expect(within(dialog).queryByRole('button', { name: /tour/ })).not.toBeInTheDocument();
-      expect(dialog).not.toHaveTextContent('tour');
-      expect(dialog).toHaveTextContent('build your own from nothing.');
     });
 
     it.each(TEMPLATES)('answers the template $name when its button is pressed', async ({ id, name }) => {

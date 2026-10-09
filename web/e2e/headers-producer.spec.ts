@@ -9,7 +9,7 @@ import { expect, test } from './support/test';
  * (`set sender header:size=10`, `unset sender header:type`), and not at all while the table has something wrong in it. It needs the flags `editor` and `simulation`.
  */
 
-const FLAGS = 'editor,simulation';
+const FLAGS = 'editor';
 
 async function open(page: Page, document = FILES_BOUND): Promise<HeadersPage> {
   const headers = await HeadersPage.open(page, document, { flags: FLAGS });

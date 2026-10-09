@@ -16,8 +16,6 @@ export const BLANK: Choice = { kind: 'blank' };
 export interface ChooserData {
   /** The first run: the library has no canvas, and the question is a welcome. */
   readonly first: boolean;
-  /** The tour can be taken: the simulation is on (ADR-0083). */
-  readonly tour: boolean;
 }
 
 /**
@@ -37,7 +35,7 @@ export interface ChooserData {
       <p class="text-muted">
         @if (data.first) {
           A canvas is where you draw how messages travel. Start from one of the tutorials of RabbitMQ, build your own
-          from nothing{{ data.tour ? ', or take a short tour' : '' }}.
+          from nothing, or take a short tour.
         } @else {
           Each one opens as a new canvas, with its own name.
         }
@@ -60,11 +58,9 @@ export interface ChooserData {
         @if (!data.first) {
           <button type="button" [class]="button" data-testid="choose-cancel" (click)="ref.close()">Cancel</button>
         }
-        @if (data.tour) {
-          <button type="button" [class]="button" data-testid="choose-tour" (click)="ref.close({ kind: 'tour' })">
-            Take the tour (about a minute)
-          </button>
-        }
+        <button type="button" [class]="button" data-testid="choose-tour" (click)="ref.close({ kind: 'tour' })">
+          Take the tour (about a minute)
+        </button>
         <button type="button" [class]="primary" data-testid="choose-blank" (click)="ref.close(blank)">
           Build from scratch
         </button>

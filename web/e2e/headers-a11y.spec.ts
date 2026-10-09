@@ -22,8 +22,8 @@ import { expect, test } from './support/test';
 const CONDITIONS = 'editor';
 const LIGHT_ACCENT = 'rgb(29, 78, 216)';
 const DARK_ACCENT = 'rgb(147, 197, 253)';
-const PRODUCER = 'editor,simulation';
-const MESSAGES = 'editor,simulation';
+const PRODUCER = 'editor';
+const MESSAGES = 'editor';
 
 interface State {
   readonly name: string;

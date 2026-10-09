@@ -63,7 +63,7 @@ export interface EditorDebugSources {
   /** What the canvas reported, oldest first: the contract suite reads it to tell a drop on a node from a drop on nothing. */
   readonly intents: () => readonly unknown[];
   readonly viewport: () => DebugViewport | null;
-  /** The clock of the simulation, whether it runs, how fast, when the next thing is, and what the engine says of itself (ADR-0056). `null` without the flag. */
+  /** The clock of the simulation, whether it runs, how fast, when the next thing is, and what the engine says of itself (ADR-0056). */
   readonly simulationState: () => SimulationState | null;
   /** What the overlay of the messages drew in its last frame (ADR-0055). `null` without the overlay. */
   readonly overlayFrame: () => DebugOverlayFrame | null;

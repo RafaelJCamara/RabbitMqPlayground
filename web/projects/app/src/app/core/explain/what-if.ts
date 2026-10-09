@@ -11,7 +11,6 @@ import {
   type Issue,
   type RouteExplanation,
 } from '@rmq/domain';
-import { FeatureFlags } from '../flags/feature-flags';
 import { DocumentStore } from '../state/document-store';
 import { SelectionStore } from '../state/selection-store';
 import type { Emphasis } from './emphasis';
@@ -20,7 +19,7 @@ import { emphasisOfRoute } from './highlight';
 /**
  * The what-if tester (ADR-0064): where a message would go on the canvas as it is, asked of an exchange and a message written as it follows the exchange in `publish`. It reads the canvas and nothing else: it does not publish,
  * does not call the bus or the engine, writes nothing to either log and changes neither the document, the selection nor the history. What it says is worked out again for each change of the text, of the exchange and of the
- * canvas, with no timer, because the work is a few microseconds. It needs the flag `explain` alone; the line that would send the message for real is offered when the simulation is on too.
+ * canvas, with no timer, because the work is a few microseconds. It also offers the line that would send the message for real.
  */
 
 /** An exchange that the tester can ask about. The default exchange has no name, and a canvas may not be showing it. */
@@ -52,10 +51,6 @@ export interface WhatIfLit {
 export class WhatIf {
   private readonly store = inject(DocumentStore);
   private readonly selection = inject(SelectionStore);
-  private readonly flags = inject(FeatureFlags);
-
-  /** Whether the line that would send the message is offered: it is a command of the simulation. */
-  private readonly offersLine = this.flags.isEnabled('simulation');
 
   private readonly opened = signal(false);
   private readonly asked = signal<string | null>(null);
@@ -103,7 +98,7 @@ export class WhatIf {
     return {
       explanation,
       outlook: outlookOf(explanation),
-      line: this.offersLine && exchange !== '' ? `publish ${wordText(exchange)}${text === '' ? '' : ` ${text}`}` : null,
+      line: exchange !== '' ? `publish ${wordText(exchange)}${text === '' ? '' : ` ${text}`}` : null,
       document,
     };
   });

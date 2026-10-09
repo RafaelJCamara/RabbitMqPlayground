@@ -41,6 +41,9 @@ describe('HintBar', () => {
     expect(shown()).toEqual([
       'Arrow keys Move between nodes',
       'F Fit the canvas',
+      'Space Play or pause the simulation',
+      '. Step to the next event',
+      'E Show or hide the event log',
       '+ and - Zoom',
       expect.stringMatching(/^(Ctrl|Cmd)\+Z Undo$/),
       expect.stringMatching(/^(Ctrl|Cmd)\+Shift\+Z Redo$/),
@@ -98,6 +101,10 @@ describe('HintBar', () => {
   it('has the same hints for a canvas that is empty, because what the keys do does not depend on what is on it', async () => {
     const { shown } = await renderBar(emptyDocument());
 
-    expect(shown().slice(0, 3)).toEqual(['Arrow keys Move between nodes', 'F Fit the canvas', '+ and - Zoom']);
+    expect(shown().slice(0, 3)).toEqual([
+      'Arrow keys Move between nodes',
+      'F Fit the canvas',
+      'Space Play or pause the simulation',
+    ]);
   });
 });

@@ -13,9 +13,7 @@ describe('linkBase', () => {
   });
 
   it('carries the flags that are on, so that a link opens for whoever is sent it as it does for whoever made it', () => {
-    expect(linkBase(address, { enabled: ['editor', 'simulation'] })).toBe(
-      'https://learner.test/RabbitMqPlayground/?ff=editor,simulation',
-    );
+    expect(linkBase(address, { enabled: ['editor'] })).toBe('https://learner.test/RabbitMqPlayground/?ff=editor');
   });
 });
 

@@ -1,7 +1,5 @@
 import { SimulationPage } from './pages/simulation-page';
-import { EditorPage } from './pages/editor-page';
 import { DIRECT_TO_QUEUE, LONG_LEG, ORDERS, TWO_WORKERS } from './support/orders';
-import { seedCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -148,29 +146,6 @@ test.describe('the controls and the keys (ADR-0054, ADR-0056)', () => {
     await expect(sheet.getByText('Play or pause the simulation')).toBeVisible();
     await expect(sheet.getByText('Step to the next event')).toBeVisible();
     await page.keyboard.press('Escape');
-  });
-
-  test('is not there without the flag: no controls, no overlay, no numbers on the nodes, and the keys are the page’s', async ({
-    page,
-  }) => {
-    await seedCanvas(page, ORDERS, 'Plain');
-    const editor = new EditorPage(page);
-    await editor.goto('?ff=editor');
-    await page.waitForFunction(() => (window.__rmq?.drawnEdges().length ?? 0) >= 3);
-
-    await expect(page.getByRole('region', { name: 'Simulation' })).toHaveCount(0);
-    await expect(page.locator('rmq-message-overlay')).toHaveCount(0);
-    await expect(page.locator('rmq-node-stats')).toHaveCount(0);
-    await expect(editor.hints).not.toContainText('Space');
-    await editor.select('Producer sender');
-    await page.keyboard.press('p');
-    await page.keyboard.press('.');
-    // Neither key is the simulation's, so neither does anything, and neither is refused for a simulation that is not there. A refusal that did not come is waited for, by two frames of the page.
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await expect(page.getByTestId('status-message')).toHaveCount(0);
-    await expect(page.getByTestId('refusal')).toHaveCount(0);
-    expect(await page.evaluate(() => window.__rmq?.simulationState())).toBeNull();
-    expect(await page.evaluate(() => window.__rmq?.overlayFrame())).toBeNull();
   });
 });
 

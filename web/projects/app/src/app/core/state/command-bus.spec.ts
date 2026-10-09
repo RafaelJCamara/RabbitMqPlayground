@@ -202,7 +202,10 @@ describe('CommandBus', () => {
 
       expect(!result.ok && result.error.kind).toBe('unsupported');
       expect(status.refusal()).toMatchObject({ origin: 'key' });
-      expect(announcer.announce).toHaveBeenCalledWith(expect.stringContaining('not switched on'), 'assertive');
+      expect(announcer.announce).toHaveBeenCalledWith(
+        expect.stringContaining('There is no simulation on this canvas'),
+        'assertive',
+      );
     });
 
     it('hands the command to the simulation, and says what it did, on the status line and aloud', () => {

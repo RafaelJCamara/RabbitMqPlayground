@@ -51,22 +51,16 @@ let nextSection = 0;
           >
             @for (message of messages(); track message.id) {
               <li data-testid="queue-message">
-                @if (explain.enabled) {
-                  <button
-                    type="button"
-                    class="hover:bg-canvas flex min-h-7 w-full flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1 text-left"
-                    data-testid="open-message"
-                    [attr.title]="'Open message ' + message.id + ' in the inspector'"
-                    [attr.aria-current]="explain.message() === message.id ? 'true' : null"
-                    (click)="open(message, name)"
-                  >
-                    <ng-container *ngTemplateOutlet="summary; context: { $implicit: message }" />
-                  </button>
-                } @else {
-                  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1">
-                    <ng-container *ngTemplateOutlet="summary; context: { $implicit: message }" />
-                  </div>
-                }
+                <button
+                  type="button"
+                  class="hover:bg-canvas flex min-h-7 w-full flex-wrap items-baseline gap-x-2 gap-y-0.5 px-2 py-1 text-left"
+                  data-testid="open-message"
+                  [attr.title]="'Open message ' + message.id + ' in the inspector'"
+                  [attr.aria-current]="explain.message() === message.id ? 'true' : null"
+                  (click)="open(message, name)"
+                >
+                  <ng-container *ngTemplateOutlet="summary; context: { $implicit: message }" />
+                </button>
               </li>
             }
           </ol>

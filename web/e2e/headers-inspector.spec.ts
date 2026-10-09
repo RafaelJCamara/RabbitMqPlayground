@@ -11,7 +11,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('shows the mode and a row for each condition, as the binding has them, with the sentence of what it asks and the line that would make it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
 
     await headers.selectBinding('x1>q1');
 
@@ -37,7 +37,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('shows the other binding of the same exchange with its own mode and rows, and the types as they are held', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
 
     await headers.selectBinding('x1>q2');
 
@@ -53,7 +53,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('changes the binding when Apply is pressed and not before, as one step of undo, and the label of the edge follows', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     const conditions = headers.conditions();
     await expect(headers.chips('x1>q1')).toHaveText(['all · format=pdf · type=report']);
@@ -100,7 +100,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('says that nothing changed when Apply is pressed on a binding that is as it was, and makes no command', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     const conditions = headers.conditions();
 
@@ -114,7 +114,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('is never switched off in the inspector either: Apply with a row that is wrong says it aloud, puts the cursor in it, and changes nothing', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     const conditions = headers.conditions();
     await conditions.fill(2, 'format', 'tiff');
@@ -130,7 +130,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   });
 
   test('gives back the binding as it is with Revert, and says so', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     const conditions = headers.conditions();
     await conditions.choose('any-with-x');
@@ -148,7 +148,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   });
 
   test('makes two bindings one when an edit makes them the same, and says so', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES_TWICE);
+    const headers = await HeadersPage.open(page, FILES_TWICE, { stop: false });
     await headers.selectBinding('x1>q1');
     const first = headers.conditions(1);
     await expect(headers.editor.inspector.getByTestId('binding-conditions')).toHaveCount(2);
@@ -173,7 +173,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('gives the editor of each binding of an edge ids of its own, so that the sentence of a mode and the label of a field are tied to their own editor', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_TWICE);
+    const headers = await HeadersPage.open(page, FILES_TWICE, { stop: false });
     await headers.selectBinding('x1>q1');
 
     const described = await Promise.all(
@@ -195,7 +195,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('keeps the order of the bindings when one is edited: the edited one is the last of its edge', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_TWICE);
+    const headers = await HeadersPage.open(page, FILES_TWICE, { stop: false });
     await headers.selectBinding('x1>q1');
     await expect(headers.chips('x1>q1')).toHaveText(['all · format=pdf · type=report', 'all · format=pdf']);
 
@@ -208,7 +208,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('adds another binding between the same two nodes through the same popover, and deletes one with its own button', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
 
     await headers.editor.inspector.getByTestId('add-binding').click();
@@ -232,7 +232,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('says that a binding that is already there is there, and makes nothing, when the popover is given the same conditions', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     await headers.editor.inspector.getByTestId('add-binding').click();
     const popover = headers.popover('exchange files', 'queue pdfs');
@@ -250,7 +250,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('is kept in what is saved, so that a page that is opened again has the binding as it was applied, with its chip', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     await headers.conditions().choose('any-with-x');
     await headers.conditions().append('x-region', 'eu');
@@ -271,7 +271,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('says in three places that a binding with any and no condition that counts matches no message: a badge on its label, the inspector and its own editor', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, NEVER);
+    const headers = await HeadersPage.open(page, NEVER, { stop: false });
     await expect(headers.label('x1>q1').getByTestId('edge-lint')).toBeVisible();
     await expect(headers.label('x1>q2').getByTestId('edge-lint')).toHaveCount(0);
 
@@ -293,7 +293,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('says that the key of a binding is not read by a headers exchange, and keeps it when the conditions are changed', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, KEYED);
+    const headers = await HeadersPage.open(page, KEYED, { stop: false });
     await headers.selectBinding('x1>q1');
     const conditions = headers.conditions();
     await expect(conditions.keyNote).toHaveText('Its key, legacy, is not read by a headers exchange.');
@@ -311,7 +311,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
   test('gives the keyboard to the canvas on Escape, from a field of the editor, as the other fields of the inspector do', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES_BOUND);
+    const headers = await HeadersPage.open(page, FILES_BOUND, { stop: false });
     await headers.selectBinding('x1>q1');
     await headers.conditions().name(1).focus();
 

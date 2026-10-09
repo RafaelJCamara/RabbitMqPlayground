@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { HeadersPage } from './pages/headers-page';
 import { FILES } from './support/headers';
+import { ORDERS, UNLINKED } from './support/orders';
 import { Finger } from './support/touch';
 import { expect, test } from './support/test';
 
@@ -29,7 +30,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('opens by the node that the link goes to with the cursor in the name of its first row, and makes nothing until it is told to', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
 
     const popover = await askForConditions(headers);
 
@@ -54,7 +55,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('makes one binding with the mode written out and the conditions as they were typed, and says so in one line of the log', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
 
     await popover.fill(1, 'format', 'pdf');
@@ -84,7 +85,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   });
 
   test('makes the binding with Enter in a field, which is a form that is sent', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
 
     await popover.fill(1, 'format', 'pdf');
@@ -97,7 +98,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('is never switched off: Bind with a row that is not finished says the first problem aloud and puts the cursor in it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.name(1).fill('format');
 
@@ -117,7 +118,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('is given up with Escape, which gives the canvas the keyboard and makes nothing, and says so', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
 
@@ -133,7 +134,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('is given up with its Cancel button as well, and a second link opens it with nothing typed in it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
 
@@ -149,7 +150,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('is not given up by a click on its own text, and is given up when the focus goes elsewhere', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
 
@@ -170,7 +171,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('is given up by a click on something that cannot take the focus, and the focus is not taken to the canvas, where the learner did not put it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
 
@@ -184,7 +185,7 @@ test.describe('the popover that asks for the conditions of a link (ADR-0066)', (
   test('says in a sentence what the binding asks as the rows are typed, in the words of the explanation', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await expect(popover.sentence).toContainText('no condition counts, so it matches every message');
 
@@ -208,7 +209,7 @@ test.describe('the popover of the conditions in a window that is shorter than it
   test('is inside the canvas and wholly in the window, and scrolls inside itself, with the cursor in view and the buttons reached by Tab', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
 
     const popover = await askForConditions(headers);
 
@@ -235,7 +236,7 @@ test.describe('every way of making a link asks for the conditions of a headers b
   test('by "Link to…" in the inspector, which lists the targets and then asks, with the cursor in the first row', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     await headers.editor.select('Exchange files, headers');
 
     await page.getByRole('button', { name: 'Link exchange files to…' }).click();
@@ -253,7 +254,7 @@ test.describe('every way of making a link asks for the conditions of a headers b
   });
 
   test('by the key L, which the library takes: the arrow keys choose the target and Enter asks', async ({ page }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     await headers.editor.select('Exchange files, headers');
 
     await page.keyboard.press('l');
@@ -269,7 +270,7 @@ test.describe('every way of making a link asks for the conditions of a headers b
     test.use({ hasTouch: true });
 
     test('by dragging a finger from the dot of the exchange to a queue', async ({ page }) => {
-      const headers = await HeadersPage.open(page, FILES);
+      const headers = await HeadersPage.open(page, FILES, { stop: false });
       const { editor } = headers;
       const finger = await Finger.on(page);
 
@@ -284,7 +285,7 @@ test.describe('every way of making a link asks for the conditions of a headers b
   test('by letting a link go on nothing, which makes a queue and asks for the conditions of its binding', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const { editor } = headers;
     const from = await editor.centre(editor.handle('x1', 'out'));
 
@@ -304,7 +305,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('reads the type of what is typed, by the rule of the command line: a number is an integer, with a point it is a float, and text in quotes is a string', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     const cases: readonly (readonly [string, string])[] = [
       ['1', 'integer'],
@@ -325,7 +326,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('rewrites the text when another type is chosen so that it says the type, and says what it became', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'n', '1');
 
@@ -346,7 +347,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('refuses a type that the text cannot have, under the row, with the cause first, and the select goes back to what it was', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'big', 'true');
     await expect(popover.type(1)).toHaveValue('boolean');
@@ -366,7 +367,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('keeps a type that is chosen while the value is empty, and shows an example of it in the field', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.name(1).fill('size');
 
@@ -383,7 +384,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('flags a name that is there twice on both rows, and Bind says it and puts the cursor in the first of them', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
     await popover.append('format', 'tiff');
@@ -416,7 +417,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('says that an x- name is not counted by the modes that leave it out, counted by the ones that do not, and what the sentence makes of it', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'x-region', 'eu');
 
@@ -440,7 +441,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('does not take the name x-match as a condition, because it is the mode, and says which control to use', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
 
     await popover.fill(1, 'x-match', 'any');
@@ -456,7 +457,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('asks only for the header to be there with the type exists, which takes the value away, says that it cannot be exported, and makes a condition with no value', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.name(1).fill('author');
     await expect(popover.exportNote).toHaveCount(0);
@@ -480,7 +481,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('keeps the mode that is chosen readable while the pointer is still on it, which a hover must not take the fill from', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
 
     await popover.choose('any');
@@ -498,7 +499,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('tells a lint of the conditions while they are typed: any with nothing that counts matches no message, and a condition that counts takes it away', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await expect(popover.lint).toHaveCount(0);
 
@@ -520,7 +521,7 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
   test('chooses the mode with the arrow keys as a group of radio buttons does, and a mode that is chosen is written out', async ({
     page,
   }) => {
-    const headers = await HeadersPage.open(page, FILES);
+    const headers = await HeadersPage.open(page, FILES, { stop: false });
     const popover = await askForConditions(headers);
     await popover.fill(1, 'format', 'pdf');
 
@@ -536,5 +537,30 @@ test.describe('the rows of conditions: the type of what is typed, and what is sa
 
     await expect(popover.scope).toHaveCount(0);
     expect(await headers.editor.log()).toEqual(['bind files -> pdfs x-match=any format=pdf']);
+  });
+});
+
+test.describe('the conditions leave the other exchanges as they were (ADR-0066)', () => {
+  test('does not ask for conditions for an exchange that is not a headers exchange, which still asks for its key', async ({
+    page,
+  }) => {
+    const headers = await HeadersPage.open(page, UNLINKED, { stop: false });
+    const { editor } = headers;
+
+    // `jobs` is the direct exchange, `x2`, and `errors` the queue, `q1`.
+    await editor.dragLinkTo('x2', await editor.centre(editor.nodeById('q1')));
+
+    await expect(page.getByRole('textbox', { name: 'Binding key' })).toBeFocused();
+    await expect(page.getByRole('group', { name: /^Conditions for the binding/ })).toHaveCount(0);
+  });
+
+  test('keeps the key field for the binding of a direct exchange, which reads the key', async ({ page }) => {
+    const headers = await HeadersPage.open(page, ORDERS, { stop: false });
+
+    await headers.selectBinding('x1>q1');
+
+    await expect(headers.editor.inspector.getByRole('textbox', { name: 'Key' })).toHaveValue('order.new');
+    await expect(headers.editor.inspector.getByTestId('binding-conditions')).toHaveCount(0);
+    await expect(headers.chips('x1>q1')).toHaveText(['order.new']);
   });
 });

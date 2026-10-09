@@ -10,7 +10,6 @@ import {
   type QueueMessage,
   type RuntimeView,
 } from '@rmq/engine';
-import { FeatureFlags } from '../flags/feature-flags';
 import { SHARED_MESSAGES, type SharedMessages } from '../share/shared-messages';
 import { CommandBus, type RuntimeHost, type RuntimeOutcome } from '../state/command-bus';
 import { DocumentStore, type ChangeCause } from '../state/document-store';
@@ -52,8 +51,6 @@ const plural = (count: number, one: string): string => `${count} ${count === 1 ?
  * `reconcile`, which is the one path for a command, an undo, a redo and a load alike, so that it is always what the canvas says. It runs the commands of the
  * runtime that the bus hands it, and advances the engine in the frames of the page by the time that passed times the speed (ADR-0055). The engine is never
  * called by anything else, and what it says goes to the screen as signals that are set only when they change.
- *
- * Without the flag `simulation` it does nothing and takes nothing: the bus refuses what it is not given a host for.
  */
 @Injectable()
 export class Simulation implements RuntimeHost {
@@ -64,8 +61,6 @@ export class Simulation implements RuntimeHost {
   private readonly motion = inject(MotionPreference);
   /** The messages of a shared canvas, until the document of the canvas has loaded and they have been given to the engine (ADR-0078). */
   private shared: SharedMessages | null = inject(SHARED_MESSAGES);
-
-  readonly enabled = inject(FeatureFlags).isEnabled('simulation');
 
   private engine: Engine = engineFor(this.store.document());
   /** The document that the engine holds, which is what `reconcile` goes on from. */
@@ -98,9 +93,6 @@ export class Simulation implements RuntimeHost {
   readonly revision = this.changes.asReadonly();
 
   constructor() {
-    if (!this.enabled) {
-      return;
-    }
     this.rebuild(this.store.document());
     const stopBus = this.bus.attach(this);
     const stopStore = this.store.subscribe((document, cause) => this.follow(document, cause));

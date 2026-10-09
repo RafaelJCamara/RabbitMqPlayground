@@ -1,7 +1,6 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { BLANK, CHOOSER_TITLE_ID, TemplateChooser, type Choice, type ChooserData } from './template-chooser';
 
 /** Opens the chooser: modal, with the cursor on the first control and given back to what had it, as the other dialogs are. */
@@ -15,7 +14,6 @@ const MODAL = {
 @Injectable({ providedIn: 'root' })
 export class OnboardingDialogs {
   private readonly dialog = inject(Dialog);
-  private readonly simulating = inject(FeatureFlags).isEnabled('simulation');
   private isOpen = false;
 
   /**
@@ -27,7 +25,7 @@ export class OnboardingDialogs {
       return undefined;
     }
     this.isOpen = true;
-    const data: ChooserData = { first: options.first, tour: this.simulating };
+    const data: ChooserData = { first: options.first };
     const ref = this.dialog.open<Choice | undefined, ChooserData, TemplateChooser>(TemplateChooser, {
       ...MODAL,
       data,

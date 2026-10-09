@@ -108,12 +108,6 @@ describe('Tour (ADR-0083)', () => {
       expect(screen.queryByRole('region', { name: 'Tour' })).not.toBeInTheDocument();
     });
 
-    it('is not there without the simulation, which its last steps need: only editor,canvases is on', async () => {
-      await renderTour({ flags: 'editor,canvases' });
-
-      expect(screen.queryByRole('region', { name: 'Tour' })).not.toBeInTheDocument();
-    });
-
     it('has Skip this step and End tour, and no Back on the first step, and does not take the cursor', async () => {
       await renderTour();
 

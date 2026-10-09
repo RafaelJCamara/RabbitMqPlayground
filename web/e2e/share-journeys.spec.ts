@@ -245,7 +245,7 @@ test.describe('journey 5: a link with the messages', () => {
     page,
     visitor,
   }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
+    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor' });
     await sender.editor.select('Producer sender');
     await page.keyboard.press('p');
     await sender.step(2);
@@ -281,7 +281,7 @@ test.describe('journey 5: a link with the messages', () => {
   });
 
   test('is not offered when nothing is queued, and the panel says so', async ({ page }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
+    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor' });
     const share = new SharePage(sender.page);
 
     await share.open();
@@ -289,33 +289,6 @@ test.describe('journey 5: a link with the messages', () => {
     await expect(share.withMessages).toBeDisabled();
     await expect(share.noMessages).toContainText('No message is on the canvas now');
     await expect(share.canvasOnly).toBeChecked();
-  });
-
-  test('is said to be left out, with how many there were, when the page has no simulation to put them in', async ({
-    page,
-    visitor,
-  }) => {
-    const sender = await SimulationPage.open(page, ORDERS, { flags: 'editor,simulation' });
-    await sender.editor.select('Producer sender');
-    await page.keyboard.press('p');
-    await sender.step(2);
-    const share = new SharePage(page);
-    await share.open();
-    await share.withMessages.check();
-    const withFlags = await share.address();
-    // The same link, for a page that has the flag editor and no simulation.
-    const bare = withFlags.replace(/\?ff=[^#]*/, '?ff=editor');
-
-    const other = await visitor();
-    await other.goto(bare);
-    const shared = new SharedViewPage(other);
-    await shared.ready();
-
-    await expect(shared.notice).toContainText(
-      /This link carries \d+ messages?, but the simulation is not switched on yet/,
-    );
-    await expect(shared.notice).toHaveAttribute('role', 'status');
-    await expect(shared.editor.node('Queue billing')).toBeVisible();
   });
 });
 
@@ -384,7 +357,7 @@ test.describe('journey 5: links that were made once and are only ever read', () 
     const { payload } = goldenLink('sample-with-messages');
     const other = await visitor();
 
-    await other.goto(`?ff=editor,simulation#c=${payload}`);
+    await other.goto(`?ff=editor#c=${payload}`);
 
     const shared = new SharedViewPage(other);
     await shared.ready();

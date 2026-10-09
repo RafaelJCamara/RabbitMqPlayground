@@ -11,7 +11,6 @@ import {
   queueRecord,
 } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
 import { FRAME_SOURCE, FrameLoop } from '../runtime/frame-loop';
 import { MOTION_QUERY } from '../runtime/motion';
 import { SimStats } from '../runtime/sim-stats';
@@ -44,9 +43,7 @@ const traffic = (burst = 2): CanvasDocument => ({
 
 const PUBLISH: RuntimeCommand = { type: 'publish', from: { kind: 'producer', name: 'sender' } };
 
-function setup(
-  options: { readonly flags?: string | null; readonly burst?: number; readonly before?: () => void } = {},
-) {
+function setup(options: { readonly burst?: number; readonly before?: () => void } = {}) {
   const frames = manualFrames();
   const providers: Provider[] = [
     DocumentStore,
@@ -58,12 +55,7 @@ function setup(
     SimStats,
     Simulation,
     EventLog,
-    FeatureFlags,
     { provide: FRAME_SOURCE, useValue: frames },
-    {
-      provide: FLAG_SOURCES,
-      useValue: { stored: null, query: options.flags === undefined ? 'simulation,explain' : options.flags },
-    },
     {
       provide: MOTION_QUERY,
       useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -446,14 +438,6 @@ describe('EventLog (ADR-0061)', () => {
     log.flush();
 
     expect(log.count()).toBe(0);
-  });
-
-  it('listens to nothing without the simulation: a log that says what it cannot know would be a log of nothing', () => {
-    const { log } = setup({ flags: null });
-
-    expect(log.enabled).toBe(false);
-    expect(log.count()).toBe(0);
-    expect(log.held.size).toBe(0);
   });
 
   it('stops listening to the events and to the lines of commands when it is destroyed, so that a closed editor says nothing', () => {

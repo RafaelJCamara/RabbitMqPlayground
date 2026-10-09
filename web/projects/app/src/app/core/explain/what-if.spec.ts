@@ -11,7 +11,6 @@ import {
   queueRecord,
 } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { FeatureFlags, FLAG_SOURCES } from '../flags/feature-flags';
 import { FRAME_SOURCE, FrameLoop } from '../runtime/frame-loop';
 import { MOTION_QUERY } from '../runtime/motion';
 import { SimStats } from '../runtime/sim-stats';
@@ -43,7 +42,7 @@ const canvas = (): CanvasDocument => ({
   settings: { ...emptyDocument().settings },
 });
 
-function setup(flags: string | null = 'explain,simulation') {
+function setup() {
   const frames = manualFrames();
   const providers: Provider[] = [
     DocumentStore,
@@ -55,9 +54,7 @@ function setup(flags: string | null = 'explain,simulation') {
     SimStats,
     Simulation,
     WhatIf,
-    FeatureFlags,
     { provide: FRAME_SOURCE, useValue: frames },
-    { provide: FLAG_SOURCES, useValue: { stored: null, query: flags } },
     {
       provide: MOTION_QUERY,
       useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
@@ -191,7 +188,7 @@ describe('WhatIf (ADR-0064)', () => {
 
   describe('the line that would send it for real', () => {
     it('is the publish that has the same text after the exchange, with the simulation on', () => {
-      const { whatIf } = setup('explain,simulation');
+      const { whatIf } = setup();
       whatIf.open();
 
       whatIf.type('key=new header:format=pdf');
@@ -202,7 +199,7 @@ describe('WhatIf (ADR-0064)', () => {
     });
 
     it('leaves out the spaces around what was written, so that what is pasted is a line that reads', () => {
-      const { whatIf } = setup('explain,simulation');
+      const { whatIf } = setup();
       whatIf.open();
 
       whatIf.type('   key=new  ');
@@ -213,24 +210,18 @@ describe('WhatIf (ADR-0064)', () => {
     });
 
     it('writes the name of the exchange as the grammar reads it', () => {
-      const { whatIf, bus } = setup('explain,simulation');
+      const { whatIf, bus } = setup();
       bus.apply({ type: 'rename', target: { kind: 'exchange', name: 'orders' }, name: 'big orders' }, 'gesture');
       whatIf.open();
 
       expect(whatIf.answer()?.line).toBe('publish "big orders"');
     });
 
-    it('is not there for the default exchange, which no command names, or without the simulation', () => {
-      const { whatIf } = setup('explain,simulation');
+    it('is not there for the default exchange, which no command names', () => {
+      const { whatIf } = setup();
       whatIf.open();
       whatIf.choose('');
       expect(whatIf.answer()?.line).toBeNull();
-
-      TestBed.resetTestingModule();
-      const alone = setup('explain');
-      alone.whatIf.open();
-      alone.whatIf.type('key=new');
-      expect(alone.whatIf.answer()?.line).toBeNull();
     });
   });
 

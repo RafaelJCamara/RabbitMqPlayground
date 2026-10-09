@@ -30,7 +30,7 @@ describe('the flag registry', () => {
   });
 
   it('keeps the flag names the M1 plan promises for its slices', () => {
-    expect([...FLAG_NAMES].sort()).toEqual(['editor', 'simulation'].sort());
+    expect([...FLAG_NAMES]).toEqual(['editor']);
   });
 });
 
@@ -61,11 +61,10 @@ describe('resolveFlags', () => {
   });
 
   it('turns on the flags named in the URL', () => {
-    expect(enabled(null, 'simulation,editor')).toEqual(['editor', 'simulation']);
+    expect(enabled(null, 'editor')).toEqual(['editor']);
   });
 
   it('adds the two sources together', () => {
-    expect(enabled('editor', 'simulation')).toEqual(['editor', 'simulation']);
     expect(enabled('editor', 'editor')).toEqual(['editor']);
   });
 

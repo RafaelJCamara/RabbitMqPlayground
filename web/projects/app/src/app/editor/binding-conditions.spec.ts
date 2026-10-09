@@ -1,3 +1,4 @@
+import type { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { Issue, RuntimeCommand } from '@rmq/domain';
 import type { HeaderArguments } from '@rmq/engine';
@@ -20,7 +21,6 @@ import { describe, expect, it } from 'vitest';
 import { Announcer } from '../core/announcer';
 import { EventLog } from '../core/explain/event-log';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
-import { FLAG_SOURCES } from '../core/flags/feature-flags';
 import { FRAME_SOURCE } from '../core/runtime/frame-loop';
 import { MOTION_QUERY } from '../core/runtime/motion';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
@@ -42,9 +42,22 @@ interface Options {
   readonly error?: Issue | null;
   readonly popover?: boolean;
   readonly key?: string;
-  /** The flags that are on, as `?ff=` says them. */
-  readonly flags?: string;
 }
+
+/** What the table of recent messages needs, which every editor of the conditions has: the simulation, the log behind it and the clock that the simulation is advanced by. */
+const logProviders = (): Provider[] => [
+  SelectionStore,
+  StatusStore,
+  CommandBus,
+  CommandLog,
+  ...RUNTIME_SERVICES,
+  ...EXPLAIN_SERVICES,
+  { provide: FRAME_SOURCE, useValue: manualFrames() },
+  {
+    provide: MOTION_QUERY,
+    useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
+  },
+];
 
 async function renderEditor(options: Options = {}) {
   const confirmed: HeaderArguments[] = [];
@@ -52,9 +65,7 @@ async function renderEditor(options: Options = {}) {
   const popover = options.popover ?? (options.purpose ?? 'new') === 'new';
   const view = await render(BindingConditions, {
     providers: [
-      ...(options.flags === undefined
-        ? []
-        : [{ provide: FLAG_SOURCES, useValue: { stored: null, query: options.flags } }]),
+      ...logProviders(),
       {
         provide: DocumentStore,
         useFactory: () => {
@@ -492,16 +503,11 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.queryByTestId('conditions-key')).not.toBeInTheDocument();
     });
 
-    it('has no table of recent messages without the simulation, because the log needs it', async () => {
-      await renderEditor({ flags: 'editor' });
-
-      expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
-    });
-
-    it('has no table of recent messages without the log, which needs the flags', async () => {
+    it('has the table of recent messages, which is empty until a message is published to its exchange', async () => {
       await renderEditor();
 
-      expect(screen.queryByTestId('headers-live')).not.toBeInTheDocument();
+      expect(screen.getByTestId('headers-live')).toBeInTheDocument();
+      expect(screen.getByTestId('headers-live-empty')).toBeInTheDocument();
     });
   });
 });
@@ -647,21 +653,7 @@ describe('BindingConditions with the table of recent messages (ADR-0069, ADR-007
   function renderWithLog() {
     const frames = manualFrames();
     TestBed.configureTestingModule({
-      providers: [
-        DocumentStore,
-        SelectionStore,
-        StatusStore,
-        CommandBus,
-        CommandLog,
-        ...RUNTIME_SERVICES,
-        ...EXPLAIN_SERVICES,
-        { provide: FRAME_SOURCE, useValue: frames },
-        { provide: FLAG_SOURCES, useValue: { stored: null, query: 'simulation,explain' } },
-        {
-          provide: MOTION_QUERY,
-          useValue: { matches: false, addEventListener: () => undefined, removeEventListener: () => undefined },
-        },
-      ],
+      providers: [DocumentStore, ...logProviders(), { provide: FRAME_SOURCE, useValue: frames }],
     });
     const bus = TestBed.inject(CommandBus);
     const log = TestBed.inject(EventLog);

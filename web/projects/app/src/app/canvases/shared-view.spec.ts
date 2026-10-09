@@ -325,14 +325,6 @@ describe('SharedView (ADR-0078)', () => {
       expect(screen.queryByTestId('shared-notice')).not.toBeInTheDocument();
     });
 
-    it('are said to be left out, with how many there were, when the simulation is not switched on', async () => {
-      await renderView({ shared: withMessages() });
-
-      const notice = await screen.findByTestId('shared-notice');
-      expect(notice).toHaveTextContent(/^This link carries 2 messages, but the simulation is not switched on yet/);
-      expect(notice).toHaveAttribute('role', 'status');
-    });
-
     it('are said to be left out, and why, when the engine does not take them, and the canvas is shown without them', async () => {
       const snapshot = { ...snapshotAfter(traffic(), 180), version: 2 } as unknown as EngineSnapshot;
       const { editorInjector } = await renderView({ shared: withMessages(snapshot), flags: 'editor,simulation' });

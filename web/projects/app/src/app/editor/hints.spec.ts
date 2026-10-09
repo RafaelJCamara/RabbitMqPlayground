@@ -10,6 +10,9 @@ describe('hintsFor', () => {
     expect(hintsFor({ nodes: 0, edges: 0 }, false)).toEqual([
       { id: 'navigate', keys: 'Arrow keys', label: 'Move between nodes' },
       { id: 'fit', keys: 'F', label: 'Fit the canvas' },
+      { id: 'play', keys: 'Space', label: 'Play or pause the simulation' },
+      { id: 'step', keys: '.', label: 'Step to the next event' },
+      { id: 'event-log', keys: 'E', label: 'Show or hide the event log' },
       { id: 'zoom', keys: '+ and -', label: 'Zoom' },
       { id: 'undo', keys: 'Ctrl+Z', label: 'Undo' },
       { id: 'redo', keys: 'Ctrl+Shift+Z', label: 'Redo' },
@@ -27,6 +30,9 @@ describe('hintsFor', () => {
       'Enter',
       'Delete',
       'F',
+      'Space',
+      '.',
+      'E',
       'Ctrl+Z',
       'Ctrl+Shift+Z',
       '/',
@@ -61,32 +67,26 @@ describe('hintsFor', () => {
   });
 
   it('is made from the table, in its order, so that a row that is added shows up', () => {
-    const everything = hintsFor({ nodes: 1, edges: 0, kind: 'queue' }, false, ['simulation']).map((hint) => hint.id);
+    const everything = hintsFor({ nodes: 1, edges: 0, kind: 'queue' }, false).map((hint) => hint.id);
     const table = SHORTCUTS.filter((row) => row.shows({ nodes: 1, edges: 0, kind: 'queue' })).map((row) => row.id);
 
     expect(everything).toEqual(table);
   });
 
-  it('says the keys of the simulation when the flag is on, and not otherwise, and P only for a producer', () => {
-    const ids = (selection: Parameters<typeof hintsFor>[0], enabled: Parameters<typeof hintsFor>[2]) =>
-      hintsFor(selection, false, enabled).map((hint) => hint.id);
+  it('says the keys of the simulation, and P only for a producer', () => {
+    const ids = (selection: Parameters<typeof hintsFor>[0]) => hintsFor(selection, false).map((hint) => hint.id);
 
-    expect(ids({ nodes: 0, edges: 0 }, [])).not.toEqual(expect.arrayContaining(['play']));
-    expect(ids({ nodes: 0, edges: 0 }, ['simulation'])).toEqual(expect.arrayContaining(['play', 'step']));
-    expect(ids({ nodes: 0, edges: 0 }, ['simulation'])).not.toContain('publish');
-    expect(ids({ nodes: 1, edges: 0, kind: 'queue' }, ['simulation'])).not.toContain('publish');
-    expect(ids({ nodes: 1, edges: 0, kind: 'producer' }, ['simulation'])).toContain('publish');
-    expect(ids({ nodes: 1, edges: 0, kind: 'producer' }, [])).not.toContain('publish');
-    expect(ids({ nodes: 2, edges: 0 }, ['simulation'])).not.toContain('publish');
-    expect(ids({ nodes: 1, edges: 1, kind: 'producer' }, ['simulation'])).not.toContain('publish');
+    expect(ids({ nodes: 0, edges: 0 })).toEqual(expect.arrayContaining(['play', 'step']));
+    expect(ids({ nodes: 0, edges: 0 })).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 0, kind: 'queue' })).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 0, kind: 'producer' })).toContain('publish');
+    expect(ids({ nodes: 2, edges: 0 })).not.toContain('publish');
+    expect(ids({ nodes: 1, edges: 1, kind: 'producer' })).not.toContain('publish');
   });
 
-  it('says the key of the event log when the simulation is on, and not otherwise, since there is no log without events', () => {
-    const ids = (enabled: Parameters<typeof hintsFor>[2]) =>
-      hintsFor({ nodes: 0, edges: 0 }, false, enabled).map((hint) => hint.id);
-
-    expect(ids([])).not.toContain('event-log');
-    expect(ids(['simulation'])).toContain('event-log');
+  it('says the key of the event log whatever is selected', () => {
+    expect(hintsFor({ nodes: 0, edges: 0 }, false).map((hint) => hint.id)).toContain('event-log');
+    expect(hintsFor({ nodes: 1, edges: 0, kind: 'queue' }, false).map((hint) => hint.id)).toContain('event-log');
   });
 
   it('writes the modifier that the platform has', () => {

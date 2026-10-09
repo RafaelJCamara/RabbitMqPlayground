@@ -8,8 +8,6 @@ import { Icon } from '../core/ui/icon';
 /** How many recent messages the live table shows (ADR-0070). */
 export const RECENT_LIMIT = 10;
 
-let nextTable = 0;
-
 const MARK = {
   pass: { icon: 'check', color: 'var(--rmq-explain-hit)' },
   fail: { icon: 'close', color: 'var(--rmq-explain-miss)' },
@@ -20,14 +18,14 @@ const MARK = {
  * The live table of a headers binding (ADR-0070): the last messages that were published to its exchange, or to one that leads to it, against each condition, and the verdict of the binding for each. It is made by the
  * domain from the engine's matcher and the sentences of the message inspector, so it cannot say what they do not, and it follows the conditions that are being typed. It is worked out again when the conditions
  * change, when the canvas changes and once for each turn in which the log says something, with no timer, and only while it is on the screen. A cell is an icon and a word, and the whole sentence is its title; a row ends in
- * its verdict, in words. It needs the log, which needs the flags `simulation` and `explain`.
+ * its verdict, in words.
  */
 @Component({
   selector: 'rmq-headers-live',
   imports: [Icon],
   template: `
-    <section class="flex flex-col gap-1.5" data-testid="headers-live" [attr.aria-labelledby]="titleId">
-      <h3 class="text-sm font-semibold" [id]="titleId">Recent messages</h3>
+    <section class="flex flex-col gap-1.5" data-testid="headers-live" [attr.aria-label]="name()">
+      <h3 class="text-sm font-semibold">Recent messages</h3>
       @if (table().rows.length === 0) {
         <p class="text-muted text-xs" data-testid="headers-live-empty">
           No message has been published to {{ where() }} yet. Publish one from a producer, and it is checked here.
@@ -38,7 +36,7 @@ const MARK = {
           role="region"
           tabindex="0"
           data-testid="headers-live-scroll"
-          [attr.aria-label]="'Recent messages against the conditions'"
+          [attr.aria-label]="scrollName()"
         >
           <table class="w-full text-xs" data-testid="headers-live-table">
             <caption class="text-muted pb-1 text-left" data-testid="headers-live-caption">
@@ -102,10 +100,19 @@ export class HeadersLive {
   readonly headers = input<HeaderArguments | undefined>();
   /** The name of the exchange that the binding starts from. */
   readonly exchange = input.required<string>();
+  /** What the table is about, in words, when there is more than one on the page: the bindings of an edge are edited one above the other, and two regions with the same name are one name for two places. */
+  readonly about = input('');
 
   private readonly log = inject(EventLog);
   private readonly store = inject(DocumentStore);
-  protected readonly titleId = `rmq-headers-live-${nextTable++}`;
+
+  /** The name of the section and of the region that scrolls in it, which begin with what a learner reads and go on with what the table is about, so that two tables on a page are two names. */
+  protected readonly name = computed(() =>
+    this.about() === '' ? 'Recent messages' : `Recent messages, ${this.about()}`,
+  );
+  protected readonly scrollName = computed(
+    () => `Recent messages against the conditions${this.about() === '' ? '' : `, ${this.about()}`}`,
+  );
 
   /** The exchanges that a message can come to this one from, through bindings between exchanges. */
   private readonly leading = computed(() => exchangesLeadingTo(toTopology(this.store.document()), this.exchange()));

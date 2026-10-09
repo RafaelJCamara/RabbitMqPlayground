@@ -1,6 +1,5 @@
 import { Component, computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Announcer } from '../core/announcer';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { CommandBus } from '../core/state/command-bus';
 import { DocumentStore } from '../core/state/document-store';
 import { BUTTON, BUTTON_PRIMARY } from '../core/ui/buttons';
@@ -36,7 +35,6 @@ export class TourController {
   readonly done = computed(() => this.question(this.step()));
 
   constructor() {
-    const flags = inject(FeatureFlags);
     const stop = this.bus.onApplied(({ command }) => {
       if (this.running() && command.type === 'publish') {
         this.sent.update((sent) => sent + 1);
@@ -50,7 +48,7 @@ export class TourController {
         untracked(() => this.enter(this.place() + 1));
       }
     });
-    if (flags.isEnabled('simulation') && inject(TourRequests).take()) {
+    if (inject(TourRequests).take()) {
       this.begin();
     }
   }

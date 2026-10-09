@@ -416,16 +416,6 @@ describe('KeyboardService', () => {
   });
 
   describe('the keys of the simulation (ADR-0054)', () => {
-    it('are left to the page without the flag: Space, the full stop and P are not taken, and nothing is run', () => {
-      expect(send('flow', { key: ' ' }).prevented).toBe(false);
-      expect(send('flow', { key: '.' }).prevented).toBe(false);
-      expect(send('flow', { key: 'p' }).prevented).toBe(false);
-
-      expect(actions.togglePlay).not.toHaveBeenCalled();
-      expect(actions.step).not.toHaveBeenCalled();
-      expect(actions.publishSelected).not.toHaveBeenCalled();
-    });
-
     describe('with the flag', () => {
       beforeEach(() => {
         TestBed.resetTestingModule();
@@ -492,29 +482,6 @@ describe('KeyboardService', () => {
   });
 
   describe('the key of the event log (ADR-0061)', () => {
-    it('is left to the page without the flag: E is not taken, and nothing is run', () => {
-      expect(send('flow', { key: 'e' }).prevented).toBe(false);
-
-      expect(actions.toggleEventLog).not.toHaveBeenCalled();
-    });
-
-    it('is left to the page without the simulation, because the log is made of what the simulation does', () => {
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          KeyboardService,
-          { provide: EditorActions, useValue: actions },
-          { provide: FLAG_SOURCES, useValue: { stored: null, query: null } },
-        ],
-      });
-      service = TestBed.inject(KeyboardService);
-      mount();
-
-      expect(send('flow', { key: 'e' }).prevented).toBe(false);
-
-      expect(actions.toggleEventLog).not.toHaveBeenCalled();
-    });
-
     describe('with the flags', () => {
       beforeEach(() => {
         TestBed.resetTestingModule();

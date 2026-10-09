@@ -23,9 +23,9 @@ import {
   type Issue,
 } from '@rmq/domain';
 import type { HeaderArguments, XMatch } from '@rmq/engine';
+import { lowerFirst } from '../canvas/model/labels';
 import type { Placement } from '../canvas/model/transform';
 import { Announcer } from '../core/announcer';
-import { FeatureFlags } from '../core/flags/feature-flags';
 import { DocumentStore } from '../core/state/document-store';
 import { HeaderRows } from '../core/ui/header-rows';
 import { Icon } from '../core/ui/icon';
@@ -115,9 +115,7 @@ const EXPORT_NOTE =
         <div data-testid="conditions-refusal"><rmq-refusal-notice [issue]="issue" /></div>
       }
 
-      @if (live) {
-        <rmq-headers-live [headers]="report().headers" [exchange]="exchange()" />
-      }
+      <rmq-headers-live [headers]="report().headers" [exchange]="exchange()" [about]="about()" />
 
       @if (line(); as text) {
         <p class="text-muted text-xs">
@@ -194,8 +192,6 @@ export class BindingConditions {
   private readonly store = inject(DocumentStore);
   private readonly announcer = inject(Announcer);
   private readonly rowsView = viewChild.required(HeaderRows);
-  /** The table of recent messages needs the log, which needs the simulation (ADR-0069). */
-  protected readonly live = inject(FeatureFlags).isEnabled('simulation');
 
   private readonly uid = `rmq-conditions-${nextEditor++}`;
   protected readonly modeId = `${this.uid}-mode`;
@@ -207,6 +203,8 @@ export class BindingConditions {
     this.purpose() === 'new' ? newDraft() : draftOf(this.headers()),
   );
   protected readonly report = computed(() => reportDraft(this.draft()));
+  /** What the table of recent messages is about, in the words of the title, which tell this binding from another one of the same edge: the title of an editor in the inspector says which one it is. */
+  protected readonly about = computed(() => lowerFirst(this.title()));
   protected readonly xMatch = computed<XMatch>(() => this.draft().xMatch ?? 'all');
   protected readonly modeHelp = computed(
     () => `${MODE_HELP[this.xMatch()]}${this.draft().xMatch === null ? LEFT_OUT : ''}`,

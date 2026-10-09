@@ -114,13 +114,17 @@ describe('Inspector', () => {
     });
 
     it('has no fields of an exchange or a queue on a producer or a consumer', async () => {
+      const fields = () => [
+        screen.queryByRole('combobox', { name: 'Type' }),
+        screen.queryByRole('switch', { name: 'Durable' }),
+        screen.queryByRole('switch', { name: 'Auto-delete' }),
+        screen.queryByRole('switch', { name: 'Internal' }),
+      ];
       const { choose } = await renderInspector({ nodes: ['P1'] });
-      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+      expect(fields()).toEqual([null, null, null, null]);
 
       choose(['C1']);
-      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+      expect(fields()).toEqual([null, null, null, null]);
     });
 
     it('shows what the document says for an exchange: its type, and each flag', async () => {
@@ -340,15 +344,6 @@ describe('Inspector', () => {
   describe('what the simulation adds (ADR-0056)', () => {
     const sections = ['queue-messages', 'producer-composer', 'consumer-settings'];
     const shown = () => sections.filter((id) => screen.queryByTestId(id) !== null);
-
-    it('is not there without the flag: a queue, a producer and a consumer have the fields that they had', async () => {
-      const { choose } = await renderInspector();
-
-      for (const node of ['Q1', 'P1', 'C1']) {
-        choose([node]);
-        expect(shown()).toEqual([]);
-      }
-    });
 
     it('has the messages of a queue, the composer of a producer and the settings of a consumer, each for its own kind and for no other', async () => {
       const { choose } = await renderInspector({}, 'simulation');

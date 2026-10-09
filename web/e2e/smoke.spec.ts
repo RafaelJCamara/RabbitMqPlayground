@@ -67,16 +67,16 @@ test.describe('feature flags', () => {
   });
 
   test('can be turned on with ?ff=', async ({ page }) => {
-    await new EditorPage(page).goto('?ff=editor,simulation');
+    await new EditorPage(page).goto('?ff=editor');
 
-    expect(await new AppPage(page).flags()).toEqual(['editor', 'simulation']);
+    expect(await new AppPage(page).flags()).toEqual(['editor']);
   });
 
   test('can be turned on in local storage, and add up with ?ff=', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem('rmq.flags', 'editor'));
-    await new EditorPage(page).goto('?ff=simulation');
+    await new EditorPage(page).goto('?ff=editor');
 
-    expect(await new AppPage(page).flags()).toEqual(['editor', 'simulation']);
+    expect(await new AppPage(page).flags()).toEqual(['editor']);
   });
 
   test('ignore a name they do not know, and say so in the console', async ({ page }) => {

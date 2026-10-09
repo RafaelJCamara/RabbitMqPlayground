@@ -254,7 +254,7 @@ const testerStates: readonly {
   },
   {
     name: 'with the what-if tester answering, and the event log open beside it, with the simulation on',
-    flags: 'editor,simulation',
+    flags: 'editor',
     enter: async (tester) => {
       await tester.ask('key=order.new', 'orders (direct)');
       await tester.editor.flow.focus();
