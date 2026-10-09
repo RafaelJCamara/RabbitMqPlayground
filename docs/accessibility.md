@@ -274,6 +274,8 @@ These are the criteria that the editor can fail, and where each is met, or why i
 
 Machines cannot tell whether a screen reader says something a person can use. This pass is for a person, once for each release, with **NVDA on Windows** (Firefox or Chrome) and/or **VoiceOver on macOS** (Safari). One of the two is enough for the release; the other is welcome. It takes about 40 minutes.
 
+**Where it stands.** This pass does not block `v0.1.0` ([ADR-0090](adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md)); it is tracked in [#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20). Post the table there.
+
 **Before you start**
 
 - Use the deployed site (<https://rafaeljcamara.github.io/RabbitMqPlayground/>) in a window of a normal size, in a private window so that it is a first run. Note the version of the screen reader, of the browser and of the system.

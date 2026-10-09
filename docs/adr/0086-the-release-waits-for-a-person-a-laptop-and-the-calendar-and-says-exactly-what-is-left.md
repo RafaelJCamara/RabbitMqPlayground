@@ -1,6 +1,6 @@
 # ADR-0086: The release waits for a person, a laptop and the calendar, and says exactly what is left
 
-- **Status:** Accepted
+- **Status:** Accepted. The manual screen-reader pass is no longer a condition of the tag: superseded by [ADR-0090](0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md). The rest stands.
 - **Date:** 2026-10-09
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0003](0003-roadmap-and-milestones.md) (the acceptance of M1, section 7 of [the plan](../plans/m1.md)), [ADR-0015](0015-testing-strategy-and-definition-of-done.md) (what "done" is) and [ADR-0084](0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md) (which links here), for what S12 ([#14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14)) does with the tag `v0.1.0`.

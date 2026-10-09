@@ -13,11 +13,13 @@ and behaviour that is checked against a real broker.
 
 **Live site:** <https://rafaeljcamara.github.io/RabbitMqPlayground/>
 
-> **Status: M1 ("Build & route") is built and deployed, and `v0.1.0` is not tagged yet.** Three things that a program
-> cannot do are left: a manual pass with a screen reader, the frame rate on a mid-range laptop, and seven scheduled nights
-> of the Nightly in a row. [ADR-0086](docs/adr/0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md)
+> **Status: M1 ("Build & route") is built and deployed, and `v0.1.0` is not tagged yet.** Two things that a program
+> cannot do are left: the frame rate on a mid-range laptop, and seven scheduled nights of the Nightly in a row.
+> [ADR-0086](docs/adr/0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md)
 > says how each is done, and [issue #14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14) and
-> [#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1) track them. What is checked is in
+> [#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1) track them. The manual pass with a screen reader does
+> not block the release ([ADR-0090](docs/adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md)) and is tracked in
+> [#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20). What is checked is in
 > [docs/accessibility.md](docs/accessibility.md) and [docs/performance.md](docs/performance.md), and the draft of the
 > release notes is [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
 
