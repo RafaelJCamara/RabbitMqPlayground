@@ -53,7 +53,7 @@ jobs:
         run: npx tsx tools/pages/check-bundle.ts dist/app/browser __rmq RMQ_E2E drawnEdges simulationState overlayFrame explainEventLog explainEmphasis
       - name: Upload the site
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist/app/browser
 
