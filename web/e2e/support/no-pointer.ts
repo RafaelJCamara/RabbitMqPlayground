@@ -56,11 +56,3 @@ export function withoutPointer(page: Page): () => void {
     }
   };
 }
-
-/** The names of what a page refuses while it is without a pointer, for the test of the guard. */
-export const REFUSED = {
-  locator: LOCATOR_POINTER,
-  page: PAGE_POINTER,
-  mouse: MOUSE_POINTER,
-  touchscreen: TOUCH_POINTER,
-} as const;
