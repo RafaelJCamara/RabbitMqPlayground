@@ -96,11 +96,12 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0083](0083-the-tour-is-six-steps-in-the-editor-that-the-learner-does-and-the-document-ticks-off-by-whichever-way-of-linking.md) | The tour is six steps in the editor that the learner does and the document ticks off, by whichever way of linking | Accepted |
 | [0084](0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md) | The seven M1 flags are deleted one by one, the page ignores what they leave behind, and the first run always asks | Accepted |
 | [0085](0085-targets-are-24-pixels-nothing-that-stays-is-drawn-over-the-canvas-and-every-screen-is-checked-in-both-themes-from-a-list.md) | Targets are 24 pixels, nothing that stays on the screen is drawn over the canvas, and every screen is checked in both themes from a list | Accepted |
-| [0086](0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) | The release waits for a person, a laptop and the calendar, and says exactly what is left | Accepted (the screen-reader pass no longer waits, superseded by 0090) |
+| [0086](0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) | The release waits for a person, a laptop and the calendar, and says exactly what is left | Accepted (the screen-reader pass no longer waits, superseded by 0090; nor the frame rate, by 0091) |
 | [0087](0087-the-disclaimer-moves-from-the-placeholder-to-the-welcome-and-the-foot-of-the-home.md) | The disclaimer moves from the placeholder to the welcome and the foot of the home | Accepted |
 | [0088](0088-a-cancelled-consumer-that-still-holds-messages-takes-up-where-it-was-when-its-channel-consumes-the-same-queue-again.md) | A cancelled consumer that still holds messages takes up where it was when its channel consumes the same queue again | Accepted (what the consumer is when its tag is taken again, superseded by 0089) |
 | [0089](0089-a-tag-taken-again-after-a-cancel-is-a-new-consumer-whose-window-starts-at-nothing-and-counts-every-ack-under-the-tag.md) | A tag taken again after a cancel is a new consumer whose window starts at nothing and counts every ack under the tag | Accepted |
 | [0090](0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md) | The manual screen-reader pass does not block v0.1.0 and is tracked in issue #20 | Accepted |
+| [0091](0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md) | The frame rate on a mid-range laptop does not block v0.1.0 and is tracked in issue #21 | Accepted |
 
 ## Where to start
 

@@ -2,7 +2,7 @@
 
 The editor has to stay smooth with a lot going on: **200 nodes, 500 edges and 500 messages in flight, at 45 frames a second or more, on a mid-range laptop.** That is a line of the acceptance of M1 (section 7 of [the plan](plans/m1.md)), and [ADR-0086](adr/0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) says why it is done this way: a program can measure it and write the result down, but only a person with the right laptop can give the answer. This page is the tool and the instructions; the records are the files of `docs/performance/records/`, and the table at the end of this page is made from them.
 
-**Where it stands.** The first record will be from the laptop that S12 was built on: an i9-14900HX with an RTX 4070, which is a gaming laptop. It says the product is not slow there. It is a data point, not the answer. The answer is a record from a mid-range laptop (below), and until there is one the line is not ticked on [#14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14).
+**Where it stands.** The first record is from the laptop that S12 was built on: an i9-14900HX with an RTX 4070, which is a gaming laptop. It says the product is not slow there. It is a data point, not the answer. The answer is a record from a mid-range laptop (below), it is tracked in [#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21), it does not block `v0.1.0` ([ADR-0091](adr/0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md)), and until there is one the line is not claimed.
 
 ## What is measured, and why
 
@@ -58,7 +58,7 @@ Then:
 
 1. Check the new rows of the table: the machine (second column) is the one you meant, the power (third) says `AC`, and the messages in flight (seventh) are 500 or more.
 2. Commit `docs/performance/records/*.json` and `docs/performance.md`.
-3. Post the rows of your record from the table as a comment on [#14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14), with the machine's name.
+3. Post the rows of your record from the table as a comment on [#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21), with the machine's name.
 
 ## What counts as a mid-range laptop
 
