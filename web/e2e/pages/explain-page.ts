@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import type { CanvasDocument } from '@rmq/domain';
 import { EditorPage } from './editor-page';
-import { SimulationPage } from './simulation-page';
+import { SimulationPage, type OverlayFrame } from './simulation-page';
 
 /** What the event log holds, as the end-to-end build reads it (ADR-0061). */
 export type EventLogState = NonNullable<Awaited<ReturnType<ExplainPage['eventLog']>>>;
@@ -201,12 +201,21 @@ export class ExplainPage extends LitCanvas {
    * stands for.
    */
   async shapeOf(message?: number): Promise<{ x: number; y: number; count: number }> {
-    const frame = await this.simulation.settledFrame();
-    const marker = frame.markers.find((shape) => message === undefined || shape.message === message);
-    if (marker === undefined) {
-      throw new Error('no shape is drawn for that message');
-    }
+    // Two frames that are the same are "settled" also when both are empty, because the overlay has not drawn the shape yet (a slow runner: CI of 2026-10-09, `no shape is drawn for that
+    // message`), so the settling is asked again until there is a shape to be settled.
+    let marker: OverlayFrame['markers'][number] | undefined;
+    await expect
+      .poll(
+        async () => {
+          const frame = await this.simulation.settledFrame();
+          marker = frame.markers.find((shape) => message === undefined || shape.message === message);
+          return marker !== undefined;
+        },
+        { intervals: [100], timeout: 15_000, message: 'no shape is drawn for that message' },
+      )
+      .toBe(true);
+    const found = marker as NonNullable<typeof marker>;
     const host = await this.simulation.host();
-    return { x: host.x + marker.x, y: host.y + marker.y, count: marker.count };
+    return { x: host.x + found.x, y: host.y + found.y, count: found.count };
   }
 }
