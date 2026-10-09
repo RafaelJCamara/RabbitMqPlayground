@@ -2,22 +2,53 @@ import type { CanvasDocument } from '@rmq/domain';
 import { HeadersPage } from './pages/headers-page';
 import { expectNoAxeViolations } from './support/axe';
 import {
+  DIRECT_AND_HEADERS,
   DIRECT_WITH_HEADERS,
   FILES,
   FILES_BOUND,
   FILES_TWICE,
   FILES_UNBOUND,
   FILES_WITH_X,
+  KEYED,
   MANY_CONDITIONS,
+  NEVER,
   NUMBERS,
 } from './support/headers';
+import { buildDocument } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
  * Accessibility of what S8 puts on the screen, in the light theme and in the dark one: axe, with every rule for WCAG 2.0 to 2.2 at A and AA and the best practices, in each new state, with no rule switched off.
  * A state is a popover with its rows empty, typed, with what is wrong with them and with what to know about them; the editor of a binding in the inspector; the chip, its card and the label of an edge; the table
  * of a producer's headers; the table of recent messages, empty and full; and the panel that makes a binding from a message, in each thing that it says.
+ *
+ * Every state here is a row of docs/accessibility.md (ADR-0085), and a state without a row fails tools/accessibility/accessibility.spec.ts.
  */
+
+/**
+ * A direct exchange with a binding that has a key and header arguments, which only a headers exchange reads (a canvas that was imported can have it): the inspector says that they are written with the command bar for
+ * now. The edge is `x1>q1`.
+ */
+const DIRECT_WITH_ARGUMENTS = buildDocument([
+  { type: 'add-producer', name: 'sender' },
+  {
+    type: 'declare-exchange',
+    name: 'orders',
+    exchangeType: 'direct',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'billing', durable: true },
+  {
+    type: 'bind',
+    source: 'orders',
+    destination: { kind: 'queue', name: 'billing' },
+    key: 'k',
+    headers: { xMatch: 'all', args: [{ key: 'format', value: { t: 'string', v: 'pdf' } }] },
+  },
+  { type: 'link', producer: 'sender', target: { kind: 'exchange', name: 'orders' } },
+]);
 
 const LIGHT_ACCENT = 'rgb(29, 78, 216)';
 const DARK_ACCENT = 'rgb(147, 197, 253)';
@@ -126,6 +157,32 @@ const states: readonly State[] = [
     },
   },
   {
+    name: 'with the editor of a binding whose key is not read by a headers exchange, and says so',
+    document: KEYED,
+    enter: async (headers) => {
+      await headers.selectBinding('x1>q1');
+      await expect(headers.conditions().keyNote).toBeVisible();
+    },
+  },
+  {
+    name: 'with a binding that matches no message: the badge on its label, and the warning in the inspector and in its editor',
+    document: NEVER,
+    enter: async (headers) => {
+      await expect(headers.label('x1>q1').getByTestId('edge-lint')).toBeVisible();
+      await headers.selectBinding('x1>q1');
+      await expect(headers.conditions().lint).toBeVisible();
+      await expect(headers.editor.inspector.getByTestId('inspector-warnings')).toBeVisible();
+    },
+  },
+  {
+    name: 'with the inspector of a binding that has header arguments which a direct exchange does not read, and the note that says so',
+    document: DIRECT_WITH_ARGUMENTS,
+    enter: async (headers) => {
+      await headers.selectBinding('x1>q1');
+      await expect(headers.editor.inspector.getByTestId('binding-headers')).toBeVisible();
+    },
+  },
+  {
     name: 'with the editors of the two bindings of an edge, one above the other',
     document: FILES_TWICE,
     enter: async (headers) => {
@@ -221,6 +278,26 @@ const states: readonly State[] = [
       await headers.bind.tick('format').uncheck();
       await expect(headers.bind.reserved).toBeVisible();
       await expect(headers.bind.notes).toBeVisible();
+    },
+  },
+  {
+    name: 'with "Bind from this message" open for a message that was published to an exchange that does not read headers',
+    document: DIRECT_AND_HEADERS,
+    enter: async (headers) => {
+      await headers.openLastMessage('routed');
+      await headers.bind.show();
+      await expect(headers.bind.elsewhere).toBeVisible();
+    },
+  },
+  {
+    name: 'with "Bind from this message" open and the warning of a binding that would match no message',
+    document: FILES_WITH_X,
+    enter: async (headers) => {
+      await headers.openLastMessage('unroutable');
+      await headers.bind.show();
+      await headers.bind.tick('format').uncheck();
+      await headers.bind.mode.choose('any');
+      await expect(headers.bind.lint).toBeVisible();
     },
   },
   {

@@ -1,11 +1,13 @@
 import { SimulationPage } from './pages/simulation-page';
 import { expectNoAxeViolations } from './support/axe';
-import { ORDERS } from './support/orders';
+import { LONG_LEG, ORDERS } from './support/orders';
 import { expect, test } from './support/test';
 
 /**
  * What the simulation puts on the screen besides the messages (ADR-0056), in a real browser: the parts that the inspector has for a queue, a producer and a consumer, and the numbers
  * of the nodes, which are the same numbers in both places. Every state of the screen that is new is held to axe, in both themes.
+ *
+ * Every state here is a row of docs/accessibility.md (ADR-0085), and a state without a row fails tools/accessibility/accessibility.spec.ts.
  */
 
 test.describe('the messages of a queue, in its inspector (ADR-0056)', () => {
@@ -122,6 +124,17 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoAxeViolations(page);
     });
 
+    test('has no axe violations for the strip while the clock runs, with a message on its way', async ({ page }) => {
+      // The link takes a minute, so the message is on its way for as long as axe looks, with the clock running.
+      const simulation = await SimulationPage.open(page, LONG_LEG, { theme, stop: false });
+      await simulation.editor.select('Producer sender');
+      await page.keyboard.press('p');
+      await expect.poll(async () => (await simulation.frame())?.markers.length).toBe(1);
+      await expect(simulation.pause).toBeVisible();
+
+      await expectNoAxeViolations(page);
+    });
+
     test('has no axe violations for the inspector of a queue that holds messages, of a producer and of a consumer', async ({
       page,
     }) => {
@@ -135,6 +148,44 @@ for (const theme of ['light', 'dark'] as const) {
         await simulation.editor.select(label);
         await expectNoAxeViolations(page);
       }
+    });
+
+    test('has no axe violations while a producer that is linked to nothing says under its button why it cannot publish', async ({
+      page,
+    }) => {
+      const simulation = await SimulationPage.open(page, ORDERS, { theme });
+      await simulation.editor.openCommandBar();
+      await simulation.editor.runCommand('unlink sender');
+      await simulation.editor.select('Producer sender');
+
+      await page.getByTestId('producer-composer').getByRole('button', { name: 'Publish now' }).click();
+
+      await expect(page.getByTestId('publish-problem')).toBeVisible();
+      await expectNoAxeViolations(page);
+    });
+
+    test('has no axe violations for a queue that holds more messages than its node and its inspector draw, and a consumer that may hold more than its node draws', async ({
+      page,
+    }) => {
+      const simulation = await SimulationPage.open(page, ORDERS, { theme });
+      await simulation.editor.openCommandBar();
+      await simulation.editor.runCommand('set sender burst=80');
+      await simulation.editor.runCommand('set worker prefetch=20 processing=600000');
+      await page.keyboard.press('Escape');
+      await simulation.editor.select('Producer sender');
+      await page.keyboard.press('p');
+      // The consumer takes twenty and is slow with them, and sixty wait: more than the eight squares of the node and the fifty rows of the inspector.
+      await simulation.play.click();
+      await expect(simulation.statsOf('q1')).toHaveText('60 ready · 20 unacked');
+      await simulation.stop();
+      await simulation.editor.select('Queue billing');
+      await expect(page.getByTestId('queue-more')).toHaveText(/^and \d+ more$/);
+      await expect(simulation.editor.nodeById('q1').getByTestId('stack-more')).toBeVisible();
+      await expectNoAxeViolations(page);
+
+      await simulation.editor.select('Consumer worker');
+      await expect(simulation.editor.nodeById('c1').getByTestId('slots-more')).toBeVisible();
+      await expectNoAxeViolations(page);
     });
 
     test('has no axe violations while a field says why it was refused, and while the cheat-sheet lists the keys', async ({

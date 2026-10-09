@@ -11,6 +11,8 @@ import { expect, test } from './support/test';
  * state, with no rule switched off. A state is the workspace with its strip; the home, empty, full, searched, with canvases that cannot be opened and with each thing it can say
  * about keeping the canvases; a notice with an Undo, and one whose Undo did not work; and every dialog: the name, the question before a delete, the question before every canvas is
  * deleted, the reason a file could not be opened and the report of a backup that was put back.
+ *
+ * Every state here is a row of docs/accessibility.md (ADR-0085), and a state without a row fails tools/accessibility/accessibility.spec.ts.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -47,6 +49,12 @@ const NEWER: SeededCanvas = {
   name: 'From a newer app',
   document: { ...emptyDocument(), schemaVersion: 99 } as never,
 };
+
+/** More canvases than a page of the home draws (48), so that the home offers to show more. */
+const MANY: readonly SeededCanvas[] = Array.from({ length: 50 }, (_, index) => ({
+  id: `many${index}`,
+  name: `Canvas ${index + 1}`,
+}));
 
 interface State {
   readonly name: string;
@@ -108,6 +116,26 @@ const states: readonly State[] = [
       await canvases.showHome();
       await canvases.sort.selectOption('name');
       await canvases.search.fill('o');
+    },
+  },
+  {
+    name: 'on the home, with more canvases than a page of cards holds, and the button that shows more',
+    canvases: MANY,
+    enter: async (canvases) => {
+      await canvases.showHome();
+      await expect(canvases.home.getByTestId('home-more')).toBeVisible();
+    },
+  },
+  {
+    name: 'on the home, scrolled to its foot: the disclaimer and the links to the source, the decisions and the progress',
+    canvases: FEW,
+    enter: async (canvases) => {
+      await canvases.showHome();
+      // The foot is below the window in the other states of the home, in the part that scrolls. Here it is in view, so that what axe reads is what a person sees.
+      const footer = canvases.home.getByTestId('home-footer');
+      await footer.scrollIntoViewIfNeeded();
+      await expect(footer).toBeInViewport({ ratio: 1 });
+      await expect(footer.getByRole('link')).toHaveCount(3);
     },
   },
   {
@@ -273,6 +301,18 @@ const states: readonly State[] = [
     },
   },
   {
+    name: 'with the question before every canvas is deleted, when the backup that it offers could not be made',
+    canvases: [NEWER],
+    enter: async (canvases) => {
+      // The one canvas that the first run made is deleted, so that what is left is a canvas that this version cannot open, which a backup cannot hold.
+      await canvases.showHome();
+      await deleteCard(canvases, 'Untitled canvas');
+      await canvases.home.getByRole('button', { name: 'Delete all…' }).click();
+      await canvases.confirmation.getByRole('button', { name: 'Export a backup first' }).click();
+      await expect(canvases.confirmation.getByTestId('backup-problem')).toContainText('There is nothing to back up');
+    },
+  },
+  {
     name: 'with the dialog that says why a file could not be opened',
     enter: async (canvases) => {
       await canvases.showHome();
@@ -304,12 +344,56 @@ const states: readonly State[] = [
     },
   },
   {
+    name: 'with the report of a backup that was put back, and more that could not be than the report lists',
+    enter: async (canvases) => {
+      await canvases.showHome();
+      // The report lists twenty of what could not be put back and counts the rest.
+      const text = JSON.stringify({
+        format: 'rmq-playground/backup',
+        version: 1,
+        exportedAt: 1,
+        canvases: Array.from({ length: 22 }, (_, index) => ({
+          id: `newer${index}`,
+          name: `Broken ${index + 1}`,
+          createdAt: 1,
+          updatedAt: 2,
+          document: { ...emptyDocument(), schemaVersion: 99 },
+        })),
+      });
+      await canvases.choose('restore-file', 'backup.json', text);
+      await expect(canvases.page.getByTestId('restore-more')).toHaveText('and 2 more.');
+    },
+  },
+  {
     name: 'in the editor, with the notice after a clear',
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.editor.add('Queue');
       await canvases.page.getByRole('button', { name: 'Clear canvas' }).click();
       await expect(canvases.notices).toBeVisible();
+    },
+  },
+  {
+    name: 'in the editor, with the warning that the room is nearly gone and the note that the browser did not promise to keep the canvases',
+    canvases: FEW,
+    before: async (page) => {
+      await page.addInitScript(() => {
+        navigator.storage.estimate = async () => ({ usage: 850, quota: 1_000 });
+        navigator.storage.persist = async () => false;
+      });
+    },
+    enter: async (canvases) => {
+      // The note comes a moment after the first change.
+      await canvases.editor.add('Queue');
+      await expect(canvases.page.getByTestId('persistence')).toBeVisible();
+      await expect(canvases.page.getByTestId('quota')).toBeVisible();
+    },
+  },
+  {
+    name: 'in the editor, with the note that a canvas saved in this browser could not be opened',
+    canvases: [...FEW, NEWER],
+    enter: async (canvases) => {
+      await expect(canvases.page.getByTestId('unreadable')).toBeVisible();
     },
   },
 ];

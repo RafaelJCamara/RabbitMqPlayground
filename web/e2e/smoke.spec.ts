@@ -80,6 +80,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test('has no axe violations', async ({ page }) => {
       await new AppPage(page).goto();
+      // The page that the question leaves is the new canvas, and not the home that is there for a moment before it: the editor has its toolbox.
+      await expect(page.getByRole('complementary', { name: 'Toolbox' })).toBeVisible();
 
       await expectNoAxeViolations(page);
     });

@@ -14,6 +14,8 @@ import { expect, test } from './support/test';
  * A state is the panel that makes a link (with the link made, with the choice of messages, with the choice switched off for want of messages, with a link too long to send), the dialog that exports (with what it leaves
  * out, with a virtual host that cannot be one, with nothing to export), the page that a link opens (as it is, with a notice, with the problem of a copy that could not be kept), and the page of a link that cannot be opened.
  * Then the keyboard: the cursor goes into the dialog, stays in it, and goes back to the button that opened it.
+ *
+ * Every state here is a row of docs/accessibility.md (ADR-0085), and a state without a row fails tools/accessibility/accessibility.spec.ts.
  */
 
 const usesTheme = async (page: Page, scheme: 'light' | 'dark'): Promise<void> => {
@@ -79,6 +81,58 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await share.open();
 
         await expect(share.long).toBeVisible();
+        await expectNoAxeViolations(page);
+      });
+
+      test('has no axe violations with the notice that the link was copied', async ({ page, context }) => {
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+        await seedCanvas(page, ORDERS, 'Orders flow');
+        await new EditorPage(page).goto();
+        const share = new SharePage(page);
+        await share.open();
+        await share.address();
+
+        await share.copy.click();
+
+        await expect(share.notice).toHaveText('Link copied.');
+        await expectNoAxeViolations(page);
+      });
+
+      test('has no axe violations with the notice that the browser did not let the page copy the link, which is selected instead', async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator.clipboard, 'writeText', {
+            configurable: true,
+            value: () => Promise.reject(new DOMException('Not allowed', 'NotAllowedError')),
+          });
+        });
+        await seedCanvas(page, ORDERS, 'Orders flow');
+        await new EditorPage(page).goto();
+        const share = new SharePage(page);
+        await share.open();
+        await share.address();
+
+        await share.copy.click();
+
+        await expect(share.notice).toContainText('The browser did not let this page copy the link.');
+        await expectNoAxeViolations(page);
+      });
+
+      test('has no axe violations when the browser cannot make a link, and says so, with the file offered instead', async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(window, 'CompressionStream', { configurable: true, value: undefined });
+        });
+        await seedCanvas(page, ORDERS, 'Orders flow');
+        await new EditorPage(page).goto();
+        const share = new SharePage(page);
+
+        await share.open();
+
+        await expect(share.error).toBeVisible();
+        await expect(share.download).toBeVisible();
         await expectNoAxeViolations(page);
       });
     });

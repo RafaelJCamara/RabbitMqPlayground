@@ -9,6 +9,8 @@ import { expect, test } from './support/test';
  * Accessibility of what the explanation puts on the screen (ADR-0061, ADR-0062), in the light theme and in the dark one: axe, with every rule for WCAG 2.0 to 2.2 at A and AA and the best
  * practices, in each new state, with no rule switched off. A state is the log open and empty, with a few rows, full, filtered and filtered to nothing; a row chosen; the Why? of a message on the
  * canvas, with a binding that missed and its reason on its label; and a queue asked about.
+ *
+ * Every state here is a row of docs/accessibility.md (ADR-0085), and a state without a row fails tools/accessibility/accessibility.spec.ts.
  */
 
 const states: readonly {
@@ -94,6 +96,18 @@ const states: readonly {
     },
   },
   {
+    name: 'with the Why? of a message on the canvas, after a queue that it was about was deleted, and the note of how many parts of it are gone',
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.step();
+      await expect(explain.card).toBeVisible();
+      await explain.editor.openCommandBar();
+      await explain.editor.runCommand('delete archive');
+      await explain.page.keyboard.press('Escape');
+      await expect(explain.card.getByTestId('why-card-gone')).toBeVisible();
+    },
+  },
+  {
     name: 'with the Why? of a message on the canvas and the event log open beside it',
     enter: async (explain) => {
       await explain.publish();
@@ -147,6 +161,37 @@ const states: readonly {
       await explain.openByKey();
       await explain.openFromRow('published');
       await expect(explain.message.getByTestId('message-basis')).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message open that the broker refused, because the exchange it was sent to was deleted on the way, and what the broker replied',
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.editor.openCommandBar();
+      await explain.editor.runCommand('delete orders');
+      await explain.page.keyboard.press('Escape');
+      await explain.simulation.step();
+      await explain.openByKey();
+      await explain.openFromRow('refused');
+      await expect(explain.message.getByTestId('route-reply')).toBeVisible();
+    },
+  },
+  {
+    name: 'with a message open that the log does not keep any more, and the sentence that says so',
+    enter: async (explain) => {
+      await explain.publish();
+      await explain.simulation.stepThrough();
+      // The log keeps the last 2,000 messages: three thousand more are sent, and the first, which the consumer took and acknowledged, is in no queue. Its rows are still in the log.
+      await explain.editor.openCommandBar();
+      await explain.editor.runCommand('set sender burst=1000');
+      await explain.page.keyboard.press('Escape');
+      for (let times = 0; times < 3; times += 1) {
+        await explain.publish();
+      }
+      await explain.openByKey();
+      await explain.log.getByLabel('Search').fill('routed message 1 to');
+      await explain.rows.first().click();
+      await expect(explain.message.getByTestId('message-gone')).toBeVisible();
     },
   },
   {
