@@ -114,15 +114,15 @@ export interface Placement extends Point {
 /**
  * Where a box of this `size` goes so that it is by an `anchor`, inside the `room` that it has (ADR-0041, ADR-0085): just below the anchor, or above it when there is no room
  * below, and kept inside the room with `margin` to spare. The room is a part of the host measured from the host's top left, and what the window shows of it: a box is never put
- * where the learner cannot see it. Without an anchor the box is in the middle of the top of the room. A box that is taller than the room is placed as if it were as tall as the room,
- * and `maxHeight` is what is left of the room under its top, so that a box whose content is taller than it was thought to be, or than the room, ends inside the room and scrolls.
+ * where the learner cannot see it. Without an anchor the box is in the middle of the top of the room. A box that is taller than the room is put at the top of it (`keep` gives the top
+ * the last word, so the box need not be made shorter first), and `maxHeight` is what is left of the room under its top, so that a box whose content is taller than it was thought to be,
+ * or than the room, ends inside the room and scrolls.
  */
 export function popoverPosition(anchor: (Point & Size) | null, size: Size, room: Point & Size, margin = 8): Placement {
   const left = room.x + margin;
   const right = room.x + room.width - margin;
   const top = room.y + margin;
   const bottom = room.y + room.height - margin;
-  const height = Math.min(size.height, Math.max(bottom - top, 0));
   const keep = (value: number, length: number, from: number, to: number): number =>
     Math.max(from, Math.min(value, to - length));
   if (anchor === null) {
@@ -133,7 +133,7 @@ export function popoverPosition(anchor: (Point & Size) | null, size: Size, room:
     };
   }
   const below = anchor.y + anchor.height + 6;
-  const fits = below + height <= bottom;
-  const y = keep(fits ? below : anchor.y - height - 6, height, top, bottom);
+  const fits = below + size.height <= bottom;
+  const y = keep(fits ? below : anchor.y - size.height - 6, size.height, top, bottom);
   return { x: keep(anchor.x, size.width, left, right), y, maxHeight: Math.max(bottom - y, 0) };
 }
