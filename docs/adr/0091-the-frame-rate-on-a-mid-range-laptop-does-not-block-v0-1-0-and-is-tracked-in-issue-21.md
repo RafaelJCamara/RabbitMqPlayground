@@ -1,6 +1,6 @@
 # ADR-0091: The frame rate on a mid-range laptop does not block v0.1.0 and is tracked in issue #21
 
-- **Status:** Accepted
+- **Status:** Accepted. That the calendar still waits for the tag is superseded by [ADR-0092](0092-seven-scheduled-nights-in-a-row-are-not-a-condition-of-the-tag-v0-1-0.md).
 - **Date:** 2026-10-09
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** the part of [ADR-0086](0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) that makes a record of the frame rate from a mid-range laptop a condition of the tag `v0.1.0`. What ADR-0086 says about how the frame rate is measured, what a mid-range laptop is and what is done if the median is below 45 stands, for the task that is now [#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21).

@@ -13,11 +13,9 @@ and behaviour that is checked against a real broker.
 
 **Live site:** <https://rafaeljcamara.github.io/RabbitMqPlayground/>
 
-> **Status: M1 ("Build & route") is built and deployed, and `v0.1.0` is not tagged yet.** One thing is left, and it is
-> the calendar: seven scheduled nights of the Nightly in a row
-> ([ADR-0086](docs/adr/0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md)), which
-> [issue #14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14) and
-> [#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1) track. The manual pass with a screen reader
+> **Status: M1 ("Build & route") is built and deployed.** Nothing waits for the tag `v0.1.0`
+> ([ADR-0092](docs/adr/0092-seven-scheduled-nights-in-a-row-are-not-a-condition-of-the-tag-v0-1-0.md); [issue #14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14) and
+> [#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1) track it). The manual pass with a screen reader
 > ([#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20), [ADR-0090](docs/adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md)) and the frame rate on a mid-range laptop
 > ([#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21), [ADR-0091](docs/adr/0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md)) do not block the release: they have not been checked, and the release does not claim them. What is checked is in
 > [docs/accessibility.md](docs/accessibility.md) and [docs/performance.md](docs/performance.md), and the draft of the

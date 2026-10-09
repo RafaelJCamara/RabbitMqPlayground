@@ -1,6 +1,6 @@
 # ADR-0090: The manual screen-reader pass does not block v0.1.0 and is tracked in issue #20
 
-- **Status:** Accepted
+- **Status:** Accepted. That the calendar still waits for the tag is superseded by [ADR-0092](0092-seven-scheduled-nights-in-a-row-are-not-a-condition-of-the-tag-v0-1-0.md).
 - **Date:** 2026-10-09
 - **Deciders:** @RafaelJCamara
 - **Supersedes:** the part of [ADR-0086](0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md) that makes the manual pass with a screen reader a condition of the tag `v0.1.0`. The rest of ADR-0086 stands: the frame rate on a mid-range laptop and seven scheduled nights still wait for the tag, and the tag is still made only when what it claims is true.
