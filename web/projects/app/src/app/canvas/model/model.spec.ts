@@ -612,6 +612,13 @@ describe('popoverPosition (ADR-0041, ADR-0085)', () => {
     expect(popoverPosition(null, size, { x: 0, y: 0, width: 100, height: 100 })).toEqual({ x: 8, y: 8, maxHeight: 84 });
   });
 
+  it('gives a room that is shorter than its margins no height at all, and never a negative one', () => {
+    const squeezed = { x: 0, y: 0, width: 300, height: 10 };
+
+    expect(popoverPosition(null, size, squeezed).maxHeight).toBe(0);
+    expect(popoverPosition({ x: 100, y: 0, width: 140, height: 56 }, size, squeezed).maxHeight).toBe(0);
+  });
+
   describe('in a room that is shorter than the box (the canvas under a strip and two rows of tools, in a window of 1280 by 720)', () => {
     const tall = { width: 288, height: 480 };
     const short = { x: 0, y: 0, width: 900, height: 415 };

@@ -509,6 +509,14 @@ describe('BindingConditions, for a binding that is being made (ADR-0066)', () =>
       expect(screen.getByTestId('headers-live')).toBeInTheDocument();
       expect(screen.getByTestId('headers-live-empty')).toBeInTheDocument();
     });
+
+    it('names its table of recent messages by the binding that it is about, so that the tables of the bindings of one edge are not one name (axe landmark-unique)', async () => {
+      await renderEditor();
+
+      expect(screen.getByTestId('headers-live')).toHaveAccessibleName(
+        'Recent messages, conditions for the binding from exchange docs to queue pdf',
+      );
+    });
   });
 });
 

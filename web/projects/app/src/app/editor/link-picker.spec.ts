@@ -99,6 +99,14 @@ describe('LinkPicker (ADR-0041)', () => {
     expect(optionNames()).toEqual(['billing']);
   });
 
+  it('draws the list, and says that it has expanded it, for a single target', async () => {
+    await renderPicker([OPTIONS[2]!]);
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-controls', screen.getByRole('listbox').id);
+  });
+
   it('has no group for a kind that has no target', async () => {
     await renderPicker([OPTIONS[2]!]);
 
