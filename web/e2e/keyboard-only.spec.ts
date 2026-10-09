@@ -18,6 +18,9 @@ const focused = (page: Page) =>
 /** What the page says aloud, politely: the announcements of the canvas and of the editor. */
 const live = (page: Page) => page.locator('body > [role="status"][aria-live="polite"]');
 
+/** The ids of the nodes that are selected, which is where the cursor of the canvas is. */
+const selectedNodes = (page: Page) => page.evaluate(() => window.__rmq?.selection().nodes ?? []);
+
 /** Adds a queue with the toolbox, which is one tab stop: Tab to its first item, and the arrow keys go down it to the queue. */
 async function addQueue(page: Page): Promise<void> {
   await tabTo(page, 'Producer');
@@ -171,23 +174,29 @@ test.describe('journey 12: a keyboard and nothing else (ADR-0017, ADR-0085)', ()
   });
 
   for (const chord of ['Control+m', 'Meta+m']) {
-    test(`does not pick a node up for ${chord}, so the arrow keys that follow move the cursor and not the node`, async ({
+    test(`does not pick a node up for ${chord}, so the arrow key that follows moves the cursor to the node above and not the node`, async ({
       page,
     }) => {
       const editor = new EditorPage(page);
       await editor.goto();
       const release = withoutPointer(page);
       try {
+        // Two queues, one under the other: the second is the one that is selected, and an arrow key has somewhere to go. The cursor still is on the Queue of the toolbox, which adds another with Enter.
         await addQueue(page);
+        await page.keyboard.press('Enter');
+        await expect(page.locator('[data-node-id]')).toHaveCount(2);
         await page.keyboard.press('Tab');
         await expect(editor.flow).toBeFocused();
+        await expect.poll(() => selectedNodes(page)).toEqual(['q2']);
         const before = await editor.layout();
 
         await page.keyboard.press(chord);
-        await page.keyboard.press('ArrowRight');
-        await page.keyboard.press('ArrowDown');
-        await page.keyboard.press('Escape');
+        await page.keyboard.press('ArrowUp');
 
+        // The library takes Ctrl+M for M, which picks the node up, and the arrow key then moves the node a step and the selection stays on it; and Escape, which puts the node back, would hide that the node
+        // was ever picked up. Held back, the arrow key does what it does with no chord before it, which is to move the cursor to the node above.
+        await expect.poll(() => selectedNodes(page), `${chord} must not pick the node up`).toEqual(['q1']);
+        await page.keyboard.press('Escape');
         expect(await editor.layout(), `${chord} must not start a move`).toEqual(before);
         expect(
           await page.evaluate(() => window.__rmq?.intents().some((i) => (i as { type: string }).type === 'move')),
