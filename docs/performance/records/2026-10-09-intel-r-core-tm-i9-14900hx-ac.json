@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "date": "2026-10-09T09:01:25.230Z",
+  "commit": "083606cb185490ca68f3202fbafc7c47703e0e9c",
+  "dirty": false,
+  "scenario": {
+    "nodes": 200,
+    "edges": 500,
+    "messagesTarget": 500,
+    "seconds": 10
+  },
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i9-14900HX",
+    "cores": 32,
+    "memoryGb": 32,
+    "platform": "win32",
+    "release": "10.0.26300",
+    "arch": "x64",
+    "gpu": "ANGLE (Intel, Intel(R) UHD Graphics (0x0000A788) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "browser": "chromium 153.0.8010.12",
+    "displayHz": 164,
+    "devicePixelRatio": 1.5,
+    "screen": "1707x1067"
+  },
+  "power": {
+    "charging": true,
+    "level": 1,
+    "plan": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
+  },
+  "rates": [
+    {
+      "cpuThrottle": 1,
+      "stats": {
+        "frames": 1410,
+        "seconds": 9.997299999952316,
+        "averageFps": 141.03808028234874,
+        "medianFps": 147.058824560634,
+        "lowFps": 99.00990075637822,
+        "worstFrameMs": 32,
+        "longFrames": 8
+      },
+      "travelling": {
+        "min": 600,
+        "mean": 600
+      },
+      "meets": true
+    },
+    {
+      "cpuThrottle": 4,
+      "stats": {
+        "frames": 207,
+        "seconds": 9.992900000035762,
+        "averageFps": 20.71470744220989,
+        "medianFps": 22.727272727272727,
+        "lowFps": 6.191950464396285,
+        "worstFrameMs": 297,
+        "longFrames": 6
+      },
+      "travelling": {
+        "min": 600,
+        "mean": 600
+      },
+      "meets": null
+    }
+  ]
+}

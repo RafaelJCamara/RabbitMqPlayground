@@ -82,7 +82,8 @@ Newest first, one row for each rate of each record.
 
 | Date | Machine | Power | CPU throttle | Median fps | 1% low | Messages in flight (min) | Meets 45 fps |
 | --- | --- | --- | --- | ---: | ---: | ---: | --- |
-| No record yet. | | | | | | | |
+| 2026-10-09 | Intel(R) Core(TM) i9-14900HX, ANGLE (Intel, Intel(R) UHD Graphics (0x0000A788) Direct3D11 vs_5_0 ps_5_0, D3D11), 32 cores, 32 GB, 164 Hz | AC, Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e (Balanced) | none | 147.0 | 99.0 | 600 | yes |
+| 2026-10-09 | Intel(R) Core(TM) i9-14900HX, ANGLE (Intel, Intel(R) UHD Graphics (0x0000A788) Direct3D11 vs_5_0 ps_5_0, D3D11), 32 cores, 32 GB, 164 Hz | AC, Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e (Balanced) | 4x | 22.7 | 6.1 | 600 | data point |
 
 <!-- records:end -->
 
