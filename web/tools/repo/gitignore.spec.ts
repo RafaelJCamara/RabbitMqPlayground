@@ -26,6 +26,7 @@ describe('.gitignore', () => {
     'web/tools/obj/model.ts',
     'web/projects/engine/src/lib/release/notes.ts',
     'web/projects/engine/src/lib/Release/notes.ts',
+    'docs/releases/v0.1.0.md',
   ])('keeps source in %s', (path) => {
     expect(isIgnored(path)).toBe(false);
   });

@@ -12,6 +12,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# ...but the notes of our own releases are documents (docs/releases/v0.1.0.md).
+!/docs/releases/
 x64/
 x86/
 [Ww][Ii][Nn]32/

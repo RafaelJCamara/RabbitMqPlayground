@@ -95,8 +95,11 @@ A change is done when all of these hold ([ADR-0015](docs/adr/0015-testing-strate
   global. Only `canvas/flow/**` imports Foblex Flow. `@rmq/testing` is for tests only. See
   [ADR-0018](docs/adr/0018-workspace-layout-and-dependency-rules.md). If ESLint refuses an import, the fix is in the
   design, not in the lint configuration.
-- **Unfinished features go behind a feature flag** that is off by default. Flags are read from
-  `localStorage['rmq.flags']` or from `?ff=name,name` in the URL. A finished feature's flag is deleted.
+- **Unfinished features of a later milestone go behind a feature flag** that is off by default, and a finished
+  feature's flag is deleted ([ADR-0004](docs/adr/0004-trunk-based-development-on-main.md)). M1 shipped without any: its
+  seven flags and the registry that read them were deleted in S12 ([ADR-0084](docs/adr/0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md)),
+  and the page does not read `?ff=` or `localStorage['rmq.flags']` any more. A flag for M2 is added again with an ADR
+  that says how it is read, and a test that fails if its default is on.
 - **The conformance fixtures are never updated blindly.** The nightly job fails on any difference from the recorded
   behaviour of RabbitMQ 4.3. A person reviews a re-recorded fixture and commits it, and a rule that a fixture disproves
   gets a superseding ADR.

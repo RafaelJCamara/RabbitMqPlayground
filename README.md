@@ -13,8 +13,13 @@ and behaviour that is checked against a real broker.
 
 **Live site:** <https://rafaeljcamara.github.io/RabbitMqPlayground/>
 
-> **Status: pre-release.** The first milestone (M1, "Build & route") is being built slice by slice, and the live site
-> currently shows a placeholder shell. Progress is tracked in [issue #1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1).
+> **Status: M1 ("Build & route") is built and deployed, and `v0.1.0` is not tagged yet.** Three things that a program
+> cannot do are left: a manual pass with a screen reader, the frame rate on a mid-range laptop, and seven scheduled nights
+> of the Nightly in a row. [ADR-0086](docs/adr/0086-the-release-waits-for-a-person-a-laptop-and-the-calendar-and-says-exactly-what-is-left.md)
+> says how each is done, and [issue #14](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/14) and
+> [#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1) track them. What is checked is in
+> [docs/accessibility.md](docs/accessibility.md) and [docs/performance.md](docs/performance.md), and the draft of the
+> release notes is [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
 
 ## Not affiliated with Broadcom or RabbitMQ
 
@@ -23,7 +28,7 @@ Broadcom Inc. or the RabbitMQ project**. RabbitMQ is a trademark of Broadcom Inc
 has no logo, and its name is kept in one place so it can be changed (see
 [ADR-0020](docs/adr/0020-mit-licence.md)).
 
-## What it will do
+## What it does
 
 The scope is set in [ADR-0002](docs/adr/0002-product-vision-and-scope.md) and the roadmap in
 [ADR-0003](docs/adr/0003-roadmap-and-milestones.md). In short:
@@ -83,8 +88,8 @@ The libraries, and which of them may import which, are described in
 - **Trunk-based development.** Maintainers commit straight to `main`, and automation replaces review: a pre-push hook,
   CI on every push, and a nightly conformance run against a real RabbitMQ
   ([ADR-0004](docs/adr/0004-trunk-based-development-on-main.md),
-  [ADR-0015](docs/adr/0015-testing-strategy-and-definition-of-done.md)). Unfinished features sit behind feature flags
-  that are off by default.
+  [ADR-0015](docs/adr/0015-testing-strategy-and-definition-of-done.md)). A feature of a later milestone sits behind a
+  feature flag until it ships; M1 has none left ([ADR-0084](docs/adr/0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md)).
 - **The plan** for M1 is in [`docs/plans/m1.md`](docs/plans/m1.md).
 
 ## Contributing
