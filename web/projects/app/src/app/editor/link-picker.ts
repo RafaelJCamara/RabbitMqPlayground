@@ -55,9 +55,9 @@ const GROUPS: readonly { readonly kind: ElementKind; readonly label: string }[] 
         spellcheck="false"
         aria-label="Search the targets"
         aria-autocomplete="list"
-        aria-expanded="true"
         class="border-border bg-surface rounded-md border px-2 py-1.5"
-        [attr.aria-controls]="listId"
+        [attr.aria-expanded]="listed()"
+        [attr.aria-controls]="listed() ? listId : null"
         [attr.aria-activedescendant]="activeId()"
         (input)="type($event)"
         (keydown)="onKey($event)"
@@ -145,6 +145,12 @@ export class LinkPicker {
       options: this.visible().filter((option) => option.kind === kind),
     })).filter(({ options }) => options.length > 0),
   );
+
+  /**
+   * Whether the list is drawn. When there is a reason, or the search leaves nothing, a sentence is drawn in its place, and the field must not say that it has expanded a list, nor point
+   * at one that is not in the page (axe: aria-valid-attr-value).
+   */
+  protected readonly listed = computed(() => this.reason() === null && this.visible().length > 0);
 
   /** The targets in the order that they are listed, which is the order that the arrow keys go in. */
   private readonly flat = computed(() => this.groups().flatMap(({ options }) => options));

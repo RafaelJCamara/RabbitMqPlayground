@@ -1,21 +1,36 @@
 @if (opening()) {
-  <p class="bg-surface text-muted p-6" role="status" data-testid="opening-link">Opening the shared canvas…</p>
+  <main class="bg-surface text-fg p-6">
+    <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+    <p class="text-muted mt-2" role="status" data-testid="opening-link">Opening the shared canvas…</p>
+  </main>
 } @else if (refusal(); as why) {
   <rmq-link-failed [error]="why" />
 } @else if (shared(); as canvas) {
   @defer (on immediate) {
     <rmq-shared-view [shared]="canvas" />
   } @loading {
-    <p class="bg-surface text-muted p-6" role="status">Loading the editor…</p>
+    <main class="bg-surface text-fg p-6">
+      <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      <p class="text-muted mt-2" role="status">Loading the editor…</p>
+    </main>
   } @error {
-    <p class="bg-surface text-danger p-6" role="alert">The editor could not be loaded. Reload the page to try again.</p>
+    <main class="bg-surface text-fg p-6">
+      <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      <p class="text-danger mt-2" role="alert">The editor could not be loaded. Reload the page to try again.</p>
+    </main>
   }
 } @else {
   @defer (on immediate) {
     <rmq-workspace />
   } @loading {
-    <p class="bg-surface text-muted p-6" role="status">Loading the editor…</p>
+    <main class="bg-surface text-fg p-6">
+      <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      <p class="text-muted mt-2" role="status">Loading the editor…</p>
+    </main>
   } @error {
-    <p class="bg-surface text-danger p-6" role="alert">The editor could not be loaded. Reload the page to try again.</p>
+    <main class="bg-surface text-fg p-6">
+      <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
+      <p class="text-danger mt-2" role="alert">The editor could not be loaded. Reload the page to try again.</p>
+    </main>
   }
 }

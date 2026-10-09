@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { DeferBlockBehavior } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
 import { createMemoryRepository, encodeShare, SHARE_KEY, type Shared } from '@rmq/persistence';
 import { documentOf, queueRecord } from '@rmq/testing';
@@ -32,6 +32,26 @@ describe('App', () => {
     await render(App, options());
 
     expect(await screen.findByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+  });
+
+  describe('while the editor is loaded', () => {
+    // A page that says only that it is loading has no landmark and no heading for a screen reader to start from (axe: landmark-one-main, page-has-heading-one), and it lasts as long as a slow network takes.
+    it('is a page with the name of the product as its heading and a main region, when the editor is loading and when it could not be loaded', async () => {
+      const { fixture } = await render(App, { ...options(), deferBlockBehavior: DeferBlockBehavior.Manual });
+      const [block] = await fixture.getDeferBlocks();
+
+      await block?.render(DeferBlockState.Loading);
+      expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+      expect(screen.getByRole('main')).toHaveTextContent('Loading the editor…');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading the editor…');
+
+      await block?.render(DeferBlockState.Error);
+      expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'The editor could not be loaded. Reload the page to try again.',
+      );
+    });
   });
 
   describe('the editor (ADR-0030, ADR-0084)', () => {
@@ -103,11 +123,13 @@ describe('App', () => {
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
     });
 
-    it('says that it is opening the canvas while the link is unpacked, and shows nothing else', async () => {
+    it('says that it is opening the canvas while the link is unpacked, as a page with its heading and its main region, and shows nothing else', async () => {
       await render(App, withState({ kind: 'opening' }));
 
       expect(screen.getByTestId('opening-link')).toHaveTextContent('Opening the shared canvas…');
       expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+      expect(screen.getByRole('main')).toContainElement(screen.getByTestId('opening-link'));
       expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
     });
 

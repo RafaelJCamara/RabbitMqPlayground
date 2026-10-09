@@ -229,6 +229,27 @@ describe('LinkPicker (ADR-0041)', () => {
     expect(chosen).toEqual([]);
   });
 
+  it('does not say that it has expanded a list, nor point at one, when it draws a sentence in the place of the list (axe: aria-valid-attr-value)', async () => {
+    const { user } = await renderPicker();
+    const field = screen.getByRole('combobox');
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(field).toHaveAttribute('aria-expanded', 'true');
+    expect(field).toHaveAttribute('aria-controls');
+
+    await user.keyboard('zzz');
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(field).toHaveAttribute('aria-expanded', 'false');
+    expect(field).not.toHaveAttribute('aria-controls');
+    expect(field).not.toHaveAttribute('aria-activedescendant');
+
+    await user.clear(field);
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(field).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(field.getAttribute('aria-controls') as string)).toBe(screen.getByRole('listbox'));
+  });
+
   it('gives up with Escape, and when the focus leaves it', async () => {
     const outside = document.createElement('button');
     document.body.append(outside);
@@ -262,6 +283,8 @@ describe('LinkPicker (ADR-0041)', () => {
       'Add a queue or another exchange first: an exchange is bound to those.',
     );
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('combobox')).not.toHaveAttribute('aria-controls');
     await user.keyboard('{Enter}');
     expect(chosen).toEqual([]);
   });
