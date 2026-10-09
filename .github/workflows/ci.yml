@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-web
       - name: Lint
         working-directory: web
@@ -64,7 +64,7 @@ jobs:
     # The 803 tests took 12.5 to 14.3 minutes on two workers, and 15.1 once (the run of ee8d619 was cancelled with one test to go).
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-web
       - uses: ./.github/actions/install-playwright
       - name: Build for the end-to-end tests (production build plus the debug handle)
@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-web
       - name: Run the benchmarks (the results go to the job summary)
         working-directory: web
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-web
       - uses: ./.github/actions/install-playwright
       - name: Playwright against the deployed site, once it serves this commit
