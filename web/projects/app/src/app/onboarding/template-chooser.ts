@@ -1,6 +1,7 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, inject } from '@angular/core';
 import { TEMPLATES, type TemplateId } from '@rmq/domain';
+import { APP_DISCLAIMER } from '../core/app-info';
 import { BUTTON, BUTTON_PRIMARY } from '../core/ui/buttons';
 
 export const CHOOSER_TITLE_ID = 'rmq-chooser-title';
@@ -65,6 +66,9 @@ export interface ChooserData {
           Build from scratch
         </button>
       </div>
+      @if (data.first) {
+        <p class="text-muted text-xs" data-testid="chooser-disclaimer">{{ disclaimer }}</p>
+      }
     </div>
   `,
 })
@@ -76,4 +80,5 @@ export class TemplateChooser {
   protected readonly primary = BUTTON_PRIMARY;
   protected readonly templates = TEMPLATES;
   protected readonly blank = BLANK;
+  protected readonly disclaimer = APP_DISCLAIMER;
 }

@@ -4,6 +4,7 @@ import { failure, succeed, type Outcome, type RestoreReport, type UnreadableCanv
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { APP_DISCLAIMER } from '../core/app-info';
 import { NOW } from '../core/session/canvas-session';
 import { Toasts } from '../core/ui/toasts';
 import { Home } from './home';
@@ -80,6 +81,20 @@ const names = (): string[] =>
   screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent?.trim() ?? '');
 
 describe('Home (ADR-0073)', () => {
+  describe('the foot of the page (ADR-0087)', () => {
+    it('says that the product is not affiliated with Broadcom or the RabbitMQ project, and links to the source, the decision records and the progress issue', async () => {
+      await renderHome([canvas('a')]);
+
+      const foot = screen.getByTestId('home-footer');
+      expect(within(foot).getByText(APP_DISCLAIMER)).toBeInTheDocument();
+      expect(APP_DISCLAIMER).toContain('Not affiliated with');
+      expect(APP_DISCLAIMER).toContain('Broadcom');
+      for (const name of ['Source code', 'Design decisions', 'Progress']) {
+        expect(within(foot).getByRole('link', { name })).toHaveAttribute('href', expect.stringContaining('github.com'));
+      }
+    });
+  });
+
   describe('the page', () => {
     it('is a main landmark named by its heading, My canvases', async () => {
       await renderHome([canvas('a')]);

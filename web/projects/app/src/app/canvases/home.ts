@@ -1,4 +1,5 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
+import { APP_DISCLAIMER } from '../core/app-info';
 import { Icon } from '../core/ui/icon';
 import { Toasts } from '../core/ui/toasts';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
@@ -169,12 +170,43 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
             </ul>
           </section>
         }
+
+        <footer class="border-line text-muted flex flex-col gap-2 border-t pt-4 text-sm" data-testid="home-footer">
+          <p>{{ disclaimer }}</p>
+          <ul class="flex flex-wrap gap-x-6 gap-y-1">
+            <li>
+              <a
+                class="text-link underline underline-offset-4"
+                href="https://github.com/RafaelJCamara/RabbitMqPlayground"
+              >
+                Source code
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-link underline underline-offset-4"
+                href="https://github.com/RafaelJCamara/RabbitMqPlayground/tree/main/docs/adr"
+              >
+                Design decisions
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-link underline underline-offset-4"
+                href="https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1"
+              >
+                Progress
+              </a>
+            </li>
+          </ul>
+        </footer>
       </div>
     </main>
   `,
   host: { class: 'block h-full', '(document:keydown)': 'onKey($event)' },
 })
 export class Home {
+  protected readonly disclaimer = APP_DISCLAIMER;
   protected readonly library = inject(CanvasLibrary);
   private readonly dialogs = inject(CanvasDialogs);
   private readonly toasts = inject(Toasts);

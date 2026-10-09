@@ -96,6 +96,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0083](0083-the-tour-is-six-steps-in-the-editor-that-the-learner-does-and-the-document-ticks-off-by-whichever-way-of-linking.md) | The tour is six steps in the editor that the learner does and the document ticks off, by whichever way of linking | Accepted |
 | [0084](0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md) | The seven M1 flags are deleted one by one, the page ignores what they leave behind, and the first run always asks | Accepted |
 | [0085](0085-targets-are-24-pixels-nothing-that-stays-is-drawn-over-the-canvas-and-every-screen-is-checked-in-both-themes-from-a-list.md) | Targets are 24 pixels, nothing that stays on the screen is drawn over the canvas, and every screen is checked in both themes from a list | Accepted |
+| [0087](0087-the-disclaimer-moves-from-the-placeholder-to-the-welcome-and-the-foot-of-the-home.md) | The disclaimer moves from the placeholder to the welcome and the foot of the home | Accepted |
 
 ## Where to start
 

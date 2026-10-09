@@ -5,7 +5,7 @@ import { createMemoryRepository, encodeShare, SHARE_KEY, type Shared } from '@rm
 import { documentOf, queueRecord } from '@rmq/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './app';
-import { APP_DISCLAIMER, APP_NAME } from './core/app-info';
+import { APP_NAME } from './core/app-info';
 import { FLAG_SOURCES } from './core/flags/feature-flags';
 import { REPOSITORIES } from './core/session/canvas-session';
 import { LinkOpening, type LinkState } from './core/share/link-opening';
@@ -31,49 +31,18 @@ const options = (stored: string | null) => ({
 
 describe('App', () => {
   it('names the application in its top-level heading', async () => {
-    await render(App);
+    await render(App, options(null));
 
-    expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
   });
 
-  it('says it is not affiliated with Broadcom or the RabbitMQ project', async () => {
-    await render(App);
-
-    expect(screen.getByText(APP_DISCLAIMER)).toBeInTheDocument();
-    expect(APP_DISCLAIMER).toContain('Not affiliated with');
-    expect(APP_DISCLAIMER).toContain('Broadcom');
-  });
-
-  it('links to the source, the decision records and the progress issue', async () => {
-    await render(App);
-
-    for (const name of ['Source code', 'Design decisions', 'Progress']) {
-      expect(screen.getByRole('link', { name })).toHaveAttribute('href', expect.stringContaining('github.com'));
-    }
-  });
-
-  describe('behind the editor flag (ADR-0030)', () => {
-    it('shows the placeholder, and none of the editor, when the flag is off', async () => {
-      await render(App, options(null));
-
-      expect(screen.getByText(/Under construction/)).toBeInTheDocument();
-      expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('save-state')).not.toBeInTheDocument();
-    });
-
-    it('shows the editor, and not the placeholder, when the flag is on, and the editor has the one heading', async () => {
+  describe('the editor (ADR-0030, ADR-0084)', () => {
+    it('shows the editor, and the editor has the one heading', async () => {
       await render(App, options('editor'));
 
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 1, name: APP_NAME })).toBeInTheDocument();
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-      expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
-    });
-
-    it('loads a flag that is not the editor’s and shows the placeholder', async () => {
-      await render(App, options('simulation'));
-
-      expect(screen.getByText(/Under construction/)).toBeInTheDocument();
     });
   });
 
@@ -85,7 +54,6 @@ describe('App', () => {
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
       expect(screen.getByRole('button', { name: 'My canvases' })).toBeInTheDocument();
-      expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
     });
   });
 
@@ -128,7 +96,6 @@ describe('App', () => {
       expect(await screen.findByTestId('shared-name')).toHaveTextContent('Shared canvas “Orders flow”');
       expect(await screen.findByLabelText('Toolbox')).toBeInTheDocument();
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-      expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
       expect(screen.queryByRole('navigation', { name: 'Open canvases' })).not.toBeInTheDocument();
     });
 
@@ -144,7 +111,6 @@ describe('App', () => {
 
       expect(screen.getByTestId('opening-link')).toHaveTextContent('Opening the shared canvas…');
       expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
     });
 
@@ -158,7 +124,6 @@ describe('App', () => {
       expect(screen.getByRole('link', { name: 'Go to the playground' })).toHaveAttribute('href', HOME);
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
       expect(screen.queryByLabelText('Toolbox')).not.toBeInTheDocument();
-      expect(screen.queryByText(/Under construction/)).not.toBeInTheDocument();
     });
 
     it('is the page as it was, with no sign of a link, when the address has no link', async () => {

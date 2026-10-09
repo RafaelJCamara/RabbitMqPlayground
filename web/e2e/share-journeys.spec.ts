@@ -398,7 +398,6 @@ test.describe('journey 5: a link that cannot be opened', () => {
       await expect(failed.heading).toHaveText('RabbitMQ Playground');
       await expect(other.getByRole('heading', { level: 1 })).toHaveCount(1);
       await expect(other.getByRole('complementary', { name: 'Toolbox' })).toHaveCount(0);
-      await expect(other.getByText(/Under construction/)).toHaveCount(0);
       expect(await databases(other)).toEqual([]);
     });
   }

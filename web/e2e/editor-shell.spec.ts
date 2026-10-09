@@ -2,28 +2,7 @@ import { EditorPage } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { expect, test } from './support/test';
 
-test.describe('the editor, behind its flag (ADR-0030)', () => {
-  test('is not downloaded by a visitor who does not have the flag, and is by one who does', async ({ page }) => {
-    const scripts = async () =>
-      page.evaluate(() =>
-        performance
-          .getEntriesByType('resource')
-          .map((entry) => entry.name)
-          .filter((name) => name.endsWith('.js')),
-      );
-
-    await page.goto('');
-    await expect(page.getByText(/Under construction/)).toBeVisible();
-    const without = await scripts();
-    expect(await page.getByRole('complementary', { name: 'Toolbox' }).count()).toBe(0);
-
-    await new EditorPage(page).goto();
-    const withFlag = await scripts();
-
-    expect(withFlag.length).toBeGreaterThan(without.length);
-    expect(withFlag.filter((name) => !without.includes(name))).toHaveLength(withFlag.length - without.length);
-  });
-
+test.describe('the editor (ADR-0030, ADR-0084)', () => {
   test('opens with the one heading and the regions of the layout, and says that its changes are saved', async ({
     page,
   }) => {

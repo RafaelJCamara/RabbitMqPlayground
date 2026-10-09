@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TEMPLATES } from '@rmq/domain';
+import { APP_DISCLAIMER } from '../core/app-info';
 import { fireEvent, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -46,6 +47,19 @@ describe('the chooser (ADR-0082)', () => {
   });
 
   describe('at the first run', () => {
+    it('says that the product is not affiliated with Broadcom or the RabbitMQ project, which a visitor reads first (ADR-0087), and the question from the home does not repeat it', async () => {
+      const first = await ask(true);
+      expect(within(first.dialog).getByText(APP_DISCLAIMER)).toBeVisible();
+      first.dialog.closest('.cdk-overlay-container')?.remove();
+      TestBed.resetTestingModule();
+      document.body.replaceChildren();
+      configured = false;
+
+      const fromHome = await ask(false);
+
+      expect(within(fromHome.dialog).queryByTestId('chooser-disclaimer')).not.toBeInTheDocument();
+    });
+
     it('is a modal dialog that welcomes, says what a canvas is and what can be done, and has no way to say never mind', async () => {
       const { dialog } = await ask(true);
 

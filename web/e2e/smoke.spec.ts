@@ -1,5 +1,5 @@
 import { AppPage } from './pages/app-page';
-import { EditorPage } from './pages/editor-page';
+import { EditorPage, welcome } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { expect, test } from './support/test';
 
@@ -14,10 +14,20 @@ test.describe('journey 1: smoke and axe at the base path', () => {
     await expect(page).toHaveTitle((await app.heading.textContent()) ?? 'missing heading');
   });
 
-  test('says it is not affiliated with Broadcom or the RabbitMQ project', async ({ page }) => {
-    await new AppPage(page).goto();
+  test('says it is not affiliated with Broadcom or the RabbitMQ project, in the welcome that a visitor reads first and at the foot of the home (ADR-0087)', async ({
+    page,
+  }) => {
+    await page.goto('');
+    await expect(
+      welcome(page).getByText('Not affiliated with, endorsed by or sponsored by Broadcom Inc.'),
+    ).toBeVisible();
 
-    await expect(page.getByText('Not affiliated with, endorsed by or sponsored by Broadcom Inc.')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'My canvases' }).click();
+
+    await expect(
+      page.getByTestId('home-footer').getByText('Not affiliated with, endorsed by or sponsored by Broadcom Inc.'),
+    ).toBeVisible();
   });
 
   test('loads a deep link through 404.html, as GitHub Pages does, with its assets found', async ({ page }) => {
@@ -28,14 +38,20 @@ test.describe('journey 1: smoke and axe at the base path', () => {
     await expect(app.heading).toBeVisible();
   });
 
-  test('has no horizontal scrolling at 320 px wide, so text reflows (WCAG 1.4.10)', async ({ page }) => {
+  test('has no horizontal scrolling at 320 px wide in the welcome and on the home, so text reflows (WCAG 1.4.10); the canvas is a diagram and keeps its two dimensions, which the criterion allows', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 320, height: 640 });
-    await new AppPage(page).goto();
+    const overflow = () =>
+      page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+    await page.goto('');
+    await welcome(page).waitFor();
+    expect(await overflow(), 'the welcome').toBeLessThanOrEqual(0);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'My canvases' }).click();
+    await page.getByTestId('home-footer').waitFor();
+    expect(await overflow(), 'the home').toBeLessThanOrEqual(0);
   });
 });
 
@@ -104,7 +120,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await new AppPage(page).goto();
 
       const background = await page.evaluate(
-        () => getComputedStyle(document.querySelector('rmq-root > div')!).backgroundColor,
+        () => getComputedStyle(document.querySelector('rmq-workspace > div')!).backgroundColor,
       );
       expect(background).toBe(colorScheme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(11, 16, 32)');
     });
@@ -118,7 +134,7 @@ test.describe('the theme can also be chosen on the page, which the theme switch 
     await new AppPage(page).goto();
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
 
-    await expect(page.locator('rmq-root > div')).toHaveCSS('background-color', 'rgb(11, 16, 32)');
+    await expect(page.locator('rmq-workspace > div')).toHaveCSS('background-color', 'rgb(11, 16, 32)');
     await expectNoAxeViolations(page);
   });
 
@@ -129,7 +145,7 @@ test.describe('the theme can also be chosen on the page, which the theme switch 
       await new AppPage(page).goto();
       await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
 
-      await expect(page.locator('rmq-root > div')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(page.locator('rmq-workspace > div')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
       await expectNoAxeViolations(page);
     });
   });
