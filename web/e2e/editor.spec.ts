@@ -440,6 +440,82 @@ test.describe('journey 2: arranging and looking', () => {
   });
 });
 
+/** What a node draws of its name: the width of its body in canvas units (zoom does not change it), the text, whether the style had to clip it, and its tooltip. */
+async function nameOf(node: import('@playwright/test').Locator) {
+  return node.evaluate((element) => {
+    const body = element.querySelector<HTMLElement>('.rmq-node-body');
+    const name = element.querySelector<HTMLElement>('.rmq-node-name');
+    return {
+      width: body?.offsetWidth ?? 0,
+      text: name?.textContent ?? '',
+      clipped: name === null ? false : name.scrollWidth > name.clientWidth,
+      title: name?.getAttribute('title') ?? null,
+    };
+  });
+}
+
+test.describe('journey 2: long names (ADR-0093)', () => {
+  const fits = 'orders-events-eu-west-payments'; // 30 characters
+  const longer = `${fits}-and-the-retries`; // 48 characters
+
+  test('draws a node as wide as its name needs up to 30 characters, and cuts a longer name with an ellipsis', async ({
+    page,
+  }) => {
+    expect(fits).toHaveLength(30);
+    const editor = await open(page);
+    await editor.openCommandBar();
+    await editor.runCommand(`declare queue q1; declare queue ${fits}; declare queue ${longer}`);
+
+    const short = await nameOf(editor.node('Queue q1'));
+    const whole = await nameOf(editor.node(`Queue ${fits}`));
+    const cut = await nameOf(editor.node(`Queue ${longer}`));
+
+    expect(short).toEqual({ width: 160, text: 'q1', clipped: false, title: null });
+    expect(whole.text).toBe(fits);
+    expect(whole.clipped, 'a name of 30 characters has the room it needs').toBe(false);
+    expect(whole.title).toBeNull();
+    expect(whole.width).toBe(308);
+    expect(cut.text).toBe(`${fits.slice(0, 29)}…`);
+    expect(cut.title, 'the whole name is in the tooltip').toBe(longer);
+    expect(cut.width, 'no wider than a name of 30').toBe(whole.width);
+    // A screen reader is told the whole name.
+    await expect(editor.node(`Queue ${longer}`)).toHaveAttribute('aria-label', `Queue ${longer}`);
+  });
+
+  test('arranges nodes of different widths without one over another, and the edge reaches each of them', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+    await editor.openCommandBar();
+    await editor.runCommand(
+      `declare exchange ${fits} type=fanout; declare queue ${longer}; add producer p; add consumer ${fits}-consumer;` +
+        ` bind ${fits} -> ${longer}; link p -> ${fits}; subscribe ${fits}-consumer ${longer}`,
+    );
+    await expect.poll(() => page.evaluate(() => window.__rmq?.drawnEdges().length)).toBe(3);
+
+    await page.getByRole('button', { name: 'Auto-layout' }).click();
+
+    await expect
+      .poll(async () => {
+        const boxes = await page.locator('[data-node-id]').evaluateAll((elements) =>
+          elements.map((element) => {
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return { x, y, width, height };
+          }),
+        );
+        return boxes.every((a, index) =>
+          boxes
+            .slice(index + 1)
+            .every(
+              (b) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y,
+            ),
+        );
+      })
+      .toBe(true);
+    await expect.poll(() => allNodesInside(page, editor, 0)).toBe(true);
+  });
+});
+
 test.describe('journey 2: how far it zooms', () => {
   test('fits one small node at 100%, and does not blow it up to fill the canvas', async ({ page }) => {
     const editor = await open(page);

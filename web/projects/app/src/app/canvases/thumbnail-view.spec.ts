@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/angular';
 import { documentOf, exchangeRecord, producerRecord, queueRecord, consumerRecord, bindingRecord } from '@rmq/testing';
 import { describe, expect, it } from 'vitest';
+import { NODE_SIZE } from '@rmq/domain';
 import { shapePath } from '../canvas/model/shapes';
 import { EMPTY_THUMBNAIL, thumbnailOf } from './thumbnail';
 import { ThumbnailView } from './thumbnail-view';
@@ -43,6 +44,20 @@ describe('ThumbnailView (ADR-0073)', () => {
       'translate(1200 0)',
     ]);
     expect(container.querySelectorAll('line')).toHaveLength(3);
+  });
+
+  it('draws the outline of a node at the width of the node, wider for a longer name (ADR-0093)', async () => {
+    const thumbnail = thumbnailOf(
+      documentOf({ queues: { Q1: queueRecord('q'.repeat(30)) }, nodes: { Q1: { x: 0, y: 0 } } }),
+    );
+    const { container } = await render(ThumbnailView, { inputs: { thumbnail } });
+
+    const node = thumbnail.nodes[0] ?? { width: 0, height: 0 };
+    expect(node.width).toBeGreaterThan(NODE_SIZE.queue.width);
+    expect(container.querySelector('path')?.getAttribute('d')).toBe(
+      shapePath('queue', { width: node.width, height: node.height }),
+    );
+    expect(container.querySelector('path')?.getAttribute('d')).not.toBe(shapePath('queue'));
   });
 
   it('draws each edge from where it starts to where it ends', async () => {

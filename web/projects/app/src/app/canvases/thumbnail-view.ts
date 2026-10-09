@@ -1,15 +1,10 @@
 import { Component, computed, input } from '@angular/core';
 import type { ElementKind } from '@rmq/domain';
 import { shapePath } from '../canvas/model/shapes';
-import type { Thumbnail } from './thumbnail';
+import type { ThumbNode, Thumbnail } from './thumbnail';
 
-/** The outline of each kind, at its own size: the thumbnail is drawn in canvas units, so a node is the shape that the canvas draws. */
-const PATHS: Readonly<Record<ElementKind, string>> = {
-  exchange: shapePath('exchange'),
-  queue: shapePath('queue'),
-  producer: shapePath('producer'),
-  consumer: shapePath('consumer'),
-};
+/** The outline of a node, at its own size: the thumbnail is drawn in canvas units, so a node is the shape that the canvas draws. */
+const pathOf = ({ kind, width, height }: ThumbNode): string => shapePath(kind, { width, height });
 
 /** The colours of the canvas for each kind, as the utilities of the theme give them. */
 const PAINT: Readonly<Record<ElementKind, string>> = {
@@ -51,7 +46,7 @@ const PAINT: Readonly<Record<ElementKind, string>> = {
             [class]="paint[node.kind]"
             stroke-width="1.5"
             vector-effect="non-scaling-stroke"
-            [attr.d]="paths[node.kind]"
+            [attr.d]="pathOf(node)"
             [attr.transform]="'translate(' + node.x + ' ' + node.y + ')'"
           />
         }
@@ -71,7 +66,7 @@ const PAINT: Readonly<Record<ElementKind, string>> = {
 export class ThumbnailView {
   readonly thumbnail = input.required<Thumbnail>();
 
-  protected readonly paths = PATHS;
+  protected readonly pathOf = pathOf;
   protected readonly paint = PAINT;
   protected readonly box = computed(() => {
     const box = this.thumbnail().box;

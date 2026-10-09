@@ -103,7 +103,9 @@
         <div class="rmq-node-body" [style.width.px]="node.width" [style.height.px]="node.height">
           <rmq-icon [name]="node.kind" [size]="20" />
           <span class="rmq-node-text">
-            <span class="rmq-node-name">{{ node.name }}</span>
+            <span class="rmq-node-name" [attr.title]="node.shownName === node.name ? null : node.name">{{
+              node.shownName
+            }}</span>
             @if (node.exchangeType; as type) {
               <span class="rmq-badge" [attr.data-exchange-type]="type">
                 <rmq-icon [name]="type" [size]="12" />

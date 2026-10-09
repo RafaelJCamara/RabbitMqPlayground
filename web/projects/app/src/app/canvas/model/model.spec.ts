@@ -1,4 +1,4 @@
-import { allowedTargets, NODE_SIZE, type CanvasDocument, type ElementKind } from '@rmq/domain';
+import { allowedTargets, NAME_FIT_MAX, NODE_SIZE, nodeSize, type CanvasDocument, type ElementKind } from '@rmq/domain';
 import {
   bindingRecord,
   consumerRecord,
@@ -44,6 +44,13 @@ describe('shapes', () => {
     for (const kind of ['producer', 'exchange', 'queue', 'consumer'] as const) {
       expect(frameOf(kind)).toEqual(NODE_SIZE[kind]);
     }
+  });
+
+  it('is wider for a name that needs room, up to 30 characters of it, and is the size of the kind for a short one (ADR-0093)', () => {
+    expect(frameOf('queue', 'q1')).toEqual(NODE_SIZE.queue);
+    expect(frameOf('queue', 'q'.repeat(30))).toEqual(nodeSize('queue', 'q'.repeat(30)));
+    expect(frameOf('queue', 'q'.repeat(30)).width).toBe(308);
+    expect(frameOf('queue', 'q'.repeat(90))).toEqual(frameOf('queue', 'q'.repeat(30)));
   });
 
   it('gives each kind an outline of its own, as a closed path', () => {
@@ -178,6 +185,35 @@ describe('buildCanvasVm', () => {
 
     for (const node of nodes) {
       expect('exchangeType' in node).toBe(node.kind === 'exchange');
+    }
+  });
+
+  it('draws a name of up to 30 characters whole, and a longer one cut to 30 with an ellipsis, with the whole name for whoever asks (ADR-0093)', () => {
+    const whole = 'o'.repeat(NAME_FIT_MAX);
+    const long = `${'l'.repeat(NAME_FIT_MAX)}-and-more`;
+    const { nodes } = buildCanvasVm(
+      documentOf({ queues: { Q1: queueRecord('q1'), Q2: queueRecord(whole), Q3: queueRecord(long) } }),
+    );
+
+    expect(nodes.map(({ name, shownName }) => [name, shownName])).toEqual([
+      ['q1', 'q1'],
+      [whole, whole],
+      [long, `${'l'.repeat(NAME_FIT_MAX - 1)}…`],
+    ]);
+    // A screen reader is told the whole name, whatever is drawn.
+    expect(nodes[2]?.label).toBe(`Queue ${long}`);
+  });
+
+  it('draws a node as wide as its name needs, with an outline of that width, and no wider than 30 characters need (ADR-0093)', () => {
+    const { nodes } = buildCanvasVm(
+      documentOf({
+        queues: { Q1: queueRecord('q1'), Q2: queueRecord('q'.repeat(24)), Q3: queueRecord('q'.repeat(200)) },
+      }),
+    );
+
+    expect(nodes.map(({ width }) => width)).toEqual([NODE_SIZE.queue.width, 260, 308]);
+    for (const { width, height, shape } of nodes) {
+      expect(shape).toBe(shapePath('queue', { width, height }));
     }
   });
 

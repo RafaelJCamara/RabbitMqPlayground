@@ -1,5 +1,6 @@
 import {
   defaultPosition,
+  displayName,
   edgeKey,
   elements,
   lint,
@@ -10,7 +11,12 @@ import {
   type Id,
 } from '@rmq/domain';
 import type { ExchangeType } from '@rmq/engine';
-import { DEFAULT_EXCHANGE_ID, defaultExchangePosition, implicitEdgeId } from '../../core/state/default-exchange';
+import {
+  DEFAULT_EXCHANGE_ID,
+  DEFAULT_EXCHANGE_NAME,
+  defaultExchangePosition,
+  implicitEdgeId,
+} from '../../core/state/default-exchange';
 import {
   bindingLabel,
   chipsOf,
@@ -35,6 +41,8 @@ export interface NodeVm {
   readonly id: Id;
   readonly kind: ElementKind;
   readonly name: string;
+  /** The name as it is drawn: whole up to 30 characters and cut with an ellipsis after that (ADR-0093). The name is the whole one. */
+  readonly shownName: string;
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -130,7 +138,7 @@ function nodesOf(
   warnings: ReadonlyMap<Id, readonly string[]>,
 ): NodeVm[] {
   const nodes = elements(document).map(({ kind, id, name }) => {
-    const { width, height } = frameOf(kind);
+    const { width, height } = frameOf(kind, name);
     const { x, y } = lookup(document.layout.nodes, id) ?? defaultPosition(document, kind);
     // An id belongs to one element, whatever its kind, so only the id of an exchange is found among the exchanges.
     const exchangeType = lookup(document.exchanges, id)?.type;
@@ -140,11 +148,12 @@ function nodesOf(
         id,
         kind,
         name,
+        shownName: displayName(name),
         x,
         y,
         width,
         height,
-        shape: shapePath(kind),
+        shape: shapePath(kind, { width, height }),
         label: nodeLabel(kind, name, exchangeType, lints.length),
         ...(exchangeType === undefined ? {} : { exchangeType }),
         hasInput: kind !== 'producer',
@@ -155,20 +164,21 @@ function nodesOf(
     );
   });
   if (document.settings.showDefaultExchange) {
-    const { width, height } = frameOf('exchange');
+    const { width, height } = frameOf('exchange', DEFAULT_EXCHANGE_NAME);
     const { x, y } = defaultExchangePosition(document);
     nodes.push(
       reuse<NodeVm>(
         {
           id: DEFAULT_EXCHANGE_ID,
           kind: 'exchange',
-          name: '(default)',
+          name: DEFAULT_EXCHANGE_NAME,
+          shownName: DEFAULT_EXCHANGE_NAME,
           caption: 'default exchange',
           x,
           y,
           width,
           height,
-          shape: shapePath('exchange'),
+          shape: shapePath('exchange', { width, height }),
           label: 'Default exchange',
           hasInput: true,
           hasOutput: true,

@@ -1,4 +1,4 @@
-import { NODE_SIZE, type ElementKind } from '@rmq/domain';
+import { nodeSize, type ElementKind } from '@rmq/domain';
 
 /**
  * What each kind of node looks like (ADR-0032): its size, which is the size that the domain's auto-layout leaves room for, and its
@@ -15,8 +15,8 @@ export interface Frame {
   readonly height: number;
 }
 
-/** The size of a node of this kind, in canvas units. */
-export const frameOf = (kind: ElementKind): Frame => NODE_SIZE[kind];
+/** The size of a node of this kind with this name, in canvas units: it is wider where the name needs room, up to 30 characters of it (ADR-0093). */
+export const frameOf = (kind: ElementKind, name = ''): Frame => nodeSize(kind, name);
 
 const f = (n: number): string => String(Math.round(n * 100) / 100);
 

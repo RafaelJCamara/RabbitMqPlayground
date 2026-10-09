@@ -20,6 +20,7 @@ const node = (id: string, x: number, y: number): NodeVm => ({
   id,
   kind: 'queue',
   name: id,
+  shownName: id,
   x,
   y,
   width: 100,

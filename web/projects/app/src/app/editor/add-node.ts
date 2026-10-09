@@ -41,7 +41,7 @@ export function addNode(document: CanvasDocument, node: NewNode, at?: Point): Ad
   if (at === undefined) {
     return { command: declare, kind: node.kind, name };
   }
-  const { width, height } = frameOf(node.kind);
+  const { width, height } = frameOf(node.kind, name);
   const move: DocumentCommand = {
     type: 'move',
     target: { kind: node.kind, name },

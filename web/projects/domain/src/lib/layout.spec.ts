@@ -13,7 +13,17 @@ import { describe, expect, it } from 'vitest';
 import { elements } from './document/elements';
 import type { CanvasDocument } from './document/schema';
 import { edgeKeys } from './document/topology';
-import { autoLayout, COLUMN_SEPARATION, NODE_SEPARATION, NODE_SIZE } from './layout';
+import {
+  autoLayout,
+  COLUMN_SEPARATION,
+  displayName,
+  NAME_FIT_MAX,
+  NODE_CHARACTER,
+  NODE_CHROME,
+  NODE_SEPARATION,
+  NODE_SIZE,
+  nodeSize,
+} from './layout';
 
 const sample = (): CanvasDocument => deepFreeze(sampleDocument());
 const at = (document: CanvasDocument, id: string) => autoLayout(document)[id] as { x: number; y: number };
@@ -161,15 +171,18 @@ describe('autoLayout', () => {
     expect(positions['M']?.x).toBe(positions['C']?.x);
   });
 
-  it('leaves room for the nodes: nodes in a column are a gap apart, and columns are a gap apart', () => {
-    const document = sample();
+  /** The nodes of a document at the positions that the layout gives them, each at the size that its name needs. */
+  const placed = (document: CanvasDocument) => {
     const positions = autoLayout(document);
-    const boxes = elements(document).map(({ id, kind }) => ({
+    return elements(document).map(({ id, kind, name }) => ({
       id,
       ...(positions[id] as { x: number; y: number }),
-      ...NODE_SIZE[kind],
+      ...nodeSize(kind, name),
     }));
+  };
 
+  /** Nodes in a column are a node gap apart, and nodes in two columns are a column gap apart. */
+  const expectRoom = (boxes: ReturnType<typeof placed>) => {
     for (const [index, a] of boxes.entries()) {
       for (const b of boxes.slice(index + 1)) {
         const sharesColumn = a.x < b.x + b.width && b.x < a.x + a.width;
@@ -185,6 +198,33 @@ describe('autoLayout', () => {
         }
       }
     }
+  };
+
+  it('leaves room for the nodes: nodes in a column are a gap apart, and columns are a gap apart', () => {
+    expectRoom(placed(sample()));
+  });
+
+  it('leaves the same room for nodes that are wider for their names, and none of them is wider than a name of 30 characters needs (ADR-0093)', () => {
+    const document = deepFreeze(
+      documentOf({
+        exchanges: { E: exchangeRecord('e'.repeat(12)), F: exchangeRecord('x'.repeat(31)) },
+        queues: { Q: queueRecord('q'.repeat(30)), R: queueRecord('r') },
+        bindings: {
+          B1: bindingRecord('E', { kind: 'queue', id: 'Q' }),
+          B2: bindingRecord('F', { kind: 'queue', id: 'R' }),
+        },
+        producers: {
+          P: producerRecord('p'.repeat(20), { kind: 'exchange', id: 'E' }),
+          S: producerRecord('s'.repeat(255), { kind: 'exchange', id: 'F' }),
+        },
+        consumers: { C: consumerRecord('c'.repeat(100), ['Q']), D: consumerRecord('d', ['R']) },
+      }),
+    );
+    const boxes = placed(document);
+
+    expectRoom(boxes);
+    expect(Math.max(...boxes.map(({ width }) => width))).toBe(308);
+    expect(new Set(boxes.map(({ width }) => width)).size).toBeGreaterThan(3);
   });
 
   it('copes with an exchange bound to itself, a cycle of exchanges, and a queue that nothing feeds', () => {
@@ -347,6 +387,82 @@ describe('autoLayout', () => {
         for (const { x, y } of Object.values(positions)) {
           expect(Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0).toBe(true);
         }
+      }),
+    );
+  });
+});
+
+describe('displayName (ADR-0093)', () => {
+  it('shows a name of up to 30 characters whole', () => {
+    expect(displayName('')).toBe('');
+    expect(displayName('orders')).toBe('orders');
+    expect(displayName('a'.repeat(NAME_FIT_MAX))).toBe('a'.repeat(30));
+  });
+
+  it('cuts a name of 31 characters or more to 30, the last of them an ellipsis', () => {
+    expect(displayName('a'.repeat(31))).toBe(`${'a'.repeat(29)}…`);
+    expect(displayName('a'.repeat(255))).toBe(`${'a'.repeat(29)}…`);
+    expect([...displayName('a'.repeat(31))]).toHaveLength(30);
+  });
+
+  it('counts a character as a code point, so that a pair is never cut in half', () => {
+    const emoji = String.fromCodePoint(0x1f407);
+
+    expect(displayName(emoji.repeat(30))).toBe(emoji.repeat(30));
+    expect(displayName(emoji.repeat(31))).toBe(`${emoji.repeat(29)}…`);
+  });
+});
+
+describe('nodeSize (ADR-0093)', () => {
+  const kinds = ['producer', 'exchange', 'queue', 'consumer'] as const;
+
+  it('is the size of the kind for a name that is short', () => {
+    for (const kind of kinds) {
+      expect(nodeSize(kind, ''), kind).toEqual(NODE_SIZE[kind]);
+      expect(nodeSize(kind, 'p1'), kind).toEqual(NODE_SIZE[kind]);
+    }
+  });
+
+  it('is the size of the kind for the name that the toolbox gives a node, so that a node that is added is as big as it always was', () => {
+    for (const kind of kinds) {
+      expect(nodeSize(kind, `${kind}1`), kind).toEqual(NODE_SIZE[kind]);
+      expect(nodeSize(kind, `${kind}9`), kind).toEqual(NODE_SIZE[kind]);
+    }
+  });
+
+  it('is wider by a character of room for each character of the name, once the name needs more than the kind has', () => {
+    expect(nodeSize('queue', 'q'.repeat(20)).width).toBe(228);
+    expect(nodeSize('queue', 'q'.repeat(21)).width - nodeSize('queue', 'q'.repeat(20)).width).toBe(NODE_CHARACTER);
+    expect(nodeSize('producer', 'p'.repeat(25)).width).toBe(268);
+  });
+
+  it('keeps the width of the kind for the longest name that fits in it, and no less', () => {
+    for (const kind of kinds) {
+      const fits = Math.floor((NODE_SIZE[kind].width - NODE_CHROME) / NODE_CHARACTER);
+
+      expect(nodeSize(kind, 'n'.repeat(fits)).width, kind).toBe(NODE_SIZE[kind].width);
+      expect(nodeSize(kind, 'n'.repeat(fits + 1)).width, kind).toBeGreaterThan(NODE_SIZE[kind].width);
+    }
+  });
+
+  it('stops growing at 30 characters: a longer name is cut, and the node is the node of a name of 30', () => {
+    for (const kind of kinds) {
+      const widest = nodeSize(kind, 'n'.repeat(NAME_FIT_MAX));
+
+      expect(widest.width, kind).toBe(308);
+      expect(nodeSize(kind, 'n'.repeat(NAME_FIT_MAX + 1)), kind).toEqual(widest);
+      expect(nodeSize(kind, 'n'.repeat(255)), kind).toEqual(widest);
+    }
+  });
+
+  it('never changes the height of the kind', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...kinds), fc.string({ maxLength: 300 }), (kind, name) => {
+        const size = nodeSize(kind, name);
+
+        expect(size.height).toBe(NODE_SIZE[kind].height);
+        expect(size.width).toBeGreaterThanOrEqual(NODE_SIZE[kind].width);
+        expect(size.width).toBeLessThanOrEqual(308);
       }),
     );
   });

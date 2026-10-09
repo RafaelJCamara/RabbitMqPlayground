@@ -57,10 +57,16 @@ test.describe('plain text (ADR-0078)', () => {
     await expect(shared.editor.node(`Queue ${VECTOR}`)).toBeVisible();
     await expect(shared.editor.node(`Producer ${LOCATION}`)).toBeVisible();
     await expect(shared.editor.node(`Consumer ${BREAKOUT}`)).toBeVisible();
-    // The text of the nodes is the text that was written, and not what a browser would make of it.
+    // The text of the nodes is the text that was written, and not what a browser would make of it. A name of more than 30 characters is cut on the node (ADR-0093), so the start
+    // of the script is what is drawn, and the whole of it is the tooltip, which is text too.
     const texts = await other.locator('[data-node-id]').evaluateAll((nodes) => nodes.map((node) => node.textContent));
-    expect(texts.join(' ')).toContain(SCRIPT);
+    expect(SCRIPT.length).toBeGreaterThan(30);
+    expect(texts.join(' ')).toContain(`${SCRIPT.slice(0, 29)}…`);
     expect(texts.join(' ')).toContain(VECTOR);
+    const tooltips = await other
+      .locator('[data-node-id] .rmq-node-name')
+      .evaluateAll((names) => names.map((name) => name.getAttribute('title')));
+    expect(tooltips).toContain(SCRIPT);
     // Selecting a node says in the inspector what it is joined to, by name, as text too.
     await shared.editor.select(`Producer ${LOCATION}`);
     await expect(other.getByTestId('inspector-joins')).toContainText(SCRIPT);

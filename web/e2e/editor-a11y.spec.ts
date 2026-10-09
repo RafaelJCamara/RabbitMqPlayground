@@ -53,6 +53,21 @@ const PRODUCER_TO_QUEUE = buildDocument([
   { type: 'link', producer: 'sender', target: { kind: 'queue', name: 'billing' } },
 ]);
 
+/** Names that fill a node (30 characters) and a name that is cut (48), on a producer, an exchange, a queue and a consumer that are linked (ADR-0093). */
+const LONG_NAMES = buildDocument([
+  { type: 'add-producer', name: 'orders-events-eu-west-payments' },
+  {
+    type: 'declare-exchange',
+    name: 'orders-events-eu-west-payments-fanout',
+    exchangeType: 'fanout',
+    durable: true,
+    autoDelete: false,
+    internal: false,
+  },
+  { type: 'declare-queue', name: 'orders-events-eu-west-payments-and-the-retries', durable: true },
+  { type: 'add-consumer', name: 'orders-events-eu-west-payments-worker' },
+]);
+
 const states: readonly {
   readonly name: string;
   /** The canvas that the state is on, which is the one with a node of each kind unless it says another. */
@@ -62,6 +77,14 @@ const states: readonly {
   readonly enter: (page: Page, editor: EditorPage) => Promise<void>;
 }[] = [
   { name: 'with nothing selected', enter: async () => undefined },
+  {
+    name: 'with names that fill a node and a name that is cut',
+    document: LONG_NAMES,
+    edges: 0,
+    enter: async (_, editor) => {
+      await expect(editor.node('Queue orders-events-eu-west-payments-and-the-retries')).toBeVisible();
+    },
+  },
   { name: 'with a producer selected', enter: (_, editor) => editor.select('Producer sender') },
   { name: 'with an exchange selected', enter: (_, editor) => editor.select('Exchange orders, topic') },
   { name: 'with an internal exchange selected', enter: (_, editor) => editor.select('Exchange hidden, fanout') },

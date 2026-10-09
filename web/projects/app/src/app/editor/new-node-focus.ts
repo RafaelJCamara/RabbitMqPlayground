@@ -25,7 +25,7 @@ export class NewNodeFocus {
     this.selection.select([id]);
     const position = lookup(document.layout.nodes, id);
     if (position !== undefined) {
-      const { width, height } = frameOf(kind);
+      const { width, height } = frameOf(kind, name);
       // The canvas draws the node on the next render, and the library fits what it has drawn, so the node is brought into view then.
       afterNextRender(() => this.viewport.reveal({ id, x: position.x, y: position.y, width, height }), {
         injector: this.injector,

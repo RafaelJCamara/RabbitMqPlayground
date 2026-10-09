@@ -7,6 +7,7 @@ import {
   linkCommand,
   linkVerdict,
   lookup,
+  nameOf,
   type ApplyContext,
   type BindCommand,
   type CanvasDocument,
@@ -276,7 +277,7 @@ export class LinkFlow {
     if (made.value.type === 'bind') {
       const type = lookup(document.exchanges, source)?.type;
       if (type === 'headers' && this.surface !== undefined) {
-        const { width, height } = frameOf(addition.kind);
+        const { width, height } = frameOf(addition.kind, addition.name);
         this.askConditions(
           made.value,
           describeNode(document, source) as string,
@@ -288,7 +289,7 @@ export class LinkFlow {
         return;
       }
       if (type !== undefined && keyMatters(type) && this.surface !== undefined) {
-        const { width, height } = frameOf(addition.kind);
+        const { width, height } = frameOf(addition.kind, addition.name);
         this.askKey(
           made.value,
           type,
@@ -364,7 +365,7 @@ export class LinkFlow {
     if (position === undefined || kind === undefined) {
       return null;
     }
-    const { width, height } = frameOf(kind);
+    const { width, height } = frameOf(kind, nameOf(document, kind, id) ?? '');
     return this.viewport.onHost({ x: position.x, y: position.y, width, height });
   }
 }

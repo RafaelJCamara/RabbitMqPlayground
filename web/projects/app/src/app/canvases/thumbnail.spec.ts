@@ -49,9 +49,34 @@ describe('thumbnailOf (ADR-0073)', () => {
     const { width, height } = NODE_SIZE.queue;
     expect(thumbnailOf(document)).toEqual({
       box: { x: 300 - M, y: -40 - M, width: width + 2 * M, height: height + 2 * M },
-      nodes: [{ kind: 'queue', x: 300, y: -40 }],
+      nodes: [{ kind: 'queue', x: 300, y: -40, ...NODE_SIZE.queue }],
       edges: [],
     });
+  });
+
+  it('draws a node as wide as the canvas draws it, which is wider for a longer name and no wider than 30 characters of it (ADR-0093)', () => {
+    const document = documentOf({
+      queues: { Q1: queueRecord('q'.repeat(20)), Q2: queueRecord('q'.repeat(200)) },
+      nodes: { Q1: { x: 0, y: 0 }, Q2: { x: 1000, y: 0 } },
+    });
+
+    const { box, nodes } = thumbnailOf(document);
+
+    expect(nodes.map(({ width }) => width)).toEqual([228, 308]);
+    expect(box?.width).toBe(1000 + 308 + 2 * M);
+  });
+
+  it('draws an edge from the middle of a wide node to the middle of the next', () => {
+    const document = documentOf({
+      producers: { P1: producerRecord('p'.repeat(30), { kind: 'queue', id: 'Q1' }) },
+      queues: { Q1: queueRecord('q') },
+      nodes: { P1: { x: 0, y: 0 }, Q1: { x: 600, y: 0 } },
+    });
+
+    const { x1, x2 } = thumbnailOf(document).edges[0] ?? { x1: -1, x2: -1 };
+
+    expect(x1).toBe(308 / 2);
+    expect(x2).toBe(600 + NODE_SIZE.queue.width / 2);
   });
 
   it('draws a node that has no position beside ones that have, and leaves it out', () => {
@@ -60,7 +85,7 @@ describe('thumbnailOf (ADR-0073)', () => {
       nodes: { Q2: { x: 10, y: 20 } },
     });
 
-    expect(thumbnailOf(document).nodes).toEqual([{ kind: 'queue', x: 10, y: 20 }]);
+    expect(thumbnailOf(document).nodes).toEqual([{ kind: 'queue', x: 10, y: 20, ...NODE_SIZE.queue }]);
   });
 
   it('holds every node in the box, whichever way they lie', () => {

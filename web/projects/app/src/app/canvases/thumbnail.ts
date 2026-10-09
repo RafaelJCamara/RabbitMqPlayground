@@ -1,4 +1,4 @@
-import { edgeKeys, elements, lookup, NODE_SIZE, type CanvasDocument, type ElementKind } from '@rmq/domain';
+import { edgeKeys, elements, lookup, nodeSize, type CanvasDocument, type ElementKind } from '@rmq/domain';
 
 /**
  * The thumbnail of a canvas on the home (ADR-0073): its layout as data, drawn by a component as one SVG. It is a pure function of the document. The box is
@@ -17,6 +17,9 @@ export interface ThumbNode {
   /** The top left of the node, in canvas units. */
   readonly x: number;
   readonly y: number;
+  /** Its size, which is wider for a longer name (ADR-0093). */
+  readonly width: number;
+  readonly height: number;
 }
 
 /** A line between the middle of two nodes. */
@@ -43,19 +46,19 @@ export interface Thumbnail {
 
 export const EMPTY_THUMBNAIL: Thumbnail = { box: null, nodes: [], edges: [] };
 
-const middleX = (node: ThumbNode): number => node.x + NODE_SIZE[node.kind].width / 2;
-const middleY = (node: ThumbNode): number => node.y + NODE_SIZE[node.kind].height / 2;
+const middleX = (node: ThumbNode): number => node.x + node.width / 2;
+const middleY = (node: ThumbNode): number => node.y + node.height / 2;
 
 /** What to draw for a canvas. An element that has no position in the layout is not drawn: there is nowhere to draw it. */
 export function thumbnailOf(document: CanvasDocument): Thumbnail {
   const placed = new Map<string, ThumbNode>();
-  for (const { kind, id } of elements(document)) {
+  for (const { kind, id, name } of elements(document)) {
     if (placed.size >= THUMBNAIL_NODES) {
       break;
     }
     const at = lookup(document.layout.nodes, id);
     if (at !== undefined) {
-      placed.set(id, { kind, x: at.x, y: at.y });
+      placed.set(id, { kind, x: at.x, y: at.y, ...nodeSize(kind, name) });
     }
   }
   if (placed.size === 0) {
@@ -79,8 +82,8 @@ export function thumbnailOf(document: CanvasDocument): Thumbnail {
   const nodes = [...placed.values()];
   const left = Math.min(...nodes.map(({ x }) => x));
   const top = Math.min(...nodes.map(({ y }) => y));
-  const right = Math.max(...nodes.map((node) => node.x + NODE_SIZE[node.kind].width));
-  const bottom = Math.max(...nodes.map((node) => node.y + NODE_SIZE[node.kind].height));
+  const right = Math.max(...nodes.map((node) => node.x + node.width));
+  const bottom = Math.max(...nodes.map((node) => node.y + node.height));
   return {
     box: {
       x: left - THUMBNAIL_MARGIN,

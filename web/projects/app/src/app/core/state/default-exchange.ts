@@ -9,6 +9,9 @@ import { COLUMN_X, edgeKey, lookup, ROW_HEIGHT, type CanvasDocument, type Id, ty
 
 export const DEFAULT_EXCHANGE_ID = '~default';
 
+/** The name that the node of the default exchange is drawn with: the exchange has the empty name, which says nothing. */
+export const DEFAULT_EXCHANGE_NAME = '(default)';
+
 /** The id of the implicit edge from the default exchange to a queue, which is also its key as an edge. */
 export const implicitEdgeId = (queueId: Id): string => edgeKey(DEFAULT_EXCHANGE_ID, queueId);
 

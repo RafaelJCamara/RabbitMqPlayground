@@ -161,7 +161,17 @@ export type {
 } from './lib/explain/types';
 export { SHORT_MOST, typeText, valueText } from './lib/explain/words';
 export { History, HISTORY_LIMIT } from './lib/history';
-export { autoLayout, COLUMN_SEPARATION, NODE_SEPARATION, NODE_SIZE } from './lib/layout';
+export {
+  autoLayout,
+  COLUMN_SEPARATION,
+  displayName,
+  NAME_FIT_MAX,
+  NODE_CHARACTER,
+  NODE_CHROME,
+  NODE_SEPARATION,
+  NODE_SIZE,
+  nodeSize,
+} from './lib/layout';
 export {
   allowedTargets,
   explainLink,
