@@ -95,6 +95,42 @@ test.describe('saving a canvas as a file and opening one (ADR-0075)', () => {
     expect(await canvases.stored()).toEqual(['Untitled canvas']);
   });
 
+  test('refuses a file that is not a JSON file, even a good canvas under another name, in a dialog, and adds nothing (ADR-0102)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, [{ id: 'orders', name: 'Orders flow', document: small() }]);
+    await canvases.goto();
+    await canvases.showHome();
+    const file = await canvases.downloaded(() => canvases.action('Orders flow', 'Save as file').click());
+
+    await canvases.choose('open-file', 'canvas.js', file.text, 'text/javascript');
+
+    await expect(canvases.confirmation).toHaveAccessibleName('“canvas.js” could not be opened');
+    await expect(canvases.confirmation).toContainText('“canvas.js” is not a JSON file.');
+    await expect(canvases.confirmation).toContainText('a canvas (.rmq.json) or a backup');
+    await canvases.confirmation.getByRole('button', { name: 'OK' }).click();
+    await expect(canvases.confirmation).toHaveCount(0);
+    await canvases.choose('open-file', 'canvas.json', file.text, 'text/html');
+    await expect(canvases.confirmation).toContainText('“canvas.json” is not a JSON file.');
+    await canvases.confirmation.getByRole('button', { name: 'OK' }).click();
+    expect(await canvases.stored()).toEqual(['Orders flow']);
+    await expect.poll(() => canvases.cardNames()).toEqual(['Orders flow']);
+  });
+
+  test('takes a canvas file that the browser gave no type, by its name (ADR-0102)', async ({ page }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, [{ id: 'orders', name: 'Orders flow', document: small() }]);
+    await canvases.goto();
+    await canvases.showHome();
+    const file = await canvases.downloaded(() => canvases.action('Orders flow', 'Save as file').click());
+
+    await canvases.choose('open-file', file.name, file.text, '');
+    await canvases.editorReady();
+
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Orders flow', 'Orders flow']);
+  });
+
   test('refuses a file from a newer version of the app, and says to reload the page for the newest', async ({
     page,
   }) => {
@@ -285,6 +321,26 @@ test.describe('backing up and putting a backup back (ADR-0075)', () => {
     await expect(report.getByRole('heading', { level: 3, name: 'What could not be put back' })).toBeVisible();
     await expect(report.getByRole('listitem')).toHaveCount(1);
     await expect(report.getByRole('listitem')).toContainText('Canvas 2 “Broken” could not be read.');
+  });
+
+  test('refuses a backup that is under another name or type, in a dialog, and puts nothing back (ADR-0102)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.showHome();
+    const text = JSON.stringify({
+      format: 'rmq-playground/backup',
+      version: 1,
+      canvases: [{ id: 'x', name: 'From a backup', createdAt: 1, updatedAt: 2, document: emptyDocument() }],
+    });
+
+    await canvases.choose('restore-file', 'backup.js', text, 'text/javascript');
+
+    await expect(canvases.confirmation).toHaveAccessibleName('“backup.js” could not be put back');
+    await expect(canvases.confirmation).toContainText('“backup.js” is not a JSON file.');
+    await canvases.confirmation.getByRole('button', { name: 'OK' }).click();
+    expect(await canvases.stored()).toEqual(['Untitled canvas']);
   });
 
   test('says that the file of one canvas is not a backup, in a dialog', async ({ page }) => {

@@ -1389,6 +1389,40 @@ describe('CanvasLibrary', () => {
       expect(big.text).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['canvas.js', 'text/javascript'],
+      ['canvas.html', 'text/html'],
+      ['canvas.json.exe', ''],
+      ['canvas.json', 'text/html'],
+    ])('refuses %s (%s) before it reads a byte of it, and makes no canvas (ADR-0102)', async (name, type) => {
+      const harness = setup();
+      await harness.library.start();
+      const create = vi.spyOn(harness.repository, 'create');
+      const file = new File([canvasFile()], name, { type });
+      const read = vi.spyOn(file, 'text');
+
+      const opened = await harness.library.openFile(file);
+
+      expect(!opened.ok && opened.error).toBe(
+        `“${name}” is not a JSON file. This app opens only the JSON files it saves: a canvas (.rmq.json) or a backup.`,
+      );
+      expect(read).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('opens a canvas file that the browser gave no type, and one that it called JSON', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      const plain = await harness.library.openFile(new File([canvasFile('One')], 'one.rmq.json'));
+      const typed = await harness.library.openFile(
+        new File([canvasFile('Two')], 'two.rmq.json', { type: 'application/json' }),
+      );
+
+      expect(plain.ok).toBe(true);
+      expect(typed.ok).toBe(true);
+    });
+
     it('says that the file could not be read when the browser fails to read it', async () => {
       const harness = setup();
       await harness.library.start();
@@ -1776,6 +1810,27 @@ describe('CanvasLibrary', () => {
       expect(!text.ok && text.error).toMatch(/^This is not JSON/);
       expect(!huge.ok && huge.error).toMatch(/^This file is 286\.1 MB/);
       expect(big.text).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['backup.js', 'text/javascript'],
+      ['backup.html', 'text/html'],
+      ['backup.json', 'text/html'],
+    ])('refuses %s (%s) before it reads a byte of it, and puts nothing back (ADR-0102)', async (name, type) => {
+      const harness = setup();
+      await harness.library.start();
+      const create = vi.spyOn(harness.repository, 'create');
+      const real = backupFile('Beta');
+      const file = new File([await real.text()], name, { type });
+      const read = vi.spyOn(file, 'text');
+
+      const report = await harness.library.restoreFile(file);
+
+      expect(!report.ok && report.error).toBe(
+        `“${name}” is not a JSON file. This app opens only the JSON files it saves: a canvas (.rmq.json) or a backup.`,
+      );
+      expect(read).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
     });
 
     it('says why when the browser cannot be read', async () => {

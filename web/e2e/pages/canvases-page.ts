@@ -69,9 +69,17 @@ export class CanvasesPage {
     return { name: download.suggestedFilename(), text: await readFile(location, 'utf8') };
   }
 
-  /** Chooses a file in one of the two fields of the home, which are hidden behind their buttons: `open-file` or `restore-file`. */
-  async choose(field: 'open-file' | 'restore-file', name: string, text: string): Promise<void> {
-    await this.page.getByTestId(field).setInputFiles({ name, mimeType: 'application/json', buffer: Buffer.from(text) });
+  /**
+   * Chooses a file in one of the two fields of the home, which are hidden behind their buttons: `open-file` or `restore-file`. The picker of the browser is not there, so what `accept` filters is not
+   * either: a file of any name and type can be given, as a learner who switches the picker to "All files" can (ADR-0102).
+   */
+  async choose(
+    field: 'open-file' | 'restore-file',
+    name: string,
+    text: string,
+    mimeType = 'application/json',
+  ): Promise<void> {
+    await this.page.getByTestId(field).setInputFiles({ name, mimeType, buffer: Buffer.from(text) });
   }
 
   /** The names of the items of the strip, the home first, in order. */

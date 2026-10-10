@@ -31,6 +31,7 @@ import { OnboardingDialogs } from '../onboarding/dialogs';
 import { BLANK, type Choice } from '../onboarding/template-chooser';
 import { TourRequests } from '../onboarding/tour-requests';
 import { ShareDialogs } from '../share/dialogs';
+import { refusedKind } from './file-kind';
 import { readText, tooBigToRead } from './file-text';
 import { backupFileName, canvasFileName } from '../core/files/file-names';
 import { copyName, nameProblem, TOUR_CANVAS, UNTITLED, uniqueName } from './names';
@@ -629,8 +630,15 @@ export class CanvasLibrary implements CanvasHost {
     return succeed(undefined);
   }
 
-  /** The text of a file that the learner chose, or why it cannot be read. */
+  /**
+   * The text of a file that the learner chose, or why it cannot be read. A file that is not a JSON file is refused first, and is never read (ADR-0102): the check is of the name and the type,
+   * and then the size, and only then does the browser read the text.
+   */
   private async textOf(file: File): Promise<Outcome<string, string>> {
+    const refused = refusedKind(file);
+    if (refused !== null) {
+      return failure(refused);
+    }
     const big = tooBigToRead(file);
     if (big !== null) {
       return failure(big);
