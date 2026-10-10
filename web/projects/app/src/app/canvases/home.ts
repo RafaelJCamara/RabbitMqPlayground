@@ -185,22 +185,6 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
                 Source code
               </a>
             </li>
-            <li>
-              <a
-                class="text-link underline underline-offset-4"
-                href="https://github.com/RafaelJCamara/RabbitMqPlayground/tree/main/docs/adr"
-              >
-                Design decisions
-              </a>
-            </li>
-            <li>
-              <a
-                class="text-link underline underline-offset-4"
-                href="https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1"
-              >
-                Progress
-              </a>
-            </li>
           </ul>
         </footer>
       </div>

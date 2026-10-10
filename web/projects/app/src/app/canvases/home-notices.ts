@@ -1,12 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
-import { quotaWarning } from '@rmq/persistence';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
 import { CanvasLibrary } from './library';
 
 /**
  * What the home says about keeping the canvases (ADR-0075), above the search and in this order: that nothing is kept after the tab is closed, if the browser keeps nothing; that
- * the room is running out, if it is; that the browser has not promised to keep them, if it has not; the reminder to make a backup, if it is due; and, quietly, how much room they
- * take. A warning is in words and in a colour, and the colour is not the only sign of it (WCAG 1.4.1).
+ * the room is running out, if it is; that the browser has not promised to keep them, if it has not; and the reminder to make a backup, if it is due. How much room the canvases
+ * take is not said (ADR-0100). A warning is in words and in a colour, and the colour is not the only sign of it (WCAG 1.4.1).
  */
 @Component({
   selector: 'rmq-home-notices',
@@ -53,9 +52,6 @@ import { CanvasLibrary } from './library';
         </button>
       </div>
     }
-    @if (usage(); as line) {
-      <p class="text-muted text-sm" data-testid="usage">{{ line }}</p>
-    }
   `,
   host: { class: 'flex flex-col gap-3' },
 })
@@ -68,12 +64,5 @@ export class HomeNotices {
   protected readonly due = computed(() => {
     const reminder = this.library.reminder();
     return reminder.due ? reminder.text : null;
-  });
-
-  /** How much room the canvases take, when the browser says and the room is not running out (a warning says it then). */
-  protected readonly usage = computed(() => {
-    const usage = this.library.usage();
-    const warning = usage === null ? null : quotaWarning(usage);
-    return warning?.level === 'ok' ? warning.message : null;
   });
 }

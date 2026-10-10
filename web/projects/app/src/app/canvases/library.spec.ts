@@ -1643,14 +1643,13 @@ describe('CanvasLibrary', () => {
       estimate: async () => ({ usage, quota }),
     });
 
-    it('is said as of the last time the home was read, and a warning is only for a browser that is running out', async () => {
+    it('is not a warning while there is room (ADR-0100)', async () => {
       const harness = setup({ manager: manager(10, 1_000) });
       await seed(harness, 'Alpha');
       await harness.library.start();
 
       await harness.library.show(HOME);
 
-      expect(harness.library.usage()).toEqual({ usage: 10, quota: 1_000, fraction: 0.01 });
       expect(harness.library.quota()).toBeNull();
     });
 
@@ -1676,7 +1675,6 @@ describe('CanvasLibrary', () => {
 
       await harness.library.show(HOME);
 
-      expect(harness.library.usage()).toBeNull();
       expect(harness.library.quota()).toBeNull();
     });
 

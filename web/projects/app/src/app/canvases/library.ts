@@ -95,8 +95,6 @@ export class CanvasLibrary implements CanvasHost {
   readonly ready = this.started.asReadonly();
   /** Why the canvases could not be read or what could not be done, in words, or `null`. */
   readonly problem = this.trouble.asReadonly();
-  /** How much room the browser allows the canvases and how much they use, as of the last read, or `null` if the browser does not say. */
-  readonly usage = this.storageUsage.asReadonly();
   /** A warning that the room is running out, or `null` (ADR-0075). */
   readonly quota = computed<QuotaWarning | null>(() => {
     const usage = this.storageUsage();

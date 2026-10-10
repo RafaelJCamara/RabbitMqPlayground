@@ -172,16 +172,19 @@ describe('formatBytes', () => {
 
 describe('quotaWarning', () => {
   const at = (fraction: number) => quotaWarning({ usage: fraction * 100 * MB, quota: 100 * MB, fraction });
+  /** The message of a warning, which a case of enough room does not have. */
+  const said = (warning: ReturnType<typeof quotaWarning>): string =>
+    'message' in warning ? warning.message : 'no message';
 
   it('warns at 80% and again at 95%', () => {
     expect(QUOTA_LOW_AT).toBe(0.8);
     expect(QUOTA_CRITICAL_AT).toBe(0.95);
   });
 
-  it('is ok below 80%, and says how much is used', () => {
-    expect(at(0)).toEqual({ level: 'ok', message: 'The canvases take 0 B of the 100 MB that the browser allows.' });
-    expect(at(0.5)).toEqual({ level: 'ok', message: 'The canvases take 50 MB of the 100 MB that the browser allows.' });
-    expect(at(0.7999).level).toBe('ok');
+  it('is ok below 80%, and says nothing (ADR-0100)', () => {
+    expect(at(0)).toStrictEqual({ level: 'ok' });
+    expect(at(0.5)).toStrictEqual({ level: 'ok' });
+    expect(at(0.7999)).toStrictEqual({ level: 'ok' });
   });
 
   it('is low from 80%, and says what to do', () => {
@@ -200,18 +203,18 @@ describe('quotaWarning', () => {
         'The browser has almost no room left for this app (95% of 100 MB is used). Saving may fail. Export a backup now, and delete the canvases that you no longer need.',
     });
     expect(at(1.5).level).toBe('critical');
-    expect(at(1.5).message).toContain('(100% of 100 MB is used)');
+    expect(said(at(1.5))).toContain('(100% of 100 MB is used)');
   });
 
   it('does not round up to the next warning, so that 94.99% does not read as 95%', () => {
     const low = quotaWarning({ usage: 9499, quota: 10_000, fraction: 0.9499 });
 
-    expect(low.message).toContain('used 94% of');
+    expect(said(low)).toContain('used 94% of');
     expect(low.level).toBe('low');
   });
 
   it('writes a percent that floating point gets a hair wrong as what it is', () => {
-    expect(quotaWarning({ usage: 29, quota: 100, fraction: 0.29 }).message).toContain('take 29 B');
-    expect(quotaWarning({ usage: 87, quota: 100, fraction: 0.87 }).message).toContain('used 87% of');
+    expect(said(quotaWarning({ usage: 29, quota: 100, fraction: 0.29 }))).toBe('no message');
+    expect(said(quotaWarning({ usage: 87, quota: 100, fraction: 0.87 }))).toContain('used 87% of');
   });
 });

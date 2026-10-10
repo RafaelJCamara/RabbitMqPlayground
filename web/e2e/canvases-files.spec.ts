@@ -487,14 +487,18 @@ test.describe('what the home says about keeping the canvases (ADR-0075)', () => 
     await expect(canvases.home.getByRole('group', { name: 'Reminder to make a backup' })).toHaveCount(0);
   });
 
-  test('says how much room the canvases take, quietly, when the browser says', async ({ page }) => {
+  test('does not say how much room the canvases take, though the browser says (ADR-0100)', async ({ page }) => {
     const canvases = new CanvasesPage(page);
+    await page.addInitScript(() => {
+      navigator.storage.estimate = async () => ({ usage: 1_258_291, quota: 2_254_857_830 });
+    });
     await canvases.goto();
     await canvases.showHome();
 
-    await expect(canvases.home.getByTestId('usage')).toContainText(
-      /^The canvases take .+ of the .+ that the browser allows\.$/,
-    );
+    await expect(canvases.home.getByTestId('home-footer')).toBeVisible();
+    await expect(canvases.home.getByTestId('usage')).toHaveCount(0);
+    await expect(canvases.home).not.toContainText('The canvases take');
+    await expect(canvases.home.getByTestId('quota')).toHaveCount(0);
   });
 
   test('warns, in words, when the browser says the room is nearly gone', async ({ page }) => {

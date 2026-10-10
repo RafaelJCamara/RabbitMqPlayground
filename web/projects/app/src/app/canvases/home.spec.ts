@@ -85,16 +85,18 @@ const names = (): string[] =>
 
 describe('Home (ADR-0073)', () => {
   describe('the foot of the page (ADR-0087)', () => {
-    it('says that the product is not affiliated with Broadcom or the RabbitMQ project, and links to the source, the decision records and the progress issue', async () => {
+    it('says that the product is not affiliated with Broadcom or the RabbitMQ project, and has one link, to the source (ADR-0100)', async () => {
       await renderHome([canvas('a')]);
 
       const foot = screen.getByTestId('home-footer');
       expect(within(foot).getByText(APP_DISCLAIMER)).toBeInTheDocument();
       expect(APP_DISCLAIMER).toContain('Not affiliated with');
       expect(APP_DISCLAIMER).toContain('Broadcom');
-      for (const name of ['Source code', 'Design decisions', 'Progress']) {
-        expect(within(foot).getByRole('link', { name })).toHaveAttribute('href', expect.stringContaining('github.com'));
-      }
+      expect(within(foot).getAllByRole('link')).toHaveLength(1);
+      expect(within(foot).getByRole('link', { name: 'Source code' })).toHaveAttribute(
+        'href',
+        'https://github.com/RafaelJCamara/RabbitMqPlayground',
+      );
     });
   });
 

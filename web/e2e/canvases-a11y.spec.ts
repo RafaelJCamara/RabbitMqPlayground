@@ -142,7 +142,7 @@ const states: readonly State[] = [
     },
   },
   {
-    name: 'on the home, scrolled to its foot: the disclaimer and the links to the source, the decisions and the progress',
+    name: 'on the home, scrolled to its foot: the disclaimer and the link to the source',
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.showHome();
@@ -150,7 +150,7 @@ const states: readonly State[] = [
       const footer = canvases.home.getByTestId('home-footer');
       await footer.scrollIntoViewIfNeeded();
       await expect(footer).toBeInViewport({ ratio: 1 });
-      await expect(footer.getByRole('link')).toHaveCount(3);
+      await expect(footer.getByRole('link')).toHaveCount(1);
     },
   },
   {
@@ -162,14 +162,14 @@ const states: readonly State[] = [
     },
   },
   {
-    name: 'on the home, with the reminder to make a backup and how much room the canvases take',
+    name: 'on the home, with the reminder to make a backup',
     canvases: [
       { id: 'old', name: 'Old', document: small(), createdAt: Date.now() - 20 * DAY, updatedAt: Date.now() - 20 * DAY },
     ],
     enter: async (canvases) => {
       await canvases.showHome();
       await expect(canvases.home.getByRole('group', { name: 'Reminder to make a backup' })).toBeVisible();
-      await expect(canvases.home.getByTestId('usage')).toBeVisible();
+      await expect(canvases.home.getByTestId('usage')).toHaveCount(0);
     },
   },
   {

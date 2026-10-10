@@ -87,6 +87,7 @@ export {
   requestPersistence,
   type PersistResult,
   type PersistStatus,
+  type QuotaFine,
   type QuotaLevel,
   type QuotaWarning,
   type StorageManagerLike,

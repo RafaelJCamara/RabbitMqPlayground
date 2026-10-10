@@ -98,9 +98,15 @@ export const QUOTA_CRITICAL_AT = 0.95;
 
 export type QuotaLevel = 'ok' | 'low' | 'critical';
 
+/** A warning: the room is running out, or almost gone, and what to do about it. */
 export interface QuotaWarning {
-  readonly level: QuotaLevel;
+  readonly level: Exclude<QuotaLevel, 'ok'>;
   readonly message: string;
+}
+
+/** There is room, and nothing is said (ADR-0100): how much the canvases take is not shown. */
+export interface QuotaFine {
+  readonly level: 'ok';
 }
 
 const UNITS = ['B', 'KB', 'MB', 'GB'] as const;
@@ -116,8 +122,8 @@ export function formatBytes(bytes: number): string {
   return `${unit === 0 ? Math.round(value) : value.toFixed(1).replace(/\.0$/, '')} ${UNITS[unit]}`;
 }
 
-/** Whether the room is running out, and what to say to the learner about it. */
-export function quotaWarning({ usage, quota, fraction }: StorageUsage): QuotaWarning {
+/** Whether the room is running out, and what to say to the learner about it: a warning, or `{ level: 'ok' }` when there is room. */
+export function quotaWarning({ usage, quota, fraction }: StorageUsage): QuotaWarning | QuotaFine {
   // The percent is rounded down, so that a warning at 95% is never raised by something that says 94.
   const percent = Math.min(100, Math.floor(fraction * 100 + 1e-9));
   if (fraction >= QUOTA_CRITICAL_AT) {
@@ -132,8 +138,5 @@ export function quotaWarning({ usage, quota, fraction }: StorageUsage): QuotaWar
       message: `The browser has used ${percent}% of the room that it allows this app (${formatBytes(usage)} of ${formatBytes(quota)}). Export a backup, and delete the canvases that you no longer need, before it runs out.`,
     };
   }
-  return {
-    level: 'ok',
-    message: `The canvases take ${formatBytes(usage)} of the ${formatBytes(quota)} that the browser allows.`,
-  };
+  return { level: 'ok' };
 }

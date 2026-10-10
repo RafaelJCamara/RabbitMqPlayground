@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import type { PersistResult, QuotaWarning, StorageUsage } from '@rmq/persistence';
+import type { PersistResult, QuotaWarning } from '@rmq/persistence';
 import { describe, expect, it, vi } from 'vitest';
 import { HomeNotices } from './home-notices';
 import { CanvasLibrary } from './library';
@@ -12,13 +12,11 @@ function fakeLibrary() {
   const quota = signal<QuotaWarning | null>(null);
   const persistence = signal<PersistResult | null>(null);
   const reminder = signal<Reminder>({ due: false });
-  const usage = signal<StorageUsage | null>(null);
   return {
     memoryReason,
     quota,
     persistence,
     reminder,
-    usage,
     exportBackup: vi.fn(async () => undefined),
     snoozeReminder: vi.fn(async () => undefined),
   };
@@ -120,32 +118,22 @@ describe('HomeNotices (ADR-0075)', () => {
     });
   });
 
-  describe('the room that the canvases take', () => {
-    it('says it quietly when the browser says and the room is not running out', async () => {
-      const { library, fixture } = await renderNotices();
+  describe('the room that the canvases take (ADR-0100)', () => {
+    it('is not said when there is room: no line, and no number of bytes', async () => {
+      const { container } = await renderNotices();
 
-      library.usage.set({ usage: 1_258_291, quota: 2_254_857_830, fraction: 0.0005 });
-      fixture.detectChanges();
-
-      expect(await screen.findByTestId('usage')).toHaveTextContent(
-        'The canvases take 1.2 MB of the 2.1 GB that the browser allows.',
-      );
+      expect(screen.queryByTestId('usage')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('quota')).not.toBeInTheDocument();
+      expect(container).not.toHaveTextContent('The canvases take');
     });
 
-    it('leaves it to the warning when the room is running out', async () => {
+    it('is still warned of, in words, when the room is running out', async () => {
       const { library, fixture } = await renderNotices();
 
-      library.usage.set({ usage: 850, quota: 1_000, fraction: 0.85 });
       library.quota.set({ level: 'low', message: 'The browser has used 85% of the room.' });
       fixture.detectChanges();
 
-      expect(await screen.findByTestId('quota')).toBeInTheDocument();
-      expect(screen.queryByTestId('usage')).not.toBeInTheDocument();
-    });
-
-    it('says nothing when the browser does not say', async () => {
-      await renderNotices();
-
+      expect(await screen.findByTestId('quota')).toHaveTextContent('The browser has used 85% of the room.');
       expect(screen.queryByTestId('usage')).not.toBeInTheDocument();
     });
   });
