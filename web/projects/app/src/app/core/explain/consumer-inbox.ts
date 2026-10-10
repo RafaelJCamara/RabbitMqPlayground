@@ -10,8 +10,8 @@ export const INBOX_ROWS = 100;
 /** How many published messages the inbox remembers, so that a row can say what it carried: as many as the log keeps rows (`LOG_CAP`), and not the 2,000 that the log holds the messages of. */
 export const INBOX_MESSAGES = 5000;
 
-/** Where a message is with a consumer, in the words of the engine's events. */
-export type ReceivedState = 'on its way' | 'received' | 'processed' | 'acked' | 'requeued';
+/** Where a message is with a consumer, in the words of the engine's events, and `cleared` for one that "Clear messages" took out of the simulation before the consumer had finished with it (ADR-0105). */
+export type ReceivedState = 'on its way' | 'received' | 'processed' | 'acked' | 'requeued' | 'cleared';
 
 /** One message that a queue gave to a consumer. */
 export interface ReceivedRow {
@@ -32,7 +32,8 @@ export interface ReceivedRow {
  * missing when a consumer is selected. A row is added when a queue gives a message to a consumer, and it moves through received, processed and acknowledged, or to requeued, as the engine says it
  * does. It is its own store and not the log: the log holds rows of text and 2,000 messages, and this holds the last hundred of each consumer and is read by the node that it is about.
  *
- * It is the session's: a canvas that is opened empties it, and a consumer that is deleted takes its rows. A tag that is taken again after a cancel is the same node (ADR-0089), so its list goes on,
+ * It is the session's: a canvas that is opened empties it, and a consumer that is deleted takes its rows. A learner can also empty the list of one consumer (`clear`, ADR-0105), which is only a view: nothing in the engine or the
+ * document changes, and what the consumer is given afterwards starts a new list. A tag that is taken again after a cancel is the same node (ADR-0089), so its list goes on,
  * and a message that it is given again is a new row marked redelivered.
  */
 @Injectable()
@@ -109,6 +110,10 @@ export class ConsumerInbox {
         case 'requeued':
           touched = this.move(event.channel, event.message, 'requeued') || touched;
           break;
+        case 'cleared':
+          // "Clear messages" takes every message that was on its way or being handled out of the simulation, so a row that was not finished is marked, and those that were are left as they are.
+          touched = this.markUnfinishedCleared() || touched;
+          break;
         default:
           break;
       }
@@ -121,6 +126,14 @@ export class ConsumerInbox {
   /** What the consumer was given, newest first: the last `INBOX_ROWS` of it. Read it again when `changed` changes. */
   of(consumer: Id): readonly ReceivedRow[] {
     return [...(this.rows.get(consumer) ?? [])].reverse();
+  }
+
+  /** Empties the list of one consumer, and nothing else (ADR-0105). It is the view only: the engine, the document and the other consumers are as they were, and there is no command and no undo. */
+  clear(consumer: Id): void {
+    if ((this.rows.get(consumer)?.length ?? 0) > 0) {
+      this.rows.set(consumer, []);
+      this.revision.update((count) => count + 1);
+    }
   }
 
   /** The rows of a consumer as a signal, so that what shows them follows the engine. */
@@ -162,6 +175,20 @@ export class ConsumerInbox {
       }
     }
     return false;
+  }
+
+  /** Marks every row that the consumer had not finished with as cleared. It answers whether there was one. */
+  private markUnfinishedCleared(): boolean {
+    let marked = false;
+    for (const rows of this.rows.values()) {
+      rows.forEach((row, index) => {
+        if (row.state === 'on its way' || row.state === 'received') {
+          rows[index] = { ...row, state: 'cleared' };
+          marked = true;
+        }
+      });
+    }
+    return marked;
   }
 
   /** A canvas that is opened starts the inbox again: nothing that was given to the consumers of another is shown for this one. */

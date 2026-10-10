@@ -268,6 +268,102 @@ describe('ConsumerInbox (ADR-0098)', () => {
     });
   });
 
+  describe('clearing the list of a consumer (ADR-0105)', () => {
+    it('empties the list of that consumer and leaves the other consumers and the engine alone', () => {
+      const { inbox, document } = harness;
+      inbox.apply([published(info(1)), published(info(2))], document);
+      inbox.apply([delivered(1, 'C'), delivered(2, 'D')], document);
+
+      inbox.clear('C');
+
+      expect(inbox.of('C')).toEqual([]);
+      expect(inbox.of('D').map(({ message }) => message)).toEqual([2]);
+    });
+
+    it('says that it changed, and says nothing for a list that was empty already', () => {
+      const { inbox, document } = harness;
+      inbox.apply([published(info(1)), delivered(1, 'C')], document);
+      const before = inbox.changed();
+
+      inbox.clear('D');
+      expect(inbox.changed()).toBe(before);
+      inbox.clear('C');
+      expect(inbox.changed()).toBe(before + 1);
+      inbox.clear('C');
+      expect(inbox.changed()).toBe(before + 1);
+    });
+
+    it('starts a new list with what the consumer is given afterwards, and does not bring back what the engine says of a row that was cleared', () => {
+      const { inbox, document } = harness;
+      inbox.apply([published(info(1)), published(info(2)), delivered(1, 'C')], document);
+      inbox.clear('C');
+
+      inbox.apply([handled('received', 1), handled('acked', 1)], document);
+      expect(inbox.of('C')).toEqual([]);
+      inbox.apply([delivered(2, 'C')], document);
+
+      expect(inbox.of('C').map(({ message, state }) => [message, state])).toEqual([[2, 'on its way']]);
+      expect(inbox.of('C')[0]?.info?.payload).toBe('hello');
+    });
+
+    it('is the view only: the document is the one that it was, and nothing is put on the undo stack', () => {
+      const { inbox, document, store } = harness;
+      inbox.apply([published(info(1)), delivered(1, 'C')], document);
+
+      inbox.clear('C');
+
+      expect(store.document()).toBe(document);
+      expect(store.canUndo()).toBe(false);
+    });
+  });
+
+  describe('what "Clear messages" took out of the simulation (ADR-0105)', () => {
+    it('marks the rows that the consumer had not finished with as cleared, and leaves the finished ones as they were', () => {
+      const { inbox, document } = harness;
+      inbox.apply([published(info(1)), published(info(2)), published(info(3)), published(info(4))], document);
+      inbox.apply([delivered(1, 'C'), delivered(2, 'C'), delivered(3, 'D'), delivered(4, 'C')], document);
+      inbox.apply([handled('received', 1), handled('processed', 1), handled('acked', 1)], document);
+      inbox.apply([handled('received', 2)], document);
+      inbox.apply([handled('requeued', 4)], document);
+
+      inbox.apply([{ seq: 1, at: 900, type: 'cleared', travelling: 1, ready: 0, unacked: 1, buffered: 0 }], document);
+
+      expect(inbox.of('C').map(({ message, state }) => [message, state])).toEqual([
+        [4, 'requeued'],
+        [2, 'cleared'],
+        [1, 'acked'],
+      ]);
+      expect(inbox.of('D').map(({ message, state }) => [message, state])).toEqual([[3, 'cleared']]);
+    });
+
+    it('says that it changed only when a row was marked', () => {
+      const { inbox, document } = harness;
+      inbox.apply([published(info(1)), delivered(1, 'C'), handled('acked', 1)], document);
+      const before = inbox.changed();
+
+      inbox.apply([{ seq: 1, at: 900, type: 'cleared', travelling: 0, ready: 3, unacked: 0, buffered: 0 }], document);
+      expect(inbox.changed()).toBe(before);
+
+      inbox.apply([published(info(2)), delivered(2, 'C')], document);
+      const added = inbox.changed();
+      inbox.apply([{ seq: 1, at: 900, type: 'cleared', travelling: 1, ready: 0, unacked: 0, buffered: 0 }], document);
+      expect(inbox.changed()).toBe(added + 1);
+    });
+
+    it('marks them when the simulation is asked to clear its messages', () => {
+      const { inbox, bus } = harness;
+      bus.run({ type: 'publish', from: { kind: 'exchange', name: 'orders' }, key: 'new', payload: 'Hello' }, 'toolbar');
+      for (let step = 0; step < 40 && inbox.of('C').length === 0; step += 1) {
+        bus.run({ type: 'step' }, 'toolbar');
+      }
+      expect(inbox.of('C')[0]?.state).toBe('on its way');
+
+      bus.run({ type: 'clear-messages' }, 'toolbar');
+
+      expect(inbox.of('C').map(({ state }) => state)).toEqual(['cleared']);
+    });
+  });
+
   describe('changing', () => {
     it('says that it changed when a row was added or moved on, once for each turn, and not for what only publishes', () => {
       const { inbox, document } = harness;

@@ -208,6 +208,87 @@ test.describe('what a consumer received, in its inspector (ADR-0098)', () => {
   });
 });
 
+/** Gives `worker` twelve messages, one after another, and steps the clock until it is done with all of them. */
+async function twelveReceived(simulation: SimulationPage): Promise<void> {
+  await simulation.editor.openCommandBar();
+  await simulation.editor.runCommand('set sender burst=12');
+  await simulation.editor.runCommand('set worker prefetch=0 processing=1');
+  await simulation.editor.runCommand('publish sender');
+  await simulation.stepThrough(600);
+  await simulation.editor.select('Consumer worker');
+}
+
+test.describe('the list of what a consumer received, in pages and with Clear (ADR-0105)', () => {
+  test('shows the newest ten, goes to the second page with Next and back with Previous, and is emptied with Clear', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await twelveReceived(simulation);
+    const received = page.getByTestId('consumer-received');
+    const rows = received.getByTestId('received-row');
+
+    await expect(rows).toHaveCount(10);
+    await expect(received.getByTestId('received-page')).toHaveText('Page 1 of 2 · messages 1–10 of 12');
+    await expect(rows.first()).toContainText('#12');
+    await expect(received.getByRole('button', { name: 'Previous' })).toBeDisabled();
+
+    await received.getByRole('button', { name: 'Next' }).click();
+
+    await expect(rows).toHaveCount(2);
+    await expect(received.getByTestId('received-page')).toHaveText('Page 2 of 2 · messages 11–12 of 12');
+    await expect(rows.first()).toContainText('#2');
+    await expect(received.getByRole('button', { name: 'Previous' })).toBeFocused();
+    await expect(received.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    await received.getByRole('button', { name: 'Previous' }).click();
+    await expect(rows).toHaveCount(10);
+
+    await received.getByRole('button', { name: 'Clear' }).click();
+
+    await expect(rows).toHaveCount(0);
+    await expect(received.getByTestId('received-empty')).toHaveText('No messages received yet.');
+    await expect(received.getByRole('heading', { name: 'Received' })).toBeFocused();
+    await expect(received.getByRole('button', { name: 'Clear' })).toBeDisabled();
+    await expect(received.getByTestId('received-pages')).toHaveCount(0);
+  });
+
+  test('is a view: Clear leaves the queue, the numbers of the nodes and the log as they were, and what comes next starts a list again', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await twelveReceived(simulation);
+    const received = page.getByTestId('consumer-received');
+    const log = await simulation.editor.log();
+    const counts = await simulation.statsOf('c1').textContent();
+
+    await received.getByRole('button', { name: 'Clear' }).click();
+    await expect(received.getByTestId('received-row')).toHaveCount(0);
+
+    await expect(simulation.statsOf('c1')).toHaveText(counts ?? '');
+    expect(await simulation.editor.log()).toEqual(log);
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('set sender burst=1');
+    await simulation.editor.runCommand('publish sender');
+    await simulation.stepThrough(200);
+    await simulation.editor.select('Consumer worker');
+    await expect(received.getByTestId('received-row')).toHaveCount(1);
+  });
+
+  test('marks what "Clear messages" took out of the simulation as cleared', async ({ page }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('publish orders key=order.new payload=gone');
+    await simulation.editor.select('Consumer worker');
+    await stepUntilReceived(simulation, page);
+    const received = page.getByTestId('consumer-received');
+    await expect(received.getByTestId('received-state')).not.toHaveText('acked');
+
+    await simulation.bar.getByTestId('clear-messages').click();
+
+    await expect(received.getByTestId('received-state')).toHaveText('cleared');
+  });
+});
+
 test.describe('the settings of a consumer, in its inspector (ADR-0056)', () => {
   test('are the commands that set them, and say what the consumer holds, in words', async ({ page }) => {
     const simulation = await SimulationPage.open(page, ORDERS);
@@ -284,6 +365,24 @@ for (const theme of ['light', 'dark'] as const) {
       await stepUntilReceived(simulation, page);
       await simulation.stepThrough();
       await expect(page.getByTestId('consumer-received').getByTestId('received-row')).toHaveCount(2);
+
+      await expectNoAxeViolations(page);
+    });
+
+    test('has no axe violations for the list of what a consumer received, on its second page', async ({ page }) => {
+      const simulation = await SimulationPage.open(page, ORDERS, { theme });
+      await twelveReceived(simulation);
+      await page.getByTestId('consumer-received').getByRole('button', { name: 'Next' }).click();
+      await expect(page.getByTestId('consumer-received').getByTestId('received-row')).toHaveCount(2);
+
+      await expectNoAxeViolations(page);
+    });
+
+    test('has no axe violations for the list of what a consumer received, after Clear', async ({ page }) => {
+      const simulation = await SimulationPage.open(page, ORDERS, { theme });
+      await twelveReceived(simulation);
+      await page.getByTestId('consumer-received').getByRole('button', { name: 'Clear' }).click();
+      await expect(page.getByTestId('consumer-received').getByTestId('received-empty')).toBeVisible();
 
       await expectNoAxeViolations(page);
     });

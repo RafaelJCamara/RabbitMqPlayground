@@ -12,7 +12,8 @@ import {
 } from '@rmq/testing';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { Announcer } from '../core/announcer';
 import { ConsumerInbox, INBOX_ROWS } from '../core/explain/consumer-inbox';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
@@ -23,7 +24,7 @@ import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
-import { ConsumerReceived } from './consumer-received';
+import { ConsumerReceived, RECEIVED_PAGE } from './consumer-received';
 
 /** An exchange that sends what has the key `new` to the queue `billing`, which the consumer `worker` takes from, acknowledging after a second. */
 const canvas = (): CanvasDocument => ({
@@ -32,7 +33,10 @@ const canvas = (): CanvasDocument => ({
     queues: { Q: queueRecord('billing') },
     bindings: { B: bindingRecord('E', { kind: 'queue', id: 'Q' }, 'new') },
     producers: { P: producerRecord('sender', { kind: 'exchange', id: 'E' }) },
-    consumers: { C: consumerRecord('worker', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 1_000 }) },
+    consumers: {
+      C: consumerRecord('worker', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 1_000 }),
+      D: consumerRecord('helper', ['Q'], { ack: 'manual', prefetch: 1, processingMs: 1_000 }),
+    },
   }),
   settings: { ...emptyDocument().settings, timing: { publishMs: 100, brokerMs: 50, deliverMs: 100 } },
 });
@@ -52,14 +56,14 @@ const published = (message: MessageInfo): EngineEvent => ({
   message,
   arrivesAt: 100,
 });
-const delivered = (message: number, at: number, redelivered = false): EngineEvent => ({
+const delivered = (message: number, at: number, redelivered = false, channel = 'C'): EngineEvent => ({
   seq: 1,
   at,
   type: 'delivered',
   message,
   queue: 'billing',
   consumer: 'tag',
-  channel: 'C',
+  channel,
   redelivered,
   autoAck: false,
   arrivesAt: at + 100,
@@ -214,7 +218,8 @@ describe('ConsumerReceived (ADR-0098)', () => {
     }
     settle();
 
-    expect(screen.getAllByTestId('received-row')).toHaveLength(INBOX_ROWS);
+    expect(screen.getAllByTestId('received-row')).toHaveLength(RECEIVED_PAGE);
+    expect(screen.getByTestId('received-page')).toHaveTextContent('Page 1 of 10 · messages 1–10 of 100');
     expect(screen.getByTestId('received-limit')).toHaveTextContent('The last 100 are kept.');
   });
 
@@ -235,5 +240,232 @@ describe('ConsumerReceived (ADR-0098)', () => {
 
     expect(screen.getByTestId('received-payload')).toHaveTextContent(/^Hello$/);
     expect(screen.getByTestId('received-state')).toHaveTextContent(/^acked$/);
+  });
+
+  describe('pages of ten (ADR-0105)', () => {
+    /** Gives the consumer `count` messages, numbered from `from`, so that the newest is the highest. */
+    const give = (inbox: ConsumerInbox, document: CanvasDocument, count: number, channel = 'C', from = 1) => {
+      for (let id = from; id < from + count; id += 1) {
+        inbox.apply([published(info(id, `p${id}`)), delivered(id, id * 10, false, channel)], document);
+      }
+    };
+    const numbers = () =>
+      screen.getAllByTestId('received-row').map((row) => /^[^#]*#(\d+)/.exec(row.textContent ?? '')?.[1]);
+    const pager = () => screen.queryByTestId('received-pages');
+
+    it('has no pages to go through while the list fits on one: ten rows are one page, and eleven are two', async () => {
+      const { inbox, document, settle } = await renderSection();
+      give(inbox, document, RECEIVED_PAGE);
+      settle();
+
+      expect(pager()).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('received-row')).toHaveLength(10);
+
+      give(inbox, document, 1, 'C', 11);
+      settle();
+
+      expect(pager()).toBeInTheDocument();
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 1 of 2 · messages 1–10 of 11');
+    });
+
+    it('shows the newest ten on the first page, and goes to the next and back with Next and Previous', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      give(inbox, document, 25);
+      settle();
+
+      expect(numbers()).toEqual(['25', '24', '23', '22', '21', '20', '19', '18', '17', '16']);
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 1 of 3 · messages 1–10 of 25');
+
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(numbers()).toEqual(['15', '14', '13', '12', '11', '10', '9', '8', '7', '6']);
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 2 of 3 · messages 11–20 of 25');
+
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(numbers()).toEqual(['5', '4', '3', '2', '1']);
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 3 of 3 · messages 21–25 of 25');
+
+      await user.click(screen.getByRole('button', { name: 'Previous' }));
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 2 of 3 · messages 11–20 of 25');
+      expect(numbers()[0]).toBe('15');
+    });
+
+    it('disables Previous on the first page and Next on the last, and the buttons have the size of the buttons of the app', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      give(inbox, document, 15);
+      settle();
+      const previous = screen.getByRole('button', { name: 'Previous' });
+      const next = screen.getByRole('button', { name: 'Next' });
+
+      expect(previous).toBeDisabled();
+      expect(next).toBeEnabled();
+      await user.click(next);
+      expect(previous).toBeEnabled();
+      expect(next).toBeDisabled();
+      for (const button of [previous, next, screen.getByRole('button', { name: 'Clear' })]) {
+        expect(button.className).toContain('min-h-8');
+      }
+    });
+
+    it('says the page aloud once when it changes, and not when the rows change under it, and the text of the pages is not a live region', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
+      give(inbox, document, 25);
+      settle();
+      expect(announce).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Page 2 of 3, messages 11–20 of 25.');
+
+      give(inbox, document, 1, 'C', 26);
+      settle();
+      expect(announce).toHaveBeenCalledOnce();
+      const nav = screen.getByTestId('received-pages');
+      expect(nav.closest('[aria-live]')).toBeNull();
+      expect(nav.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
+      expect(nav).toHaveAccessibleName('Pages of what worker received');
+    });
+
+    it('keeps the focus on the button that was pressed, and moves it to the other one when the pressed one has no page left to go to', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      give(inbox, document, 25);
+      settle();
+      const next = screen.getByRole('button', { name: 'Next' });
+      const previous = screen.getByRole('button', { name: 'Previous' });
+
+      await user.click(next);
+      expect(next).toHaveFocus();
+      await user.click(next);
+      settle();
+      expect(next).toBeDisabled();
+      expect(previous).toHaveFocus();
+      await user.click(previous);
+      await user.click(previous);
+      settle();
+      expect(previous).toBeDisabled();
+      expect(next).toHaveFocus();
+    });
+
+    it('goes back to the first page when another consumer is chosen', async () => {
+      const { inbox, document, settle, user, fixture } = await renderSection();
+      give(inbox, document, 25);
+      give(inbox, document, 25, 'D', 100);
+      settle();
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 2 of 3');
+
+      fixture.componentRef.setInput('id', 'D');
+      settle();
+
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 1 of 3 · messages 1–10 of 25');
+      expect(numbers()[0]).toBe('124');
+      expect(screen.getByRole('list', { name: 'Messages received by helper' })).toBeInTheDocument();
+    });
+
+    it('does not change the page when new messages come, though the rows on it move down', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      give(inbox, document, 25);
+      settle();
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(numbers()[0]).toBe('15');
+
+      give(inbox, document, 3, 'C', 26);
+      settle();
+
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 2 of 3 · messages 11–20 of 28');
+      expect(numbers()[0]).toBe('18');
+    });
+
+    it('stays inside the pages that there are when the list gets shorter than the page that was asked for', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      give(inbox, document, 25);
+      settle();
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 3 of 3');
+
+      inbox.clear('C');
+      give(inbox, document, 12, 'C', 100);
+      settle();
+
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 2 of 2 · messages 11–12 of 12');
+      expect(numbers()).toEqual(['101', '100']);
+    });
+  });
+
+  describe('clearing the list (ADR-0105)', () => {
+    it('has a Clear button beside the heading that is off while there is nothing to clear, and says why in its title', async () => {
+      const { inbox, document, settle } = await renderSection();
+      const clear = screen.getByRole('button', { name: 'Clear' });
+
+      expect(clear).toBeDisabled();
+      expect(clear).toHaveAttribute('title', 'There is nothing to clear: no messages have been received.');
+      expect(clear.parentElement).toContainElement(screen.getByRole('heading', { level: 3, name: 'Received' }));
+
+      inbox.apply([published(info(1, 'one')), delivered(1, 100)], document);
+      settle();
+
+      expect(clear).toBeEnabled();
+      expect(clear).toHaveAttribute('title', 'Empties this list. The messages and the simulation are not changed.');
+    });
+
+    it('empties the list, says that there are no messages, says what it did aloud, and puts the cursor on the heading', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      const announce = vi.spyOn(TestBed.inject(Announcer), 'announce').mockImplementation(() => undefined);
+      inbox.apply([published(info(1, 'one')), delivered(1, 100)], document);
+      settle();
+
+      await user.click(screen.getByRole('button', { name: 'Clear' }));
+      settle();
+
+      expect(screen.queryByTestId('received-row')).not.toBeInTheDocument();
+      expect(screen.getByTestId('received-empty')).toHaveTextContent('No messages received yet.');
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Cleared what worker received.');
+      expect(screen.getByRole('heading', { level: 3, name: 'Received' })).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();
+    });
+
+    it('goes back to the first page, and what comes next starts a list again', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      for (let id = 1; id <= 25; id += 1) {
+        inbox.apply([published(info(id, 'x')), delivered(id, id * 10)], document);
+      }
+      settle();
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+
+      await user.click(screen.getByRole('button', { name: 'Clear' }));
+      inbox.apply([published(info(30, 'after')), delivered(30, 400)], document);
+      settle();
+
+      expect(screen.queryByTestId('received-pages')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('received-row')).toHaveLength(1);
+      expect(screen.getByTestId('received-payload')).toHaveTextContent('after');
+
+      for (let id = 40; id < 65; id += 1) {
+        inbox.apply([published(info(id, 'x')), delivered(id, id * 10)], document);
+      }
+      settle();
+
+      expect(screen.getByTestId('received-page')).toHaveTextContent('Page 1 of 3 · messages 1–10 of 26');
+    });
+
+    it('leaves the list of another consumer, the document and the simulation as they were', async () => {
+      const { inbox, document, settle, user } = await renderSection();
+      inbox.apply([published(info(1, 'x')), delivered(1, 100), delivered(1, 100, false, 'D')], document);
+      settle();
+
+      await user.click(screen.getByRole('button', { name: 'Clear' }));
+
+      expect(inbox.of('D')).toHaveLength(1);
+      expect(TestBed.inject(DocumentStore).document()).toBe(document);
+    });
+
+    it('shows a row that Clear messages took out of the simulation as cleared', async () => {
+      const { inbox, document, settle } = await renderSection();
+      inbox.apply([published(info(1, 'x')), delivered(1, 100)], document);
+      inbox.apply([{ seq: 1, at: 200, type: 'cleared', travelling: 1, ready: 0, unacked: 0, buffered: 0 }], document);
+      settle();
+
+      expect(screen.getByTestId('received-state')).toHaveTextContent(/^cleared$/);
+    });
   });
 });
