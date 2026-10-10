@@ -720,6 +720,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **A new consumer acknowledges by hand** (`NEW_CONSUMER` is `ack: manual`, `prefetch: 0`, `processingMs: 500`)
   ([ADR-0104](docs/adr/0104-a-new-consumer-acknowledges-by-hand-so-that-its-prefetch-holds-it-to-what-it-says.md)). The templates and the tour were read for wording that assumes automatic acknowledgement and none was found; a learner who wants to
   see an automatic consumer sets `ack=auto`. A canvas built by a script that never set `ack` now holds each message for the half second that the consumer takes to handle it.
+- **The list of what a consumer received is in pages of ten, with a view-only Clear, and "Clear messages" marks the unfinished rows `cleared`**
+  ([ADR-0105](docs/adr/0105-the-list-of-what-a-consumer-received-is-in-pages-of-ten-and-can-be-cleared-as-a-view.md)). `RECEIVED_PAGE` is 10 and the cap is still 100. Clear cannot be undone, and the `cleared` event does not say which consumer
+  lost what, so every unfinished row of every consumer is marked. The rows on a later page shift as new messages arrive; if that is confusing, the page can be held to the message it showed.
 
 
 ## Follow-ups that are already owned

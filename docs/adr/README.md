@@ -108,13 +108,14 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0095](0095-a-press-on-the-drawing-of-a-card-opens-the-canvas-and-a-double-click-on-its-name-renames-it.md) | A press on the drawing of a card opens the canvas, and a double click on its name renames it | Accepted |
 | [0096](0096-the-strip-is-one-row-with-the-newest-tab-first-the-close-inside-its-box-arrows-for-the-rest-and-a-close-all.md) | The strip is one row with the newest tab first, the close inside its box, arrows for the rest, and a Close all | Accepted (the theme chooser is at the right end of the strip, 0103) |
 | [0097](0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md) | The notices float at the bottom right, and every screen leaves room for them or keeps clear of them | Accepted |
-| [0098](0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md) | A consumer lists what it was given, with each payload, in its inspector, from a store of its own | Accepted |
+| [0098](0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md) | A consumer lists what it was given, with each payload, in its inspector, from a store of its own | Accepted (the list is in pages of ten and can be cleared, and a row that "Clear messages" took away says so, 0105) |
 | [0099](0099-every-notice-lasts-5-seconds-and-the-keys-of-an-undo-outlive-its-notice-for-50-seconds-from-when-it-was-shown.md) | Every notice lasts 5 seconds, and the keys of an Undo outlive its notice for 50 seconds from when it was shown | Accepted |
 | [0100](0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md) | The foot of the home keeps the disclaimer and the link to the source, and the line of room goes; the warnings stay | Accepted |
 | [0101](0101-the-note-that-the-browser-did-not-promise-to-keep-the-canvases-is-on-the-home-only-and-no-editor-shows-it.md) | The note that the browser did not promise to keep the canvases is on the home only, and no editor shows it | Accepted |
 | [0102](0102-the-file-pickers-take-only-json-files-by-name-and-type-and-refuse-anything-else-before-they-read-it.md) | The file pickers take only JSON files, by name and type, and refuse anything else before they read it | Accepted |
 | [0103](0103-the-theme-is-chosen-in-the-banner-of-the-page-at-the-right-end-of-the-strip-and-not-inside-a-canvas.md) | The theme is chosen in the banner of the page, at the right end of the strip, and not inside a canvas | Accepted |
 | [0104](0104-a-new-consumer-acknowledges-by-hand-so-that-its-prefetch-holds-it-to-what-it-says.md) | A new consumer acknowledges by hand, so that its prefetch holds it to what it says | Accepted |
+| [0105](0105-the-list-of-what-a-consumer-received-is-in-pages-of-ten-and-can-be-cleared-as-a-view.md) | The list of what a consumer received is in pages of ten and can be cleared, as a view | Accepted |
 
 ## Where to start
 
