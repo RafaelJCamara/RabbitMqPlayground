@@ -702,6 +702,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   ([ADR-0098](docs/adr/0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md)). `ConsumerInbox` keeps the last 100 rows of each consumer and the last 5,000 published
   messages (`INBOX_ROWS`, `INBOX_MESSAGES`), and a payload is cut at 80 characters on a row (`RECEIVED_CUT`); the message inspector has the whole of it. A row of a message that the inbox
   has forgotten says that its payload is no longer kept. Deleting a consumer and undoing the delete brings the node back without its rows.
+- **Every notice lasts 5 seconds, and the keys of an Undo outlive its notice for 50**
+  ([ADR-0099](docs/adr/0099-every-notice-lasts-5-seconds-and-the-keys-of-an-undo-outlive-its-notice-for-50-seconds-from-when-it-was-shown.md)). 5 seconds may be short for a long message, and the learner who does not know Ctrl+Z has only those
+  5 seconds for the button; `TOAST_TTL_MS` and `UNDO_KEEP_MS` in `core/ui/toasts.ts` are the two numbers. The `e2e` build reads `window.__rmqToastMs` so that a browser test can hold the notices.
+
 
 ## Follow-ups that are already owned
 
