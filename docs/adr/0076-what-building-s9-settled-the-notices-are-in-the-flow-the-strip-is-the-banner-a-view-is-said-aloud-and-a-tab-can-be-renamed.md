@@ -1,6 +1,6 @@
 # ADR-0076: What building S9 settled: the notices are in the flow, the strip is the banner, a view is said aloud, and a tab can be renamed
 
-- **Status:** Accepted
+- **Status:** Accepted. The heading in the strip holds a button that shows My canvases ([ADR-0096](0096-the-strip-is-one-row-with-the-newest-tab-first-the-close-inside-its-box-arrows-for-the-rest-and-a-close-all.md)), the rest of this section stands.
 - **Date:** 2026-10-08
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0072](0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md) (the order and the landmarks of the workspace, what a tab does, what `create` takes),

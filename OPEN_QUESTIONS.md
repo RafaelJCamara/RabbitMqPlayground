@@ -690,6 +690,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   ([ADR-0095](docs/adr/0095-a-press-on-the-drawing-of-a-card-opens-the-canvas-and-a-double-click-on-its-name-renames-it.md)). The drawing is a
   button that has no tab stop and is hidden from a screen reader (a pointer's copy of Open), and the name is `select-none`. A double tap on a name
   on a touch screen may not rename in every browser, so Rename is the way there; the guard is the count of six buttons on a card.
+- **The strip is one row, the newest tab first, with the close inside its box, arrows for the tabs out of sight, a Close all and a brand that shows My canvases**
+  ([ADR-0096](docs/adr/0096-the-strip-is-one-row-with-the-newest-tab-first-the-close-inside-its-box-arrows-for-the-rest-and-a-close-all.md)). A strip saved before it is read
+  in the order it is shown, so it keeps its oldest tab first until new canvases are put in front. The scroll is by four fifths of what is in sight (`Workspace.scroll`), and the
+  arrows are held by unit tests with sizes given by hand and by `e2e/canvases-strip.spec.ts` with the real ones; it was looked at with 15 tabs in Chromium at 1280 by 720 only.
 
 ## Follow-ups that are already owned
 
