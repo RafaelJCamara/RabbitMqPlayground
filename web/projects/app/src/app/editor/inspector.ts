@@ -19,6 +19,7 @@ import { LinkFlow } from './link-flow';
 import { RefusalNotice } from '../core/ui/refusal-notice';
 import { QueueAsked } from '../explain/queue-asked';
 import { TopicTester } from '../explain/topic-tester';
+import { ConsumerReceived } from '../simulation/consumer-received';
 import { ConsumerSettings } from '../simulation/consumer-settings';
 import { ProducerComposer } from '../simulation/producer-composer';
 import { QueueMessages } from '../simulation/queue-messages';
@@ -59,6 +60,7 @@ let nextInspector = 0;
     BindingConditions,
     QueueMessages,
     ProducerComposer,
+    ConsumerReceived,
     ConsumerSettings,
   ],
   template: `
@@ -243,6 +245,7 @@ let nextInspector = 0;
           }
           @case ('consumer') {
             <rmq-consumer-settings [id]="n.id" />
+            <rmq-consumer-received [id]="n.id" />
           }
         }
 

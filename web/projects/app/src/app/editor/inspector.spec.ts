@@ -340,10 +340,10 @@ describe('Inspector', () => {
   });
 
   describe('what the simulation adds (ADR-0056)', () => {
-    const sections = ['queue-messages', 'producer-composer', 'consumer-settings'];
+    const sections = ['queue-messages', 'producer-composer', 'consumer-settings', 'consumer-received'];
     const shown = () => sections.filter((id) => screen.queryByTestId(id) !== null);
 
-    it('has the messages of a queue, the composer of a producer and the settings of a consumer, each for its own kind and for no other', async () => {
+    it('has the messages of a queue, the composer of a producer and the settings and the received messages of a consumer, each for its own kind and for no other', async () => {
       const { choose } = await renderInspector({});
 
       choose(['Q1']);
@@ -351,7 +351,7 @@ describe('Inspector', () => {
       choose(['P1']);
       expect(shown()).toEqual(['producer-composer']);
       choose(['C1']);
-      expect(shown()).toEqual(['consumer-settings']);
+      expect(shown()).toEqual(['consumer-settings', 'consumer-received']);
       choose(['E1']);
       expect(shown()).toEqual([]);
     });
@@ -363,6 +363,7 @@ describe('Inspector', () => {
         ['Q1', 'queue-messages'],
         ['P1', 'producer-composer'],
         ['C1', 'consumer-settings'],
+        ['C1', 'consumer-received'],
       ] as const) {
         choose([node]);
         const position = screen

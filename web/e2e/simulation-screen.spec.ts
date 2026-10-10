@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { SimulationPage } from './pages/simulation-page';
 import { expectNoAxeViolations } from './support/axe';
 import { LONG_LEG, ORDERS } from './support/orders';
@@ -85,6 +86,90 @@ test.describe('the composer of a producer, in its inspector (ADR-0056)', () => {
   });
 });
 
+/** Steps the clock until the list of what a consumer received has a row, as far as a bound says. */
+async function stepUntilReceived(simulation: SimulationPage, page: Page, rows = 1): Promise<void> {
+  const row = page.getByTestId('consumer-received').getByTestId('received-row');
+  for (let steps = 0; steps < 40 && (await row.count()) < rows; steps += 1) {
+    await simulation.step();
+  }
+  await expect(row).toHaveCount(rows);
+}
+
+test.describe('what a consumer received, in its inspector (ADR-0098)', () => {
+  test('says that nothing was received, and then lists the payload that the producer sent, with where the message is, as the clock moves', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await simulation.editor.select('Producer sender');
+    const composer = page.getByTestId('producer-composer');
+    await composer.getByRole('textbox', { name: 'Payload' }).fill('Hello');
+    await composer.getByRole('textbox', { name: 'Payload' }).press('Tab');
+    await composer.getByRole('button', { name: 'Publish now' }).click();
+    await simulation.editor.select('Consumer worker');
+    const received = page.getByTestId('consumer-received');
+    await expect(received.getByRole('heading', { name: 'Received' })).toBeVisible();
+    await expect(received.getByTestId('received-empty')).toHaveText('No messages received yet.');
+
+    await stepUntilReceived(simulation, page);
+
+    const row = received.getByTestId('received-row');
+    await expect(row).toContainText('#1');
+    await expect(row).toContainText('order.new');
+    await expect(row.getByTestId('received-payload')).toHaveText('Hello');
+    await expect(row.getByTestId('received-state')).toHaveText('on its way');
+    await expect(received.getByTestId('received-empty')).toHaveCount(0);
+
+    await simulation.step();
+    await expect(row.getByTestId('received-state')).toHaveText('received');
+
+    await simulation.stepThrough();
+    await expect(row.getByTestId('received-state')).toHaveText('acked');
+    await expect(row.getByTestId('received-payload')).toHaveText('Hello');
+  });
+
+  test('lists what it received newest first, and cuts a long payload while the message inspector has the whole of it', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    const long = `${'0123456789'.repeat(9)}END`;
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('publish orders key=order.new payload=first');
+    await simulation.editor.runCommand(`publish orders key=order.new payload=${long}`);
+    await simulation.editor.select('Consumer worker');
+    // A second for each, and the second is given when the first has been acknowledged.
+    await stepUntilReceived(simulation, page, 1);
+    await simulation.stepThrough();
+    const received = page.getByTestId('consumer-received');
+    await expect(received.getByTestId('received-row')).toHaveCount(2);
+    const payloads = received.getByTestId('received-payload');
+    await expect(payloads.nth(0)).toHaveText(`${long.slice(0, 79)}…`);
+    await expect(payloads.nth(1)).toHaveText('first');
+
+    await received.getByTestId('received-row').nth(0).getByRole('button').click();
+
+    const inspector = page.getByTestId('message-inspector');
+    await expect(inspector).toBeVisible();
+    await expect(inspector.getByTestId('message-payload')).toHaveValue(long);
+    await expect(received.getByTestId('received-row').nth(0).getByRole('button')).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  test('keeps what the consumer received while another node is looked at', async ({ page }) => {
+    const simulation = await SimulationPage.open(page, ORDERS);
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('publish orders key=order.new payload=kept');
+    await simulation.editor.select('Consumer worker');
+    await stepUntilReceived(simulation, page);
+
+    await simulation.editor.select('Queue billing');
+    await simulation.editor.select('Consumer worker');
+
+    await expect(page.getByTestId('consumer-received').getByTestId('received-payload')).toHaveText('kept');
+  });
+});
+
 test.describe('the settings of a consumer, in its inspector (ADR-0056)', () => {
   test('are the commands that set them, and say what the consumer holds, in words', async ({ page }) => {
     const simulation = await SimulationPage.open(page, ORDERS);
@@ -148,6 +233,21 @@ for (const theme of ['light', 'dark'] as const) {
         await simulation.editor.select(label);
         await expectNoAxeViolations(page);
       }
+    });
+
+    test('has no axe violations for the inspector of a consumer that was given messages, one of them with a payload that is cut', async ({
+      page,
+    }) => {
+      const simulation = await SimulationPage.open(page, ORDERS, { theme });
+      await simulation.editor.openCommandBar();
+      await simulation.editor.runCommand('publish orders key=order.new payload=one');
+      await simulation.editor.runCommand(`publish orders key=order.new payload=${'long-payload-'.repeat(10)}`);
+      await simulation.editor.select('Consumer worker');
+      await stepUntilReceived(simulation, page);
+      await simulation.stepThrough();
+      await expect(page.getByTestId('consumer-received').getByTestId('received-row')).toHaveCount(2);
+
+      await expectNoAxeViolations(page);
     });
 
     test('has no axe violations while a producer that is linked to nothing says under its button why it cannot publish', async ({

@@ -26,6 +26,7 @@ import { Announcer } from '../core/announcer';
 import { DebugSources } from '../core/debug/debug-sources';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { NO_EMPHASIS } from '../core/explain/emphasis';
+import { ConsumerInbox } from '../core/explain/consumer-inbox';
 import { EventLog } from '../core/explain/event-log';
 import { ExplainState } from '../core/explain/explain-state';
 import { EXPLAIN_SERVICES } from '../core/explain/services';
@@ -359,8 +360,9 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
       }
     });
     inject(DestroyRef).onDestroy(() => setPageLength(this.page, TOAST_LIFT, 0));
-    // The log of equivalent commands listens to the bus from the start, so that nothing that the learner does is missing from it.
+    // The log of equivalent commands listens to the bus from the start, so that nothing that the learner does is missing from it, and so does what each consumer was given (ADR-0098).
     inject(CommandLog);
+    inject(ConsumerInbox);
     if (this.inWorkspace) {
       // In a workspace a `clear` is followed by a notice with an Undo (ADR-0074).
       inject(ClearNotice);
