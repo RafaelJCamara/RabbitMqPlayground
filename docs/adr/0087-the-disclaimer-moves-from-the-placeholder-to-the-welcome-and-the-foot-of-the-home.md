@@ -1,6 +1,6 @@
 # ADR-0087: The disclaimer moves from the placeholder to the welcome and the foot of the home
 
-- **Status:** Accepted
+- **Status:** Accepted. "The links of the placeholder go with it" is superseded by [ADR-0100](0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md) (only "Source code" stays), the rest stands.
 - **Date:** 2026-10-09
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0084](0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md) (the "Under construction" page is deleted), and the plan's risk "Trademark (\"RabbitMQ\" is Broadcom's)": a disclaimer, no logo, the name in one constant ([`core/app-info.ts`](../../web/projects/app/src/app/core/app-info.ts)).

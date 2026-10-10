@@ -705,6 +705,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **Every notice lasts 5 seconds, and the keys of an Undo outlive its notice for 50**
   ([ADR-0099](docs/adr/0099-every-notice-lasts-5-seconds-and-the-keys-of-an-undo-outlive-its-notice-for-50-seconds-from-when-it-was-shown.md)). 5 seconds may be short for a long message, and the learner who does not know Ctrl+Z has only those
   5 seconds for the button; `TOAST_TTL_MS` and `UNDO_KEEP_MS` in `core/ui/toasts.ts` are the two numbers. The `e2e` build reads `window.__rmqToastMs` so that a browser test can hold the notices.
+- **The foot of the home has the disclaimer and the link to the source only, and the home does not say how much room the canvases take**
+  ([ADR-0100](docs/adr/0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md)). A learner sees the room only when it passes 80% (`QUOTA_LOW_AT`); if the number is missed, it was in
+  `CanvasLibrary.usage` and `quotaWarning`'s `ok` case, which now says nothing. The links to the decisions and the progress issue can come back as one line of the foot.
 
 
 ## Follow-ups that are already owned

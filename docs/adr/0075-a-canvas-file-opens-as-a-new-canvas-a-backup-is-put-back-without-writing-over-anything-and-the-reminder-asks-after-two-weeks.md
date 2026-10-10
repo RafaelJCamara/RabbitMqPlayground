@@ -1,6 +1,6 @@
 # ADR-0075: A canvas file opens as a new canvas, a backup is put back without writing over anything, and the reminder asks after two weeks
 
-- **Status:** Accepted. A reminder of a canvas that was never backed up counts its 14 days from the oldest canvas that has an element on it: [ADR-0076](0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md).
+- **Status:** Accepted. A reminder of a canvas that was never backed up counts its 14 days from the oldest canvas that has an element on it: [ADR-0076](0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md). The quiet line about the room that the canvases take is superseded by [ADR-0100](0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md), the warnings and the rest stand.
 - **Date:** 2026-10-08
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Files" and "Storage" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md), the formats and the one loader of [ADR-0027](0027-a-canvas-is-a-record-a-file-and-a-bundle-and-one-function-loads-them.md) ("what to do with an id that is taken is S9's choice"), and the promise, the room and the reminder of
