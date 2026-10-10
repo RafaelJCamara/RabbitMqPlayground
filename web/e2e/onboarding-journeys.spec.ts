@@ -129,7 +129,7 @@ test.describe('journey 11: the first run and the templates', () => {
     await onboarding.more.click();
     await onboarding.choose('Topics');
 
-    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Untitled canvas', 'Topics']);
+    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Topics', 'Untitled canvas']);
     expect(await onboarding.canvases.stored()).toEqual(['Topics', 'Untitled canvas']);
   });
 
@@ -142,7 +142,7 @@ test.describe('journey 11: the first run and the templates', () => {
     await onboarding.more.click();
     await onboarding.choose('Routing');
 
-    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Routing', 'Routing 2']);
+    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Routing 2', 'Routing']);
   });
 
   test('keeps the template where the learner changed it: a reload brings back what they did', async ({ page }) => {
@@ -353,7 +353,7 @@ test.describe('journey 11: the tour', () => {
     await onboarding.canvases.editorReady();
 
     await expect(onboarding.banner).toBeVisible();
-    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'Untitled canvas', 'My first topology']);
+    expect(await onboarding.canvases.tabs()).toEqual(['My canvases', 'My first topology', 'Untitled canvas']);
   });
 
   test('ends with the canvas, and a canvas that is opened afterwards has no tour', async ({ page }) => {

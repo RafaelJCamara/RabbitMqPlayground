@@ -39,7 +39,7 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
 
     await canvases.newCanvas();
 
-    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas', 'Untitled canvas 2']);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas 2', 'Untitled canvas']);
     await expect.poll(() => canvases.current()).toEqual(['Untitled canvas 2']);
     await expect.poll(() => canvases.stored()).toEqual(['Untitled canvas', 'Untitled canvas 2']);
   });
@@ -56,7 +56,7 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await canvases.heading.waitFor();
     await canvases.editorReady();
 
-    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas', 'Untitled canvas 2']);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas 2', 'Untitled canvas']);
     await expect.poll(() => canvases.current()).toEqual(['Untitled canvas 2']);
     await expect(canvases.editor.node('Queue queue1')).toBeVisible();
   });
@@ -166,7 +166,7 @@ test.describe('several canvases, behind the flag canvases (ADR-0072)', () => {
     await expect.poll(() => canvases.stored()).toEqual(['Untitled canvas', 'Untitled canvas 2']);
     await canvases.showHome();
     await canvases.open('Untitled canvas 2');
-    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas', 'Untitled canvas 2']);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Untitled canvas 2', 'Untitled canvas']);
   });
 
   test('shows the home when the last tab is closed, and the strip is kept as it is', async ({ page }) => {
@@ -295,7 +295,7 @@ test.describe('the home, My canvases (ADR-0073)', () => {
 
     await canvases.open('One');
 
-    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Two', 'One']);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'One', 'Two']);
     await expect.poll(() => canvases.current()).toEqual(['One']);
   });
 
@@ -405,7 +405,7 @@ test.describe('the home, My canvases (ADR-0073)', () => {
     await canvases.action('Busy', 'Duplicate').click();
     await canvases.editorReady();
 
-    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Busy', 'Busy (copy)']);
+    await expect.poll(() => canvases.tabs()).toEqual(['My canvases', 'Busy (copy)', 'Busy']);
     await expect.poll(() => canvases.current()).toEqual(['Busy (copy)']);
     await expect(canvases.editor.node('Exchange orders, direct')).toBeVisible();
     await expect.poll(() => canvases.stored()).toEqual(['Busy', 'Busy (copy)']);

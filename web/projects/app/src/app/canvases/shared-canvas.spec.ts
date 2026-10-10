@@ -307,7 +307,7 @@ describe('SharedCanvas (ADR-0078)', () => {
       ]);
     });
 
-    it('makes the copy the canvas that was open last, and puts it at the end of the strip of the canvases that the learner had open', async () => {
+    it('makes the copy the canvas that was open last, and puts it at the start of the strip, in front of the canvases that the learner had open', async () => {
       const { canvas, learner } = await opened();
       await learner.create({ id: 'a', name: 'Alpha', document: documentOf({}) });
       await learner.create({ id: 'b', name: 'Beta', document: documentOf({}) });
@@ -320,7 +320,7 @@ describe('SharedCanvas (ADR-0078)', () => {
       const copy = listed.ok ? listed.value.canvases.find(({ name }) => name === 'Orders flow (shared)') : undefined;
       expect(copy).toBeDefined();
       expect(await learner.getMeta('lastOpenCanvas')).toEqual({ ok: true, value: copy?.id });
-      expect(await learner.getMeta('openCanvases')).toEqual({ ok: true, value: ['b', 'a', copy?.id] });
+      expect(await learner.getMeta('openCanvases')).toEqual({ ok: true, value: [copy?.id, 'b', 'a'] });
     });
 
     it('makes the strip of the copy alone when the learner had none', async () => {

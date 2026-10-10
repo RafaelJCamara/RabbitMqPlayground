@@ -204,8 +204,8 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
     await library.begin({ kind: 'template', id: 'pub-sub' });
 
     const names = library.tabs().map(({ name }) => name);
-    expect(names).toEqual(['Untitled canvas', 'Pub/Sub']);
-    expect(library.view()).toEqual({ kind: 'canvas', id: library.tabs()[1]?.id });
+    expect(names).toEqual(['Pub/Sub', 'Untitled canvas']);
+    expect(library.view()).toEqual({ kind: 'canvas', id: library.tabs()[0]?.id });
     expect(said(toasts)).toEqual([`Opened “Pub/Sub”. ${templateById('pub-sub')?.tryThis}`]);
   });
 
@@ -215,7 +215,7 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
     await library.begin({ kind: 'template', id: 'topics' });
     await library.begin({ kind: 'template', id: 'topics' });
 
-    expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas', 'Topics', 'Topics 2']);
+    expect(library.tabs().map(({ name }) => name)).toEqual(['Topics 2', 'Topics', 'Untitled canvas']);
   });
 
   it('begins from scratch as the “New canvas” button does', async () => {
@@ -223,7 +223,7 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
 
     await library.begin({ kind: 'blank' });
 
-    expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas', 'Untitled canvas 2']);
+    expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas 2', 'Untitled canvas']);
   });
 
   it('begins the tour on a canvas of its own, and asks for it', async () => {
@@ -231,7 +231,7 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
 
     await library.begin({ kind: 'tour' });
 
-    expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas', 'My first topology']);
+    expect(library.tabs().map(({ name }) => name)).toEqual(['My first topology', 'Untitled canvas']);
     expect(tours.take()).toBe(true);
   });
 
@@ -263,7 +263,7 @@ describe('CanvasLibrary, the canvas that was chosen (ADR-0082, ADR-0083)', () =>
     await library.newFromTemplate();
 
     expect(choose).toHaveBeenLastCalledWith({ first: false });
-    expect(library.tabs().map(({ name }) => name)).toEqual(['Untitled canvas', 'Headers routing']);
+    expect(library.tabs().map(({ name }) => name)).toEqual(['Headers routing', 'Untitled canvas']);
   });
 
   it('makes nothing when the question is left', async () => {

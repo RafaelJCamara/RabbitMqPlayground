@@ -63,6 +63,8 @@ interface State {
   /** Put in the browser before the app starts. */
   readonly before?: (page: Page) => Promise<void>;
   readonly canvases?: readonly SeededCanvas[];
+  /** The strip that is kept and the canvas that was open last, when the state is not the one that a start makes. */
+  readonly strip?: { readonly openCanvases: readonly string[]; readonly lastOpenCanvas: string };
   readonly enter: (canvases: CanvasesPage) => Promise<void>;
 }
 
@@ -82,6 +84,18 @@ const states: readonly State[] = [
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.newCanvas();
+    },
+  },
+  {
+    name: 'in the workspace with more open canvases than the strip holds, and the arrows that show the rest',
+    canvases: MANY,
+    strip: { openCanvases: MANY.slice(0, 24).map(({ id }) => id), lastOpenCanvas: 'many0' },
+    enter: async (canvases) => {
+      await expect(canvases.olderTabs).toBeVisible();
+      await expect(canvases.newerTabs).toHaveCount(0);
+      await canvases.olderTabs.click();
+      await expect(canvases.newerTabs).toBeVisible();
+      await expect(canvases.closeAllButton).toBeVisible();
     },
   },
   {
@@ -407,7 +421,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         const canvases = new CanvasesPage(page);
         await state.before?.(page);
         if (state.canvases !== undefined) {
-          await seedLibrary(page, state.canvases);
+          await seedLibrary(page, state.canvases, state.strip);
         }
         if (state.inMemory === true) {
           await page.goto('');

@@ -59,6 +59,7 @@ These are on the screen in every state of the editor, and are not repeated in th
 |---|---|---|
 | In the workspace, on a first run, with the strip and the editor | `rmq-how-to-link` | `e2e/canvases-a11y.spec.ts` · "in the workspace, on a first run, with the strip and the editor" |
 | In the workspace with several open canvases, one of them shown | `rmq-how-to-link` | `e2e/canvases-a11y.spec.ts` · "in the workspace with several open canvases, one of them shown" |
+| In the workspace with more open canvases than the strip holds, and the arrows that show the rest | `rmq-workspace`, `rmq-icon` | `e2e/canvases-a11y.spec.ts` · "in the workspace with more open canvases than the strip holds, and the arrows that show the rest" |
 | On the home, with a card for each canvas, a drawing for each, and a name that is cut | `rmq-canvas-card`, `rmq-home`, `rmq-home-notices`, `rmq-thumbnail` | `e2e/canvases-a11y.spec.ts` · "on the home, with a card for each canvas, a drawing for each, and a name that is cut" |
 | On the home, with nothing to show | `rmq-home`, `rmq-home-notices`, `rmq-toast-host` | `e2e/canvases-a11y.spec.ts` · "on the home, with nothing to show" |
 | On the home, with a search that matches no canvas | `rmq-home`, `rmq-home-notices` | `e2e/canvases-a11y.spec.ts` · "on the home, with a search that matches no canvas" |

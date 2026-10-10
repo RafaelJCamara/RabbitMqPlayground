@@ -188,7 +188,7 @@ export class CanvasLibrary implements CanvasHost {
       }
       opened = this.openedNotice(choice, made.value.name);
     }
-    const ids = open.includes(shown) ? open : [...open, shown];
+    const ids = open.includes(shown) ? open : [shown, ...open];
     this.openIds.set(ids);
     this.current.set({ kind: 'canvas', id: shown });
     if (stored.ok ? !sameList(stored.value, ids) : true) {
@@ -266,13 +266,16 @@ export class CanvasLibrary implements CanvasHost {
     this.announcer.announce(view.kind === 'home' ? 'Showing My canvases.' : `Showing “${this.nameOf(view.id)}”.`);
   }
 
-  /** Opens a canvas in the strip, if it is not there, and shows it. */
+  /**
+   * Opens a canvas in the strip, if it is not there, and shows it. A canvas that is opened is the newest tab and is put first (ADR-0096); one that is open already keeps
+   * its place, so that a tab does not jump when it is shown again.
+   */
   async openCanvas(id: string): Promise<void> {
     if (!this.summaries().some((canvas) => canvas.id === id)) {
       return;
     }
     if (!this.openIds().includes(id)) {
-      this.openIds.update((ids) => [...ids, id]);
+      this.openIds.update((ids) => [id, ...ids]);
       this.saveStrip();
     }
     await this.show({ kind: 'canvas', id });
@@ -296,6 +299,20 @@ export class CanvasLibrary implements CanvasHost {
     }
     this.openIds.set(remaining);
     this.saveStrip();
+  }
+
+  /**
+   * Takes every canvas out of the strip, and shows the home (ADR-0096). It deletes no canvas, and a canvas that was shown is written first, as when it is left for another
+   * view. There is nothing to confirm and nothing to undo: every canvas is on the home, and opens again from its card.
+   */
+  async closeAllTabs(): Promise<void> {
+    if (this.openIds().length === 0) {
+      return;
+    }
+    await this.show(HOME);
+    this.openIds.set([]);
+    this.saveStrip();
+    this.announcer.announce('Closed all tabs.');
   }
 
   /**

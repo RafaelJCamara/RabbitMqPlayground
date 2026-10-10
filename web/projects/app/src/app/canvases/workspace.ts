@@ -1,10 +1,21 @@
-import { afterNextRender, Component, computed, ElementRef, inject, Injector } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { APP_NAME } from '../core/app-info';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { Icon } from '../core/ui/icon';
 import { ToastHost } from '../core/ui/toast-host';
 import { Editor } from '../editor/editor';
-import { BUTTON, tabClass } from './buttons';
+import { BUTTON, tabBoxClass, TAB_CLOSE, TAB_NAME, tabClass } from './buttons';
 import { CanvasDialogs } from './dialogs';
 import { Home } from './home';
 import { CanvasLibrary, type Tab } from './library';
@@ -13,6 +24,10 @@ import { CanvasLibrary, type Tab } from './library';
  * The workspace (ADR-0072), which the flag `canvases` puts around the editor: the name of the product, the strip of open canvases, and the home or the editor. The
  * editor is made again for each canvas, by a `@for` over zero or one id that tracks it, so that the history, the selection, the view and the simulation of
  * a canvas that is left are gone and one Foblex canvas and one engine are alive at a time. It is the host that the editor's session asks which canvas to open.
+ *
+ * The strip is one row, whatever the number of canvases that are open (ADR-0096): the name of the product (which shows My canvases), My canvases, New canvas and Close all
+ * stay where they are, and only the tabs scroll, the newest first. Two buttons at the ends of the tabs show the ones that are out of sight, each only when there is one, and
+ * a tab that gets the cursor, or is shown, is scrolled into view, so that every tab is reached with the keyboard too.
  */
 @Component({
   selector: 'rmq-workspace',
@@ -21,53 +36,103 @@ import { CanvasLibrary, type Tab } from './library';
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
       <header class="border-line bg-panel flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2">
-        <h1 class="text-base font-semibold tracking-tight">{{ name }}</h1>
-        <nav aria-label="Open canvases">
-          <ul class="flex flex-wrap items-center gap-1.5">
-            <li>
+        <h1 class="shrink-0 text-base font-semibold tracking-tight">
+          <button
+            type="button"
+            class="hover:bg-canvas -mx-1.5 rounded-md px-1.5 py-0.5"
+            title="Show My canvases"
+            data-testid="brand"
+            (click)="library.show({ kind: 'home' })"
+          >
+            {{ name }}
+          </button>
+        </h1>
+        <nav aria-label="Open canvases" class="flex min-w-0 flex-1 basis-96 flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            [class]="tab(home())"
+            [attr.aria-current]="home() ? 'true' : null"
+            data-testid="tab-home"
+            (click)="library.show({ kind: 'home' })"
+          >
+            My canvases
+          </button>
+          <div class="flex min-w-48 flex-1 basis-48 items-center gap-1">
+            @if (newer()) {
               <button
                 type="button"
-                [class]="tab(home())"
-                [attr.aria-current]="home() ? 'true' : null"
-                data-testid="tab-home"
-                (click)="library.show({ kind: 'home' })"
+                [class]="arrow"
+                aria-label="Show newer canvases"
+                title="Show newer canvases"
+                data-testid="tabs-newer"
+                (click)="scroll(-1)"
               >
-                My canvases
+                <rmq-icon name="chevron-left" [size]="16" />
               </button>
-            </li>
-            @for (item of library.tabs(); track item.id) {
-              <li class="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  [class]="tab(shown() === item.id)"
-                  [attr.aria-current]="shown() === item.id ? 'true' : null"
-                  title="Double-click or press F2 to rename"
-                  aria-keyshortcuts="F2"
-                  data-testid="tab"
-                  (click)="library.show({ kind: 'canvas', id: item.id })"
-                  (dblclick)="rename(item)"
-                  (keydown.f2)="rename(item)"
-                >
-                  <span class="max-w-48 truncate">{{ item.name }}</span>
-                </button>
-                <button
-                  type="button"
-                  [class]="button"
-                  [attr.aria-label]="'Close ' + item.name"
-                  data-testid="tab-close"
-                  (click)="close(item.id)"
-                >
-                  <rmq-icon name="close" [size]="14" />
-                </button>
-              </li>
             }
-            <li>
-              <button type="button" [class]="button" data-testid="tab-new" (click)="library.create()">
-                <rmq-icon name="plus" [size]="16" />
-                <span>New canvas</span>
+            <ul
+              #tabs
+              class="flex min-h-10 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-testid="tabs"
+              (scroll)="measure()"
+            >
+              @for (item of library.tabs(); track item.id) {
+                <li [class]="box(shown() === item.id)" [attr.data-tab]="item.id">
+                  <button
+                    type="button"
+                    [class]="tabName"
+                    [attr.aria-current]="shown() === item.id ? 'true' : null"
+                    title="Double-click or press F2 to rename"
+                    aria-keyshortcuts="F2"
+                    data-testid="tab"
+                    (click)="library.show({ kind: 'canvas', id: item.id })"
+                    (dblclick)="rename(item)"
+                    (keydown.f2)="rename(item)"
+                  >
+                    <span class="max-w-48 truncate">{{ item.name }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    [class]="tabClose"
+                    [attr.aria-label]="'Close ' + item.name"
+                    data-testid="tab-close"
+                    (click)="close(item.id)"
+                  >
+                    <rmq-icon name="close" [size]="14" />
+                  </button>
+                </li>
+              }
+            </ul>
+            @if (older()) {
+              <button
+                type="button"
+                [class]="arrow"
+                aria-label="Show older canvases"
+                title="Show older canvases"
+                data-testid="tabs-older"
+                (click)="scroll(1)"
+              >
+                <rmq-icon name="chevron-right" [size]="16" />
               </button>
-            </li>
-          </ul>
+            }
+          </div>
+          <button type="button" [class]="button" data-testid="tab-new" (click)="library.create()">
+            <rmq-icon name="plus" [size]="16" />
+            <span>New canvas</span>
+          </button>
+          @if (library.tabs().length > 0) {
+            <button
+              type="button"
+              [class]="button"
+              aria-label="Close all tabs"
+              title="Close all tabs. The canvases are kept."
+              data-testid="tab-close-all"
+              (click)="closeAll()"
+            >
+              <rmq-icon name="close" [size]="16" />
+              <span>Close all</span>
+            </button>
+          }
         </nav>
       </header>
       <div class="min-h-0 flex-1">
@@ -95,6 +160,9 @@ export class Workspace {
   protected readonly library = inject(CanvasLibrary);
   private readonly dialogs = inject(CanvasDialogs);
   protected readonly button = BUTTON;
+  protected readonly arrow = `${BUTTON} min-w-8 shrink-0 px-1.5`;
+  protected readonly tabName = TAB_NAME;
+  protected readonly tabClose = TAB_CLOSE;
 
   protected readonly home = computed(() => this.library.view().kind === 'home');
   /** The id of the canvas that is shown, or `undefined` on the home. */
@@ -108,11 +176,87 @@ export class Workspace {
     return id === undefined ? [] : [id];
   });
 
+  /** Whether there are tabs out of sight on the side of the newest, and on the side of the oldest (ADR-0096). */
+  protected readonly newer = signal(false);
+  protected readonly older = signal(false);
+
+  private readonly list = viewChild<ElementRef<HTMLUListElement>>('tabs');
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     void this.library.start();
+    // What is out of sight changes when a tab is made, closed or renamed.
+    effect(() => {
+      this.library.tabs();
+      afterNextRender(() => this.measure(), { injector: this.injector });
+    });
+    // The tab of the canvas that is shown is brought into view when the one that is shown changes, and not when something else does, so that the strip does not move under a
+    // learner who has scrolled it.
+    effect(() => {
+      const shown = this.shown();
+      afterNextRender(() => this.reveal(shown), { injector: this.injector });
+    });
+    // And what is out of sight changes when the window is made wider or narrower. There is no observer in jsdom, which has no layout.
+    afterNextRender(() => {
+      const list = this.list()?.nativeElement;
+      if (list !== undefined && typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => this.measure());
+        observer.observe(list);
+        this.destroyRef.onDestroy(() => observer.disconnect());
+      }
+    });
+  }
+
+  /** Works out from where the tabs are scrolled which side has a tab out of sight. The arrow that has the cursor and goes away gives it to the tab at that end. */
+  protected measure(): void {
+    const list = this.list()?.nativeElement;
+    const newer = list !== undefined && list.scrollLeft > 1;
+    const older = list !== undefined && list.scrollLeft < list.scrollWidth - list.clientWidth - 1;
+    if (list !== undefined) {
+      const tabs = list.querySelectorAll<HTMLElement>('[data-testid="tab"]');
+      if (!newer && this.newer() && document.activeElement === this.arrowOf('newer')) {
+        tabs[0]?.focus();
+      }
+      if (!older && this.older() && document.activeElement === this.arrowOf('older')) {
+        tabs[tabs.length - 1]?.focus();
+      }
+    }
+    this.newer.set(newer);
+    this.older.set(older);
+  }
+
+  /** Scrolls the tabs by about the width that is in sight, toward the newest (-1) or the oldest (1), and gently unless the learner asked for less motion. */
+  protected scroll(direction: -1 | 1): void {
+    const list = this.list()?.nativeElement;
+    if (list === undefined) {
+      return;
+    }
+    const left = direction * Math.max(list.clientWidth * 0.8, 96);
+    const reduced =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof list.scrollBy === 'function') {
+      list.scrollBy({ left, behavior: reduced ? 'auto' : 'smooth' });
+    } else {
+      list.scrollLeft += left;
+    }
+  }
+
+  protected box(current: boolean): string {
+    return tabBoxClass(current);
+  }
+
+  /** Brings the tab of the canvas that is shown, or My canvases, into the part of the strip that is in sight, which is no change when it is already there. */
+  private reveal(shown: string | undefined): void {
+    const tabs = this.list()?.nativeElement.querySelectorAll<HTMLElement>('[data-tab]');
+    const tab = [...(tabs ?? [])].find((item) => item.dataset['tab'] === shown);
+    // jsdom does not scroll, and has no way to say so.
+    tab?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+  }
+
+  private arrowOf(side: 'newer' | 'older'): Element | null {
+    return this.element.querySelector(`[data-testid="tabs-${side}"]`);
   }
 
   /** Asks for the new name of the canvas of a tab, from a double click or F2 on it (ADR-0072), as the card of the home does. */
@@ -129,6 +273,14 @@ export class Workspace {
   protected async close(id: string): Promise<void> {
     await this.library.closeTab(id);
     afterNextRender(() => this.element.querySelector<HTMLElement>('nav [aria-current="true"]')?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  /** Closes every tab, which deletes no canvas (ADR-0096), and puts the cursor on My canvases, which is what is shown. */
+  protected async closeAll(): Promise<void> {
+    await this.library.closeAllTabs();
+    afterNextRender(() => this.element.querySelector<HTMLElement>('[data-testid="tab-home"]')?.focus(), {
       injector: this.injector,
     });
   }

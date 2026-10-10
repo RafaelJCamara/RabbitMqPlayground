@@ -19,6 +19,14 @@ export class CanvasesPage {
   readonly confirmation: Locator;
   /** The region of the notices, which is there only while there is one. */
   readonly notices: Locator;
+  /** The name of the product, a button in the one heading, which shows My canvases (ADR-0096). */
+  readonly brand: Locator;
+  /** The row of tabs, the part of the strip that scrolls, and the two arrows that show what is out of sight on each side of it (ADR-0096). */
+  readonly tabList: Locator;
+  readonly newerTabs: Locator;
+  readonly olderTabs: Locator;
+  /** Close all, which is there while a tab is open. */
+  readonly closeAllButton: Locator;
 
   constructor(readonly page: Page) {
     this.editor = new EditorPage(page);
@@ -31,6 +39,11 @@ export class CanvasesPage {
     this.dialog = page.getByRole('dialog');
     this.confirmation = page.getByRole('alertdialog');
     this.notices = page.getByRole('region', { name: 'Notices' });
+    this.brand = this.heading.getByRole('button');
+    this.tabList = this.strip.getByTestId('tabs');
+    this.newerTabs = this.strip.getByRole('button', { name: 'Show newer canvases' });
+    this.olderTabs = this.strip.getByRole('button', { name: 'Show older canvases' });
+    this.closeAllButton = this.strip.getByRole('button', { name: 'Close all tabs' });
   }
 
   /**
@@ -101,6 +114,12 @@ export class CanvasesPage {
   /** Closes a tab. */
   async closeTab(name: string): Promise<void> {
     await this.strip.getByRole('button', { name: `Close ${name}`, exact: true }).click();
+  }
+
+  /** Closes every tab with Close all, and waits for the home. */
+  async closeAll(): Promise<void> {
+    await this.closeAllButton.click();
+    await expect(this.home).toBeVisible();
   }
 
   /** The card of a canvas on the home. */

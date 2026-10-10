@@ -69,7 +69,7 @@ test.describe('the debug handle in the e2e build', () => {
       writable: false,
       configurable: false,
       enumerable: false,
-      app: await app.heading.textContent(),
+      app: (await app.heading.textContent())?.trim(),
     });
   });
 });

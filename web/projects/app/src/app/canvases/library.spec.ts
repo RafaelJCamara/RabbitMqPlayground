@@ -519,27 +519,56 @@ describe('CanvasLibrary', () => {
       return harness;
     }
 
-    it('adds a canvas to the end of the strip, shows it, and keeps the strip', async () => {
+    it('adds a canvas to the start of the strip, the newest first, shows it, and keeps the strip (ADR-0096)', async () => {
       const { library, repository } = await started('Alpha', 'Beta', 'Gamma');
 
       await library.openCanvas('gamma');
       await library.openCanvas('beta');
       await settle();
 
-      expect(library.tabs().map(({ id }) => id)).toEqual(['alpha', 'gamma', 'beta']);
+      expect(library.tabs().map(({ id }) => id)).toEqual(['beta', 'gamma', 'alpha']);
       expect(library.view()).toEqual(canvasView('beta'));
-      expect(await strip(repository)).toEqual(['alpha', 'gamma', 'beta']);
+      expect(await strip(repository)).toEqual(['beta', 'gamma', 'alpha']);
     });
 
-    it('shows a canvas that is in the strip already, and puts it there only once', async () => {
-      const { library } = await started('Alpha', 'Beta');
+    it('shows a canvas that is in the strip already without moving it, so that a tab does not jump (ADR-0096)', async () => {
+      const { library, repository } = await started('Alpha', 'Beta', 'Gamma');
       await library.openCanvas('beta');
+      await library.openCanvas('gamma');
+      await settle();
+      expect(library.tabs().map(({ id }) => id)).toEqual(['gamma', 'beta', 'alpha']);
 
       await library.openCanvas('alpha');
       await library.openCanvas('beta');
+      await settle();
 
-      expect(library.tabs().map(({ id }) => id)).toEqual(['alpha', 'beta']);
+      expect(library.tabs().map(({ id }) => id)).toEqual(['gamma', 'beta', 'alpha']);
       expect(library.view()).toEqual(canvasView('beta'));
+      expect(await strip(repository)).toEqual(['gamma', 'beta', 'alpha']);
+    });
+
+    it('reads the strip that was saved as the order that it is shown in, so that no saved strip changes (ADR-0096)', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('openCanvases', ['alpha', 'gamma', 'beta']);
+      await harness.repository.setMeta('lastOpenCanvas', 'gamma');
+
+      await harness.library.start();
+
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['alpha', 'gamma', 'beta']);
+      expect(harness.library.view()).toEqual(canvasView('gamma'));
+    });
+
+    it('opens the canvas that was open last as the only tab when every tab was closed (ADR-0096)', async () => {
+      const harness = setup();
+      await seed(harness, 'Alpha', 'Beta', 'Gamma');
+      await harness.repository.setMeta('openCanvases', []);
+      await harness.repository.setMeta('lastOpenCanvas', 'gamma');
+
+      await harness.library.start();
+
+      expect(harness.library.tabs().map(({ id }) => id)).toEqual(['gamma']);
+      expect(harness.library.view()).toEqual(canvasView('gamma'));
     });
 
     it('ignores a canvas that is not there', async () => {
@@ -571,7 +600,7 @@ describe('CanvasLibrary', () => {
       expect((await repository.get('beta')).ok).toBe(true);
     });
 
-    it('shows the canvas on the left when the one that is shown is closed', async () => {
+    it('shows the canvas on the left, the newer one, when the one that is shown is closed', async () => {
       const { library } = await started('Alpha', 'Beta', 'Gamma');
       await library.openCanvas('beta');
       await library.openCanvas('gamma');
@@ -579,19 +608,19 @@ describe('CanvasLibrary', () => {
 
       await library.closeTab('beta');
 
-      expect(library.view()).toEqual(canvasView('alpha'));
-      expect(library.tabs().map(({ id }) => id)).toEqual(['alpha', 'gamma']);
+      expect(library.view()).toEqual(canvasView('gamma'));
+      expect(library.tabs().map(({ id }) => id)).toEqual(['gamma', 'alpha']);
     });
 
-    it('shows the canvas on the right when the first one is closed', async () => {
+    it('shows the canvas on the right, the older one, when the first one is closed', async () => {
       const { library } = await started('Alpha', 'Beta');
       await library.openCanvas('beta');
-      await library.show(canvasView('alpha'));
+      await library.show(canvasView('beta'));
 
-      await library.closeTab('alpha');
+      await library.closeTab('beta');
 
-      expect(library.view()).toEqual(canvasView('beta'));
-      expect(library.tabs().map(({ id }) => id)).toEqual(['beta']);
+      expect(library.view()).toEqual(canvasView('alpha'));
+      expect(library.tabs().map(({ id }) => id)).toEqual(['alpha']);
     });
 
     it('shows the home when the only canvas is closed', async () => {
@@ -618,6 +647,56 @@ describe('CanvasLibrary', () => {
       expect(library.view()).toEqual(canvasView('alpha'));
     });
 
+    it('closes every tab, shows the home, keeps every canvas and the strip that is saved, and says so (ADR-0096)', async () => {
+      const { library, repository, announce } = await started('Alpha', 'Beta', 'Gamma');
+      await library.openCanvas('beta');
+      await library.openCanvas('gamma');
+      await settle();
+      expect(library.tabs()).toHaveLength(3);
+
+      await library.closeAllTabs();
+      await settle();
+
+      expect(library.tabs()).toEqual([]);
+      expect(library.view()).toEqual(HOME);
+      expect(await strip(repository)).toEqual([]);
+      expect(library.canvases()).toHaveLength(3);
+      expect((await repository.get('beta')).ok).toBe(true);
+      expect(announce).toHaveBeenLastCalledWith('Closed all tabs.');
+    });
+
+    it('makes the editor write before it closes every tab, as it does for one', async () => {
+      const { library } = await started('Alpha', 'Beta');
+      await library.openCanvas('beta');
+      const { editor, finish } = editorOf('beta');
+      library.attach(editor);
+
+      const closing = library.closeAllTabs();
+      await settle();
+      expect(library.view()).toEqual(canvasView('beta'));
+      expect(library.tabs()).toHaveLength(2);
+      finish();
+      await closing;
+
+      expect(editor.flush).toHaveBeenCalledOnce();
+      expect(library.view()).toEqual(HOME);
+      expect(library.tabs()).toEqual([]);
+    });
+
+    it('does nothing when no tab is open, and says nothing', async () => {
+      const { library, repository, announce } = await started('Alpha');
+      await library.closeAllTabs();
+      await settle();
+      announce.mockClear();
+      const set = vi.spyOn(repository, 'setMeta');
+
+      await library.closeAllTabs();
+
+      expect(set).not.toHaveBeenCalled();
+      expect(announce).not.toHaveBeenCalled();
+      expect(library.view()).toEqual(HOME);
+    });
+
     it('ignores a tab that is not there', async () => {
       const { library, repository } = await started('Alpha');
       const set = vi.spyOn(repository, 'setMeta');
@@ -636,8 +715,8 @@ describe('CanvasLibrary', () => {
       await library.rename('beta', 'Renamed');
 
       expect(library.tabs()).toEqual([
-        { id: 'alpha', name: 'Alpha' },
         { id: 'beta', name: 'Renamed' },
+        { id: 'alpha', name: 'Alpha' },
       ]);
     });
   });
@@ -653,9 +732,9 @@ describe('CanvasLibrary', () => {
       expect(first.ok && first.value.name).toBe('Untitled canvas 2');
       expect(second.ok && second.value.name).toBe('Untitled canvas 3');
       expect(harness.library.tabs().map(({ name }) => name)).toEqual([
-        'Untitled canvas',
-        'Untitled canvas 2',
         'Untitled canvas 3',
+        'Untitled canvas 2',
+        'Untitled canvas',
       ]);
       expect(harness.library.view()).toEqual(canvasView(second.ok ? second.value.id : ''));
       expect(harness.announce).toHaveBeenCalledWith('Made “Untitled canvas 3”.');
@@ -773,7 +852,7 @@ describe('CanvasLibrary', () => {
       expect(harness.library.view()).toEqual(canvasView(copy.ok ? copy.value.id : ''));
       const stored = await harness.repository.get(copy.ok ? copy.value.id : '');
       expect(stored.ok && Object.keys(stored.value.document.queues)).toEqual(['q1']);
-      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['Alpha', 'Alpha (copy)']);
+      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['Alpha (copy)', 'Alpha']);
       expect(harness.announce).toHaveBeenCalledWith('Made “Alpha (copy)”, a copy of “Alpha”.');
     });
 
@@ -1243,7 +1322,7 @@ describe('CanvasLibrary', () => {
       const opened = await harness.library.openFile(fileOf(canvasFile()));
 
       expect(opened.ok && opened.value.name).toBe('From a file');
-      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['Alpha', 'From a file']);
+      expect(harness.library.tabs().map(({ name }) => name)).toEqual(['From a file', 'Alpha']);
       expect(harness.library.view()).toEqual(canvasView(opened.ok ? opened.value.id : ''));
       const stored = await harness.repository.get(opened.ok ? opened.value.id : '');
       expect(stored.ok && Object.keys(stored.value.document.queues)).toEqual(['q1']);

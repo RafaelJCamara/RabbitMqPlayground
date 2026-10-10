@@ -140,9 +140,10 @@ export class SharedCanvas implements CanvasHost {
     if (!made.ok) {
       return failure(made.error.message);
     }
-    // The page opens the canvas that was open last, if it is in the strip: the copy is put there, after the canvases that the learner had open.
+    // The page opens the canvas that was open last, if it is in the strip: the copy is put there, in front of the canvases that the learner had open, as every canvas that is
+    // opened is (ADR-0096).
     const strip = await repository.getMeta('openCanvases');
-    await repository.setMeta('openCanvases', [...(strip.ok ? (strip.value ?? []) : []), made.value.id]);
+    await repository.setMeta('openCanvases', [made.value.id, ...(strip.ok ? (strip.value ?? []) : [])]);
     await repository.setMeta('lastOpenCanvas', made.value.id);
     return succeed(undefined);
   }

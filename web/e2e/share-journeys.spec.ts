@@ -146,10 +146,10 @@ test.describe('journey 5: a link to a canvas', () => {
     expect(await new EditorPage(other).canvasNames()).toEqual(['Orders flow (shared)']);
   });
 
-  test('puts the copy after the canvases that the learner has open, shows it, and leaves theirs as they were', async ({
+  test('puts the copy in front of the canvases that the learner has open, shows it, and leaves theirs as they were', async ({
     visitor,
   }) => {
-    // This one has canvases of their own, and is sent a link: the copy joins them, at the end of the strip, and is the one that is shown.
+    // This one has canvases of their own, and is sent a link: the copy joins them, at the start of the strip (the newest first, ADR-0096), and is the one that is shown.
     const other = await visitor();
     await seedLibrary(
       other,
@@ -169,7 +169,7 @@ test.describe('journey 5: a link to a canvas', () => {
     await shared.saveCopy.click();
 
     await mine.editorReady();
-    expect(await mine.tabs()).toEqual(['My canvases', 'Beta', 'Alpha', 'Orders flow (shared)']);
+    expect(await mine.tabs()).toEqual(['My canvases', 'Orders flow (shared)', 'Beta', 'Alpha']);
     expect(await mine.current()).toEqual(['Orders flow (shared)']);
     expect(await mine.stored()).toEqual(['Alpha', 'Beta', 'Orders flow (shared)']);
     for (const node of ORDERS_NODES) {
