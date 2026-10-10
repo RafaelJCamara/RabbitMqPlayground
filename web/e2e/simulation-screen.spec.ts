@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { SimulationPage } from './pages/simulation-page';
 import { expectNoAxeViolations } from './support/axe';
 import { LONG_LEG, ORDERS } from './support/orders';
+import { buildDocument } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -83,6 +84,43 @@ test.describe('the composer of a producer, in its inspector (ADR-0056)', () => {
     await page.getByTestId('producer-composer').getByRole('button', { name: 'Publish now' }).click();
 
     await expect(page.getByTestId('publish-problem')).toContainText("The producer 'sender' is not linked to anything");
+  });
+});
+
+/** A producer that publishes to the queue `billing` through the default exchange, and nothing else: the consumer is added by the test, with the commands, and keeps what a new consumer has (ADR-0104). */
+const PRODUCER_AND_QUEUE = buildDocument([
+  { type: 'add-producer', name: 'sender' },
+  { type: 'declare-queue', name: 'billing', durable: true },
+  { type: 'link', producer: 'sender', target: { kind: 'queue', name: 'billing' } },
+  { type: 'set', kind: 'producer', name: 'sender', changes: { payload: 'hello' } },
+]);
+
+test.describe('a consumer that was just added (ADR-0104)', () => {
+  test('acknowledges by hand until it is told otherwise, so that a prefetch of 1 holds one message and leaves the rest in the queue', async ({
+    page,
+  }) => {
+    const simulation = await SimulationPage.open(page, PRODUCER_AND_QUEUE);
+    await simulation.editor.openCommandBar();
+    await simulation.editor.runCommand('add consumer worker');
+    await simulation.editor.runCommand('subscribe worker billing');
+    await simulation.editor.runCommand('set worker prefetch=1');
+    for (let sent = 0; sent < 3; sent += 1) {
+      await simulation.editor.runCommand('publish sender');
+    }
+
+    // Until the first has been given to the consumer and the others are waiting: two ready, one held.
+    await expect
+      .poll(async () => {
+        await simulation.step();
+        return simulation.statsOf('q1').textContent();
+      })
+      .toBe('2 ready · 1 unacked');
+
+    await simulation.editor.select('Consumer worker');
+    const settings = page.getByTestId('consumer-settings');
+    await expect(settings.getByRole('combobox', { name: 'Acknowledges' })).toHaveValue('manual');
+    await expect(settings.getByRole('spinbutton', { name: 'Prefetch' })).toHaveValue('1');
+    expect(await simulation.editor.log()).toContain('add consumer worker');
   });
 });
 

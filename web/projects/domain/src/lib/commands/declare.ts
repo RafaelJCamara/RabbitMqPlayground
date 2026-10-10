@@ -130,8 +130,11 @@ export function applyAddProducer(
   );
 }
 
-/** What a new consumer does until it is told otherwise: takes what it is given, and spends half a second on each. */
-export const NEW_CONSUMER = { ack: 'auto', prefetch: 0, processingMs: 500 } as const;
+/**
+ * What a new consumer does until it is told otherwise (ADR-0104): spends half a second on a message and then acknowledges it, and so is held to its prefetch (0 is no limit). It acknowledges by hand, because a
+ * consumer that acknowledges automatically is not held to its prefetch (ADR-0008 rule 15), which surprised the learner who set one on a consumer that had never been told how to acknowledge.
+ */
+export const NEW_CONSUMER = { ack: 'manual', prefetch: 0, processingMs: 500 } as const;
 
 export function applyAddConsumer(
   document: CanvasDocument,

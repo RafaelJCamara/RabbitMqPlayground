@@ -354,13 +354,13 @@ describe('add producer', () => {
 });
 
 describe('add consumer', () => {
-  it('puts a consumer on the canvas that consumes from nothing, with automatic acknowledgements', () => {
+  it('puts a consumer on the canvas that consumes from nothing, with manual acknowledgements and no prefetch limit (ADR-0104)', () => {
     const result = applyAddConsumer(empty(), consumer('worker'), sequentialIds());
 
     expect(result.ok && result.value.consumers).toEqual({
-      c1: { name: 'worker', queues: [], ack: 'auto', prefetch: 0, processingMs: 500 },
+      c1: { name: 'worker', queues: [], ack: 'manual', prefetch: 0, processingMs: 500 },
     });
-    expect(NEW_CONSUMER).toEqual({ ack: 'auto', prefetch: 0, processingMs: 500 });
+    expect(NEW_CONSUMER).toStrictEqual({ ack: 'manual', prefetch: 0, processingMs: 500 });
     expect(result.ok && result.value.layout.nodes).toEqual({ c1: { x: COLUMN_X.consumer, y: 0 } });
     expect(result.ok && validateDocument(result.value)).toEqual([]);
   });
