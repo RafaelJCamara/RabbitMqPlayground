@@ -711,6 +711,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **The note about the browser's promise is on the home only**
   ([ADR-0101](docs/adr/0101-the-note-that-the-browser-did-not-promise-to-keep-the-canvases-is-on-the-home-only-and-no-editor-shows-it.md)). A learner who never visits the home (a share link, or an editor that is open all day) never reads it; the save
   state and the warning about room are still in the status strip. The older entries about the note's Dismiss and the 66 pixels that it took describe what this removes.
+- **The file pickers take only `.json` files, by the name and the type that the browser gives**
+  ([ADR-0102](docs/adr/0102-the-file-pickers-take-only-json-files-by-name-and-type-and-refuse-anything-else-before-they-read-it.md)). The check trusts the name: a file that is JSON but named `.txt` is refused, and one named `.json` that is
+  not JSON is refused later by the parse. A file with the type `application/octet-stream` is refused too; `isJsonType` in `canvases/file-kind.ts` is the one place to widen it.
 
 
 ## Follow-ups that are already owned
