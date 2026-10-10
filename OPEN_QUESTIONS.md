@@ -708,6 +708,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **The foot of the home has the disclaimer and the link to the source only, and the home does not say how much room the canvases take**
   ([ADR-0100](docs/adr/0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md)). A learner sees the room only when it passes 80% (`QUOTA_LOW_AT`); if the number is missed, it was in
   `CanvasLibrary.usage` and `quotaWarning`'s `ok` case, which now says nothing. The links to the decisions and the progress issue can come back as one line of the foot.
+- **The note about the browser's promise is on the home only**
+  ([ADR-0101](docs/adr/0101-the-note-that-the-browser-did-not-promise-to-keep-the-canvases-is-on-the-home-only-and-no-editor-shows-it.md)). A learner who never visits the home (a share link, or an editor that is open all day) never reads it; the save
+  state and the warning about room are still in the status strip. The older entries about the note's Dismiss and the 66 pixels that it took describe what this removes.
 
 
 ## Follow-ups that are already owned
