@@ -8,7 +8,7 @@ describe('checkCommitMessage', () => {
       'feat(engine): route messages through direct exchanges',
       'fix(app): keep the focus ring visible while panning',
       'docs(adr): add ADR-0021, short share links',
-      'test(conformance): record the original simulator issue #10',
+      'test(conformance): record the delivery fixture for two consumers on one queue',
       'chore(deps): bump @angular/core from 22.2.0 to 22.2.1',
       'refactor(domain,engine): share the header value type',
       'feat(app/canvas)!: drop the old link gesture',

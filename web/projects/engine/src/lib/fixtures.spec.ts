@@ -317,13 +317,13 @@ describe('the fixtures recorded on RabbitMQ 4.3, replayed through the engine', (
     expect(replayed).toBe(recorded);
   });
 
-  it('delivers, in every delivery fixture, what the broker delivered: all 14 of them, which include #10 and #18', () => {
+  it('delivers, in every delivery fixture, what the broker delivered: all 14 of them, which include the two regressions', () => {
     const delivery = inside.filter(({ kind }) => kind === 'delivery');
 
     expect(delivery.map(({ id }) => id)).toEqual(
       expect.arrayContaining([
-        'delivery/issue-10-a-message-goes-to-one-consumer-only',
-        'delivery/issue-18-a-removed-consumer-gets-nothing-more',
+        'delivery/a-message-goes-to-one-consumer-only',
+        'delivery/a-removed-consumer-gets-nothing-more',
       ]),
     );
     for (const fixture of delivery) {

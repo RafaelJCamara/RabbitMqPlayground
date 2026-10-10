@@ -17,9 +17,9 @@ import type { Engine } from './engine';
 import type { EngineEvent } from './events';
 
 /**
- * The two bugs of the original simulator that this one is a regression test for (ADR-0002, ADR-0007), as they would have happened on a canvas:
+ * The two bugs of earlier simulators that this one is a regression test for (ADR-0002, ADR-0007), as they would have happened on a canvas:
  * a producer, an exchange, a queue and two consumers, with the latencies of a new canvas, so that messages are on their way when things happen.
- * The fixtures replay the same two cases against the broker (`delivery/issue-10-…` and `delivery/issue-18-…`).
+ * The fixtures replay the same two cases against the broker (`delivery/a-message-goes-to-one-consumer-only` and `delivery/a-removed-consumer-gets-nothing-more`).
  */
 
 /** `p` sends to `orders`, which is bound to `jobs`, which `c1` and `c2` consume from, each on a channel of its own. */
@@ -41,7 +41,7 @@ function canvas(ack: 'auto' | 'manual' = 'auto', prefetch = 0): Engine {
 
 const sendOne = (engine: Engine): EngineEvent[] => run(engine, { op: 'producer.publish', producer: 'p' });
 
-describe('issue #10: the first message went to both consumers', () => {
+describe('regression: the first message went to both consumers', () => {
   it.each(['auto', 'manual'] as const)(
     'gives the first message to one consumer, and to the other none, when they acknowledge %s',
     (ack) => {
@@ -100,7 +100,7 @@ describe('issue #10: the first message went to both consumers', () => {
   });
 });
 
-describe('issue #18: messages kept going to a consumer that had been deleted', () => {
+describe('regression: messages kept going to a consumer that had been deleted', () => {
   it('gives a consumer that was deleted nothing more, and the messages that follow go to the one that is left', () => {
     const engine = canvas('manual', 1);
     sendOne(engine);

@@ -449,11 +449,15 @@ describe('the seed scenarios', () => {
     expect(new Set(SCENARIOS.map((scenario) => scenario.title)).size).toBe(SCENARIOS.length);
   });
 
-  it('include a regression case for each of the original simulator bugs the plan names, #10 and #18', () => {
-    const origin = (issue: number) => SCENARIOS.find((scenario) => scenario.origin?.endsWith(`#${issue}`));
+  it('include a regression case for each of the two delivery bugs the plan names', () => {
+    const origin = (bug: string) => SCENARIOS.find((scenario) => scenario.origin === `regression: ${bug}`);
 
-    expect(origin(10)?.id).toBe('delivery/issue-10-a-message-goes-to-one-consumer-only');
-    expect(origin(18)?.id).toBe('delivery/issue-18-a-removed-consumer-gets-nothing-more');
+    expect(origin('a message reached both of two consumers of a queue')?.id).toBe(
+      'delivery/a-message-goes-to-one-consumer-only',
+    );
+    expect(origin('messages kept going to a consumer that had been deleted')?.id).toBe(
+      'delivery/a-removed-consumer-gets-nothing-more',
+    );
   });
 
   it('cover both kinds, and every exchange type', () => {

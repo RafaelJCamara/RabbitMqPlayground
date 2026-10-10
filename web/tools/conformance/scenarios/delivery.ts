@@ -2,7 +2,7 @@ import type { Scenario } from '../scenario';
 import { bindKey, declareExchange, declareQueue, publish, queue } from './helpers';
 
 /**
- * Seed delivery scenarios, including the two bugs of the original simulator that this project is a regression test
+ * Seed delivery scenarios, including two delivery bugs of earlier simulators that this project is a regression test
  * for (ADR-0002, ADR-0015). Messages are published through the default exchange, with the queue name as the key.
  */
 export const DELIVERY_SCENARIOS: readonly Scenario[] = [
@@ -44,10 +44,10 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'delivery/issue-10-a-message-goes-to-one-consumer-only',
+    id: 'delivery/a-message-goes-to-one-consumer-only',
     kind: 'delivery',
     title: 'With two consumers on a queue, the first message goes to exactly one of them',
-    origin: 'RabbitMQSimulator/RabbitMQSimulator#10',
+    origin: 'regression: a message reached both of two consumers of a queue',
     steps: [
       declareQueue('jobs'),
       { op: 'channel.open', channel: 'ch1' },
@@ -61,11 +61,11 @@ export const DELIVERY_SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'delivery/issue-18-a-removed-consumer-gets-nothing-more',
+    id: 'delivery/a-removed-consumer-gets-nothing-more',
     kind: 'delivery',
     title:
       'Removing a consumer closes its channel: its unacked message is requeued as redelivered, and nothing else reaches it',
-    origin: 'RabbitMQSimulator/RabbitMQSimulator#18',
+    origin: 'regression: messages kept going to a consumer that had been deleted',
     steps: [
       declareQueue('jobs'),
       { op: 'channel.open', channel: 'ch1', prefetch: 1 },

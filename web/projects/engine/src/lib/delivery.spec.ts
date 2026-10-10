@@ -75,7 +75,7 @@ describe('who gets the next message', () => {
     expect(given(send(engine, 'm1', 'm2', 'm3', 'm4'))).toEqual({ c1: [1, 3], c2: [2, 4] });
   });
 
-  it('gives a message to one consumer and not to both, the first message included (#10)', () => {
+  it('gives a message to one consumer and not to both, the first message included', () => {
     const engine = jobs();
     join(engine, 'c1');
     join(engine, 'c2');
@@ -595,7 +595,7 @@ describe('cancel', () => {
 });
 
 describe('close', () => {
-  it('gives back everything that the consumers of the channel hold, redelivered, in the places that they had (#18)', () => {
+  it('gives back everything that the consumers of the channel hold, redelivered, in the places that they had', () => {
     const engine = jobs();
     join(engine, 'c1', { prefetch: 3, ack: 'manual' });
     send(engine, 'm1', 'm2', 'm3', 'm4', 'm5');
@@ -614,7 +614,7 @@ describe('close', () => {
     ]);
   });
 
-  it('serves the other consumers with them at once, inside the command, before anything else (#18)', () => {
+  it('serves the other consumers with them at once, inside the command, before anything else', () => {
     const engine = jobs();
     join(engine, 'c1', { prefetch: 1, ack: 'manual' });
     join(engine, 'c2', { prefetch: 1, ack: 'manual' });
@@ -627,7 +627,7 @@ describe('close', () => {
     expect(only(events, 'delivered')[0]).toMatchObject({ message: 1, consumer: 'c2', redelivered: true });
   });
 
-  it('gives a consumer that was deleted nothing more, and the next messages go to the ones that are left (#18)', () => {
+  it('gives a consumer that was deleted nothing more, and the next messages go to the ones that are left', () => {
     const engine = jobs();
     join(engine, 'c1', { prefetch: 1, ack: 'manual' });
     join(engine, 'c2', { prefetch: 1, ack: 'manual' });

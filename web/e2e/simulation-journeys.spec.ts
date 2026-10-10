@@ -4,7 +4,7 @@ import { expect, test } from './support/test';
 
 /**
  * What a learner does with the simulation, in a real browser (ADR-0054 to ADR-0056): the controls and the keys, the commands that are the same things typed, what reduced motion
- * changes and does not, and the two things that the first simulator got wrong, which are regression tests here as they are in the engine. The clock moves when a test steps it.
+ * changes and does not, and the two things that earlier simulators got wrong, which are regression tests here as they are in the engine. The clock moves when a test steps it.
  */
 
 test.describe('the controls and the keys (ADR-0054, ADR-0056)', () => {
@@ -262,7 +262,7 @@ test.describe('the default exchange (ADR-0043, ADR-0055)', () => {
   });
 });
 
-test.describe('the two things that the first simulator got wrong', () => {
+test.describe('the two things that earlier simulators got wrong', () => {
   /** Steps through everything that is scheduled, and answers what each consumer was given, by the name of its channel. */
   async function received(simulation: SimulationPage): Promise<Record<string, number>> {
     await simulation.stepThrough();
@@ -270,7 +270,7 @@ test.describe('the two things that the first simulator got wrong', () => {
     return Object.fromEntries(Object.entries(channels).map(([id, channel]) => [id, channel.received]));
   }
 
-  test('regression #10: the first message goes to one consumer, and not to both', async ({ page }) => {
+  test('regression: the first message goes to one consumer, and not to both', async ({ page }) => {
     const simulation = await SimulationPage.open(page, TWO_WORKERS);
     await simulation.editor.openCommandBar();
     await simulation.editor.runCommand('publish sender');
@@ -292,7 +292,7 @@ test.describe('the two things that the first simulator got wrong', () => {
     await expect(simulation.statsOf('q1')).toHaveText('0 ready · 0 unacked');
   });
 
-  test('regression #18: a consumer that was deleted is given nothing more, and what it held goes to the one that is left', async ({
+  test('regression: a consumer that was deleted is given nothing more, and what it held goes to the one that is left', async ({
     page,
   }) => {
     const simulation = await SimulationPage.open(page, TWO_WORKERS);

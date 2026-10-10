@@ -1,8 +1,8 @@
 {
-  "id": "delivery/issue-10-a-message-goes-to-one-consumer-only",
+  "id": "delivery/a-message-goes-to-one-consumer-only",
   "kind": "delivery",
   "title": "With two consumers on a queue, the first message goes to exactly one of them",
-  "origin": "RabbitMQSimulator/RabbitMQSimulator#10",
+  "origin": "regression: a message reached both of two consumers of a queue",
   "steps": [
     {
       "op": "queue.declare",

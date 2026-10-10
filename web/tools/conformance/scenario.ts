@@ -131,7 +131,7 @@ export interface Scenario {
   readonly id: string;
   readonly kind: ScenarioKind;
   readonly title: string;
-  /** Where the case comes from, for example the original simulator's issue it is a regression test for. */
+  /** Where the case comes from, for example the bug it is a regression test for. */
   readonly origin?: string;
   readonly steps: readonly Step[];
 }
