@@ -70,7 +70,7 @@ the first line within 100 characters. Examples:
 ```
 feat(engine): route messages through direct exchanges
 fix(app): keep the focus ring visible while panning
-test(conformance): record the original simulator's issue #10
+test(conformance): record the delivery fixture for two consumers on one queue
 docs(adr): add ADR-0021, short share links
 ```
 

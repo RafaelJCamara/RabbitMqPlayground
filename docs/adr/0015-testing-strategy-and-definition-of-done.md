@@ -9,10 +9,8 @@
 
 The product owner requires **tests at every level**, so that the source code is properly tested. We also commit
 straight to `main` with no review gate ([ADR-0004](0004-trunk-based-development-on-main.md)), which makes automated
-tests our main safety net. Two of the original simulator's bugs were in its core logic: a message delivered to two
-consumers ([#10](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/10)) and delivery to a deleted consumer
-([#18](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/18)). One was a crash on import
-([#16](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/16)).
+tests our main safety net. Two bugs of earlier simulators were in their core logic: a message delivered to two
+consumers and delivery to a deleted consumer. One was a crash on import.
 
 ## Decision
 
@@ -40,7 +38,7 @@ A feature is **done** only when all of the following are true:
 | **End-to-end journeys** | Playwright (Chromium) | Link in each of the five ways. Publish and watch delivery. The headers binding flow. Create, switch, rename, delete, clear and delete-all canvases, with undo. Open a share link in a fresh browser context and save a copy. Import and export. Templates. Run on **every push** |
 | **Accessibility** | Playwright + axe-core | No serious or critical axe violations on the main screens. A complete keyboard-only journey: create → link → publish |
 | **Visual regression** (M2) | Playwright screenshots | Node and edge rendering in the light and dark themes |
-| **Regression suite** | Vitest / Playwright | One named test for each bug in the original simulator: `#10` double delivery, `#16` crash on import, `#18` delivery to a deleted consumer |
+| **Regression suite** | Vitest / Playwright | One named test for each bug of earlier simulators: double delivery, crash on import, delivery to a deleted consumer |
 | **Budgets** | Angular budgets, Vitest bench | Bundle size and engine throughput, tracked in CI |
 
 ### Coverage gates

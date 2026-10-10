@@ -16,10 +16,9 @@
 
 ## Context
 
-In the original simulator, nodes were linked by holding **Alt or Shift while dragging**. Few users found that, and on
-many desktops Alt+drag moves the window instead, so the node moved rather than linking
-([#3](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/3);
-[PR #7](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/7) added Shift as a fallback).
+In earlier simulators, nodes were linked by holding **Alt or Shift while dragging**. Few users found that, and on
+many desktops Alt+drag moves the window instead, so the node moved rather than linking ("I can't create a link" was
+reported, and Shift was added as a fallback).
 
 The product owner's requirements:
 
@@ -135,7 +134,7 @@ The typed command bar is simply a text front-end for this layer.
 
 ## Alternatives considered
 
-- **Modifier+drag only, as in the original.** Rejected: it can't be discovered, and the OS can intercept it.
+- **Modifier+drag only, as in earlier simulators.** Rejected: it can't be discovered, and the OS can intercept it.
 - **A command console only.** Rejected: linking also has to be possible on the canvas.
 - **Separate code paths for UI actions and typed commands.** Rejected: behaviour would drift, and everything would be
   tested twice.

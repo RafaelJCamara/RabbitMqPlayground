@@ -15,8 +15,8 @@ The product owner requires that users can:
 - **delete one**;
 - **clean all**: both clearing a canvas and deleting every canvas.
 
-The original had no way to save locally. Users asked for "save to and load from a file, without RabbitMQ installed"
-([#13](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/13)). There is no backend
+Earlier simulators had no way to save locally. Users asked for "save to and load from a file, without RabbitMQ
+installed". There is no backend
 ([ADR-0006](0006-client-only-app-dotnet-api-when-needed.md)), so everything has to persist in the browser.
 
 ## Decision
@@ -66,7 +66,7 @@ A canvas is the unit of work. It contains:
 ### Positive
 
 - Users can run several scenarios side by side, and nothing is lost when the tab closes.
-- Data stays private and is available offline. The original's request #13 is met.
+- Data stays private and is available offline. The request to save and load without RabbitMQ installed is met.
 
 ### Negative / trade-offs
 

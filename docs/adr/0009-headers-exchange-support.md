@@ -6,9 +6,8 @@
 
 ## Context
 
-The original simulator never supported the **headers exchange**. The request
-([#17](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/17)) was closed as "not planned", even though teams
-use headers exchanges in production. Headers matching also has traps that most tutorials skip: the four `x-match`
+Earlier simulators never supported the **headers exchange**. Users asked for it and the request was closed as
+"not planned", even though teams use headers exchanges in production. Headers matching also has traps that most tutorials skip: the four `x-match`
 modes, `x-` keys being ignored, comparisons that depend on the value's type, and the behaviour of a binding with no
 conditions. Supporting it properly is the playground's headline feature.
 
@@ -72,7 +71,7 @@ The headers exchange ships in **M1** with the following design.
 
 ### Positive
 
-- It closes the original's most notable gap, with the right semantics.
+- It closes the most notable gap of earlier simulators, with the right semantics.
 - Learners see the subtle rules (types, `x-` keys, empty bindings) instead of being caught out by them in production.
 
 ### Negative / trade-offs

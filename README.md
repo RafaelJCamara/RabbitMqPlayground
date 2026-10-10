@@ -7,7 +7,7 @@ A browser-based, visual RabbitMQ playground for **learning**, **teaching and pre
 topologies**. Build a topology of producers, exchanges, queues and consumers, send messages through it, and see why each
 message went where it did.
 
-It is inspired by [tryrabbitmq.com](https://tryrabbitmq.com), and aims to be better in the ways its users asked for:
+It aims to give what users of earlier RabbitMQ simulators asked for:
 a canvas that fills the window, explicit and discoverable linking, undo, the **headers exchange**, routing explanations,
 and behaviour that is checked against a real broker.
 

@@ -8,7 +8,7 @@
 
 ## Context
 
-The original's linking was a gesture that nobody found ([ADR-0011](0011-explicit-linking-and-command-layer.md)). The editor now has five ways and a command bar, and each has to be found by someone who has not read the ADRs: a hint that changes with what is selected, a card that lists
+Linking in earlier simulators was a gesture that nobody found ([ADR-0011](0011-explicit-linking-and-command-layer.md)). The editor now has five ways and a command bar, and each has to be found by someone who has not read the ADRs: a hint that changes with what is selected, a card that lists
 the ways the first time, and a sheet of every key and command that `?` opens. S4 built the hint bar from the table of shortcuts, and said that S5 adds to it.
 
 ## Decision

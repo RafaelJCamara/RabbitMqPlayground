@@ -8,9 +8,8 @@
 ## Context
 
 Users must be able to **create a link that shares a specific canvas** with someone. The product owner chose links that
-are **self-contained**: no server, and nothing stored. In the original simulator, loading a configuration from a URL
-was a popular request that was never merged
-([PR #11](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/11)).
+are **self-contained**: no server, and nothing stored. In earlier simulators, loading a configuration from a URL
+was a popular request that was never merged.
 
 ## Decision
 

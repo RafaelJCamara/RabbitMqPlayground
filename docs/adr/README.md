@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
-This folder holds the decisions behind **RabbitMQ Playground**, a browser-based visual RabbitMQ simulator inspired by
-[tryrabbitmq.com](https://tryrabbitmq.com). It aims to have a much better UI/UX than the original, support for the
-headers exchange, and behaviour that matches a real broker.
+This folder holds the decisions behind **RabbitMQ Playground**, a browser-based visual RabbitMQ simulator. It aims to have
+a much better UI/UX than earlier simulators, support for the headers exchange, and behaviour that matches a real
+broker.
 
 Each record explains the context, the decision and its consequences, so that later work builds on decisions instead of
 re-arguing them. The format is described in [ADR-0001](0001-record-architecture-decisions.md).
@@ -12,7 +12,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
-| [0002](0002-product-vision-and-scope.md) | Product vision, scope and lessons from the original simulator | Accepted |
+| [0002](0002-product-vision-and-scope.md) | Product vision, scope and lessons from earlier simulators | Accepted |
 | [0003](0003-roadmap-and-milestones.md) | Roadmap: MVP and v1 milestones | Accepted |
 | [0004](0004-trunk-based-development-on-main.md) | Trunk-based development directly on `main` | Accepted |
 | [0005](0005-frontend-angular.md) | Frontend framework: Angular | Accepted |

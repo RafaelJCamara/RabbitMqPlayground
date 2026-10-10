@@ -10,7 +10,7 @@ The repository needs a licence before anyone else can legally use or contribute 
 same way:
 
 - Contribution has to be easy: pull requests from forks, and **no CLA** ([ADR-0004](0004-trunk-based-development-on-main.md)).
-  The original simulator's contributions stalled on a CLA ([ADR-0002](0002-product-vision-and-scope.md)).
+  Contributions to earlier simulators stalled on a CLA ([ADR-0002](0002-product-vision-and-scope.md)).
 - The app is meant to be used in classrooms and talks, and to be embedded in other pages (M5). A licence that
   restricts how it can be reused would work against that.
 
@@ -43,7 +43,7 @@ rights, and this project is not affiliated with Broadcom or the RabbitMQ project
 
 - Anyone can use, copy, modify, embed and redistribute the app and its libraries, including the engine, with almost no
   conditions. That suits teaching and embedding.
-- Contributors need no paperwork, which removes the friction the original project suffered from.
+- Contributors need no paperwork, which removes the friction that earlier projects suffered from.
 - It is short and widely understood, so there is little to explain.
 
 ### Negative / trade-offs

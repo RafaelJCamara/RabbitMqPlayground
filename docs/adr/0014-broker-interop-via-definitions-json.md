@@ -6,15 +6,13 @@
 
 ## Context
 
-The original's import and export talked to a live broker through the management API, behind a Node server. That design
-caused a run of problems:
+The import and export of earlier simulators talked to a live broker through the management API, behind a Node server.
+That design caused a run of problems:
 
 - hard-coded `guest:guest` credentials;
-- buttons hidden unless the server was configured
-  ([#14](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/14));
-- crashes on import ([#16](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/16));
-- requests for vhost support ([#15](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/15),
-  [#22](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/22)).
+- buttons hidden unless the server was configured;
+- crashes on import (`TypeError: binding is null`);
+- requests for vhost support, and for importing or exporting a single vhost.
 
 The product owner chose to interoperate with real brokers **only through RabbitMQ's definitions file**.
 
@@ -38,7 +36,7 @@ The product owner chose to interoperate with real brokers **only through RabbitM
 
 - Accepts files with one vhost or several. The user picks the **vhost** to import, which becomes a **new canvas**.
 - The file is **schema-validated**, so unknown or malformed entries never crash the import (regression test for the
-  original simulator's issue #16).
+  crash on a missing binding, `TypeError: binding is null`).
 - The topology is **auto-laid-out**.
 - An **import report** lists everything skipped or unsupported: users, permissions, parameters, global parameters,
   federation, shovels, topic permissions, and so on.

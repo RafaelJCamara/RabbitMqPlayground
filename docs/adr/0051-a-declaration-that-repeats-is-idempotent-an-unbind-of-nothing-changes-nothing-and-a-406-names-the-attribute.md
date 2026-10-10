@@ -70,7 +70,7 @@ there is accepted, and an ack of a delivery tag that was never delivered is `406
 
 ## Alternatives considered
 
-- **Keep the rule that a canvas has each name once, and record the refused repeat.** Rejected: it would have recorded a refusal that the broker does not give, and the simulator would have taught that a declaration is a creation, which is what the original simulator got wrong about declarations.
+- **Keep the rule that a canvas has each name once, and record the refused repeat.** Rejected: it would have recorded a refusal that the broker does not give, and the simulator would have taught that a declaration is a creation, which is what earlier simulators got wrong about declarations.
 - **Say in the messages that a broker accepts the repeat, with no fixture.** Rejected: ADR-0026 does not claim what nothing records.
 - **Refuse an unbind of ends that are not there, as `bind` does, with the 404.** Rejected: the broker accepts it, and a refusal that carries a `404` would be false.
 - **Make a repeat with other attributes change the exchange.** Rejected: no broker does, and `set` is the gesture for it.

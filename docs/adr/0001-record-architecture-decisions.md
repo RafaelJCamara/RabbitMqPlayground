@@ -11,9 +11,8 @@ the git workflow, the testing bar and how faithfully we follow RabbitMQ. Those d
 the code that records *why* each was made. That way, future contributors (and future us) can build on them instead of
 re-arguing them.
 
-The project we're replacing, the original RabbitMQ Simulator, shows the cost of not doing this. Its tracker includes
-"Is this project was abandoned?" ([#12](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/12)), and
-long-standing feature requests got no recorded answer.
+Earlier simulators show the cost of not doing this. Users of one of them had to ask "Is this project was abandoned?",
+and long-standing feature requests got no recorded answer.
 
 ## Decision
 

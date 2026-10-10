@@ -13,16 +13,11 @@ Every v1 feature can run in the browser:
 - self-contained share links ([ADR-0013](0013-self-contained-share-links.md));
 - `definitions.json` import/export ([ADR-0014](0014-broker-interop-via-definitions-json.md)).
 
-The original simulator needed a Node server for broker import/export, with the hard-coded login `guest:guest`. Its
-tracker is full of server-setup trouble:
+Earlier simulators needed a Node server for broker import/export, with the hard-coded login `guest:guest`. Their
+users ran into server-setup trouble:
 
-- buttons hidden behind environment variables
-  ([#14](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/14));
-- PRs for Cloud Foundry, port, management-config and path settings
-  ([#6](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/6),
-  [#19](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/19),
-  [#20](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/20),
-  [#23](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/23)).
+- the import and export buttons were hidden unless environment variables were set;
+- pull requests were opened for Cloud Foundry, port, management-config and path settings.
 
 The product owner's rule is: **if an API is needed, it will be .NET.**
 
@@ -47,7 +42,7 @@ The product owner's rule is: **if an API is needed, it will be .NET.**
 
 - No hosting cost, no operations, no secrets to manage, and private by default.
 - Once loaded, the app works anywhere, including offline and in classrooms with poor network.
-- It removes a whole class of the original's issues, such as server configuration and hard-coded credentials.
+- It removes a whole class of the issues of earlier simulators, such as server configuration and hard-coded credentials.
 
 ### Negative / trade-offs
 
@@ -60,7 +55,7 @@ The product owner's rule is: **if an API is needed, it will be .NET.**
 
 - **An ASP.NET Core backend from day one.** Rejected: no v1 feature needs it, and it adds hosting, operations and
   security work.
-- **A Node server like the original's.** Rejected for the same reasons, and it would bring back the original's
+- **A Node server, as earlier simulators had.** Rejected for the same reasons, and it would bring back their
   credential and configuration problems.
 
 ## Related

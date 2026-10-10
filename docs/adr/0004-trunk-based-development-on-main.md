@@ -10,9 +10,8 @@ The product owner wants all work committed **directly to `main`**, with no featu
 and avoids long-lived branches and merge conflicts. The trade-off is that there is no pull-request review gate, so
 quality has to be enforced by automation.
 
-The original simulator also shows how contribution friction kills a project: PRs stalled for years waiting on a CLA
-([PR #7](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/7),
-[PR #11](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/11)).
+Earlier simulators also show how contribution friction kills a project: pull requests stalled for years waiting on a
+contributor licence agreement (CLA).
 
 ## Decision
 

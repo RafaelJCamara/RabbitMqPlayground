@@ -10,13 +10,11 @@ The simulator must be **faithful** ([ADR-0008](0008-rabbitmq-fidelity-baseline.m
 ([ADR-0010](0010-explanation-first-editor-ux.md)), **testable**
 ([ADR-0015](0015-testing-strategy-and-definition-of-done.md)) and **smooth**, with hundreds of messages in flight.
 
-The original mixed simulation and rendering in one Processing.js sketch. Messages moved, and routing happened when they
+Earlier simulators mixed simulation and rendering in one Processing.js sketch. Messages moved, and routing happened when they
 arrived. That design led to timing bugs:
 
-- the first message was delivered to two consumers
-  ([#10](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/10));
-- messages kept going to a consumer that had been deleted
-  ([#18](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/18)).
+- the first message was delivered to two consumers;
+- messages kept going to a consumer that had been deleted.
 
 It also taught a wrong mental model, in which routing happens hop by hop as a message travels.
 
@@ -84,7 +82,7 @@ It also taught a wrong mental model, in which routing happens hop by hop as a me
 
 ## Alternatives considered
 
-- **Animation-driven simulation, as in the original.** Rejected: it is non-deterministic, hard to explain, and teaches
+- **Animation-driven simulation, as in earlier simulators.** Rejected: it is non-deterministic, hard to explain, and teaches
   hop-by-hop routing.
 - **Running a real broker behind a backend.** Rejected: it would need a server
   ([ADR-0006](0006-client-only-app-dotnet-api-when-needed.md)), it can't be stepped or scrubbed, and it is out of scope

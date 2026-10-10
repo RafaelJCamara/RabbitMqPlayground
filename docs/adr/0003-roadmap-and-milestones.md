@@ -24,7 +24,7 @@ A v1 that large has to be split into milestones that each ship something usable 
 
 | Release | Milestone | Theme |
 |---|---|---|
-| **MVP** | **M1 · Build & route** | Parity with the original (done better); the **headers exchange**; explicit linking (canvas, shortcuts, command bar); **multiple canvases**; **share links**; the explainer and what-if tester; realistic consumers; the full test harness |
+| **MVP** | **M1 · Build & route** | Parity with earlier simulators (done better); the **headers exchange**; explicit linking (canvas, shortcuts, command bar); **multiple canvases**; **share links**; the explainer and what-if tester; realistic consumers; the full test harness |
 | **v1** | **M2 · Observe & share** | Debugger timeline, `definitions.json` import, `?src=`, image export, presentation mode, offline support, power-editing |
 | **v1** | **M3 · Reliability** | Unroutable handling, publisher confirms, ack outcomes and redelivery, DLX/TTL/length limits, queue lifecycle, connections/crash, broker restart, policies |
 | **v1** | **M4 · Queue types & patterns** | Priorities, consumer priority, single active consumer, quorum queues, **streams**, **RPC**, worker pipelines |
@@ -127,8 +127,8 @@ A v1 that large has to be split into milestones that each ship something usable 
 
 **Quality and project** ([ADR-0004](0004-trunk-based-development-on-main.md),
 [ADR-0015](0015-testing-strategy-and-definition-of-done.md))
-- [ ] The test harness and CI are built **before** feature code. This includes regression tests for the original
-      simulator's issues #10 and #18.
+- [ ] The test harness and CI are built **before** feature code. This includes regression tests for two bugs of earlier simulators: a message
+      delivered to two consumers, and delivery to a deleted consumer.
 - [ ] Pre-push hook, CI on every push, and automatic deployment of `main` to GitHub Pages.
 - [ ] CONTRIBUTING.md.
 
@@ -144,7 +144,7 @@ A v1 that large has to be split into milestones that each ship something usable 
 - [ ] Presentation mode.
 - [ ] Routing-key rotation and `{{seq}}` tokens; saved message presets.
 - [ ] `definitions.json` import with a vhost picker, validation, auto-layout and an import report. Regression test for
-      the original simulator's issue #16.
+      a crash on import (`TypeError: binding is null`).
 - [ ] `?src=<url>` loading, and QR codes for share links.
 - [ ] PNG/SVG export.
 - [ ] Offline support through a service worker.
@@ -182,7 +182,7 @@ A v1 that large has to be split into milestones that each ship something usable 
 - [ ] Quorum delivery limit (default 20), `x-delivery-count`, and poison messages.
 - [ ] Streams: drawn as a log strip with offsets (first, last, next, an offset, a timestamp). Reads don't remove
       messages. Retention.
-- [ ] Worker node: consume → transform → publish (the original simulator's issue #21).
+- [ ] Worker node: consume → transform → publish (users asked to link consumers to producers).
 - [ ] RPC:
   - `reply_to` and `correlation_id`;
   - replies on an exclusive reply queue or direct reply-to;
@@ -221,7 +221,7 @@ A v1 that large has to be split into milestones that each ship something usable 
 
 ### Positive
 
-- A usable MVP early. M1 alone is already better than the original in every area.
+- A usable MVP early. M1 alone is already better than earlier simulators in every area.
 - Each milestone builds on the one before, so nothing is built twice.
 - The checklists can be tracked directly as GitHub issues and milestones.
 
@@ -237,5 +237,5 @@ A v1 that large has to be split into milestones that each ship something usable 
 
 ## Related
 
-- [ADR-0002](0002-product-vision-and-scope.md): the vision and the original's issues.
+- [ADR-0002](0002-product-vision-and-scope.md): the vision and what users asked earlier simulators for.
 - [ADR-0015](0015-testing-strategy-and-definition-of-done.md): the definition of done.

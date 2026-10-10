@@ -10,14 +10,12 @@
 
 ## Context
 
-The original's UX held it back:
+The UX of earlier simulators held them back:
 
-- a small, fixed canvas ([#8](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/8),
-  [#24](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/24));
-- hidden gestures ([#3](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/3));
-- overlapping labels ([PR #4](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/4),
-  [PR #5](https://github.com/RabbitMQSimulator/RabbitMQSimulator/pull/5));
-- no undo ([#1](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/1));
+- a small, fixed canvas, with no zoom or pan, no tidy layout for many exchanges and no full-screen mode;
+- hidden gestures: linking by holding Alt or Shift while dragging, which few users found;
+- labels that overlap and are hard to read;
+- no undo: a link or an element that was added by mistake could not be deleted without starting over;
 - no way to see *why* a message went where it did.
 
 Our core difference is to **teach by showing** ([ADR-0002](0002-product-vision-and-scope.md)). Every decision the
@@ -106,7 +104,7 @@ engine makes should be visible and explained.
 
 ## Alternatives considered
 
-- **Keep the original's minimal UI.** Rejected: it was the main complaint.
+- **Keep the minimal UI of earlier simulators.** Rejected: it was the main complaint.
 - **Modal forms for editing.** Rejected: they interrupt the flow and hide the canvas.
 - **Step mode that moves one hop at a time.** Rejected: routing is atomic, so the step is one engine event.
 

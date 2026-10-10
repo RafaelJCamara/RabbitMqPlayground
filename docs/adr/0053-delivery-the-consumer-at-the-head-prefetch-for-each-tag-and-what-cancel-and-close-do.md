@@ -41,7 +41,7 @@ and one of the plan's own sentences did not survive them as it was written.
   consumer that is not there is accepted (`cancel-keeps-unacked-messages`).
 - **Closing a channel gives back everything that its consumers hold**, whether they were cancelled or not (`closing-a-channel-requeues-what-a-cancelled-consumer-still-held`): every unacknowledged message goes back to its queue as `redelivered`, **in the place that it had**, which is the order that
   the copies came into the queue in, so that the messages of a closed channel are ahead of what came after them and in their old order (`requeued-messages-go-back-in-their-places`). The redelivered flag stays on the message for as long as it lives. What an automatic consumer had received and not
-  finished with is lost, because the broker had already forgotten it. The channel's tags leave every turn, what is on its way to it is called back, and the broker serves the other consumers at once, inside the command (`issue-18-a-removed-consumer-gets-nothing-more`).
+  finished with is lost, because the broker had already forgotten it. The channel's tags leave every turn, what is on its way to it is called back, and the broker serves the other consumers at once, inside the command (`a-removed-consumer-gets-nothing-more`).
 - **Deleting a queue** cancels its consumers (`consumer.cancelled`, `queue-deleted`) and takes what it held, with an event that says how much. **Purging** takes the ready messages, and not the unacknowledged ones.
 - **What the app asks for.** A consumer on the canvas is a channel named by its id, and each of its subscriptions is a tag named by the channel and the queue. Subscribing is `basic.consume`, unsubscribing is `basic.cancel`, deleting the consumer is `channel.close`, a change of prefetch or of
   processing time is `channel.set`, and a change of the ack mode, which a consumer cannot make on a broker, closes the channel and opens it again, so that what it held goes back to the queue. This is `reconcile`'s ([ADR-0054](0054-the-runtime-verbs-go-through-the-bus-and-are-in-the-log-and-reconcile-keeps-the-engine-whole.md)).
@@ -51,7 +51,7 @@ and one of the plan's own sentences did not survive them as it was written.
 - **The properties** of ADR-0015, at 100 runs in the hook and 5,000 in the Nightly run, with a model of the queues that is built from the events and is compared with the engine's own counts after every command: every published message is accounted for (a message ends as refused, unroutable,
   or a copy for each queue that it reaches, and each copy as acknowledged, handed to an automatic consumer, purged, dropped, cleared, deleted with its queue, or still held); no copy is held by two consumers, or delivered again without first being requeued; no consumer holds more than its prefetch;
   nothing is delivered to a tag after it was cancelled, or to a channel after it was closed; and the same seed and commands give the same events.
-- **The named regressions** of the original simulator are tests of their own, in the engine and in the browser: **#10**, the first message goes to one consumer and not to both, and **#18**, a consumer that was deleted is given nothing more, and its message is requeued as redelivered.
+- **The named regressions** of earlier simulators are tests of their own, in the engine and in the browser: the first message goes to one consumer and not to both, and a consumer that was deleted is given nothing more, and its message is requeued as redelivered.
 - **The fixtures are replayed through `createEngine`**, all 14 of delivery and the routing ones, each with the timing at zero and with the timing of a new canvas, and what each consumer received and what each queue holds are compared with what the broker did. Interleaving between consumers
   is not compared, because a real broker does not make it observable.
 
@@ -80,5 +80,5 @@ and one of the plan's own sentences did not survive them as it was written.
 
 - [ADR-0008](0008-rabbitmq-fidelity-baseline.md), [ADR-0015](0015-testing-strategy-and-definition-of-done.md), [ADR-0050](0050-the-simulator-has-no-connections-a-consumer-owns-a-channel-and-a-refusal-is-a-result.md),
   [ADR-0051](0051-a-declaration-that-repeats-is-idempotent-an-unbind-of-nothing-changes-nothing-and-a-406-names-the-attribute.md), [ADR-0052](0052-the-engine-commands-in-events-out-one-clock-and-a-view-for-the-screen.md).
-- The original simulator's [#10](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/10) and [#18](https://github.com/RabbitMQSimulator/RabbitMQSimulator/issues/18).
+- Two bugs of earlier simulators: a message delivered to both of two consumers, and messages that kept going to a consumer that had been deleted.
 - RabbitMQ: `deps/rabbit/src/rabbit_queue_consumers.erl`.
