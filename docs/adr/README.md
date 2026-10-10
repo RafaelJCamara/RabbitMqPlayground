@@ -108,6 +108,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0095](0095-a-press-on-the-drawing-of-a-card-opens-the-canvas-and-a-double-click-on-its-name-renames-it.md) | A press on the drawing of a card opens the canvas, and a double click on its name renames it | Accepted |
 | [0096](0096-the-strip-is-one-row-with-the-newest-tab-first-the-close-inside-its-box-arrows-for-the-rest-and-a-close-all.md) | The strip is one row with the newest tab first, the close inside its box, arrows for the rest, and a Close all | Accepted |
 | [0097](0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md) | The notices float at the bottom right, and every screen leaves room for them or keeps clear of them | Accepted |
+| [0098](0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md) | A consumer lists what it was given, with each payload, in its inspector, from a store of its own | Accepted |
 
 ## Where to start
 

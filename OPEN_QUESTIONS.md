@@ -698,6 +698,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   ([ADR-0097](docs/adr/0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md)). The host publishes `--toast-room` and the editor
   `--toast-bottom` on the page; a new screen that scrolls at the right of the page has to pad its foot with the first, or its last control is under the stack. On a window narrower than the toolbox, the canvas and
   the inspector together the stack is still 20 rem. Looked at in Chromium at 1280 by 720 only.
+- **A consumer lists what it was given, with each payload, in its inspector, from a store of its own**
+  ([ADR-0098](docs/adr/0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md)). `ConsumerInbox` keeps the last 100 rows of each consumer and the last 5,000 published
+  messages (`INBOX_ROWS`, `INBOX_MESSAGES`), and a payload is cut at 80 characters on a row (`RECEIVED_CUT`); the message inspector has the whole of it. A row of a message that the inbox
+  has forgotten says that its payload is no longer kept. Deleting a consumer and undoing the delete brings the node back without its rows.
 
 ## Follow-ups that are already owned
 
