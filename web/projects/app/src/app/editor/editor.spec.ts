@@ -38,6 +38,7 @@ import {
   UNTITLED,
   type RepositoryFactories,
 } from '../core/session/canvas-session';
+import { CanvasStorage } from '../core/session/canvas-storage';
 import { CommandBus } from '../core/state/command-bus';
 import { CommandLog } from '../core/state/command-log';
 import { DocumentStore } from '../core/state/document-store';
@@ -270,7 +271,7 @@ describe('Editor', () => {
     expect(announce).toHaveBeenCalledWith(warning?.message, politeness);
   });
 
-  it('says aloud what the browser said when it would not promise to keep the canvases', async () => {
+  it('does not say aloud what the browser said when it would not promise to keep the canvases: the home says it (ADR-0101)', async () => {
     const { providers, timer, storage } = harness();
     storage.persist.mockResolvedValue(false);
     const { fixture } = await renderEditor(providers);
@@ -282,9 +283,13 @@ describe('Editor', () => {
       .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
     timer.advance(500);
 
-    await waitFor(() => expect(fixture.debugElement.injector.get(CanvasSession).persistence()).not.toBeNull());
-    const note = fixture.debugElement.injector.get(CanvasSession).persistence();
-    await waitFor(() => expect(announce).toHaveBeenCalledWith(note?.message));
+    const page = fixture.debugElement.injector.get(CanvasStorage);
+    await waitFor(() => expect(page.persistence()).not.toBeNull());
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(announce).not.toHaveBeenCalledWith(page.persistence()?.message);
+    expect(announce.mock.calls.map(([said]) => said).join(' ')).not.toContain('did not promise');
   });
 
   it('lets go of the canvas when it is taken away, so that nothing is written after it', async () => {
@@ -2327,8 +2332,7 @@ describe('Editor', () => {
   });
 
   describe('the status strip', () => {
-    it('lets the learner dismiss the note about the browser’s promise, and keeps the warning about room', async () => {
-      const user = userEvent.setup();
+    it('has no note about the browser’s promise, though it was refused, and keeps the warning about room (ADR-0101)', async () => {
       const { providers, timer, storage } = harness();
       storage.estimate.mockResolvedValue({ usage: 900, quota: 1_000 });
       storage.persist.mockResolvedValue(false);
@@ -2338,12 +2342,15 @@ describe('Editor', () => {
         .get(CommandBus)
         .apply({ type: 'declare-queue', name: 'billing', durable: true }, 'gesture');
       timer.advance(500);
-      expect(await screen.findByTestId('persistence')).toBeInTheDocument();
-
-      await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+      const page = fixture.debugElement.injector.get(CanvasStorage);
+      await waitFor(() => expect(page.persistence()).not.toBeNull());
+      expect(await screen.findByTestId('quota')).toBeInTheDocument();
 
       expect(screen.queryByTestId('persistence')).not.toBeInTheDocument();
-      expect(screen.getByTestId('quota')).toBeInTheDocument();
+      expect(
+        within(screen.getByLabelText('Status')).queryByRole('button', { name: 'Dismiss' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Status')).not.toHaveTextContent('did not promise');
     });
 
     it('says what was done', async () => {
@@ -2392,7 +2399,7 @@ describe('Editor', () => {
       expect(screen.queryByTestId('refusal')).not.toBeInTheDocument();
     });
 
-    it('says when the browser is running out of room, and when it would not promise to keep the canvases', async () => {
+    it('says when the browser is running out of room, and says nothing of its promise', async () => {
       const { providers, timer, storage } = harness();
       storage.estimate.mockResolvedValue({ usage: 900, quota: 1_000 });
       storage.persist.mockResolvedValue(false);
@@ -2405,7 +2412,7 @@ describe('Editor', () => {
       timer.advance(500);
 
       expect(await screen.findByTestId('quota')).toHaveTextContent('90%');
-      expect(await screen.findByTestId('persistence')).toHaveTextContent('backup');
+      expect(screen.queryByTestId('persistence')).not.toBeInTheDocument();
     });
   });
 });

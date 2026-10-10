@@ -31,21 +31,6 @@ import { RefusalNotice } from '../core/ui/refusal-notice';
           {{ warning.message }}
         </p>
       }
-      @if (session.persistence(); as note) {
-        <div
-          class="border-warning bg-warning-bg text-warning flex items-start gap-3 rounded-md border px-3 py-2"
-          data-testid="persistence"
-        >
-          <p class="flex-1">{{ note.message }}</p>
-          <button
-            type="button"
-            class="border-warning hover:bg-surface shrink-0 rounded-md border px-2 py-0.5 font-medium"
-            (click)="session.dismissPersistence()"
-          >
-            Dismiss
-          </button>
-        </div>
-      }
       @if (session.unreadable() > 0) {
         <p class="text-muted" data-testid="unreadable">
           {{ unreadableText() }}

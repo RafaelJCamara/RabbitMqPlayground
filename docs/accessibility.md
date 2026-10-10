@@ -91,7 +91,7 @@ These are on the screen in every state of the editor, and are not repeated in th
 | In the editor, with the notice after a clear | `rmq-how-to-link`, `rmq-toast-host` | `e2e/canvases-a11y.spec.ts` · "in the editor, with the notice after a clear" |
 | On the home, with three notices floating at the bottom right over its foot | `rmq-canvas-card`, `rmq-home`, `rmq-home-notices`, `rmq-thumbnail`, `rmq-toast-host` | `e2e/canvases-a11y.spec.ts` · "on the home, with three notices floating at the bottom right over its foot" |
 | In the editor, with three notices floating at the bottom right over the inspector | `rmq-header-rows`, `rmq-help`, `rmq-how-to-link`, `rmq-number-field`, `rmq-producer-composer`, `rmq-toast-host` | `e2e/canvases-a11y.spec.ts` · "in the editor, with three notices floating at the bottom right over the inspector" |
-| In the editor, with the warning that the room is nearly gone and the note that the browser did not promise to keep the canvases | `rmq-help`, `rmq-how-to-link`, `rmq-queue-messages` | `e2e/canvases-a11y.spec.ts` · "in the editor, with the warning that the room is nearly gone and the note that the browser did not promise to keep the canvases" |
+| In the editor, with the warning that the room is nearly gone | `rmq-help`, `rmq-how-to-link`, `rmq-queue-messages` | `e2e/canvases-a11y.spec.ts` · "in the editor, with the warning that the room is nearly gone" |
 | In the editor, with the note that a canvas saved in this browser could not be opened | `rmq-how-to-link` | `e2e/canvases-a11y.spec.ts` · "in the editor, with the note that a canvas saved in this browser could not be opened" |
 
 ### The editor and its panels

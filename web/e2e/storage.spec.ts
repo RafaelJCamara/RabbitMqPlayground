@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test';
+import { CanvasesPage } from './pages/canvases-page';
 import { EditorPage } from './pages/editor-page';
+import { seedLibrary } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -127,8 +129,8 @@ test.describe('when the room is running out', () => {
   });
 });
 
-test.describe('the note about the browser that would not promise to keep the canvases', () => {
-  test('is shown when it would not, and goes when it is dismissed, and the warning about room stays', async ({
+test.describe('the note about the browser that would not promise to keep the canvases (ADR-0101)', () => {
+  test('is on the home and in no editor, canvas after canvas, and the warning about room stays in each', async ({
     page,
   }) => {
     await withBrowserThatCanRefuse(page);
@@ -136,15 +138,30 @@ test.describe('the note about the browser that would not promise to keep the can
       (window as unknown as Controls).__persist = false;
       (window as unknown as Controls).__estimate = { usage: 960_000, quota: 1_000_000 };
     });
-    const editor = new EditorPage(page);
-    await editor.goto();
+    await seedLibrary(page, [
+      { id: 'alpha', name: 'Alpha', updatedAt: 200_000 },
+      { id: 'beta', name: 'Beta', updatedAt: 100_000 },
+    ]);
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    const note = 'The browser did not promise to keep the canvases.';
 
-    await editor.add('Queue');
-
-    await expect(page.getByTestId('persistence')).toContainText('The browser did not promise to keep the canvases.');
-    await page.getByRole('button', { name: 'Dismiss' }).click();
-    await expect(page.getByTestId('persistence')).toHaveCount(0);
+    await canvases.editor.add('Queue');
+    await expect(canvases.editor.saveState).toHaveText('All changes saved');
     await expect(page.getByTestId('quota')).toBeVisible();
+    await expect(page.getByTestId('persistence')).toHaveCount(0);
+    await expect(page.getByLabel('Status')).not.toContainText(note);
+
+    await canvases.showHome();
+    await expect(canvases.home.getByTestId('persistence-note')).toContainText(note);
+
+    await canvases.open('Beta');
+    await canvases.editor.add('Queue');
+    await expect(canvases.editor.saveState).toHaveText('All changes saved');
+    await expect(page.getByTestId('quota')).toBeVisible();
+    await expect(page.getByTestId('persistence')).toHaveCount(0);
+    await expect(page.getByLabel('Status')).not.toContainText(note);
+    await expect(page.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   });
 
   test('is not shown when the browser agrees to keep them', async ({ page }) => {

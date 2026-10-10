@@ -406,12 +406,6 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         this.announcer.announce(warning.message, warning.level === 'critical' && !failed ? 'assertive' : 'polite');
       }
     });
-    effect(() => {
-      const note = this.session.persistence();
-      if (note !== null) {
-        this.announcer.announce(note.message);
-      }
-    });
   }
 
   /**

@@ -419,7 +419,7 @@ const states: readonly State[] = [
     },
   },
   {
-    name: 'in the editor, with the warning that the room is nearly gone and the note that the browser did not promise to keep the canvases',
+    name: 'in the editor, with the warning that the room is nearly gone',
     canvases: FEW,
     before: async (page) => {
       await page.addInitScript(() => {
@@ -428,10 +428,10 @@ const states: readonly State[] = [
       });
     },
     enter: async (canvases) => {
-      // The note comes a moment after the first change.
+      // The warning comes a moment after the first change. The note about the promise is not in the editor (ADR-0101).
       await canvases.editor.add('Queue');
-      await expect(canvases.page.getByTestId('persistence')).toBeVisible();
       await expect(canvases.page.getByTestId('quota')).toBeVisible();
+      await expect(canvases.page.getByTestId('persistence')).toHaveCount(0);
     },
   },
   {

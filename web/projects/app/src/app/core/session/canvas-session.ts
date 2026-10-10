@@ -1,4 +1,4 @@
-import { computed, DOCUMENT, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { DOCUMENT, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { emptyDocument, type CanvasDocument } from '@rmq/domain';
 import {
   createAutosave,
@@ -72,22 +72,14 @@ export class CanvasSession {
   private readonly saveState = signal<SaveState>({ kind: 'opening' });
   private readonly canvasName = signal(UNTITLED);
   private readonly unreadableCount = signal(0);
-  private readonly persistRead = signal(false);
   private readonly quotaResult = signal<QuotaWarning | null>(null);
 
   readonly save = this.saveState.asReadonly();
   readonly name = this.canvasName.asReadonly();
   /** How many canvases in the browser could not be opened (a newer version saved them, or they are damaged). Nothing was changed. */
   readonly unreadable = this.unreadableCount.asReadonly();
-  /** What the browser said when it was asked to keep the canvases, unless it agreed, and until the learner has read it. */
-  readonly persistence = computed(() => (this.persistRead() ? null : this.pageStorage.persistence()));
   /** A warning that the room is running out, or `null`. */
   readonly quota = this.quotaResult.asReadonly();
-
-  /** The learner has read what the browser said about keeping the canvases, and it goes away from the status strip for as long as the page is open. */
-  dismissPersistence(): void {
-    this.persistRead.set(true);
-  }
 
   private autosave: Autosave<CanvasDocument> | undefined;
   /** The document that is kept, as far as the session knows: the one it opened, or the last one that was written. */

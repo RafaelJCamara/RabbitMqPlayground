@@ -23,6 +23,7 @@ import { DocumentStore } from '../state/document-store';
 import { SelectionStore } from '../state/selection-store';
 import { StatusStore } from '../state/status-store';
 import { CANVAS_HOST, type CanvasHost, type OpenEditor } from './canvas-host';
+import { CanvasStorage } from './canvas-storage';
 import { AUTOSAVE_TIMER, CanvasSession, NOW, REPOSITORIES, STORAGE_MANAGER, UNTITLED } from './canvas-session';
 
 const quotaError: RepositoryError = {
@@ -685,14 +686,14 @@ describe('CanvasSession', () => {
       expect(storage.persist).toHaveBeenCalledTimes(1);
     });
 
-    it('says nothing when the browser agrees, and tells the learner to make a backup when it does not', async () => {
+    it('asks once after a save that worked and leaves what the browser said to the page storage, which the home shows and the editor does not (ADR-0101)', async () => {
       const agreed = setup();
       await agreed.session.open();
       declare(agreed.bus, 'a');
       agreed.timer.advance(500);
       await agreed.session.flush();
       await vi.waitFor(() => expect(agreed.storage.persist).toHaveBeenCalled());
-      expect(agreed.session.persistence()).toBeNull();
+      expect(TestBed.inject(CanvasStorage).persistence()).toBeNull();
 
       TestBed.resetTestingModule();
       const refused = setup();
@@ -701,26 +702,11 @@ describe('CanvasSession', () => {
       declare(refused.bus, 'a');
       refused.timer.advance(500);
       await refused.session.flush();
-      await vi.waitFor(() => expect(refused.session.persistence()?.status).toBe('denied'));
-      expect(refused.session.persistence()?.message).toContain('backup');
-    });
-
-    it('forgets what the browser said once the learner has read it, and does not ask again because of it', async () => {
-      const { session, bus, timer, storage } = setup();
-      storage.persist.mockResolvedValue(false);
-      await session.open();
-      declare(bus, 'a');
-      timer.advance(500);
-      await session.flush();
-      await vi.waitFor(() => expect(session.persistence()).not.toBeNull());
-
-      session.dismissPersistence();
-      declare(bus, 'b');
-      timer.advance(500);
-      await session.flush();
-
-      expect(session.persistence()).toBeNull();
-      expect(storage.persist).toHaveBeenCalledTimes(1);
+      const page = TestBed.inject(CanvasStorage);
+      await vi.waitFor(() => expect(page.persistence()?.status).toBe('denied'));
+      expect(page.persistence()?.message).toContain('backup');
+      expect('persistence' in refused.session).toBe(false);
+      expect('dismissPersistence' in refused.session).toBe(false);
     });
 
     it('does not ask when the canvas is kept in memory, because there is nothing to keep', async () => {
