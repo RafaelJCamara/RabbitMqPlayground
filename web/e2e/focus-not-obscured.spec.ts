@@ -4,6 +4,7 @@ import { ExplainPage } from './pages/explain-page';
 import { TesterPage } from './pages/tester-page';
 import { coveredNodes, focusCoveredBy, reachable } from './support/covered';
 import { ORDERS, TWO_WORKERS } from './support/orders';
+import { holdNotices } from './support/hold-notices';
 import { seedLibrary } from './support/seed';
 import { expect, test } from './support/test';
 
@@ -124,6 +125,7 @@ test.describe('what floats at the bottom right does not cover what is needed', (
   /** Three notices from the home, and then a canvas opened from its card: the notices go on floating over the editor, and a producer is there for the inspector to say something. */
   async function editorWithThreeNotices(page: Page): Promise<CanvasesPage> {
     const canvases = new CanvasesPage(page);
+    await holdNotices(page);
     await seedLibrary(page, MANY);
     await canvases.goto();
     await canvases.showHome();
@@ -138,6 +140,7 @@ test.describe('what floats at the bottom right does not cover what is needed', (
     page,
   }) => {
     const canvases = new CanvasesPage(page);
+    await holdNotices(page);
     await seedLibrary(page, MANY);
     await canvases.goto();
     await canvases.showHome();
@@ -176,6 +179,7 @@ test.describe('what floats at the bottom right does not cover what is needed', (
     page,
   }) => {
     const canvases = new CanvasesPage(page);
+    await holdNotices(page);
     await seedLibrary(page, MANY);
     await canvases.goto();
     await canvases.showHome();

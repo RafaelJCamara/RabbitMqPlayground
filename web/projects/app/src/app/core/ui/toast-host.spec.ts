@@ -127,7 +127,9 @@ describe('ToastHost (ADR-0074)', () => {
     expect(toasts.visible()).toHaveLength(1);
 
     fireEvent.pointerLeave(notice);
-    timer.advance(30_000);
+    timer.advance(4_999);
+    expect(toasts.visible()).toHaveLength(1);
+    timer.advance(1);
     expect(toasts.visible()).toEqual([]);
   });
 
@@ -283,7 +285,9 @@ describe('ToastHost (ADR-0074)', () => {
 
     fireEvent.focusOut(dismiss, { relatedTarget: null });
     expect(notice).toBeInTheDocument();
-    timer.advance(30_000);
+    timer.advance(4_999);
+    expect(toasts.visible()).toHaveLength(1);
+    timer.advance(1);
     expect(toasts.visible()).toEqual([]);
   });
 });

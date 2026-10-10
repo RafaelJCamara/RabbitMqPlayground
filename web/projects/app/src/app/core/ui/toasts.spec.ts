@@ -4,9 +4,9 @@ import { failure, succeed, type Outcome } from '@rmq/persistence';
 import { manualTimer, type ManualTimer } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../announcer';
-import { MAX_TOASTS, TOAST_TIMER, TOAST_TTL_MS, Toasts, type ToastUndo } from './toasts';
+import { MAX_TOASTS, TOAST_TIMER, TOAST_TTL_MS, Toasts, UNDO_KEEP_MS, type ToastUndo } from './toasts';
 
-function setup(ttl = 30_000) {
+function setup(ttl = 5_000) {
   const timer: ManualTimer = manualTimer();
   TestBed.configureTestingModule({
     providers: [
@@ -69,20 +69,27 @@ describe('Toasts (ADR-0074)', () => {
       expect(MAX_TOASTS).toBe(3);
       expect(toasts.visible().map(({ id }) => id)).toEqual(ids.slice(1));
       expect(timer.pending).toBe(3);
-      timer.advance(30_000);
+      timer.advance(5_000);
       expect(toasts.visible()).toEqual([]);
     });
   });
 
   describe('how long a notice waits', () => {
-    it('waits 30 seconds, to the millisecond, and then goes', () => {
+    it('waits 5 seconds, to the millisecond, and then goes (ADR-0099)', () => {
       const { toasts, timer } = setup();
       toasts.show({ message: 'a' });
 
-      timer.advance(29_999);
+      timer.advance(4_999);
       expect(toasts.visible()).toHaveLength(1);
       timer.advance(1);
       expect(toasts.visible()).toEqual([]);
+    });
+
+    it('is 5 seconds for every notice unless a token says otherwise, and the kept action 50', () => {
+      TestBed.configureTestingModule({});
+
+      expect(TestBed.inject(TOAST_TTL_MS)).toBe(5_000);
+      expect(UNDO_KEEP_MS).toBe(50_000);
     });
 
     it('waits as long as the token says', () => {
@@ -98,10 +105,10 @@ describe('Toasts (ADR-0074)', () => {
     it('has a time of its own for each notice', () => {
       const { toasts, timer } = setup();
       toasts.show({ message: 'first' });
-      timer.advance(10_000);
+      timer.advance(2_000);
       toasts.show({ message: 'second' });
 
-      timer.advance(20_000);
+      timer.advance(3_000);
 
       expect(toasts.visible().map(({ message }) => message)).toEqual(['second']);
     });
@@ -109,14 +116,14 @@ describe('Toasts (ADR-0074)', () => {
     it('stops while the pointer or the focus is on it, and waits the whole time again when they leave', () => {
       const { toasts, timer } = setup();
       const id = toasts.show({ message: 'a' });
-      timer.advance(20_000);
+      timer.advance(4_000);
 
       toasts.pause(id);
       timer.advance(60_000);
       expect(toasts.visible()).toHaveLength(1);
 
       toasts.resume(id);
-      timer.advance(29_999);
+      timer.advance(4_999);
       expect(toasts.visible()).toHaveLength(1);
       timer.advance(1);
       expect(toasts.visible()).toEqual([]);
@@ -130,7 +137,7 @@ describe('Toasts (ADR-0074)', () => {
       toasts.resume(id);
       expect(timer.pending).toBe(0);
       const other = toasts.show({ message: 'b' });
-      timer.advance(30_000);
+      timer.advance(5_000);
 
       expect(toasts.visible().map(({ id: seen }) => seen)).not.toContain(other);
       expect(toasts.visible()).toEqual([]);
@@ -145,7 +152,7 @@ describe('Toasts (ADR-0074)', () => {
       timer.advance(60_000);
       expect(toasts.visible().map(({ message }) => message)).toEqual(['first']);
       toasts.resume(first);
-      timer.advance(30_000);
+      timer.advance(5_000);
 
       expect(toasts.visible()).toEqual([]);
     });
@@ -158,7 +165,7 @@ describe('Toasts (ADR-0074)', () => {
       toasts.pause(id);
       toasts.resume(id);
       toasts.resume(id);
-      timer.advance(30_000);
+      timer.advance(5_000);
 
       expect(toasts.visible()).toEqual([]);
     });
@@ -247,6 +254,129 @@ describe('Toasts (ADR-0074)', () => {
       expect(toasts.visible()).toEqual([]);
       holds.set(true);
       expect(toasts.visible()).toHaveLength(1);
+    });
+  });
+
+  describe('an action that outlives its notice (ADR-0099)', () => {
+    it('is still the newest action after the notice went by its time, until 50 seconds after it was shown, to the millisecond', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a', undo: undoing() });
+
+      timer.advance(5_000);
+      expect(toasts.visible()).toEqual([]);
+      expect(toasts.latestUndo()?.id).toBe(id);
+      timer.advance(44_999);
+      expect(toasts.latestUndo()?.id).toBe(id);
+      timer.advance(1);
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('is 50 seconds from when the notice was shown, whatever the pointer did to its time on the screen', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a', undo: undoing() });
+      toasts.pause(id);
+      timer.advance(49_999);
+      expect(toasts.visible()).toHaveLength(1);
+      toasts.resume(id);
+
+      timer.advance(1);
+      expect(toasts.latestUndo()?.id).toBe(id);
+      expect(toasts.visible()).toHaveLength(1);
+      timer.advance(5_000);
+      expect(toasts.visible()).toEqual([]);
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('keeps nothing for a notice that was closed with Dismiss', () => {
+      const { toasts, timer } = setup();
+      const id = toasts.show({ message: 'a', undo: undoing() });
+
+      toasts.dismiss(id);
+      timer.advance(5_000);
+
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('keeps nothing for a notice whose condition turned false', () => {
+      const { toasts, timer } = setup();
+      const holds = signal(true);
+      toasts.show({ message: 'a', undo: undoing(), stillTrue: holds });
+
+      holds.set(false);
+      timer.advance(5_000);
+
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('stops asking a kept action whose condition turns false after the notice went', () => {
+      const { toasts, timer } = setup();
+      const holds = signal(true);
+      toasts.show({ message: 'a', undo: undoing(), stillTrue: holds });
+      timer.advance(5_000);
+      expect(toasts.latestUndo()).toBeDefined();
+
+      holds.set(false);
+
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('keeps the action of an old notice that a fourth one pushed off the screen', () => {
+      const { toasts } = setup();
+      const old = toasts.show({ message: 'old', undo: undoing() });
+      ['b', 'c', 'd'].forEach((message) => toasts.show({ message }));
+
+      expect(toasts.visible().map(({ id }) => id)).not.toContain(old);
+      expect(toasts.latestUndo()?.id).toBe(old);
+    });
+
+    it('prefers a notice on the screen to a kept one, and the newest of each', () => {
+      const { toasts, timer } = setup();
+      toasts.show({ message: 'kept one', undo: undoing() });
+      const kept = toasts.show({ message: 'kept two', undo: undoing() });
+      timer.advance(5_000);
+      expect(toasts.latestUndo()?.id).toBe(kept);
+      const onScreen = toasts.show({ message: 'on screen', undo: undoing() });
+
+      expect(toasts.latestUndo()?.id).toBe(onScreen);
+    });
+
+    it('runs a kept action, forgets it when it worked, and says what happened aloud, since no notice is there to show it', async () => {
+      const { toasts, timer, announce } = setup();
+      const undo = undoing();
+      const id = toasts.show({ message: 'Deleted “Orders”.', undo });
+      timer.advance(5_000);
+      announce.mockClear();
+
+      await toasts.undo(id);
+
+      expect(undo.run).toHaveBeenCalledOnce();
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Undone: Deleted “Orders”.');
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('says aloud, assertively, why a kept action did not work, and keeps it to be tried again', async () => {
+      const { toasts, timer, announce } = setup();
+      const undo = undoing(failure('“Orders” is gone for good.'));
+      const id = toasts.show({ message: 'a', undo });
+      timer.advance(5_000);
+      announce.mockClear();
+
+      await toasts.undo(id);
+
+      expect(announce).toHaveBeenCalledExactlyOnceWith('“Orders” is gone for good.', 'assertive');
+      expect(toasts.latestUndo()?.id).toBe(id);
+      undo.run.mockResolvedValue(succeed(undefined));
+      await toasts.undo(id);
+      expect(toasts.latestUndo()).toBeUndefined();
+    });
+
+    it('keeps no action for a notice that has none', () => {
+      const { toasts, timer } = setup();
+      toasts.show({ message: 'a' });
+
+      timer.advance(5_000);
+
+      expect(toasts.latestUndo()).toBeUndefined();
     });
   });
 

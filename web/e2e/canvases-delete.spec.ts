@@ -162,7 +162,7 @@ test.describe('deleting a canvas, with an Undo (ADR-0074)', () => {
     await expect.poll(() => canvases.cardNames()).toEqual(['Alpha']);
   });
 
-  test('keeps the notice while the pointer is on it, and waits the half minute again when the pointer leaves', async ({
+  test('keeps the notice while the pointer is on it, and waits the 5 seconds again when the pointer leaves', async ({
     page,
   }) => {
     const canvases = new CanvasesPage(page);
@@ -178,13 +178,13 @@ test.describe('deleting a canvas, with an Undo (ADR-0074)', () => {
     await expect(notice).toBeVisible();
 
     await page.mouse.move(0, 0);
-    await page.clock.fastForward(29_000);
+    await page.clock.fastForward(4_000);
     await expect(notice).toBeVisible();
     await page.clock.fastForward(2_000);
     await expect(canvases.notices).toHaveCount(0);
   });
 
-  test('keeps the notice while the cursor is in it, and waits the half minute again when the cursor leaves', async ({
+  test('keeps the notice while the cursor is in it, and waits the 5 seconds again when the cursor leaves', async ({
     page,
   }) => {
     const canvases = new CanvasesPage(page);
@@ -200,13 +200,13 @@ test.describe('deleting a canvas, with an Undo (ADR-0074)', () => {
     await expect(notice).toBeVisible();
 
     await page.evaluate(() => (document.activeElement as HTMLElement).blur());
-    await page.clock.fastForward(29_000);
+    await page.clock.fastForward(4_000);
     await expect(notice).toBeVisible();
     await page.clock.fastForward(2_000);
     await expect(canvases.notices).toHaveCount(0);
   });
 
-  test('takes the notice away after half a minute, and then the delete cannot be taken back with the keys', async ({
+  test('takes the notice away after 5 seconds, and then the delete can still be taken back with the keys, until 50 seconds after it', async ({
     page,
   }) => {
     const canvases = new CanvasesPage(page);
@@ -216,12 +216,29 @@ test.describe('deleting a canvas, with an Undo (ADR-0074)', () => {
     await canvases.confirmation.getByRole('button', { name: 'Delete canvas' }).click();
     await expect(canvases.notices).toBeVisible();
 
-    await page.clock.fastForward(29_000);
+    await page.clock.fastForward(4_000);
     await expect(canvases.notices).toBeVisible();
     await page.clock.fastForward(2_000);
+    await expect(canvases.notices).toHaveCount(0);
 
+    await page.keyboard.press('Control+z');
+    await expect.poll(() => canvases.cardNames()).toEqual(['Beta', 'Alpha']);
+  });
+
+  test('cannot be taken back with the keys 50 seconds after the delete, though the canvas is still there for ten seconds more', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await page.clock.install();
+    await twoCanvases(canvases);
+    await canvases.action('Beta', 'Delete').click();
+    await canvases.confirmation.getByRole('button', { name: 'Delete canvas' }).click();
+    await expect(canvases.notices).toBeVisible();
+
+    await page.clock.fastForward(51_000);
     await expect(canvases.notices).toHaveCount(0);
     await page.keyboard.press('Control+z');
+
     await expect.poll(() => canvases.cardNames()).toEqual(['Alpha']);
   });
 

@@ -6,7 +6,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { APP_DISCLAIMER } from '../core/app-info';
 import { NOW } from '../core/session/canvas-session';
-import { Toasts } from '../core/ui/toasts';
+import { manualTimer } from '@rmq/testing';
+import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
 import { Home } from './home';
 import { CanvasLibrary } from './library';
 import { CanvasDialogs } from './dialogs';
@@ -68,13 +69,15 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
 
 async function renderHome(canvases: readonly CanvasSummary[], unreadable: readonly UnreadableCanvas[] = []) {
   const library = fakeLibrary(canvases, unreadable);
+  const timer = manualTimer();
   const view = await render(Home, {
     providers: [
+      { provide: TOAST_TIMER, useValue: timer },
       { provide: CanvasLibrary, useValue: { ...library, problem: library.problemText } },
       { provide: NOW, useValue: () => CLOCK },
     ],
   });
-  return { ...view, library, user: userEvent.setup() };
+  return { ...view, library, timer, user: userEvent.setup() };
 }
 
 const names = (): string[] =>
@@ -493,6 +496,29 @@ describe('Home, deleting (ADR-0074)', () => {
 
       expect(left).toBe(false);
       expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('still takes it back after the notice went by its time, until 50 seconds after it was shown (ADR-0099)', async () => {
+      const { timer } = await renderHome(some());
+      const run = undoable();
+      timer.advance(5_000);
+      expect(TestBed.inject(Toasts).visible()).toEqual([]);
+
+      timer.advance(44_999);
+      const left = fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+
+      expect(left).toBe(false);
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('has nothing to take back 50 seconds after the notice was shown', async () => {
+      const { timer } = await renderHome(some());
+      const run = undoable();
+
+      timer.advance(50_000);
+
+      expect(fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true })).toBe(true);
+      expect(run).not.toHaveBeenCalled();
     });
 
     it('does the same with Command and Z, in either case of the letter', async () => {

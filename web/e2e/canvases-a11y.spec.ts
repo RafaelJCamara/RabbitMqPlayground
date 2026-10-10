@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import { CanvasesPage } from './pages/canvases-page';
 import { skipWelcome } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
+import { holdNotices } from './support/hold-notices';
 import { buildDocument, seedLibrary, type SeededCanvas } from './support/seed';
 import { expect, test } from './support/test';
 
@@ -230,6 +231,7 @@ const states: readonly State[] = [
   },
   {
     name: 'with a notice that offers to take a delete back',
+    before: holdNotices,
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.showHome();
@@ -239,6 +241,7 @@ const states: readonly State[] = [
   },
   {
     name: 'with a notice whose Undo did not work, and says why',
+    before: holdNotices,
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.showHome();
@@ -380,6 +383,7 @@ const states: readonly State[] = [
   },
   {
     name: 'in the editor, with the notice after a clear',
+    before: holdNotices,
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.editor.add('Queue');
@@ -389,6 +393,7 @@ const states: readonly State[] = [
   },
   {
     name: 'on the home, with three notices floating at the bottom right over its foot',
+    before: holdNotices,
     canvases: MANY,
     enter: async (canvases) => {
       await canvases.showHome();
@@ -401,6 +406,7 @@ const states: readonly State[] = [
   },
   {
     name: 'in the editor, with three notices floating at the bottom right over the inspector',
+    before: holdNotices,
     canvases: MANY,
     enter: async (canvases) => {
       await canvases.showHome();
