@@ -714,6 +714,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **The file pickers take only `.json` files, by the name and the type that the browser gives**
   ([ADR-0102](docs/adr/0102-the-file-pickers-take-only-json-files-by-name-and-type-and-refuse-anything-else-before-they-read-it.md)). The check trusts the name: a file that is JSON but named `.txt` is refused, and one named `.json` that is
   not JSON is refused later by the parse. A file with the type `application/octet-stream` is refused too; `isJsonType` in `canvases/file-kind.ts` is the one place to widen it.
+- **The theme is chosen in the banner of the page, at the right end of the strip, and in the banner of a shared canvas**
+  ([ADR-0103](docs/adr/0103-the-theme-is-chosen-in-the-banner-of-the-page-at-the-right-end-of-the-strip-and-not-inside-a-canvas.md)). On a window narrower than the strip the picker wraps to a second row of the banner, and
+  the banner is then taller than the 72 pixels that ADR-0096 holds at 1280; it was looked at in Chromium at 1280 by 720 only.
 
 
 ## Follow-ups that are already owned
