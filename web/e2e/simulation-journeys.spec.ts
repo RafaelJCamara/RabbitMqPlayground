@@ -189,6 +189,8 @@ test.describe('what reduced motion changes (ADR-0055)', () => {
     await simulation.editor.select('Producer sender');
     await page.keyboard.press('p');
     await simulation.step();
+    // The frame is drawn in the next frame of the browser, which is a moment later on a slow runner; a message that slid would still be at its start after two of them, which are 33 ms of the 250.
+    await simulation.drawn();
 
     // At once, and not in a quarter of a second: the first read after the step is already the last.
     const first = JSON.stringify(await simulation.frame());

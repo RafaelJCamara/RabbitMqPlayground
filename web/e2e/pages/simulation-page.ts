@@ -125,6 +125,19 @@ export class SimulationPage {
   }
 
   /**
+   * Waits until the page has drawn what the engine said: two frames of the browser and a task after them. `step` waits for the engine, which is the debug handle's word, and Angular and the overlay draw after it, a
+   * moment later on a runner that is slow: a test that reads the page right after a step reads the one before (the rows of a consumer, the first frame of the overlay).
+   */
+  async drawn(): Promise<void> {
+    await this.page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))),
+        ),
+    );
+  }
+
+  /**
    * Waits until the overlay has stopped moving: its last frame is the same in two reads that are a moment apart. After a step, the picture takes a quarter of a second to get to
    * where the clock is, and a test that measures it before that measures the middle of the move.
    */

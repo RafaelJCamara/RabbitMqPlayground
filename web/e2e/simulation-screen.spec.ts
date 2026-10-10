@@ -127,7 +127,12 @@ test.describe('a consumer that was just added (ADR-0104)', () => {
 /** Steps the clock until the list of what a consumer received has a row, as far as a bound says. */
 async function stepUntilReceived(simulation: SimulationPage, page: Page, rows = 1): Promise<void> {
   const row = page.getByTestId('consumer-received').getByTestId('received-row');
-  for (let steps = 0; steps < 40 && (await row.count()) < rows; steps += 1) {
+  for (let steps = 0; steps < 40; steps += 1) {
+    // The page draws a moment after the engine has said it, and a row that is not drawn yet must not make a step more.
+    await simulation.drawn();
+    if ((await row.count()) >= rows) {
+      break;
+    }
     await simulation.step();
   }
   await expect(row).toHaveCount(rows);
