@@ -121,7 +121,11 @@ describe('the table of shortcuts', () => {
 
     expect(named('commands')).toMatchObject({ label: 'Commands', scope: 'canvas', owner: 'app' });
     expect(formatChord(named('commands')!.chords[0]!, false)).toBe('/');
-    expect(named('commands-anywhere')).toMatchObject({ label: 'Commands, from anywhere', scope: 'app', owner: 'app' });
+    expect(named('commands-anywhere')).toMatchObject({
+      label: 'Open or close the commands, from anywhere',
+      scope: 'app',
+      owner: 'app',
+    });
     expect(formatChord(named('commands-anywhere')!.chords[0]!, false)).toBe('Ctrl+K');
     expect(formatChord(named('commands-anywhere')!.chords[0]!, true)).toBe('Cmd+K');
     expect(named('shortcuts')).toMatchObject({ label: 'Shortcuts', scope: 'canvas', owner: 'app' });
@@ -299,6 +303,7 @@ describe('KeyboardService', () => {
     | 'renameSelected'
     | 'editSelected'
     | 'openCommandBar'
+    | 'toggleCommandBar'
     | 'openCheatSheet'
     | 'togglePlay'
     | 'step'
@@ -329,6 +334,7 @@ describe('KeyboardService', () => {
       renameSelected: vi.fn(),
       editSelected: vi.fn(() => true),
       openCommandBar: vi.fn(),
+      toggleCommandBar: vi.fn(),
       openCheatSheet: vi.fn(),
       togglePlay: vi.fn(),
       step: vi.fn(),
@@ -545,24 +551,34 @@ describe('KeyboardService', () => {
       expect(actions.openCheatSheet).not.toHaveBeenCalled();
     });
 
-    it('opens the command bar on Ctrl+K and Cmd+K, from the canvas and from outside it', () => {
+    it('opens or closes the command bar on Ctrl+K and Cmd+K, from the canvas and from outside it (ADR-0094)', () => {
       send('flow', { key: 'k', ctrlKey: true });
       send('toolbox-button', { key: 'K', metaKey: true });
 
-      expect(actions.openCommandBar).toHaveBeenCalledTimes(2);
+      expect(actions.toggleCommandBar).toHaveBeenCalledTimes(2);
+      expect(actions.openCommandBar).not.toHaveBeenCalled();
     });
 
-    it('opens it from a field of text too, which has no use for Ctrl+K, and keeps the browser from taking the key for its address bar', () => {
+    it('does it from a field of text too, which has no use for Ctrl+K, and keeps the browser from taking the key for its address bar', () => {
       const { prevented } = send('name', { key: 'k', ctrlKey: true });
       send('type', { key: 'k', metaKey: true });
 
-      expect(actions.openCommandBar).toHaveBeenCalledTimes(2);
+      expect(actions.toggleCommandBar).toHaveBeenCalledTimes(2);
       expect(prevented).toBe(true);
+    });
+
+    it('does it once for a key that is held down, so that the bar does not flicker', () => {
+      send('flow', { key: 'k', ctrlKey: true });
+      send('flow', { key: 'k', ctrlKey: true, repeat: true });
+      send('flow', { key: 'k', ctrlKey: true, repeat: true });
+
+      expect(actions.toggleCommandBar).toHaveBeenCalledOnce();
     });
 
     it('leaves Ctrl+Shift+K to the browser', () => {
       send('flow', { key: 'K', ctrlKey: true, shiftKey: true });
 
+      expect(actions.toggleCommandBar).not.toHaveBeenCalled();
       expect(actions.openCommandBar).not.toHaveBeenCalled();
     });
 

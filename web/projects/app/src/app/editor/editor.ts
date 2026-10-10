@@ -460,6 +460,11 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
     this.commandBar().open();
   }
 
+  /** Closes the command bar when it is open and opens it when it is not, for the key that is for both (ADR-0094). */
+  toggleCommandBar(): void {
+    this.commandBar().toggleFromKeys();
+  }
+
   /** Opens the cheat-sheet, for the key and the button that are for it (ADR-0047). */
   openCheatSheet(): void {
     this.cheatSheet.open();

@@ -1433,6 +1433,26 @@ describe('Editor', () => {
       await waitFor(() => expect(field()).toHaveFocus());
     });
 
+    it('closes on Ctrl+K, from the field and from outside it, keeps the line, and gives the focus to the canvas (ADR-0094)', async () => {
+      const { onCanvas, canvas, user } = await openEditor();
+      onCanvas({ key: '/' });
+      await waitFor(() => expect(field()).toHaveFocus());
+      await user.keyboard('declare queue jobs');
+      canvas().calls.length = 0;
+
+      fireEvent.keyDown(field(), { key: 'k', ctrlKey: true });
+
+      await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Command' })).not.toBeInTheDocument());
+      expect(canvas().calls).toContain('focus');
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Queue' }), { key: 'k', metaKey: true });
+      await waitFor(() => expect(field()).toHaveFocus());
+      expect(field()).toHaveValue('declare queue jobs');
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Queue' }), { key: 'k', metaKey: true });
+      await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Command' })).not.toBeInTheDocument());
+    });
+
     it('closes with Escape, and gives the focus back to the canvas', async () => {
       const { onCanvas, canvas, user } = await openEditor();
       onCanvas({ key: '/' });

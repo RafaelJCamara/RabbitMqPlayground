@@ -176,6 +176,34 @@ describe('CommandBar, closed (ADR-0045)', () => {
     await waitFor(() => expect(field()).toHaveFocus());
   });
 
+  it('closes when it is asked to by the key that opens it, from the field or from anywhere in it, and gives the cursor to the canvas (ADR-0094)', async () => {
+    const { user, fixture, focused } = await renderBar();
+    await openBar(user);
+    expect(field()).toHaveFocus();
+
+    fixture.componentInstance.toggleFromKeys();
+    fixture.detectChanges();
+
+    expect(screen.queryByRole('combobox', { name: 'Command' })).not.toBeInTheDocument();
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(focused).toEqual(['canvas']);
+  });
+
+  it('opens when it is asked to by that key while it is closed, with the cursor in the field, and keeps the line that was left in it (ADR-0094)', async () => {
+    const { user, fixture } = await renderBar();
+    await openBar(user);
+    await type(user, 'declare queue jobs');
+    fixture.componentInstance.toggleFromKeys();
+    fixture.detectChanges();
+    expect(screen.queryByRole('combobox', { name: 'Command' })).not.toBeInTheDocument();
+
+    fixture.componentInstance.toggleFromKeys();
+    fixture.detectChanges();
+
+    await waitFor(() => expect(field()).toHaveFocus());
+    expect(field()).toHaveValue('declare queue jobs');
+  });
+
   it('does nothing with Escape while it is closed, so that the key stays with the canvas', async () => {
     const { user, focused } = await renderBar();
     toggle().focus();

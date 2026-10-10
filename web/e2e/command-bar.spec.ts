@@ -60,6 +60,29 @@ test.describe('journey 4: opening the command bar', () => {
     await expect(editor.commandField).toBeFocused();
   });
 
+  test('closes with Ctrl+K again, from the field, keeps the line that was typed, and gives the cursor to the canvas', async ({
+    page,
+  }) => {
+    const editor = await open(page);
+
+    await page.keyboard.press('Control+k');
+    await expect(editor.commandField).toBeFocused();
+    await page.keyboard.type('declare queue jobs');
+    await page.keyboard.press('Control+k');
+
+    await expect(editor.commandField).toHaveCount(0);
+    await expect(editor.flow).toBeFocused();
+
+    await page.keyboard.press('Control+k');
+    await expect(editor.commandField).toBeFocused();
+    await expect(editor.commandField).toHaveValue('declare queue jobs');
+
+    await page.getByRole('button', { name: 'Run' }).focus();
+    await page.keyboard.press('Control+k');
+    await expect(editor.commandField).toHaveCount(0);
+    await expect(editor.flow).toBeFocused();
+  });
+
   test('opens with its button, which says what it holds when it is closed: the latest equivalent command', async ({
     page,
   }) => {

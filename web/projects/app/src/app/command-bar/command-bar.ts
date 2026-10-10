@@ -318,6 +318,18 @@ export class CommandBar {
     this.focusField();
   }
 
+  /**
+   * Closes the bar when it is open, wherever the cursor is, as Escape does: what was typed stays and the cursor goes to the canvas. It opens the bar when it
+   * is not. It is what Ctrl+K asks for (ADR-0094).
+   */
+  toggleFromKeys(): void {
+    if (this.isOpen()) {
+      this.close(true);
+    } else {
+      this.open();
+    }
+  }
+
   protected toggle(): void {
     if (this.isOpen()) {
       this.close(false);

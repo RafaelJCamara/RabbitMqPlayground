@@ -40,7 +40,7 @@ export interface Shortcut {
   readonly scope: Scope;
   /**
    * Whether it works while the cursor is in a field of text, which every other row leaves to the field (ADR-0035). Only a chord with Ctrl, Cmd or Alt can, because
-   * anything else is typed there, and only one that the field has no use for: Ctrl+K opens the command bar from anywhere (ADR-0045).
+   * anything else is typed there, and only one that the field has no use for: Ctrl+K opens the command bar from anywhere, and closes it (ADR-0045, ADR-0094).
    */
   readonly inFields?: boolean;
   readonly owner: 'app' | 'library';
@@ -197,13 +197,13 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     // The hint bar says `/`, and the cheat-sheet lists this one too.
     id: 'commands-anywhere',
-    label: 'Commands, from anywhere',
+    label: 'Open or close the commands, from anywhere',
     chords: [{ key: 'k', mod: true }],
     scope: 'app',
     inFields: true,
     owner: 'app',
     shows: () => false,
-    run: (actions) => actions.openCommandBar(),
+    run: (actions) => actions.toggleCommandBar(),
   },
   {
     id: 'shortcuts',

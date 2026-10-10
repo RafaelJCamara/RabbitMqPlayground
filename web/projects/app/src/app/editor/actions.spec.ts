@@ -68,6 +68,7 @@ describe('EditorActions', () => {
       startRename: vi.fn(),
       focusInspector: vi.fn(() => true),
       openCommandBar: vi.fn(),
+      toggleCommandBar: vi.fn(),
       openCheatSheet: vi.fn(),
       toggleEventLog: vi.fn(() => true),
     };
@@ -142,6 +143,14 @@ describe('EditorActions', () => {
 
       expect(surface.openCommandBar).toHaveBeenCalledOnce();
       expect(surface.openCheatSheet).toHaveBeenCalledOnce();
+      expect(surface.toggleCommandBar).not.toHaveBeenCalled();
+    });
+
+    it('has the command bar closed when it is open and opened when it is closed, which only the editor knows (ADR-0094)', () => {
+      actions.toggleCommandBar();
+
+      expect(surface.toggleCommandBar).toHaveBeenCalledOnce();
+      expect(surface.openCommandBar).not.toHaveBeenCalled();
     });
   });
 

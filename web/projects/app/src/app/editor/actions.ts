@@ -20,6 +20,8 @@ export interface ActionSurface {
   focusInspector(): boolean;
   /** Opens the command bar with the cursor in its field (ADR-0045). */
   openCommandBar(): void;
+  /** Closes the command bar when it is open, with the cursor going to the canvas, and opens it when it is not (ADR-0094). */
+  toggleCommandBar(): void;
   /** Opens the cheat-sheet (ADR-0047). */
   openCheatSheet(): void;
   /** Shows the event log when it is hidden and hides it when it is shown (ADR-0061). It answers `false` when there is no log, which needs both flags. */
@@ -135,6 +137,10 @@ export class EditorActions {
 
   openCommandBar(): void {
     this.surface?.openCommandBar();
+  }
+
+  toggleCommandBar(): void {
+    this.surface?.toggleCommandBar();
   }
 
   openCheatSheet(): void {
