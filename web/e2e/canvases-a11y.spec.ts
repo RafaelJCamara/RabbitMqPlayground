@@ -388,6 +388,31 @@ const states: readonly State[] = [
     },
   },
   {
+    name: 'on the home, with three notices floating at the bottom right over its foot',
+    canvases: MANY,
+    enter: async (canvases) => {
+      await canvases.showHome();
+      await deleteCard(canvases, 'Canvas 50');
+      await deleteCard(canvases, 'Canvas 49');
+      await deleteCard(canvases, 'Canvas 48');
+      await expect(canvases.notices.getByTestId('toast')).toHaveCount(3);
+      await canvases.home.evaluate((main) => main.scrollTo(0, main.scrollHeight));
+    },
+  },
+  {
+    name: 'in the editor, with three notices floating at the bottom right over the inspector',
+    canvases: MANY,
+    enter: async (canvases) => {
+      await canvases.showHome();
+      await deleteCard(canvases, 'Canvas 50');
+      await deleteCard(canvases, 'Canvas 49');
+      await deleteCard(canvases, 'Canvas 48');
+      await canvases.open('Canvas 47');
+      await canvases.editor.add('Producer');
+      await expect(canvases.notices.getByTestId('toast')).toHaveCount(3);
+    },
+  },
+  {
     name: 'in the editor, with the warning that the room is nearly gone and the note that the browser did not promise to keep the canvases',
     canvases: FEW,
     before: async (page) => {

@@ -24,7 +24,10 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
   selector: 'rmq-home',
   imports: [CanvasCard, HomeNotices, Icon],
   template: `
-    <main class="bg-surface text-fg h-full overflow-y-auto" aria-labelledby="rmq-home-title">
+    <main
+      class="bg-surface text-fg h-full scroll-pb-[var(--toast-room,0px)] overflow-y-auto pb-[var(--toast-room,0px)]"
+      aria-labelledby="rmq-home-title"
+    >
       <div class="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6">
         <div class="flex flex-wrap items-center gap-3">
           <h2 id="rmq-home-title" class="text-xl font-semibold">My canvases</h2>

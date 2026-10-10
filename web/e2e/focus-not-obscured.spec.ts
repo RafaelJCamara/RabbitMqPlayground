@@ -1,7 +1,10 @@
+import type { Page } from '@playwright/test';
+import { CanvasesPage } from './pages/canvases-page';
 import { ExplainPage } from './pages/explain-page';
 import { TesterPage } from './pages/tester-page';
-import { coveredNodes } from './support/covered';
+import { coveredNodes, focusCoveredBy, reachable } from './support/covered';
 import { ORDERS, TWO_WORKERS } from './support/orders';
+import { seedLibrary } from './support/seed';
 import { expect, test } from './support/test';
 
 /**
@@ -94,5 +97,141 @@ test.describe('what stays on the screen does not cover a node', () => {
     await expect(explain.card).toBeVisible();
     await expect(explain.editor.inspector.getByTestId('why-card')).toBeVisible();
     await expect(explain.editor.canvas.getByTestId('why-card')).toHaveCount(0);
+  });
+});
+
+/**
+ * The notices float at the bottom right (ADR-0097), over the inspector in the editor and over the foot of the home, and they cover nothing that the learner needs (ADR-0085, WCAG 2.4.11): not a node, not the last
+ * card of the home, and not the control that has the cursor.
+ */
+test.describe('what floats at the bottom right does not cover what is needed', () => {
+  /** Makes three notices on the home by deleting three canvases, one after another. */
+  async function threeNoticesOnTheHome(canvases: CanvasesPage, names: readonly string[]): Promise<void> {
+    for (const name of names) {
+      await canvases.action(name, 'Delete').click();
+      await canvases.confirmation.getByRole('button', { name: 'Delete canvas' }).click();
+      await expect(canvases.confirmation).toHaveCount(0);
+    }
+    await expect(canvases.notices.getByTestId('toast')).toHaveCount(3);
+  }
+
+  const MANY = Array.from({ length: 12 }, (_, index) => ({
+    id: `c${index + 1}`,
+    name: `Canvas ${String(index + 1).padStart(2, '0')}`,
+    updatedAt: 100_000 - index,
+  }));
+
+  /** Three notices from the home, and then a canvas opened from its card: the notices go on floating over the editor, and a producer is there for the inspector to say something. */
+  async function editorWithThreeNotices(page: Page): Promise<CanvasesPage> {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, MANY);
+    await canvases.goto();
+    await canvases.showHome();
+    await threeNoticesOnTheHome(canvases, ['Canvas 01', 'Canvas 02', 'Canvas 03']);
+    await canvases.open('Canvas 04');
+    await canvases.editor.add('Producer');
+    await expect(canvases.notices.getByTestId('toast')).toHaveCount(3);
+    return canvases;
+  }
+
+  test('has the delete of every card reachable on the home with three notices, at the foot of the page', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, MANY);
+    await canvases.goto();
+    await canvases.showHome();
+
+    await threeNoticesOnTheHome(canvases, ['Canvas 01', 'Canvas 02', 'Canvas 03']);
+    await canvases.home.evaluate((main) => main.scrollTo(0, main.scrollHeight));
+
+    const stack = await canvases.notices.boundingBox();
+    const home = await canvases.home.boundingBox();
+    expect(stack && home).toBeTruthy();
+    // At the right, 20 rem wide, and at the foot of the page.
+    expect(stack!.width).toBeLessThanOrEqual(321);
+    expect(stack!.x + stack!.width).toBeGreaterThan(1270);
+    expect(stack!.y + stack!.height).toBeLessThanOrEqual(720);
+    expect(stack!.y).toBeGreaterThan(home!.y + 100);
+    const deletes = await reachable(page, '[data-testid="card-delete"]');
+    const boxes = await canvases.home.getByTestId('card-delete').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, left: box.left, right: box.right };
+      }),
+    );
+    // The nine cards that are left: the ones at the foot of the page, which are in sight, are not under the stack.
+    expect(deletes).toHaveLength(9);
+    for (const [index, box] of boxes.entries()) {
+      const inSight = box.bottom > home!.y && box.top < home!.y + home!.height;
+      const underStack = box.bottom > stack!.y && box.right > stack!.x && box.left < stack!.x + stack!.width;
+      if (inSight) {
+        expect(deletes[index], `the delete of card ${index + 1}`).toBe(true);
+      }
+      expect(underStack, `the delete of card ${index + 1} is under the notices`).toBe(false);
+    }
+  });
+
+  test('leaves the control that has the cursor in sight as the page is crossed with Tab, with three notices over its foot', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, MANY);
+    await canvases.goto();
+    await canvases.showHome();
+    await threeNoticesOnTheHome(canvases, ['Canvas 01', 'Canvas 02', 'Canvas 03']);
+
+    await canvases.home.getByRole('searchbox', { name: 'Search canvases' }).focus();
+    let covered: string[] = [];
+    for (let press = 0; press < 70; press += 1) {
+      await page.keyboard.press('Tab');
+      const by = await focusCoveredBy(page);
+      if (by !== null) {
+        covered = [...covered, `${press}: ${by}`];
+      }
+    }
+
+    expect(covered).toEqual([]);
+  });
+
+  test('keeps the notices at the right of the canvas and above the bars, with no node covered, in the editor with three of them', async ({
+    page,
+  }) => {
+    const canvases = await editorWithThreeNotices(page);
+    await canvases.editor.add('Queue');
+
+    const stack = await canvases.notices.boundingBox();
+    const canvas = await canvases.editor.canvas.boundingBox();
+    const inspector = await canvases.editor.inspector.boundingBox();
+    const bars = await page.getByTestId('bars').boundingBox();
+    expect(stack && canvas && inspector && bars).toBeTruthy();
+    // Over the inspector and not over the canvas, and above the bars at the foot of the editor.
+    expect(stack!.x).toBeGreaterThanOrEqual(canvas!.x + canvas!.width - 1);
+    expect(stack!.x).toBeGreaterThanOrEqual(inspector!.x - 1);
+    expect(stack!.y + stack!.height).toBeLessThanOrEqual(bars!.y);
+    expect(await coveredNodes(page)).toEqual([]);
+    expect(await reachable(page, '[data-testid="bars"] button, [data-testid="bars"] input')).not.toContain(false);
+  });
+
+  test('lets the foot of the inspector be scrolled clear of the notices, and does not cover the control that has the cursor there', async ({
+    page,
+  }) => {
+    const canvases = await editorWithThreeNotices(page);
+
+    await canvases.editor.inspector.evaluate((aside) => aside.scrollTo(0, aside.scrollHeight));
+    const stack = await canvases.notices.boundingBox();
+    const buttons = await canvases.editor.inspector.getByRole('button').evaluateAll((all) =>
+      all.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom };
+      }),
+    );
+    const last = buttons[buttons.length - 1]!;
+    expect(last.bottom).toBeLessThanOrEqual(stack!.y);
+
+    await canvases.editor.inspector.getByRole('button').last().focus();
+    expect(await focusCoveredBy(page)).toBeNull();
+    await canvases.editor.inspector.getByRole('textbox').first().focus();
+    expect(await focusCoveredBy(page)).toBeNull();
   });
 });

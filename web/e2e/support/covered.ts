@@ -44,3 +44,38 @@ export function coveredNodes(page: Page): Promise<Covered[]> {
     return covered;
   });
 }
+
+/**
+ * What is over the control that has the cursor, if it is not the control (WCAG 2.4.11, ADR-0097): the middle of the element that has the focus, asked of the page as the pointer would find it. It answers `null` when
+ * the focused element is the one at its own middle (or holds it), and else the test id, the role or the tag of what covers it, or `off the screen` when its middle is not on the screen at all.
+ */
+export function focusCoveredBy(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused === null || focused === document.body) {
+      return null;
+    }
+    const box = focused.getBoundingClientRect();
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    const top = document.elementFromPoint(x, y);
+    if (top === null) {
+      return 'off the screen';
+    }
+    if (focused.contains(top) || top.contains(focused)) {
+      return null;
+    }
+    return top.closest('[data-testid]')?.getAttribute('data-testid') ?? top.tagName.toLowerCase();
+  });
+}
+
+/** Whether the middle of an element is the element itself, or part of it, as the pointer would find it, so that a press on it reaches it. */
+export function reachable(page: Page, selector: string): Promise<boolean[]> {
+  return page.evaluate((query) => {
+    return [...document.querySelectorAll(query)].map((element) => {
+      const box = element.getBoundingClientRect();
+      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return top !== null && (element.contains(top) || top.contains(element));
+    });
+  }, selector);
+}

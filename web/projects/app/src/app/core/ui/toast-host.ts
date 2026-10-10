@@ -1,12 +1,24 @@
-import { Component, DOCUMENT, inject } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  DOCUMENT,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  viewChild,
+} from '@angular/core';
 import { BUTTON } from './buttons';
 import { Icon } from './icon';
+import { setPageLength, TOAST_GAP, TOAST_ROOM } from './toast-room';
 import { Toasts } from './toasts';
 
 /**
- * Where the notices are drawn (ADR-0074): one region named "Notices", at the bottom of the screen and in the flow of the page, so that it takes room from what is above it and
- * covers nothing (a notice that floated over the corner of the page covered the button of the card under it), that is there only while there is a notice. It is not a live
- * region, because the service says each notice through the announcer, and one that was both would be said twice. The buttons are reached by Tab, and Escape on a
+ * Where the notices are drawn (ADR-0074, ADR-0097): one region named "Notices", a stack of cards that floats at the bottom right of the page, 20 rem wide as the inspector is, the newest at
+ * the bottom, and that is there only while there is a notice. Only the cards take the pointer, so that the stack does not stand between the pointer and what is around it. What floats
+ * must leave room for what it would cover (ADR-0085), so the host measures its stack and publishes how much it takes (`--toast-room`) for a screen that scrolls to pad its foot with, and
+ * the editor lifts the stack above its bars (`--toast-bottom`). It is not a live region, because the service says each notice through the announcer, and one that was both would be said twice. The buttons are reached by Tab, and Escape on a
  * notice dismisses it.
  */
 @Component({
@@ -15,13 +27,14 @@ import { Toasts } from './toasts';
   template: `
     @if (toasts.visible().length > 0) {
       <section
+        #stack
         aria-label="Notices"
-        class="border-line bg-panel flex flex-col gap-2 border-t px-4 py-2"
+        class="pointer-events-none fixed right-0 bottom-[calc(var(--toast-bottom,0px)+0.75rem)] z-40 flex w-80 max-w-full flex-col gap-2 px-3"
         data-testid="notices"
       >
         @for (toast of toasts.visible(); track toast.id) {
           <div
-            class="border-border bg-surface text-fg flex max-w-3xl flex-col gap-1 rounded-md border px-3 py-2"
+            class="border-border bg-surface text-fg pointer-events-auto flex flex-col gap-1 rounded-md border px-3 py-2 shadow-lg"
             data-testid="toast"
             [attr.data-toast]="toast.id"
             (pointerenter)="toasts.pause(toast.id)"
@@ -54,12 +67,36 @@ import { Toasts } from './toasts';
       </section>
     }
   `,
-  host: { class: 'block', '(document:keydown.escape)': 'onEscape()' },
+  host: { '(document:keydown.escape)': 'onEscape()' },
 })
 export class ToastHost {
   protected readonly toasts = inject(Toasts);
   protected readonly button = BUTTON;
   private readonly page = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly stack = viewChild<ElementRef<HTMLElement>>('stack');
+
+  constructor() {
+    // The room that the stack takes is worked out again when a notice comes or goes, after it is drawn, and when the stack changes size, which a longer message or a problem does.
+    // There is no observer in jsdom, which has no layout.
+    effect((onCleanup) => {
+      this.toasts.visible();
+      afterNextRender(() => this.publish(), { injector: this.injector });
+      const element = this.stack()?.nativeElement;
+      if (element !== undefined && typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => this.publish());
+        observer.observe(element);
+        onCleanup(() => observer.disconnect());
+      }
+    });
+    inject(DestroyRef).onDestroy(() => setPageLength(this.page, TOAST_ROOM, 0));
+  }
+
+  /** Says how much of the bottom of the page the stack takes: its height and the space around it, or nothing when there is no stack. */
+  private publish(): void {
+    const height = this.stack()?.nativeElement.offsetHeight ?? 0;
+    setPageLength(this.page, TOAST_ROOM, height > 0 ? height + 2 * TOAST_GAP : 0);
+  }
 
   /** Escape with the focus in a notice dismisses that notice, and does nothing elsewhere. */
   protected onEscape(): void {

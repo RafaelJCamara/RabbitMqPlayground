@@ -2274,6 +2274,56 @@ describe('Editor', () => {
     });
   });
 
+  describe('the notices that float over the inspector (ADR-0097)', () => {
+    const lift = () => document.documentElement.style.getPropertyValue('--toast-bottom');
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'offsetHeight');
+      document.documentElement.style.removeProperty('--toast-bottom');
+    });
+
+    it('lifts them above the bars at the foot of the editor, as high as the bars are, and no higher when the bars are gone', async () => {
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.getAttribute('data-testid') === 'bars' ? 137 : 0;
+        },
+      });
+      const { fixture } = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+      expect(fixture.nativeElement.querySelector('[data-testid="bars"]')).not.toBeNull();
+
+      await waitFor(() => expect(lift()).toBe('137px'));
+
+      fixture.destroy();
+
+      expect(lift()).toBe('');
+    });
+
+    it('has the command bar, the hints and the status in the one box that it measures, and the log when it is open', async () => {
+      const { fixture } = await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+
+      const bars = fixture.nativeElement.querySelector('[data-testid="bars"]') as HTMLElement;
+
+      expect(bars.querySelector('rmq-command-bar')).not.toBeNull();
+      expect(bars.querySelector('rmq-hint-bar')).not.toBeNull();
+      expect(bars.querySelector('rmq-status-bar')).not.toBeNull();
+      expect(bars.parentElement?.contains(screen.getByLabelText('Inspector'))).toBe(true);
+      expect(bars.contains(screen.getByLabelText('Inspector'))).toBe(false);
+    });
+
+    it('pads the foot of the inspector with the room that the notices take, and brings what has the cursor clear of them', async () => {
+      await renderEditor(harness().providers);
+      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
+
+      const inspector = screen.getByLabelText('Inspector');
+
+      expect(inspector.className.split(' ')).toContain('pb-[calc(0.75rem+var(--toast-room,0px))]');
+      expect(inspector.className.split(' ')).toContain('scroll-pb-[var(--toast-room,0px)]');
+    });
+  });
+
   describe('the status strip', () => {
     it('lets the learner dismiss the note about the browser’s promise, and keeps the warning about room', async () => {
       const user = userEvent.setup();

@@ -3,7 +3,7 @@ import { failure, succeed, type Outcome } from '@rmq/persistence';
 import { manualTimer } from '@rmq/testing';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../announcer';
 import { ToastHost } from './toast-host';
 import { TOAST_TIMER, Toasts } from './toasts';
@@ -143,6 +143,124 @@ describe('ToastHost (ADR-0074)', () => {
     timer.advance(60_000);
 
     expect(toasts.visible()).toHaveLength(1);
+  });
+
+  describe('floating at the bottom right (ADR-0097)', () => {
+    const room = () => document.documentElement.style.getPropertyValue('--toast-room');
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'offsetHeight');
+      vi.unstubAllGlobals();
+      document.documentElement.style.removeProperty('--toast-room');
+    });
+
+    /** jsdom has no layout, so the stack is given a height: the one that its region is asked for. */
+    const stackIsHigh = (pixels: () => number) =>
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.getAttribute('data-testid') === 'notices' ? pixels() : 0;
+        },
+      });
+
+    it('is a stack that is fixed at the right of the page, 20 rem wide, above what is under it, and not a bar in the flow', async () => {
+      const { toasts, fixture } = await renderHost();
+
+      toasts.show({ message: 'First.' });
+      fixture.detectChanges();
+
+      const region = await screen.findByRole('region', { name: 'Notices' });
+      const classes = region.className.split(' ');
+      expect(classes).toEqual(expect.arrayContaining(['fixed', 'right-0', 'w-80', 'z-40']));
+      expect(classes).toContain('bottom-[calc(var(--toast-bottom,0px)+0.75rem)]');
+      expect(classes).not.toContain('border-t');
+    });
+
+    it('lets the pointer through everywhere but on a card, so that the stack stands between it and nothing', async () => {
+      const { toasts, fixture } = await renderHost();
+
+      toasts.show({ message: 'First.' });
+      toasts.show({ message: 'Second.' });
+      fixture.detectChanges();
+
+      const region = await screen.findByRole('region', { name: 'Notices' });
+      expect(region.className.split(' ')).toContain('pointer-events-none');
+      for (const card of within(region).getAllByTestId('toast')) {
+        expect(card.className.split(' ')).toContain('pointer-events-auto');
+        expect(card.className.split(' ')).toContain('shadow-lg');
+      }
+    });
+
+    it('has the newest notice last, at the bottom of the stack', async () => {
+      const { toasts, fixture } = await renderHost();
+
+      toasts.show({ message: 'First.' });
+      toasts.show({ message: 'Second.' });
+      toasts.show({ message: 'Third.' });
+      fixture.detectChanges();
+
+      const messages = (await screen.findAllByTestId('toast-message')).map((message) => message.textContent);
+      expect(messages).toEqual(['First.', 'Second.', 'Third.']);
+    });
+
+    it('says how much room it takes, its height and the space around it, when a notice comes, and none when the last one goes', async () => {
+      stackIsHigh(() => 180);
+      const { toasts, fixture } = await renderHost();
+      expect(room()).toBe('');
+
+      const id = toasts.show({ message: 'Deleted.' });
+      fixture.detectChanges();
+
+      await waitFor(() => expect(room()).toBe('204px'));
+
+      toasts.dismiss(id);
+      fixture.detectChanges();
+
+      await waitFor(() => expect(room()).toBe(''));
+    });
+
+    it('says it again when the stack changes size, which a longer message or a problem does', async () => {
+      let height = 100;
+      stackIsHigh(() => height);
+      const watching: (() => void)[] = [];
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(callback: () => void) {
+            watching.push(callback);
+          }
+          observe() {
+            return undefined;
+          }
+          disconnect() {
+            return undefined;
+          }
+        },
+      );
+      const { toasts, fixture } = await renderHost();
+      toasts.show({ message: 'Deleted.' });
+      fixture.detectChanges();
+      await waitFor(() => expect(room()).toBe('124px'));
+
+      height = 160;
+      for (const changed of watching) {
+        changed();
+      }
+
+      expect(room()).toBe('184px');
+    });
+
+    it('gives the room back when the host goes, so that nothing is padded for a stack that is gone', async () => {
+      stackIsHigh(() => 90);
+      const { toasts, fixture } = await renderHost();
+      toasts.show({ message: 'Deleted.' });
+      fixture.detectChanges();
+      await waitFor(() => expect(room()).toBe('114px'));
+
+      fixture.destroy();
+
+      expect(room()).toBe('');
+    });
   });
 
   it('stops its time while the focus is in it, and starts again when the focus leaves it, and not when it moves inside it', async () => {

@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   Component,
   computed,
   DestroyRef,
@@ -6,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   signal,
   untracked,
   viewChild,
@@ -39,6 +41,7 @@ import { SelectionStore } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { CommandBar } from '../command-bar/command-bar';
 import { CommandLog } from '../core/state/command-log';
+import { setPageLength, TOAST_LIFT } from '../core/ui/toast-room';
 import { EventLogPanel } from '../explain/event-log-panel';
 import { Tour, TourController } from '../onboarding/tour';
 import { LogToggle } from '../explain/log-toggle';
@@ -255,7 +258,10 @@ interface Peek {
             />
           }
         </main>
-        <aside class="border-line bg-panel w-80 shrink-0 overflow-y-auto border-l p-3" aria-label="Inspector">
+        <aside
+          class="border-line bg-panel w-80 shrink-0 scroll-pb-[var(--toast-room,0px)] overflow-y-auto border-l p-3 pb-[calc(0.75rem+var(--toast-room,0px))]"
+          aria-label="Inspector"
+        >
           @if (ready()) {
             <rmq-why-card />
           }
@@ -264,12 +270,15 @@ interface Peek {
           <rmq-what-if />
         </aside>
       </div>
-      @if (explain.logOpen()) {
-        <rmq-event-log-panel />
-      }
-      <rmq-command-bar [keys]="commandKeys" (share)="actions.share()" />
-      <rmq-hint-bar />
-      <rmq-status-bar />
+      <!-- The bars at the foot of the editor, in one box, so that the notices that float over the inspector are lifted above all of them (ADR-0097). -->
+      <div #bars class="flex shrink-0 flex-col" data-testid="bars">
+        @if (explain.logOpen()) {
+          <rmq-event-log-panel />
+        }
+        <rmq-command-bar [keys]="commandKeys" (share)="actions.share()" />
+        <rmq-hint-bar />
+        <rmq-status-bar />
+      </div>
       <rmq-context-menu #contextMenu (act)="onMenuAction($event)" (dismissed)="viewport.focus()" />
       <rmq-context-menu #createMenu (act)="onCreateChoice($event)" (dismissed)="viewport.focus()" />
     </div>
@@ -298,6 +307,8 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   protected readonly tour = inject(TourController);
   private readonly inspector = viewChild.required(Inspector);
   private readonly commandBar = viewChild.required(CommandBar);
+  private readonly bars = viewChild<ElementRef<HTMLElement>>('bars');
+  private readonly injector = inject(Injector);
   private readonly overlay = viewChild(MessageOverlay);
   /** The keys that open the command bar, as the table of shortcuts says them. */
   protected readonly commandKeys = keysFor(['commands', 'commands-anywhere']);
@@ -335,6 +346,19 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
   private cardHeld = false;
 
   constructor() {
+    // The notices float at the bottom right of the page, over the inspector, so they are lifted above the bars at the foot of the editor, whatever their height is, which the log, the
+    // command bar and a longer status change (ADR-0097). There is no observer in jsdom, which has no layout.
+    effect((onCleanup) => {
+      this.explain.logOpen();
+      afterNextRender(() => this.liftNotices(), { injector: this.injector });
+      const element = this.bars()?.nativeElement;
+      if (element !== undefined && typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => this.liftNotices());
+        observer.observe(element);
+        onCleanup(() => observer.disconnect());
+      }
+    });
+    inject(DestroyRef).onDestroy(() => setPageLength(this.page, TOAST_LIFT, 0));
     // The log of equivalent commands listens to the bus from the start, so that nothing that the learner does is missing from it.
     inject(CommandLog);
     if (this.inWorkspace) {
@@ -453,6 +477,11 @@ export class Editor implements IntentSurface, ActionSurface, LinkSurface {
         context: target,
       });
     }
+  }
+
+  /** Says how high the bars at the foot of the editor are, which is how far the notices are lifted (ADR-0097). */
+  private liftNotices(): void {
+    setPageLength(this.page, TOAST_LIFT, this.bars()?.nativeElement.offsetHeight ?? 0);
   }
 
   /** Opens the command bar with the cursor in its field, for the keys that are for it (ADR-0045). */
