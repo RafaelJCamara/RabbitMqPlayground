@@ -1,6 +1,7 @@
 import { Component, inject, input, type OnInit } from '@angular/core';
 import type { Shared } from '@rmq/persistence';
 import { APP_NAME } from '../core/app-info';
+import { ThemePicker } from '../core/theme/theme-picker';
 import { ToastHost } from '../core/ui/toast-host';
 import { Editor } from '../editor/editor';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
@@ -14,7 +15,7 @@ import { SHARED_CANVAS_PROVIDERS, SharedCanvas } from './shared-canvas';
  */
 @Component({
   selector: 'rmq-shared-view',
-  imports: [Editor, ToastHost],
+  imports: [Editor, ThemePicker, ToastHost],
   providers: SHARED_CANVAS_PROVIDERS,
   template: `
     <div class="bg-surface text-fg flex h-dvh flex-col">
@@ -34,6 +35,7 @@ import { SHARED_CANVAS_PROVIDERS, SharedCanvas } from './shared-canvas';
           Save a copy to my canvases
         </button>
         <button type="button" [class]="button" data-testid="shared-leave" (click)="canvas.leave()">Leave</button>
+        <rmq-theme-picker />
       </header>
       @if (canvas.problem(); as problem) {
         <p

@@ -153,6 +153,15 @@ describe('SharedView (ADR-0078)', () => {
       expect(banner).toHaveTextContent('You can look around, change things and play. Nothing here is saved.');
     });
 
+    it('has the theme chooser in its banner, once, because a shared link would otherwise have no way to choose (ADR-0103)', async () => {
+      await renderView();
+
+      const choose = screen.getByRole('combobox', { name: 'Theme' });
+      expect(screen.getAllByRole('combobox', { name: 'Theme' })).toHaveLength(1);
+      expect(choose.closest('header')).toContainElement(screen.getByTestId('shared-banner'));
+      expect(choose.closest('header')).toContainElement(screen.getByTestId('shared-leave'));
+    });
+
     it('is the editor, over the canvas of the link, in the layout that a workspace gives it', async () => {
       const { editorInjector } = await renderView();
 

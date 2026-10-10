@@ -177,6 +177,22 @@ test.describe('journey 5: a link to a canvas', () => {
     }
   });
 
+  test('has the theme chooser in its banner, and the choice is applied to the page of the link (ADR-0103)', async ({
+    visitor,
+  }) => {
+    const other = await visitor();
+    await other.goto(`#c=${await payloadFor({ name: 'Orders flow', document: ORDERS })}`);
+    const shared = new SharedViewPage(other);
+    await shared.ready();
+    const theme = other.getByRole('combobox', { name: 'Theme' });
+    await expect(other.getByRole('banner').getByRole('combobox', { name: 'Theme' })).toHaveCount(1);
+
+    await theme.selectOption('dark');
+
+    await expect(other.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(other.locator('rmq-editor > div')).toHaveCSS('background-color', 'rgb(11, 16, 32)');
+  });
+
   test('says what a clear came to, with the Undo that brings the canvas back, as it does for the canvases of the browser', async ({
     visitor,
   }) => {

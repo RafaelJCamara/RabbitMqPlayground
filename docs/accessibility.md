@@ -31,7 +31,8 @@ These are on the screen in every state of the editor, and are not repeated in th
 |---|---|---|
 | `rmq-root`, `rmq-workspace`, `rmq-icon` | The page: the name of the product, which is its one heading, the strip of open canvases, and the icons, which are decoration and hidden from a screen reader. | `e2e/onboarding-a11y.spec.ts` · "the question at the first run has no axe violations" |
 | `rmq-editor` | The editor of one canvas, in the regions that follow. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
-| `rmq-top-bar` | Undo and redo, auto-layout, the view, Share, Export, the help and the theme. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
+| `rmq-theme-picker` | The choice of the theme, an icon and a select named Theme, at the right end of the banner of the page: the strip of the workspace (on the home and in every editor) and the banner of a shared canvas, outside the list of open canvases (ADR-0103). The icon is decoration and hidden from a screen reader. | `e2e/canvases-a11y.spec.ts` · "in the workspace, on a first run, with the strip and the editor" |
+| `rmq-top-bar` | Undo and redo, auto-layout, the view, Share, Export and the help. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-toolbox` | The toolbar that adds a node: one tab stop, the arrow keys go along it. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-flow-canvas`, `rmq-message-overlay`, `rmq-node-stats` | The canvas, which is the diagram; the picture of the messages over it, which takes no pointer and is hidden from a screen reader; and the numbers under each node, which say the same in words. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-inspector`, `rmq-what-if`, `rmq-switch` | The inspector, the button of the what-if tester under it, and the switches. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
@@ -44,7 +45,7 @@ These are on the screen in every state of the editor, and are not repeated in th
 | State | Components | Axe test, both themes |
 |---|---|---|
 | The editor on an empty canvas | `rmq-how-to-link` | `e2e/editor-shell.spec.ts` · "has no axe violations" |
-| The editor with the theme chosen on the control of the top bar, light and then dark | `rmq-how-to-link` | `e2e/editor-shell.spec.ts` · "has no axe violations, whatever the operating system says" |
+| The editor with the theme chosen on the control of the strip, light and then dark | `rmq-how-to-link` | `e2e/editor-shell.spec.ts` · "has no axe violations, whatever the operating system says" |
 | The welcome: the question at the first run | `rmq-home`, `rmq-template-chooser` | `e2e/onboarding-a11y.spec.ts` · "the question at the first run has no axe violations" |
 | The page while the canvas of a link is unpacked | — | `e2e/onboarding-a11y.spec.ts` · "the page while it unpacks the canvas of a link has no axe violations" |
 | The same question, asked from the home | `rmq-canvas-card`, `rmq-home`, `rmq-home-notices`, `rmq-template-chooser`, `rmq-thumbnail` | `e2e/onboarding-a11y.spec.ts` · "the question from the home has no axe violations" |
@@ -315,6 +316,6 @@ Machines cannot tell whether a screen reader says something a person can use. Th
 | 20 | On the home press the button "New from a template…" and choose "Hello World". | A dialog that is read with its choices, and then a notice that says what to try. | The notice is not read. |
 | 21 | Open the Share button of the editor. | A dialog "Share “Untitled canvas”" (with the name of the canvas), with the warning that anyone who has the link can read the whole canvas, the choice of what to share, the link in a read-only field and "Copy link". | The warning is not read before the link. |
 | 22 | Open the link in a second private window. | A banner that says it is a shared canvas that is not kept, "Save a copy to my canvases" and "Leave". The editor works as before. | The banner is not read first. |
-| 23 | Switch the theme (the control "Theme" in the top bar) to dark and back. | The choice is said. Nothing else changes in what is read. | The control has no name. |
+| 23 | Switch the theme (the control "Theme" at the right end of the strip at the top of the page, outside the list of open canvases) to dark and back, on the home and in an editor. | The choice is said. Nothing else changes in what is read. | The control has no name. |
 
 **What counts as done.** All 23 steps pass with at least one of the two screen readers, and each failed step has an issue that is closed or an ADR that says why it stays. Write the screen reader, its version, the browser and the date under the table.

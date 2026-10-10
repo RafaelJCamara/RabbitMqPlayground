@@ -4,15 +4,11 @@ import { APP_NAME } from '../core/app-info';
 import { CANVAS_HOST } from '../core/session/canvas-host';
 import { CanvasSession } from '../core/session/canvas-session';
 import { DocumentStore } from '../core/state/document-store';
-import { ThemeService } from '../core/theme/theme-service';
-import { parseTheme, THEME_LABEL, THEME_PREFERENCES } from '../core/theme/theme';
 import { Icon } from '../core/ui/icon';
 import { Switch } from '../core/ui/switch';
 import { EditorActions } from './actions';
 import { formatChord } from './keyboard';
 import { saveText } from './save-text';
-
-const THEME_ICON = { system: 'monitor', light: 'sun', dark: 'moon' } as const;
 
 const BUTTON =
   'border-border bg-surface hover:bg-canvas disabled:text-muted flex min-h-8 items-center gap-1.5 rounded-md border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-60';
@@ -158,20 +154,6 @@ const BUTTON =
         >
           <rmq-icon name="help" [size]="18" />
         </button>
-        <span class="flex items-center gap-1.5">
-          <span class="text-muted" aria-hidden="true"><rmq-icon [name]="themeIcon()" [size]="18" /></span>
-          <select
-            class="border-border bg-surface rounded-md border px-2 py-1"
-            aria-label="Theme"
-            title="Theme"
-            data-testid="theme"
-            (change)="chooseTheme($event)"
-          >
-            @for (choice of choices; track choice) {
-              <option [value]="choice" [selected]="choice === theme.preference()">{{ labels[choice] }}</option>
-            }
-          </select>
-        </span>
       </div>
     </header>
   `,
@@ -180,7 +162,6 @@ export class TopBar {
   protected readonly name = APP_NAME;
   /** In a workspace (ADR-0072) the name of the product is the one heading of the page, and it is in the strip of open canvases. */
   protected readonly inWorkspace = inject(CANVAS_HOST) !== null;
-  protected readonly theme = inject(ThemeService);
   protected readonly store = inject(DocumentStore);
   protected readonly actions = inject(EditorActions);
   private readonly session = inject(CanvasSession);
@@ -191,10 +172,6 @@ export class TopBar {
   protected readonly redoKeys = formatChord({ key: 'z', mod: true, shift: true });
   protected readonly fitKeys = formatChord({ key: 'f' });
 
-  protected readonly choices = THEME_PREFERENCES;
-  /** The icon that stands for the choice, in place of a word, so that the bar has room for what it says about saving. */
-  protected readonly themeIcon = computed(() => THEME_ICON[this.theme.preference()]);
-  protected readonly labels = THEME_LABEL;
   protected readonly save = computed(() => saveText(this.session.save()));
   protected readonly saveIcon = computed(() =>
     this.save().tone === 'ok' ? 'check' : this.save().tone === 'busy' ? 'info' : 'alert',
@@ -220,8 +197,4 @@ export class TopBar {
     return label === undefined ? null : `Redo: ${label}`;
   });
   protected readonly percent = computed(() => `${Math.round(this.viewport.zoom() * 100)}%`);
-
-  protected chooseTheme(event: Event): void {
-    this.theme.set(parseTheme((event.target as HTMLSelectElement).value));
-  }
 }

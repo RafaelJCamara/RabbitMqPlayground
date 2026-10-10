@@ -168,6 +168,31 @@ describe('Workspace (ADR-0072)', () => {
       expect(within(tools).getByRole('group', { name: 'Edit' })).toBeInTheDocument();
     });
 
+    it('has the theme chooser at the right end of the banner, after the strip and outside it, on a canvas and on the home, and still one banner and one heading (ADR-0103)', async () => {
+      const user = userEvent.setup();
+      await renderWorkspace();
+      await screen.findByLabelText('Toolbox');
+
+      const onCanvas = screen.getByRole('combobox', { name: 'Theme' });
+      const banner = strip().closest('header');
+      expect(banner).toContainElement(onCanvas);
+      expect(strip()).not.toContainElement(onCanvas);
+      expect(strip().compareDocumentPosition(onCanvas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.getAllByRole('combobox', { name: 'Theme' })).toHaveLength(1);
+
+      await user.click(screen.getByTestId('tab-home'));
+      await screen.findByRole('main', { name: 'My canvases' });
+
+      expect(screen.getAllByRole('combobox', { name: 'Theme' })).toHaveLength(1);
+      expect(screen.getByRole('combobox', { name: 'Theme' })).toBe(onCanvas);
+      expect(banner).toContainElement(onCanvas);
+      expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+      const banners = [...document.querySelectorAll('header')].filter(
+        (header) => !header.closest('section, article, aside, main, nav'),
+      );
+      expect(banners).toHaveLength(1);
+    });
+
     it('lets the editor fill what is under the strip, and not the whole window', async () => {
       const { container } = await renderWorkspace();
       await screen.findByLabelText('Toolbox');

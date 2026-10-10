@@ -45,7 +45,6 @@ import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore, type Selection } from '../core/state/selection-store';
 import { StatusStore } from '../core/state/status-store';
 import { Toasts } from '../core/ui/toasts';
-import { THEME_STORAGE_KEY } from '../core/theme/theme';
 import { ContextMenu } from './context-menu';
 import { Editor } from './editor';
 
@@ -528,7 +527,7 @@ describe('Editor', () => {
       await waitFor(() => expect(screen.getByRole('textbox', { name: 'Binding key' })).toHaveFocus());
       canvas().calls.length = 0;
 
-      await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+      await user.click(screen.getByLabelText('Inspector'));
       fixture.detectChanges();
 
       expect(screen.queryByTestId('binding-key')).not.toBeInTheDocument();
@@ -601,7 +600,7 @@ describe('Editor', () => {
       await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search the targets' })).toHaveFocus());
       canvas().calls.length = 0;
 
-      await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+      await user.click(screen.getByLabelText('Inspector'));
       fixture.detectChanges();
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -2245,89 +2244,11 @@ describe('Editor', () => {
   });
 
   describe('the theme', () => {
-    it('is the system’s until the learner chooses, and the choice is applied and kept', async () => {
-      const user = userEvent.setup();
-      await renderEditor(harness().providers);
-      const select = screen.getByRole('combobox', { name: 'Theme' });
-
-      expect(select).toHaveValue('system');
-      expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-
-      await user.selectOptions(select, 'dark');
-      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
-
-      await user.selectOptions(select, 'light');
-      expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-
-      await user.selectOptions(select, 'system');
-      expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
-    });
-
-    it('offers the three choices, in words', async () => {
+    it('is not chosen in the top bar of an editor: it is in the banner of the page (ADR-0103)', async () => {
       await renderEditor(harness().providers);
 
-      expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['System', 'Light', 'Dark']);
-    });
-
-    it('starts as the choice that was kept', async () => {
-      window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-      await renderEditor(harness().providers);
-
-      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('dark');
-    });
-  });
-
-  describe('the notices that float over the inspector (ADR-0097)', () => {
-    const lift = () => document.documentElement.style.getPropertyValue('--toast-bottom');
-    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight') as PropertyDescriptor;
-
-    afterEach(() => {
-      // What jsdom had, and not nothing: the other specs of the worker read it.
-      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
-      document.documentElement.style.removeProperty('--toast-bottom');
-    });
-
-    it('lifts them above the bars at the foot of the editor, as high as the bars are, and no higher when the bars are gone', async () => {
-      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-        configurable: true,
-        get(this: HTMLElement) {
-          return this.getAttribute('data-testid') === 'bars' ? 137 : 0;
-        },
-      });
-      const { fixture } = await renderEditor(harness().providers);
-      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
-      expect(fixture.nativeElement.querySelector('[data-testid="bars"]')).not.toBeNull();
-
-      await waitFor(() => expect(lift()).toBe('137px'));
-
-      fixture.destroy();
-
-      expect(lift()).toBe('');
-    });
-
-    it('has the command bar, the hints and the status in the one box that it measures, and the log when it is open', async () => {
-      const { fixture } = await renderEditor(harness().providers);
-      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
-
-      const bars = fixture.nativeElement.querySelector('[data-testid="bars"]') as HTMLElement;
-
-      expect(bars.querySelector('rmq-command-bar')).not.toBeNull();
-      expect(bars.querySelector('rmq-hint-bar')).not.toBeNull();
-      expect(bars.querySelector('rmq-status-bar')).not.toBeNull();
-      expect(bars.parentElement?.contains(screen.getByLabelText('Inspector'))).toBe(true);
-      expect(bars.contains(screen.getByLabelText('Inspector'))).toBe(false);
-    });
-
-    it('pads the foot of the inspector with the room that the notices take, and brings what has the cursor clear of them', async () => {
-      await renderEditor(harness().providers);
-      await waitFor(() => expect(screen.getByTestId('save-state')).toHaveTextContent('All changes saved'));
-
-      const inspector = screen.getByLabelText('Inspector');
-
-      expect(inspector.className.split(' ')).toContain('pb-[calc(0.75rem+var(--toast-room,0px))]');
-      expect(inspector.className.split(' ')).toContain('scroll-pb-[var(--toast-room,0px)]');
+      expect(screen.queryByRole('combobox', { name: 'Theme' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('theme')).not.toBeInTheDocument();
     });
   });
 
@@ -2533,7 +2454,7 @@ describe('the conditions of a headers binding (ADR-0066)', () => {
     link();
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Name of condition 1' })).toHaveFocus());
     canvas().calls.length = 0;
-    await user.click(screen.getByRole('combobox', { name: 'Theme' }));
+    await user.click(screen.getByLabelText('Inspector'));
     fixture.detectChanges();
 
     expect(screen.queryByTestId('binding-conditions')).not.toBeInTheDocument();

@@ -45,6 +45,14 @@ test.describe('the strip of open canvases (ADR-0096)', () => {
     expect(new Set(tops).size).toBe(1);
     const header = await canvases.strip.locator('xpath=ancestor::header').boundingBox();
     expect(header?.height).toBeLessThan(72);
+    // The theme chooser is at the right end of the same row (ADR-0103), after the strip and outside it.
+    const picker = await page.getByRole('combobox', { name: 'Theme' }).boundingBox();
+    const stripBox = await canvases.strip.boundingBox();
+    expect(picker).not.toBeNull();
+    expect(picker!.x).toBeGreaterThanOrEqual((stripBox?.x ?? 0) + (stripBox?.width ?? 0) - 1);
+    expect(picker!.y).toBeGreaterThanOrEqual(header?.y ?? 0);
+    expect(picker!.y + picker!.height).toBeLessThanOrEqual((header?.y ?? 0) + (header?.height ?? 0));
+    expect(picker!.x + picker!.width).toBeLessThanOrEqual(1280);
     const editor = await canvases.editor.flow.boundingBox();
     expect(editor?.height).toBeGreaterThan(300);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

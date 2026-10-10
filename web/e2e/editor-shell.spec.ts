@@ -1,3 +1,4 @@
+import { CanvasesPage } from './pages/canvases-page';
 import { EditorPage } from './pages/editor-page';
 import { expectNoAxeViolations } from './support/axe';
 import { expect, test } from './support/test';
@@ -62,6 +63,30 @@ test.describe('the one implicit canvas, in IndexedDB in a real browser', () => {
 });
 
 test.describe('the theme switch', () => {
+  test('is chosen from the banner of the page, on the home with no canvas open, and kept when the page is opened again (ADR-0103)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.closeAll();
+    await expect(canvases.home).toBeVisible();
+    await expect(canvases.tabs()).resolves.toEqual(['My canvases']);
+    const root = page.locator('html');
+    const theme = page.getByRole('combobox', { name: 'Theme' });
+    await expect(page.getByRole('banner').getByRole('combobox', { name: 'Theme' })).toHaveCount(1);
+    await expect(canvases.strip.getByRole('combobox', { name: 'Theme' })).toHaveCount(0);
+
+    await theme.selectOption('dark');
+
+    await expect(root).toHaveAttribute('data-theme', 'dark');
+    await page.reload();
+    await canvases.heading.waitFor();
+    await expect(root).toHaveAttribute('data-theme', 'dark');
+    await expect(theme).toHaveValue('dark');
+    await theme.selectOption('system');
+    await expect(root).not.toHaveAttribute('data-theme', /.*/);
+  });
+
   test('applies the choice, keeps it when the page is opened again, and goes back to the system', async ({ page }) => {
     const editor = new EditorPage(page);
     await editor.goto();
