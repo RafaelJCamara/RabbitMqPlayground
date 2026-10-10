@@ -1,6 +1,6 @@
 # ADR-0048: What building S5 settled: Ctrl+K in a field, a bar that keeps its draft, a top bar that fits, and tests that wait
 
-- **Status:** Accepted. What the setup of the specs does between two tests is settled by [ADR-0058](0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md).
+- **Status:** Accepted. What the setup of the specs does between two tests is settled by [ADR-0058](0058-the-specs-of-the-app-share-one-document-so-each-test-leaves-it-empty.md). Ctrl+K only opening the bar is superseded by [ADR-0094](0094-ctrl-k-opens-the-command-bar-and-closes-it-when-it-is-open-and-the-draft-stays.md), which also closes it, the rest stands.
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** [ADR-0035](0035-the-keyboard-service-scope-modifiers-and-text-fields.md) (text fields keep their keys), [ADR-0036](0036-the-test-strategy-of-the-editor.md) (what the tests wait for),

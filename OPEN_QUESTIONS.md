@@ -682,6 +682,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   fonts of Linux or macOS**; the CI run of the new browser test is the first look at another font. If a font cuts a name that fits by count,
   raise `NODE_CHARACTER` there and the pinned numbers in the specs (228, 260, 268 and 308). A node that is added is still put at `COLUMN_X`,
   320 apart, so a renamed node of 30 characters can touch the next column until the learner presses Auto-layout.
+- **Ctrl+K opens the command bar and closes it when it is open**
+  ([ADR-0094](docs/adr/0094-ctrl-k-opens-the-command-bar-and-closes-it-when-it-is-open-and-the-draft-stays.md)). The draft stays and the
+  cursor goes to the canvas, as with Escape. A learner who pressed it a second time to get the cursor back in the field now closes the
+  bar; if that proves annoying, `CommandBar.toggleFromKeys()` is the one place to go back to open-only.
 
 ## Follow-ups that are already owned
 

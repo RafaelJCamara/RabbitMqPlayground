@@ -1,6 +1,6 @@
 # ADR-0045: The command bar: a panel that types through the same door
 
-- **Status:** Accepted. What it keeps when it is closed, where a refusal of it is shown, and when its list is shut are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md). The folder that sits between it and the editor is settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md).
+- **Status:** Accepted. What it keeps when it is closed, where a refusal of it is shown, and when its list is shut are settled by [ADR-0048](0048-what-building-s5-settled-ctrl-k-in-a-field-a-bar-that-keeps-its-draft-a-top-bar-that-fits-and-tests-that-wait.md). The folder that sits between it and the editor is settled by [ADR-0057](0057-what-building-s6-settled-folders-that-run-one-way-a-strip-that-is-a-region-frames-that-cannot-jump-and-colours-read-through-a-probe.md). Ctrl+K also closes the bar when it is open, superseded by [ADR-0094](0094-ctrl-k-opens-the-command-bar-and-closes-it-when-it-is-open-and-the-draft-stays.md), the rest stands.
 - **Date:** 2026-10-06
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Command bar (M1)" of [ADR-0011](0011-explicit-linking-and-command-layer.md), "The verbs of M1" of [ADR-0025](0025-the-command-grammar.md) (`help` joins the registry in S5) and
