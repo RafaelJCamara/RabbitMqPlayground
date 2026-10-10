@@ -100,27 +100,56 @@ describe('CanvasCard (ADR-0073)', () => {
     expect(events).toEqual(['open', 'rename', 'duplicate', 'save', 'delete']);
   });
 
-  it('opens nothing when the name or the drawing is pressed, so that reading a card does not open it', async () => {
+  it('opens the canvas when the drawing is pressed, as Open does, and does nothing else (ADR-0095)', async () => {
+    const { events, user } = await renderCard();
+
+    await user.click(screen.getByTestId('thumbnail-empty'));
+
+    expect(events).toEqual(['open']);
+  });
+
+  it('opens nothing when the name is pressed, so that reading a card does not open it', async () => {
     const { events, user } = await renderCard();
 
     await user.click(screen.getByRole('heading', { name: 'Orders flow' }));
-    await user.click(screen.getByTestId('thumbnail-empty'));
 
     expect(events).toEqual([]);
   });
 
-  it('hides the drawing from a screen reader, which has everything it says in words', async () => {
+  it('renames when the name is double-clicked, as Rename does, and does nothing else (ADR-0095)', async () => {
+    const { events, user } = await renderCard();
+
+    await user.dblClick(screen.getByRole('heading', { name: 'Orders flow' }));
+
+    expect(events).toEqual(['rename']);
+  });
+
+  it('does not rename when the drawing or the time is double-clicked, only the name', async () => {
+    const { events, user } = await renderCard();
+
+    await user.dblClick(screen.getByText('Edited 3 hours ago'));
+    await user.dblClick(screen.getByText('12 elements'));
+
+    expect(events).toEqual([]);
+  });
+
+  it('hides the drawing from a screen reader, which has everything it says in words, and from the keyboard, which has Open', async () => {
     await renderCard();
 
-    expect(screen.getByTestId('thumbnail-empty').closest('[aria-hidden="true"]')).not.toBeNull();
+    const drawing = screen.getByTestId('card-drawing');
+    expect(drawing).toHaveAttribute('aria-hidden', 'true');
+    expect(drawing).toContainElement(screen.getByTestId('thumbnail-empty'));
+    expect(drawing).toHaveAttribute('tabindex', '-1');
     expect(within(screen.getByRole('article')).queryByRole('img')).toBeNull();
+    expect(within(screen.getByRole('article')).getAllByRole('button', { name: /^Open / })).toHaveLength(1);
+    expect(within(screen.getByRole('article')).getAllByRole('button')).toHaveLength(6);
   });
 
   it('shows the whole name when the pointer rests on one that is cut', async () => {
     const long = 'A canvas with a very long name that does not fit on one line of a card';
     await renderCard(canvas({ name: long }));
 
-    expect(screen.getByRole('heading', { name: long })).toHaveAttribute('title', long);
+    expect(screen.getByRole('heading', { name: long })).toHaveAttribute('title', `${long} (double-click to rename)`);
   });
 
   it('marks the card with the id of its canvas, for the home to find the card', async () => {

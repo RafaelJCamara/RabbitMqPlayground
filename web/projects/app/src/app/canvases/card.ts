@@ -12,6 +12,9 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
 /**
  * The card of a canvas on the home (ADR-0073): its drawing, its name, when it was edited and how much is on it, and the buttons that act on it. The drawing is
  * decoration, so everything it says is in words, and each button is named with the canvas (`Open Orders`), so that a list of them is not a list of "Open".
+ *
+ * A press on the drawing opens the canvas, and a double click on the name renames it (ADR-0095). Both are for a pointer: the drawing is a copy of **Open** that a
+ * keyboard and a screen reader do not meet (it has no tab stop and is hidden from them), and the name has **Rename** beside it.
  */
 @Component({
   selector: 'rmq-canvas-card',
@@ -21,11 +24,23 @@ export const elementsText = (count: number): string => `${count} ${count === 1 ?
       class="border-border bg-surface flex h-full flex-col overflow-hidden rounded-lg border"
       [attr.data-canvas]="canvas().id"
     >
-      <div class="bg-canvas border-line aspect-[16/10] border-b p-2">
+      <button
+        type="button"
+        class="bg-canvas border-line block aspect-[16/10] w-full cursor-pointer border-b p-2"
+        tabindex="-1"
+        aria-hidden="true"
+        data-testid="card-drawing"
+        (click)="open.emit()"
+      >
         <rmq-thumbnail [thumbnail]="canvas().thumbnail" />
-      </div>
+      </button>
       <div class="flex flex-1 flex-col gap-1 p-3">
-        <h3 class="truncate text-base font-semibold" [title]="canvas().name" data-testid="card-name">
+        <h3
+          class="truncate text-base font-semibold select-none"
+          [title]="canvas().name + ' (double-click to rename)'"
+          data-testid="card-name"
+          (dblclick)="rename.emit()"
+        >
           {{ canvas().name }}
         </h3>
         <p class="text-muted flex flex-wrap gap-x-3 text-sm">

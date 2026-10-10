@@ -186,6 +186,21 @@ describe('Home (ADR-0073)', () => {
       await data?.submit('Beta');
       expect(library.rename).toHaveBeenCalledExactlyOnceWith('a', 'Beta');
     });
+
+    it('opens the canvas whose drawing is pressed, and asks for the name of the canvas whose name is double-clicked, and no other (ADR-0095)', async () => {
+      const { library, user } = await renderHome([canvas('a', { name: 'Alpha' }), canvas('b', { name: 'Beta' })]);
+      const rename = vi.spyOn(TestBed.inject(CanvasDialogs), 'rename').mockImplementation(() => undefined);
+
+      await user.click(document.querySelector<HTMLElement>('[data-canvas=b] [data-testid=card-drawing]')!);
+      await user.dblClick(screen.getByRole('heading', { name: 'Alpha' }));
+
+      expect(library.openCanvas).toHaveBeenCalledExactlyOnceWith('b');
+      expect(rename).toHaveBeenCalledOnce();
+      const data = rename.mock.calls[0]?.[0];
+      expect(data).toMatchObject({ title: 'Rename canvas', name: 'Alpha', confirm: 'Rename' });
+      await data?.submit('Gamma');
+      expect(library.rename).toHaveBeenCalledExactlyOnceWith('a', 'Gamma');
+    });
   });
 
   describe('searching', () => {

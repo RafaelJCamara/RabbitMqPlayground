@@ -299,6 +299,42 @@ test.describe('the home, My canvases (ADR-0073)', () => {
     await expect.poll(() => canvases.current()).toEqual(['One']);
   });
 
+  test('opens a canvas when its drawing is pressed, and renames it when its name is double-clicked, and only then', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await seedLibrary(page, [
+      { id: 'one', name: 'One' },
+      { id: 'two', name: 'Two' },
+    ]);
+    await canvases.goto();
+    await canvases.showHome();
+    // The drawing is a pointer's copy of Open: a keyboard and a screen reader meet six buttons on a card, and one of them is Open.
+    await expect(canvases.card('One').getByRole('button')).toHaveCount(6);
+    await expect(canvases.card('One').getByRole('button', { name: /^Open / })).toHaveCount(1);
+
+    await canvases.card('One').getByRole('heading', { level: 3, name: 'One', exact: true }).click();
+    await expect(canvases.home).toBeVisible();
+    await expect(canvases.dialog).toHaveCount(0);
+
+    await canvases.card('One').getByTestId('card-drawing').click();
+    await canvases.editorReady();
+    await expect.poll(() => canvases.current()).toEqual(['One']);
+    await expect(canvases.home).toHaveCount(0);
+
+    await canvases.showHome();
+    await canvases.card('Two').getByRole('heading', { level: 3, name: 'Two', exact: true }).dblclick();
+    await expect(canvases.dialog).toHaveAccessibleName('Rename canvas');
+    await expect(canvases.dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Two');
+    await canvases.dialog.getByRole('textbox', { name: 'Name' }).fill('Second');
+    await page.keyboard.press('Enter');
+    await expect(canvases.dialog).toHaveCount(0);
+
+    await expect.poll(async () => (await canvases.cardNames()).sort()).toEqual(['One', 'Second']);
+    await expect.poll(() => canvases.stored().then((names) => [...names].sort())).toEqual(['One', 'Second']);
+    await expect(canvases.home).toBeVisible();
+  });
+
   test('renames a canvas in a dialog that has the cursor in the field, with the name selected, and the tab follows', async ({
     page,
   }) => {
