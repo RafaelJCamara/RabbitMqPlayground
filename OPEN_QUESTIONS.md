@@ -717,6 +717,9 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
 - **The theme is chosen in the banner of the page, at the right end of the strip, and in the banner of a shared canvas**
   ([ADR-0103](docs/adr/0103-the-theme-is-chosen-in-the-banner-of-the-page-at-the-right-end-of-the-strip-and-not-inside-a-canvas.md)). On a window narrower than the strip the picker wraps to a second row of the banner, and
   the banner is then taller than the 72 pixels that ADR-0096 holds at 1280; it was looked at in Chromium at 1280 by 720 only.
+- **A new consumer acknowledges by hand** (`NEW_CONSUMER` is `ack: manual`, `prefetch: 0`, `processingMs: 500`)
+  ([ADR-0104](docs/adr/0104-a-new-consumer-acknowledges-by-hand-so-that-its-prefetch-holds-it-to-what-it-says.md)). The templates and the tour were read for wording that assumes automatic acknowledgement and none was found; a learner who wants to
+  see an automatic consumer sets `ack=auto`. A canvas built by a script that never set `ack` now holds each message for the half second that the consumer takes to handle it.
 
 
 ## Follow-ups that are already owned
