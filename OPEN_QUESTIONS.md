@@ -686,6 +686,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   ([ADR-0094](docs/adr/0094-ctrl-k-opens-the-command-bar-and-closes-it-when-it-is-open-and-the-draft-stays.md)). The draft stays and the
   cursor goes to the canvas, as with Escape. A learner who pressed it a second time to get the cursor back in the field now closes the
   bar; if that proves annoying, `CommandBar.toggleFromKeys()` is the one place to go back to open-only.
+- **A press on the drawing of a card opens the canvas, and a double click on its name renames it**
+  ([ADR-0095](docs/adr/0095-a-press-on-the-drawing-of-a-card-opens-the-canvas-and-a-double-click-on-its-name-renames-it.md)). The drawing is a
+  button that has no tab stop and is hidden from a screen reader (a pointer's copy of Open), and the name is `select-none`. A double tap on a name
+  on a touch screen may not rename in every browser, so Rename is the way there; the guard is the count of six buttons on a card.
 
 ## Follow-ups that are already owned
 

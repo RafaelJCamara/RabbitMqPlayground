@@ -1,6 +1,6 @@
 # ADR-0073: The home is a grid of cards from one read, and a canvas that cannot be read is listed with its reason
 
-- **Status:** Accepted
+- **Status:** Accepted. "The name and the thumbnail are not the button" is superseded by [ADR-0095](0095-a-press-on-the-drawing-of-a-card-opens-the-canvas-and-a-double-click-on-its-name-renames-it.md) (the drawing opens the canvas and a double click on the name renames it), the rest stands.
 - **Date:** 2026-10-08
 - **Deciders:** @RafaelJCamara
 - **Extends:** "UI (M1)" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md), `list()` of [ADR-0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md), and the arrangement of [ADR-0072](0072-the-canvases-flag-puts-a-workspace-around-the-editor-a-strip-of-open-canvases-a-home-and-an-editor-that-is-made-again-for-each-canvas.md).
