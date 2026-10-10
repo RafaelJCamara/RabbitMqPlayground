@@ -1,6 +1,6 @@
 # ADR-0074: Delete, clear and delete-all ask once and can be taken back, with an Undo that says how long it lasts
 
-- **Status:** Accepted. The region of the notices is a strip in the flow of the page under the view, and not in the corner over it: [ADR-0076](0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md).
+- **Status:** Accepted. The region of the notices is a strip in the flow of the page under the view, and not in the corner over it: [ADR-0076](0076-what-building-s9-settled-the-notices-are-in-the-flow-the-strip-is-the-banner-a-view-is-said-aloud-and-a-tab-can-be-renamed.md). The notices float at the bottom right and the screens leave room for them, superseded by [ADR-0097](0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md), the rest stands.
 - **Date:** 2026-10-08
 - **Deciders:** @RafaelJCamara
 - **Extends:** "Per-canvas actions", "Clear canvas" and "Delete all canvases" of [ADR-0012](0012-multiple-canvases-and-local-persistence.md), the tombstones of [ADR-0028](0028-the-canvas-repository-autosave-and-what-the-browser-may-do.md), and the dialog of [ADR-0047](0047-guidance-the-hint-bar-the-how-to-link-card-and-the-cheat-sheet.md)

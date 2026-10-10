@@ -694,6 +694,10 @@ What was checked on the live site, https://rafaeljcamara.github.io/RabbitMqPlayg
   ([ADR-0096](docs/adr/0096-the-strip-is-one-row-with-the-newest-tab-first-the-close-inside-its-box-arrows-for-the-rest-and-a-close-all.md)). A strip saved before it is read
   in the order it is shown, so it keeps its oldest tab first until new canvases are put in front. The scroll is by four fifths of what is in sight (`Workspace.scroll`), and the
   arrows are held by unit tests with sizes given by hand and by `e2e/canvases-strip.spec.ts` with the real ones; it was looked at with 15 tabs in Chromium at 1280 by 720 only.
+- **The notices float at the bottom right, 20 rem wide, over the foot of the home and of the inspector, and never over the canvas or the bars**
+  ([ADR-0097](docs/adr/0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md)). The host publishes `--toast-room` and the editor
+  `--toast-bottom` on the page; a new screen that scrolls at the right of the page has to pad its foot with the first, or its last control is under the stack. On a window narrower than the toolbox, the canvas and
+  the inspector together the stack is still 20 rem. Looked at in Chromium at 1280 by 720 only.
 
 ## Follow-ups that are already owned
 
