@@ -147,9 +147,11 @@ describe('ToastHost (ADR-0074)', () => {
 
   describe('floating at the bottom right (ADR-0097)', () => {
     const room = () => document.documentElement.style.getPropertyValue('--toast-room');
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight') as PropertyDescriptor;
 
     afterEach(() => {
-      Reflect.deleteProperty(HTMLElement.prototype, 'offsetHeight');
+      // What jsdom had, and not nothing: the other specs of the worker read it.
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
       vi.unstubAllGlobals();
       document.documentElement.style.removeProperty('--toast-room');
     });

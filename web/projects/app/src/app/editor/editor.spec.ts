@@ -2276,9 +2276,11 @@ describe('Editor', () => {
 
   describe('the notices that float over the inspector (ADR-0097)', () => {
     const lift = () => document.documentElement.style.getPropertyValue('--toast-bottom');
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight') as PropertyDescriptor;
 
     afterEach(() => {
-      Reflect.deleteProperty(HTMLElement.prototype, 'offsetHeight');
+      // What jsdom had, and not nothing: the other specs of the worker read it.
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
       document.documentElement.style.removeProperty('--toast-bottom');
     });
 
