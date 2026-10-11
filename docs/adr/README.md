@@ -117,6 +117,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0104](0104-a-new-consumer-acknowledges-by-hand-so-that-its-prefetch-holds-it-to-what-it-says.md) | A new consumer acknowledges by hand, so that its prefetch holds it to what it says | Accepted |
 | [0105](0105-the-list-of-what-a-consumer-received-is-in-pages-of-ten-and-can-be-cleared-as-a-view.md) | The list of what a consumer received is in pages of ten and can be cleared, as a view | Accepted |
 | [0106](0106-the-home-always-says-that-the-canvases-take-up-space-in-the-browser-in-a-note-that-stays-and-without-a-number.md) | The home always says that the canvases take up space in the browser, in a note that stays and without a number | Accepted |
+| [0107](0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md) | A pull request into main needs the CI checks and the code owner, and the maintainer may still push | Accepted |
 
 ## Where to start
 

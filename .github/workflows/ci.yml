@@ -1,5 +1,5 @@
-# CI (ADR-0004, ADR-0015). Every push to main runs the whole suite, and a green run deploys to GitHub Pages.
-# There is no review step on main, so this is the gate. A red main is fixed first.
+# CI (ADR-0004, ADR-0015, ADR-0107). Every pull request into main and every push to main runs the whole suite, and a green run on main deploys to GitHub Pages.
+# A pull request needs this to pass and a review from the code owner before it merges, so this is the gate for everyone but the maintainer.
 name: CI
 
 on:
