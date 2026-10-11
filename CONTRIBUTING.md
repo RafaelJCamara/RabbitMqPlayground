@@ -11,12 +11,17 @@ Thank you for helping. This page explains how changes get into the project, and 
 
 ## How changes get in
 
-[ADR-0004](docs/adr/0004-trunk-based-development-on-main.md) sets the workflow.
+Every change reaches `main` through a pull request, maintainers' included, and nobody pushes to `main`
+([ADR-0108](docs/adr/0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md)).
 
-- **Maintainers** commit directly to `main`, in small commits. Each commit leaves `main` building with its tests
-  passing. A red `main` is fixed first: the next commit fixes it, or the breaking commit is reverted.
-- **Everyone else** forks the repository and opens a pull request into `main` ([ADR-0107](docs/adr/0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md)). `main` is protected: a pull request needs the CI checks, a review from the code owner, and every conversation resolved. CI runs on pull requests from forks and
-  from Dependabot. Keep pull requests small, and include their tests.
+- **Maintainers** work on a branch and open a pull request into `main`, in small commits. Each commit follows
+  Conventional Commits and leaves the branch building with its tests passing. A red `main` is fixed first, with a pull
+  request that fixes it or one that reverts the breaking change.
+- **Everyone else** forks the repository and opens a pull request into `main`. Keep pull requests small, and include
+  their tests.
+- **`main` is protected.** A pull request needs the CI checks, a review from the code owner, and every conversation
+  resolved. CI runs on pull requests from forks and from Dependabot. A change to documentation only (`docs/` and the
+  Markdown files at the root) skips most of the checks, and the commit-message check always runs.
 
 Not sure where to start? Open an issue, or pick a slice from the tracking issue
 ([#1](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/1)).
@@ -96,7 +101,7 @@ A change is done when all of these hold ([ADR-0015](docs/adr/0015-testing-strate
   [ADR-0018](docs/adr/0018-workspace-layout-and-dependency-rules.md). If ESLint refuses an import, the fix is in the
   design, not in the lint configuration.
 - **Unfinished features of a later milestone go behind a feature flag** that is off by default, and a finished
-  feature's flag is deleted ([ADR-0004](docs/adr/0004-trunk-based-development-on-main.md)). M1 shipped without any: its
+  feature's flag is deleted ([ADR-0108](docs/adr/0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md)). M1 shipped without any: its
   seven flags and the registry that read them were deleted in S12 ([ADR-0084](docs/adr/0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md)),
   and the page does not read `?ff=` or `localStorage['rmq.flags']` any more. A flag for M2 is added again with an ADR
   that says how it is read, and a test that fails if its default is on.
