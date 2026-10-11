@@ -14,10 +14,28 @@ export interface RepositoryFactories {
   memory(): CanvasRepository;
 }
 
+/** The part of `crypto` that an id is made from. */
+export type RandomSource = Pick<Crypto, 'getRandomValues'> & Partial<Pick<Crypto, 'randomUUID'>>;
+
+/**
+ * A random version-4 UUID. `crypto.randomUUID` exists only in a secure context (HTTPS, or localhost), and the page can be opened over plain HTTP, for example before the host has a certificate for its domain;
+ * `getRandomValues` is there in every context, and a UUID is made of it the same way.
+ */
+export function randomId(source: RandomSource = crypto): string {
+  if (typeof source.randomUUID === 'function') {
+    return source.randomUUID();
+  }
+  const bytes = source.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export const REPOSITORIES = new InjectionToken<RepositoryFactories>('REPOSITORIES', {
   providedIn: 'root',
   factory: () => {
-    const options = { now: () => Date.now(), newId: () => crypto.randomUUID() };
+    const options = { now: () => Date.now(), newId: () => randomId() };
     return { browser: () => createIdbRepository(options), memory: () => createMemoryRepository(options) };
   },
 });
