@@ -1,0 +1,30 @@
+name: Changed code
+description: >-
+  Says whether a push or pull request changes anything besides documentation (everything under docs/ and the Markdown
+  files at the root). Run it after actions/checkout with fetch-depth 0. A manual run, a schedule, or a base that is not
+  in the checkout (a force-push) counts as code, so the jobs that wait on it run.
+
+outputs:
+  code:
+    description: "'true' when something besides documentation changed, 'false' when only documentation did"
+    value: ${{ steps.diff.outputs.code }}
+
+runs:
+  using: composite
+  steps:
+    - id: diff
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      run: |
+        code=true
+        if [ "$EVENT" != workflow_dispatch ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+          files=$(git diff --name-only "$BASE...$HEAD")
+          if [ -n "$files" ] && ! echo "$files" | grep -qvE '^(docs/|[^/]+\.md$)'; then
+            code=false
+          fi
+        fi
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        echo "Code changed: $code"

@@ -18,6 +18,21 @@ permissions:
   contents: read
 
 jobs:
+  # The commit messages are checked whatever the change is. The dependency review is skipped, not filtered by path, for a
+  # change to documentation only (see ci.yml).
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        uses: ./.github/actions/changed-code
+
   commit-messages:
     name: Commit messages
     runs-on: ubuntu-latest
@@ -44,6 +59,8 @@ jobs:
 
   dependency-review:
     name: Dependency review
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
