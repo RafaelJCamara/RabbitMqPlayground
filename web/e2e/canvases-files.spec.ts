@@ -557,6 +557,21 @@ test.describe('what the home says about keeping the canvases (ADR-0075)', () => 
     await expect(canvases.home.getByTestId('quota')).toHaveCount(0);
   });
 
+  test('says that the canvases take up space in the browser, in the page and not in a notice that goes (ADR-0106)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await canvases.goto();
+    await canvases.showHome();
+
+    const note = canvases.home.getByTestId('space-note');
+    await expect(note).toBeVisible();
+    await expect(note).toContainText('Your canvases take up space in this browser.');
+    await expect(canvases.notices).toHaveCount(0);
+    await page.waitForTimeout(5_500);
+    await expect(note).toBeVisible();
+  });
+
   test('warns, in words, when the browser says the room is nearly gone', async ({ page }) => {
     const canvases = new CanvasesPage(page);
     await page.addInitScript(() => {

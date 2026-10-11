@@ -5,7 +5,7 @@ import { CanvasLibrary } from './library';
 /**
  * What the home says about keeping the canvases (ADR-0075), above the search and in this order: that nothing is kept after the tab is closed, if the browser keeps nothing; that
  * the room is running out, if it is; that the browser has not promised to keep them, if it has not; and the reminder to make a backup, if it is due. How much room the canvases
- * take is not said (ADR-0100). A warning is in words and in a colour, and the colour is not the only sign of it (WCAG 1.4.1).
+ * take is not said (ADR-0100), but that they take room is: always, with no timer, when they are kept in the browser (ADR-0106). A warning is in words and in a colour, and the colour is not the only sign of it (WCAG 1.4.1).
  */
 @Component({
   selector: 'rmq-home-notices',
@@ -17,6 +17,12 @@ import { CanvasLibrary } from './library';
           {{ reason }} Save a canvas as a file, or back up everything, to keep your work.
         </p>
       </div>
+    } @else {
+      <p class="border-border bg-panel rounded-md border px-3 py-2" data-testid="space-note">
+        <strong>Your canvases take up space in this browser.</strong>
+        They are stored on this device, so delete the ones you do not need, or save them as files and back up
+        everything.
+      </p>
     }
     @if (library.quota(); as warning) {
       <p

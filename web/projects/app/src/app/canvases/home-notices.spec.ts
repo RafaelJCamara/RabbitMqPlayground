@@ -29,10 +29,22 @@ async function renderNotices() {
 }
 
 describe('HomeNotices (ADR-0075)', () => {
-  it('says nothing when there is nothing to say', async () => {
+  it('says only that the canvases take up space when there is nothing else to say', async () => {
     const { container } = await renderNotices();
 
-    expect(container.textContent?.trim()).toBe('');
+    expect(screen.getByTestId('space-note')).toHaveTextContent('Your canvases take up space in this browser.');
+    expect(container.querySelectorAll('[data-testid]')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('does not say it when the canvases are in memory, where the notice that nothing is kept says more', async () => {
+    const { library, fixture } = await renderNotices();
+
+    library.memoryReason.set('The browser does not let this site keep canvases here.');
+    fixture.detectChanges();
+
+    expect(screen.queryByTestId('space-note')).toBeNull();
+    expect(await screen.findByTestId('memory-note')).toBeInTheDocument();
   });
 
   describe('when the browser keeps nothing', () => {

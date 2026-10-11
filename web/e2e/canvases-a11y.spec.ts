@@ -148,7 +148,8 @@ const states: readonly State[] = [
       await canvases.showHome();
       // The foot is below the window in the other states of the home, in the part that scrolls. Here it is in view, so that what axe reads is what a person sees.
       const footer = canvases.home.getByTestId('home-footer');
-      await footer.scrollIntoViewIfNeeded();
+      // To the very end of the part that scrolls: scrolling the foot to the edge of the window can leave a fraction of a pixel of it below, now that the home has the note about the space.
+      await canvases.home.evaluate((element) => element.scrollTo(0, element.scrollHeight));
       await expect(footer).toBeInViewport({ ratio: 1 });
       await expect(footer.getByRole('link')).toHaveCount(1);
     },
