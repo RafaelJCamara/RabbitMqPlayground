@@ -15,7 +15,7 @@ Thank you for helping. This page explains how changes get into the project, and 
 
 - **Maintainers** commit directly to `main`, in small commits. Each commit leaves `main` building with its tests
   passing. A red `main` is fixed first: the next commit fixes it, or the breaking commit is reverted.
-- **Everyone else** forks the repository and opens a pull request into `main`. CI runs on pull requests from forks and
+- **Everyone else** forks the repository and opens a pull request into `main` ([ADR-0107](docs/adr/0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md)). `main` is protected: a pull request needs the CI checks, a review from the code owner, and every conversation resolved. CI runs on pull requests from forks and
   from Dependabot. Keep pull requests small, and include their tests.
 
 Not sure where to start? Open an issue, or pick a slice from the tracking issue

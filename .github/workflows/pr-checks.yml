@@ -1,0 +1,55 @@
+# Checks that only make sense on a pull request (ADR-0107). Both are required by the ruleset on main.
+#
+#   commit-messages    every commit of the pull request follows Conventional Commits (ADR-0004). The commit-msg hook does
+#                      the same on a maintainer's machine, but a fork can skip a hook, so CI says it again.
+#   dependency-review  fails a pull request that adds a dependency with a known vulnerability or a licence that
+#                      the project cannot ship (ADR-0020 is MIT).
+name: Pull request checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  commit-messages:
+    name: Commit messages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-web
+      - name: Check each commit of the pull request
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          status=0
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/message.txt"
+            if ! web/node_modules/.bin/tsx web/tools/git/check-commit-message.ts "$RUNNER_TEMP/message.txt"; then
+              echo "::error::Commit $sha does not follow Conventional Commits: $(git log -1 --format=%s "$sha")"
+              status=1
+            fi
+          done
+          exit $status
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          # A pull request from a fork has a read-only token, so the action cannot comment. The summary is enough.
+          comment-summary-in-pr: never
