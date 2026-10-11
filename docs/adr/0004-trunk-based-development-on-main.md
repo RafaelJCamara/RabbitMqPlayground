@@ -1,6 +1,6 @@
 # ADR-0004: Trunk-based development directly on `main`
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0108](0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md)
 - **Date:** 2026-10-05
 - **Deciders:** @RafaelJCamara
 

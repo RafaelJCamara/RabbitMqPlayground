@@ -8,16 +8,10 @@ topologies**. Build a topology of producers, exchanges, queues and consumers, se
 message went where it did.
 
 It aims to give what users of earlier RabbitMQ simulators asked for:
-a canvas that fills the window, explicit and discoverable linking, undo, the **headers exchange**, routing explanations,
+a canvas that fills the window, explicit and discoverable linking, undo, the headers exchange, routing explanations,
 and behaviour that is checked against a real broker.
 
 **Live site:** <https://www.rabbitmqplayground.com/>
-
-> **Status: M1 ("Build & route") is released as [`v0.1.0`](https://github.com/RafaelJCamara/RabbitMqPlayground/releases/tag/v0.1.0)** and deployed. Two things were not checked and are not claimed: a manual pass with a screen reader
-> ([#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20)) and the frame rate on a mid-range
-> laptop ([#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21)). What is checked is in
-> [docs/accessibility.md](docs/accessibility.md) and [docs/performance.md](docs/performance.md), and the release notes are
-> [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
 
 ## Not affiliated with Broadcom or RabbitMQ
 
@@ -27,9 +21,7 @@ has no logo, and its name is kept in one place so it can be changed.
 
 ## What it does
 
-In short:
-
-- direct, fanout, topic and **headers** exchanges, with RabbitMQ 4.3 semantics;
+- direct, fanout, topic and headers exchanges, with RabbitMQ 4.3 semantics;
 - five ways to link things, a command bar, and an equivalent command shown for every gesture;
 - a deterministic simulation with an explanation for every routing decision;
 - multiple canvases saved in your browser, share links and `definitions.json` export, with no server and no account.
@@ -79,7 +71,6 @@ web/        the npm and Angular workspace
   CI checks to pass, a review from the code owner and every conversation resolved. Before that, a pre-push hook runs the
   checks on your machine, and a nightly conformance run compares the simulator with a real RabbitMQ. A feature of a
   later milestone sits behind a feature flag until it ships; M1 has none left.
-- **The plan** for M1 is in [`docs/plans/m1.md`](docs/plans/m1.md).
 
 ## Contributing
 

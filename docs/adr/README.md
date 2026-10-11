@@ -14,7 +14,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-product-vision-and-scope.md) | Product vision, scope and lessons from earlier simulators | Accepted |
 | [0003](0003-roadmap-and-milestones.md) | Roadmap: MVP and v1 milestones | Accepted |
-| [0004](0004-trunk-based-development-on-main.md) | Trunk-based development directly on `main` | Accepted |
+| [0004](0004-trunk-based-development-on-main.md) | Trunk-based development directly on `main` | Superseded by 0108 |
 | [0005](0005-frontend-angular.md) | Frontend framework: Angular | Accepted |
 | [0006](0006-client-only-app-dotnet-api-when-needed.md) | Client-only app; a .NET API only when needed | Accepted |
 | [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted (the engine as built by 0052, delivery by 0053, what it says of a route by 0059 and 0060) |
@@ -117,7 +117,8 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0104](0104-a-new-consumer-acknowledges-by-hand-so-that-its-prefetch-holds-it-to-what-it-says.md) | A new consumer acknowledges by hand, so that its prefetch holds it to what it says | Accepted |
 | [0105](0105-the-list-of-what-a-consumer-received-is-in-pages-of-ten-and-can-be-cleared-as-a-view.md) | The list of what a consumer received is in pages of ten and can be cleared, as a view | Accepted |
 | [0106](0106-the-home-always-says-that-the-canvases-take-up-space-in-the-browser-in-a-note-that-stays-and-without-a-number.md) | The home always says that the canvases take up space in the browser, in a note that stays and without a number | Accepted |
-| [0107](0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md) | A pull request into main needs the CI checks and the code owner, and the maintainer may still push | Accepted |
+| [0107](0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md) | A pull request into main needs the CI checks and the code owner, and the maintainer may still push | Superseded by 0108 |
+| [0108](0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md) | Every change reaches main through a pull request, and nobody pushes to it | Accepted |
 
 ## Where to start
 

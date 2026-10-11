@@ -1,6 +1,6 @@
 # ADR-0107: A pull request into main needs the CI checks and the code owner, and the maintainer may still push
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0108](0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md)
 - **Date:** 2026-10-11
 - **Deciders:** @RafaelJCamara
 - **Refines:** "Outside contributions" of [ADR-0004](0004-trunk-based-development-on-main.md). ADR-0004 said that others cannot push to `main`, and now GitHub enforces it.
