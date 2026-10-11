@@ -11,7 +11,7 @@ It aims to give what users of earlier RabbitMQ simulators asked for:
 a canvas that fills the window, explicit and discoverable linking, undo, the **headers exchange**, routing explanations,
 and behaviour that is checked against a real broker.
 
-**Live site:** <https://rafaeljcamara.github.io/RabbitMqPlayground/>
+**Live site:** <https://www.rabbitmqplayground.com/>
 
 > **Status: M1 ("Build & route") is released as [`v0.1.0`](https://github.com/RafaelJCamara/RabbitMqPlayground/releases/tag/v0.1.0)** and deployed. Two things were not checked and are not claimed: a manual pass with a screen reader
 > ([#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20), [ADR-0090](docs/adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md)) and the frame rate on a mid-range
@@ -60,7 +60,7 @@ Everyday commands, all run from `web/`:
 | `npm run test:libs` | Vitest for the libraries and tools (`test:libs:coverage` adds the coverage gates) |
 | `npm run test:app` | Angular component tests (`test:app:coverage` adds the coverage gate) |
 | `npm run build:dev` | development build, which also type-checks the app templates |
-| `npm run build:pages` | production build for GitHub Pages, at the `/RabbitMqPlayground/` base path |
+| `npm run build:pages` | production build for GitHub Pages, at the root base path (`/`), because the site is served from its own domain |
 | `npm run build:e2e` + `npm run test:e2e` | production-like build with the debug handle, then Playwright and axe |
 | `npm run docs:check` | fails if `docs/commands.md` is out of date |
 | `npm run bench` | engine micro-benchmarks, with a check for gross regressions |
