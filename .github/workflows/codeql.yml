@@ -18,8 +18,24 @@ permissions:
   contents: read
 
 jobs:
+  # Skipped, not filtered by path, for a change to documentation only (see ci.yml).
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        uses: ./.github/actions/changed-code
+
   analyze:
     name: Analyze (javascript-typescript)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

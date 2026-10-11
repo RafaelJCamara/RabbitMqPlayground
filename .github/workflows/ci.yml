@@ -17,8 +17,27 @@ permissions:
   contents: read
 
 jobs:
+  # A change that touches only documentation (everything under docs/ and the Markdown files at the root) cannot break
+  # the build, so the jobs below are skipped. They are skipped, not left out of the workflow with a path filter,
+  # because Verify and End-to-end are required checks of the main ruleset: a check that never runs stays pending and
+  # blocks the merge, while a skipped one counts as passed.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        uses: ./.github/actions/changed-code
+
   verify:
     name: Verify
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
