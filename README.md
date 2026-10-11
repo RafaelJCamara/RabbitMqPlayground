@@ -14,8 +14,8 @@ and behaviour that is checked against a real broker.
 **Live site:** <https://www.rabbitmqplayground.com/>
 
 > **Status: M1 ("Build & route") is released as [`v0.1.0`](https://github.com/RafaelJCamara/RabbitMqPlayground/releases/tag/v0.1.0)** and deployed. Two things were not checked and are not claimed: a manual pass with a screen reader
-> ([#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20), [ADR-0090](docs/adr/0090-the-manual-screen-reader-pass-does-not-block-v0-1-0-and-is-tracked-in-issue-20.md)) and the frame rate on a mid-range
-> laptop ([#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21), [ADR-0091](docs/adr/0091-the-frame-rate-on-a-mid-range-laptop-does-not-block-v0-1-0-and-is-tracked-in-issue-21.md)). What is checked is in
+> ([#20](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/20)) and the frame rate on a mid-range
+> laptop ([#21](https://github.com/RafaelJCamara/RabbitMqPlayground/issues/21)). What is checked is in
 > [docs/accessibility.md](docs/accessibility.md) and [docs/performance.md](docs/performance.md), and the release notes are
 > [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
 
@@ -23,22 +23,16 @@ and behaviour that is checked against a real broker.
 
 RabbitMQ Playground is an independent, community project. It is **not affiliated with, endorsed by or sponsored by
 Broadcom Inc. or the RabbitMQ project**. RabbitMQ is a trademark of Broadcom Inc. and/or its subsidiaries. The project
-has no logo, and its name is kept in one place so it can be changed (see
-[ADR-0020](docs/adr/0020-mit-licence.md)).
+has no logo, and its name is kept in one place so it can be changed.
 
 ## What it does
 
-The scope is set in [ADR-0002](docs/adr/0002-product-vision-and-scope.md) and the roadmap in
-[ADR-0003](docs/adr/0003-roadmap-and-milestones.md). In short:
+In short:
 
-- direct, fanout, topic and **headers** exchanges, with RabbitMQ 4.3 semantics
-  ([ADR-0008](docs/adr/0008-rabbitmq-fidelity-baseline.md), [ADR-0009](docs/adr/0009-headers-exchange-support.md));
-- five ways to link things, a command bar, and an equivalent command shown for every gesture
-  ([ADR-0011](docs/adr/0011-explicit-linking-and-command-layer.md));
-- a deterministic simulation with an explanation for every routing decision
-  ([ADR-0007](docs/adr/0007-deterministic-simulation-engine.md), [ADR-0010](docs/adr/0010-explanation-first-editor-ux.md));
-- multiple canvases saved in your browser, share links and `definitions.json` export, with no server and no account
-  ([ADR-0006](docs/adr/0006-client-only-app-dotnet-api-when-needed.md)).
+- direct, fanout, topic and **headers** exchanges, with RabbitMQ 4.3 semantics;
+- five ways to link things, a command bar, and an equivalent command shown for every gesture;
+- a deterministic simulation with an explanation for every routing decision;
+- multiple canvases saved in your browser, share links and `definitions.json` export, with no server and no account.
 
 ## Getting started
 
@@ -69,7 +63,7 @@ Everyday commands, all run from `web/`:
 ## Repository layout
 
 ```
-docs/       architecture decision records (docs/adr), plans (docs/plans), generated command reference
+docs/       plans (docs/plans), accessibility and performance notes, generated command reference
 web/        the npm and Angular workspace
   projects/engine, domain, persistence, testing   plain TypeScript libraries (@rmq/*)
   projects/app                                     the Angular application
@@ -77,17 +71,14 @@ web/        the npm and Angular workspace
 .github/    CI, the nightly conformance run, Dependabot
 ```
 
-The libraries, and which of them may import which, are described in
-[ADR-0018](docs/adr/0018-workspace-layout-and-dependency-rules.md).
-
 ## How we work
 
-- **Decisions are written down.** Significant changes come with an ADR in [`docs/adr`](docs/adr/README.md).
-- **Trunk-based development.** Maintainers commit straight to `main`, and automation replaces review: a pre-push hook,
-  CI on every push, and a nightly conformance run against a real RabbitMQ
-  ([ADR-0004](docs/adr/0004-trunk-based-development-on-main.md),
-  [ADR-0015](docs/adr/0015-testing-strategy-and-definition-of-done.md)). A feature of a later milestone sits behind a
-  feature flag until it ships; M1 has none left ([ADR-0084](docs/adr/0084-the-seven-m1-flags-are-deleted-one-by-one-the-page-ignores-what-they-leave-and-the-first-run-always-asks.md)).
+- **Decisions are written down.** Significant changes come with an ADR (architecture decision record) in
+  [`docs/adr`](docs/adr/README.md).
+- **Every change is a pull request.** Nobody, maintainers included, commits straight to `main`. A pull request needs the
+  CI checks to pass, a review from the code owner and every conversation resolved. Before that, a pre-push hook runs the
+  checks on your machine, and a nightly conformance run compares the simulator with a real RabbitMQ. A feature of a
+  later milestone sits behind a feature flag until it ships; M1 has none left.
 - **The plan** for M1 is in [`docs/plans/m1.md`](docs/plans/m1.md).
 
 ## Contributing
