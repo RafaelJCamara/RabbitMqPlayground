@@ -1,4 +1,5 @@
 import { AppPage } from './pages/app-page';
+import { skipWelcome } from './pages/editor-page';
 import { expect, test } from './support/test';
 
 /**
@@ -40,7 +41,7 @@ test.describe('the deployed site', () => {
       throw new Error('EXPECTED_COMMIT is required for the live smoke test');
     }
     await page.goto('');
-    await page.keyboard.press('Escape');
+    await skipWelcome(page);
     await page.getByRole('button', { name: 'My canvases' }).click();
 
     const link = page.getByTestId('home-footer').getByTestId('build-stamp').getByRole('link');
