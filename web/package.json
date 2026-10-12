@@ -60,7 +60,7 @@
     "@angular/compiler-cli": "^22.2.0",
     "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@testcontainers/rabbitmq": "^12.2.0",
     "@testing-library/angular": "^19.5.0",
