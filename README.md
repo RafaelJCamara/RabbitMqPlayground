@@ -69,8 +69,7 @@ web/        the npm and Angular workspace
   [`docs/adr`](docs/adr/README.md).
 - **Every change is a pull request.** Nobody, maintainers included, commits straight to `main`. A pull request needs the
   CI checks to pass, a review from the code owner and every conversation resolved. Before that, a pre-push hook runs the
-  checks on your machine, and a nightly conformance run compares the simulator with a real RabbitMQ. A feature of a
-  later milestone sits behind a feature flag until it ships; M1 has none left.
+  checks on your machine, and a nightly conformance run compares the simulator with a real RabbitMQ.
 
 ## Contributing
 
