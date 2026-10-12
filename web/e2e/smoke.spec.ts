@@ -30,6 +30,24 @@ test.describe('journey 1: smoke and axe at the base path', () => {
     ).toBeVisible();
   });
 
+  test('says at the foot of the home which commit the build is of (ADR-0109): a short hash that links to it, or "local" outside CI', async ({
+    page,
+  }) => {
+    await page.goto('');
+    await welcome(page).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'My canvases' }).click();
+
+    const stamp = page.getByTestId('home-footer').getByTestId('build-stamp');
+    await expect(stamp).toHaveText(/^\s*Build\s+(local|[0-9a-f]{7})\s*$/);
+    if (!(await stamp.textContent())?.includes('local')) {
+      await expect(stamp.getByRole('link')).toHaveAttribute(
+        'href',
+        /^https:\/\/github\.com\/RafaelJCamara\/RabbitMqPlayground\/commit\/[0-9a-f]{7,40}$/,
+      );
+    }
+  });
+
   test('loads a deep link through 404.html, as GitHub Pages does, with its assets found', async ({ page }) => {
     const app = new AppPage(page);
     const response = await app.goto('some/deep/link');

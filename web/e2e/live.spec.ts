@@ -34,6 +34,20 @@ test.describe('the deployed site', () => {
     expect(await page.evaluate(() => '__rmq' in window)).toBe(false);
   });
 
+  test('shows the commit that was just built at the foot of the home (ADR-0109)', async ({ page }) => {
+    const expected = process.env['EXPECTED_COMMIT'];
+    if (!expected) {
+      throw new Error('EXPECTED_COMMIT is required for the live smoke test');
+    }
+    await page.goto('');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'My canvases' }).click();
+
+    const link = page.getByTestId('home-footer').getByTestId('build-stamp').getByRole('link');
+    await expect(link).toHaveText(expected.slice(0, 7));
+    await expect(link).toHaveAttribute('href', new RegExp(`/commit/${expected}$`));
+  });
+
   test('loads a deep link through 404.html', async ({ page }) => {
     const app = new AppPage(page);
     const response = await app.goto('some/deep/link');

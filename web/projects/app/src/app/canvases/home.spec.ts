@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/ang
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { APP_DISCLAIMER } from '../core/app-info';
+import { BUILD } from '../core/build-info';
 import { NOW } from '../core/session/canvas-session';
 import { manualTimer } from '@rmq/testing';
 import { TOAST_TIMER, Toasts } from '../core/ui/toasts';
@@ -97,6 +98,28 @@ describe('Home (ADR-0073)', () => {
         'href',
         'https://github.com/RafaelJCamara/RabbitMqPlayground',
       );
+    });
+  });
+
+  describe('the build at the foot (ADR-0109)', () => {
+    const build = { commit: 'abcdef0123456789', short: 'abcdef0', url: 'https://example.test/commit/abcdef0123456789' };
+
+    it('shows the commit that the page was built from, as a link beside the source', async () => {
+      TestBed.overrideProvider(BUILD, { useValue: build });
+      await renderHome([canvas('a')]);
+
+      const foot = screen.getByTestId('home-footer');
+      expect(within(foot).getByTestId('build-stamp')).toHaveTextContent('Build abcdef0');
+      expect(within(foot).getByRole('link', { name: 'abcdef0' })).toHaveAttribute('href', build.url);
+      expect(within(foot).getAllByRole('listitem')).toHaveLength(2);
+    });
+
+    it('has no empty list item when the page has no build', async () => {
+      await renderHome([canvas('a')]);
+
+      const foot = screen.getByTestId('home-footer');
+      expect(within(foot).queryByTestId('build-stamp')).toBeNull();
+      expect(within(foot).getAllByRole('listitem')).toHaveLength(1);
     });
   });
 

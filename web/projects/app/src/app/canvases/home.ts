@@ -1,5 +1,7 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import { APP_DISCLAIMER } from '../core/app-info';
+import { APP_DISCLAIMER, APP_SOURCE_URL } from '../core/app-info';
+import { BUILD } from '../core/build-info';
+import { BuildStamp } from '../core/ui/build-stamp';
 import { Icon } from '../core/ui/icon';
 import { Toasts } from '../core/ui/toasts';
 import { BUTTON, BUTTON_PRIMARY } from './buttons';
@@ -22,7 +24,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
  */
 @Component({
   selector: 'rmq-home',
-  imports: [CanvasCard, HomeNotices, Icon],
+  imports: [BuildStamp, CanvasCard, HomeNotices, Icon],
   template: `
     <main
       class="bg-surface text-fg h-full scroll-pb-[var(--toast-room,0px)] overflow-y-auto pb-[var(--toast-room,0px)]"
@@ -178,13 +180,11 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
           <p>{{ disclaimer }}</p>
           <ul class="flex flex-wrap gap-x-6 gap-y-1">
             <li>
-              <a
-                class="text-link underline underline-offset-4"
-                href="https://github.com/RafaelJCamara/RabbitMqPlayground"
-              >
-                Source code
-              </a>
+              <a class="text-link underline underline-offset-4" [href]="source">Source code</a>
             </li>
+            @if (build) {
+              <li><rmq-build-stamp /></li>
+            }
           </ul>
         </footer>
       </div>
@@ -194,6 +194,8 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
 })
 export class Home {
   protected readonly disclaimer = APP_DISCLAIMER;
+  protected readonly source = APP_SOURCE_URL;
+  protected readonly build = inject(BUILD);
   protected readonly library = inject(CanvasLibrary);
   private readonly dialogs = inject(CanvasDialogs);
   private readonly toasts = inject(Toasts);
