@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { withContentSecurityPolicy } from './csp';
-import { addPagesFiles, createBuildInfo } from './postbuild';
+import { addPagesFiles, createBuildInfo, withBuildMeta } from './postbuild';
 
 describe('createBuildInfo', () => {
   const now = new Date('2026-10-05T12:00:00.000Z');
@@ -18,6 +18,37 @@ describe('createBuildInfo', () => {
 
   it('says "local" outside CI', () => {
     expect(createBuildInfo({}, now)).toMatchObject({ commit: 'local', ref: 'local' });
+  });
+});
+
+describe('withBuildMeta (ADR-0109)', () => {
+  const HTML = '<html><head><meta charset="utf-8"><title>x</title></head><body></body></html>';
+  const HASH = '3f2a9c1d4e5b60718293a4b5c6d7e8f901234567';
+
+  it('puts the commit in a <meta name="rmq-build"> after the charset', () => {
+    expect(withBuildMeta(HTML, HASH)).toContain(`<meta charset="utf-8"><meta name="rmq-build" content="${HASH}" />`);
+  });
+
+  it('puts one only, however many times it is run, and the last commit wins', () => {
+    const twice = withBuildMeta(withBuildMeta(HTML, 'aaaaaaa'), HASH);
+
+    expect(twice.match(/rmq-build/g)).toHaveLength(1);
+    expect(twice).toBe(withBuildMeta(HTML, HASH));
+  });
+
+  it('accepts "local", which is what a build outside CI says', () => {
+    expect(withBuildMeta(HTML, 'local')).toContain('content="local"');
+  });
+
+  it.each(['', 'a"b', 'a b', '<script>', 'x" onload="y'])(
+    'refuses %j, which would be put in an attribute of the page',
+    (commit) => {
+      expect(() => withBuildMeta(HTML, commit)).toThrow(/not a hash/);
+    },
+  );
+
+  it('refuses a page with no charset to put it after', () => {
+    expect(() => withBuildMeta('<html><head></head></html>', HASH)).toThrow(/charset/);
   });
 });
 
@@ -41,7 +72,17 @@ describe('addPagesFiles', () => {
     expect(index).toContain(
       "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' 'sha256-",
     );
-    expect(index).toBe(withContentSecurityPolicy(BUILT));
+    expect(index).toBe(withContentSecurityPolicy(withBuildMeta(BUILT, 'local')));
+  });
+
+  it('says in index.html, and so in 404.html, which commit the build is of', () => {
+    writeFileSync(join(dist, 'index.html'), BUILT);
+
+    addPagesFiles(dist, { commit: 'abc123', ref: 'main', builtAt: '2026-10-05T12:00:00.000Z' });
+
+    for (const page of ['index.html', '404.html']) {
+      expect(readFileSync(join(dist, page), 'utf8')).toContain('<meta name="rmq-build" content="abc123" />');
+    }
   });
 
   it('copies index.html, policy and all, to 404.html, and writes build-info.json', () => {

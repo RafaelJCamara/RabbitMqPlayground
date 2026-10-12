@@ -142,7 +142,7 @@ const states: readonly State[] = [
     },
   },
   {
-    name: 'on the home, scrolled to its foot: the disclaimer and the link to the source',
+    name: 'on the home, scrolled to its foot: the disclaimer, the link to the source and the build',
     canvases: FEW,
     enter: async (canvases) => {
       await canvases.showHome();
@@ -151,7 +151,8 @@ const states: readonly State[] = [
       // To the very end of the part that scrolls: scrolling the foot to the edge of the window can leave a fraction of a pixel of it below, now that the home has the note about the space.
       await canvases.home.evaluate((element) => element.scrollTo(0, element.scrollHeight));
       await expect(footer).toBeInViewport({ ratio: 1 });
-      await expect(footer.getByRole('link')).toHaveCount(1);
+      // The build stamp is a link too when the build has a commit (ADR-0109), which the build of CI has and a local one does not.
+      await expect(footer.getByRole('link', { name: 'Source code' })).toBeVisible();
     },
   },
   {

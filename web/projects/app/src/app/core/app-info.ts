@@ -8,3 +8,6 @@ export const APP_NAME = 'RabbitMQ Playground';
 export const APP_DISCLAIMER =
   'Not affiliated with, endorsed by or sponsored by Broadcom Inc. or the RabbitMQ project. ' +
   'RabbitMQ is a trademark of Broadcom Inc. and/or its subsidiaries.';
+
+/** Where the source is, which the foot of the home links to and a build links its commit to (ADR-0109). */
+export const APP_SOURCE_URL = 'https://github.com/RafaelJCamara/RabbitMqPlayground';

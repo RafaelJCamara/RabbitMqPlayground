@@ -110,7 +110,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0097](0097-the-notices-float-at-the-bottom-right-and-every-screen-leaves-room-for-them-or-keeps-clear-of-them.md) | The notices float at the bottom right, and every screen leaves room for them or keeps clear of them | Accepted |
 | [0098](0098-a-consumer-lists-what-it-was-given-with-each-payload-in-its-inspector-from-a-store-of-its-own.md) | A consumer lists what it was given, with each payload, in its inspector, from a store of its own | Accepted (the list is in pages of ten and can be cleared, and a row that "Clear messages" took away says so, 0105) |
 | [0099](0099-every-notice-lasts-5-seconds-and-the-keys-of-an-undo-outlive-its-notice-for-50-seconds-from-when-it-was-shown.md) | Every notice lasts 5 seconds, and the keys of an Undo outlive its notice for 50 seconds from when it was shown | Accepted |
-| [0100](0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md) | The foot of the home keeps the disclaimer and the link to the source, and the line of room goes; the warnings stay | Accepted (the home says that the canvases take room, with no number, 0106) |
+| [0100](0100-the-foot-of-the-home-keeps-the-disclaimer-and-the-source-link-and-the-line-of-room-goes-the-warnings-stay.md) | The foot of the home keeps the disclaimer and the link to the source, and the line of room goes; the warnings stay | Accepted (the home says that the canvases take room, with no number, 0106; the foot also says which build it is, 0109) |
 | [0101](0101-the-note-that-the-browser-did-not-promise-to-keep-the-canvases-is-on-the-home-only-and-no-editor-shows-it.md) | The note that the browser did not promise to keep the canvases is on the home only, and no editor shows it | Accepted |
 | [0102](0102-the-file-pickers-take-only-json-files-by-name-and-type-and-refuse-anything-else-before-they-read-it.md) | The file pickers take only JSON files, by name and type, and refuse anything else before they read it | Accepted |
 | [0103](0103-the-theme-is-chosen-in-the-banner-of-the-page-at-the-right-end-of-the-strip-and-not-inside-a-canvas.md) | The theme is chosen in the banner of the page, at the right end of the strip, and not inside a canvas | Accepted |
@@ -119,6 +119,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0106](0106-the-home-always-says-that-the-canvases-take-up-space-in-the-browser-in-a-note-that-stays-and-without-a-number.md) | The home always says that the canvases take up space in the browser, in a note that stays and without a number | Accepted |
 | [0107](0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md) | A pull request into main needs the CI checks and the code owner, and the maintainer may still push | Superseded by 0108 |
 | [0108](0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md) | Every change reaches main through a pull request, and nobody pushes to it | Accepted |
+| [0109](0109-the-foot-of-the-home-says-which-commit-the-build-is-of-and-the-page-itself-carries-it.md) | The foot of the home says which commit the build is of, and the page itself carries it | Accepted |
 
 ## Where to start
 
