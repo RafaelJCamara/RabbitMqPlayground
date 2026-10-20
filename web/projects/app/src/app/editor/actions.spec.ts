@@ -1,5 +1,6 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { importBatch, planImport } from '@rmq/persistence';
 import { manualFrames, sampleDocument } from '@rmq/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FlowViewport } from '../canvas/model/flow-viewport';
@@ -14,6 +15,7 @@ import { DocumentStore } from '../core/state/document-store';
 import { SelectionStore } from '../core/state/selection-store';
 import { RUNTIME_SERVICES } from '../core/runtime/services';
 import { StatusStore } from '../core/state/status-store';
+import { Toasts } from '../core/ui/toasts';
 import { ShareDialogs } from '../share/dialogs';
 import { EditorActions, type ActionSurface } from './actions';
 
@@ -391,6 +393,80 @@ describe('EditorActions', () => {
       expect(dialogs.exportDefinitions).toHaveBeenCalledExactlyOnceWith({
         name: 'Untitled canvas',
         document: store.document(),
+      });
+    });
+
+    describe('importing a definitions file (ADR-0111)', () => {
+      const DEFINITIONS = JSON.stringify({
+        vhosts: [{ name: 'shop' }],
+        exchanges: [
+          { name: 'carts', vhost: 'shop', type: 'direct', durable: true, auto_delete: false, internal: false },
+        ],
+        queues: [{ name: 'checkout', vhost: 'shop', durable: true, auto_delete: false, arguments: {} }],
+      });
+      const opened = () => vi.mocked(dialogs.importDefinitions).mock.calls[0]?.[0];
+
+      beforeEach(() => {
+        vi.spyOn(dialogs, 'importDefinitions').mockImplementation(() => undefined);
+      });
+
+      it('reads the file and opens the dialog with it, for the canvas as it is on the screen', async () => {
+        await actions.importDefinitions(new File([DEFINITIONS], 'shop.json', { type: 'application/json' }));
+
+        expect(opened()?.name).toBe('Untitled canvas');
+        expect(opened()?.fileName).toBe('shop.json');
+        expect(opened()?.document).toBe(store.document());
+        expect(opened()?.file.ok && opened()?.file).toMatchObject({ value: { vhosts: ['shop'] } });
+      });
+
+      it('refuses a file that is not JSON before it reads it, and says so in the dialog', async () => {
+        const file = new File(['vhosts: []'], 'shop.yaml', { type: 'application/yaml' });
+        const text = vi.spyOn(file, 'text');
+
+        await actions.importDefinitions(file);
+
+        expect(text).not.toHaveBeenCalled();
+        expect(opened()?.file).toEqual({
+          ok: false,
+          error: '“shop.yaml” is not a JSON file. The import takes a RabbitMQ definitions file, which is a JSON file.',
+        });
+      });
+
+      it('says why a JSON file is not a definitions file', async () => {
+        await actions.importDefinitions(new File(['{"format": "rmq-playground/canvas"}'], 'a.rmq.json'));
+
+        expect(opened()?.file).toEqual({
+          ok: false,
+          error:
+            'This is a file of this app, not a RabbitMQ definitions file. Open a canvas file or a backup from My canvases.',
+        });
+      });
+
+      it('replaces the canvas in one change that Undo takes back, and shows a notice with Undo', async () => {
+        const before = store.document();
+        await actions.importDefinitions(new File([DEFINITIONS], 'shop.json'));
+        const data = opened();
+        const file = data?.file;
+        if (file === undefined || !file.ok || data === undefined) {
+          throw new Error('expected a file');
+        }
+        const plan = planImport(file.value, 'shop');
+        if (!plan.ok) {
+          throw new Error(plan.error.message);
+        }
+
+        expect(data.run(importBatch(plan.value))).toBe(true);
+        const after = store.document();
+        expect(after.vhost).toBe('shop');
+        expect(Object.values(after.queues).map(({ name }) => name)).toEqual(['checkout']);
+        expect(Object.keys(after.producers)).toEqual([]);
+        const toasts = TestBed.inject(Toasts);
+        expect(toasts.visible().map(({ message }) => message)).toEqual([
+          'Imported 1 exchange and 1 queue from a definitions file.',
+        ]);
+
+        await toasts.undo(toasts.visible()[0]?.id ?? -1);
+        expect(store.document()).toBe(before);
       });
     });
 

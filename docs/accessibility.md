@@ -32,7 +32,7 @@ These are on the screen in every state of the editor, and are not repeated in th
 | `rmq-root`, `rmq-workspace`, `rmq-icon` | The page: the name of the product, which is its one heading, the strip of open canvases, and the icons, which are decoration and hidden from a screen reader. | `e2e/onboarding-a11y.spec.ts` · "the question at the first run has no axe violations" |
 | `rmq-editor` | The editor of one canvas, in the regions that follow. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-theme-picker` | The choice of the theme, an icon and a select named Theme, at the right end of the banner of the page: the strip of the workspace (on the home and in every editor) and the banner of a shared canvas, outside the list of open canvases (ADR-0103). The icon is decoration and hidden from a screen reader. | `e2e/canvases-a11y.spec.ts` · "in the workspace, on a first run, with the strip and the editor" |
-| `rmq-top-bar` | Undo and redo, auto-layout, the view, Share, Export and the help. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
+| `rmq-top-bar` | Undo and redo, auto-layout, the view, Share, Export, Import and the help. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-toolbox` | The toolbar that adds a node: one tab stop, the arrow keys go along it. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-flow-canvas`, `rmq-message-overlay`, `rmq-node-stats` | The canvas, which is the diagram; the picture of the messages over it, which takes no pointer and is hidden from a screen reader; and the numbers under each node, which say the same in words. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
 | `rmq-inspector`, `rmq-what-if`, `rmq-switch` | The inspector, the button of the what-if tester under it, and the switches. | `e2e/editor-a11y.spec.ts` · "with nothing selected" |
@@ -236,6 +236,8 @@ These are on the screen in every state of the editor, and are not repeated in th
 | The dialog that exports for a broker, with what it leaves out listed | `rmq-export-dialog` | `e2e/share-a11y.spec.ts` · "has no axe violations with what it leaves out listed" |
 | The same dialog with everything in the file, and with a virtual host that cannot be one | `rmq-export-dialog` | `e2e/share-a11y.spec.ts` · "has no axe violations with everything in the file, and with a virtual host that cannot be one" |
 | The same dialog when there is nothing to put in a file | `rmq-export-dialog`, `rmq-how-to-link` | `e2e/share-a11y.spec.ts` · "has no axe violations when there is nothing to put in a file" |
+| The dialog that imports from a broker, with a vhost to choose, what it replaces, and what it leaves out listed | `rmq-import-dialog` | `e2e/share-a11y.spec.ts` · "has no axe violations with a vhost to choose, what it replaces, and what it leaves out listed" |
+| The same dialog when the file cannot be imported | `rmq-import-dialog` | `e2e/share-a11y.spec.ts` · "has no axe violations when the file cannot be imported" |
 | The page that a link opens, with its banner | `rmq-shared-view` | `e2e/share-a11y.spec.ts` · "has no axe violations" |
 | The same page with the problem of a copy that cannot be kept | `rmq-shared-view` | `e2e/share-a11y.spec.ts` · "has no axe violations with the problem of a copy that cannot be kept" |
 | The page of a link that cannot be opened | `rmq-link-failed` | `e2e/share-a11y.spec.ts` · "the page of a link that cannot be opened has no axe violations" |

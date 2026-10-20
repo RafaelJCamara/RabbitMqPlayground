@@ -20,9 +20,16 @@ export function isJsonFile(file: { readonly name: string; readonly type?: string
   return file.name.toLowerCase().endsWith('.json') && isJsonType(file.type ?? '');
 }
 
-/** Why a file is refused before it is read, in words that say what the app does take, or `null` if it is a JSON file. */
-export function refusedKind(file: { readonly name: string; readonly type?: string }): string | null {
-  return isJsonFile(file)
-    ? null
-    : `“${file.name}” is not a JSON file. This app opens only the JSON files it saves: a canvas (.rmq.json) or a backup.`;
+/** What the pickers of the home take, said after a file that is not one of them. */
+export const TAKES_CANVAS_FILES = 'This app opens only the JSON files it saves: a canvas (.rmq.json) or a backup.';
+
+/** What the import of the editor takes (ADR-0111), said after a file that is not one. */
+export const TAKES_DEFINITIONS = 'The import takes a RabbitMQ definitions file, which is a JSON file.';
+
+/** Why a file is refused before it is read, in words that say what the picker does take, or `null` if it is a JSON file. */
+export function refusedKind(
+  file: { readonly name: string; readonly type?: string },
+  takes: string = TAKES_CANVAS_FILES,
+): string | null {
+  return isJsonFile(file) ? null : `“${file.name}” is not a JSON file. ${takes}`;
 }

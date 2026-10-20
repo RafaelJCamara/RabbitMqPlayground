@@ -79,6 +79,26 @@ describe('TopBar', () => {
       expect([share.mock.calls.length, exporting.mock.calls.length]).toEqual([1, 1]);
     });
 
+    it('has an Import button in the group, which opens the picker of a JSON file, and hands what is chosen to the import (ADR-0111)', async () => {
+      const { user } = await renderBar();
+      const importing = vi.spyOn(TestBed.inject(EditorActions), 'importDefinitions').mockResolvedValue(undefined);
+      const button = within(screen.getByRole('group', { name: 'Share' })).getByRole('button', { name: 'Import…' });
+      const field = screen.getByTestId('import-file-field') as HTMLInputElement;
+      const picked = vi.spyOn(field, 'click');
+
+      expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+      expect(button).toHaveAttribute('title', 'Replace this canvas with what a RabbitMQ definitions file has');
+      expect(field).toHaveAttribute('accept', '.json,application/json');
+      expect(field).not.toBeVisible();
+      await user.click(button);
+      expect(picked).toHaveBeenCalledOnce();
+
+      const file = new File(['{}'], 'defs.json', { type: 'application/json' });
+      await user.upload(field, file);
+      expect(importing).toHaveBeenCalledExactlyOnceWith(file);
+      expect(field.value).toBe('');
+    });
+
     it('says in words, when the pointer rests on them, what each of them does', async () => {
       await renderBar();
 

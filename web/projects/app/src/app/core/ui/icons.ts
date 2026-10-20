@@ -35,6 +35,7 @@ export const ICONS = {
   pause: 'M8 5v14 M16 5v14',
   step: 'M5 5l10 7-10 7z M19 5v14',
   send: 'M21 3L3 10l7 3 3 7z M10 13l11-10',
+  import: 'M12 3v12 M7 10l5 5 5-5 M4 15v5h16v-5',
   reset: 'M4 4v6h6 M4.5 14a8 8 0 1 0 1-6',
   command: 'M4 7l5 5-5 5 M12 17h8',
   log: 'M5 6h14 M5 12h14 M5 18h9',

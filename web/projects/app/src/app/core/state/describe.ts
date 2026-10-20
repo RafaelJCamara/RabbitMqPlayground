@@ -27,6 +27,7 @@ const ATTRIBUTES: Readonly<Record<string, string>> = {
   publishMs: 'the publish time',
   brokerMs: 'the broker time',
   deliverMs: 'the delivery time',
+  vhost: 'the vhost',
 };
 
 const list = (items: readonly string[]): string =>
@@ -45,6 +46,9 @@ const REMOVALS = new Set<DocumentCommand['type']>(['delete', 'unbind', 'unlink',
 const LINKS = new Set<DocumentCommand['type']>(['bind', 'link', 'subscribe']);
 
 function describeBatch(batch: Batch): string {
+  if (batch.label !== undefined) {
+    return batch.label;
+  }
   const { commands } = batch;
   const [only] = commands;
   if (commands.length === 1 && only !== undefined) {

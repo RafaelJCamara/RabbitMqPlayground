@@ -256,6 +256,7 @@ function setFor(document: CanvasDocument, i: Intent): DocumentCommand {
       { seed: i.c },
       { publishMs: i.c % 1000 },
       { brokerMs: i.d % 1000, deliverMs: i.c % 1000 },
+      { vhost: i.flag ? '/' : 'shop' },
     ];
     return { type: 'set', kind: 'canvas', changes: at(changes, i.d) };
   }

@@ -6,10 +6,13 @@ import { formatBytes, SIZE_CAPS } from '@rmq/persistence';
  */
 export const MAX_FILE_BYTES = 4 * SIZE_CAPS.file;
 
-/** Why a file is too big to be read, in words, or `null` if it is not. */
-export function tooBigToRead(file: { readonly size: number }): string | null {
+/** Why a file is too big to be read, in words, or `null` if it is not. `what` names the files that the picker takes; a definitions file has the same cap (ADR-0111). */
+export function tooBigToRead(
+  file: { readonly size: number },
+  what = 'a canvas file or a backup of this app',
+): string | null {
   return file.size > MAX_FILE_BYTES
-    ? `This file is ${formatBytes(file.size)}, which is more than a canvas file or a backup of this app can be (at most ${formatBytes(SIZE_CAPS.file)} of text). It was not read, so that a file that is not one of ours cannot make the page run out of memory.`
+    ? `This file is ${formatBytes(file.size)}, which is more than ${what} can be (at most ${formatBytes(SIZE_CAPS.file)} of text). It was not read, so that a file that is not one of ours cannot make the page run out of memory.`
     : null;
 }
 

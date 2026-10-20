@@ -1,4 +1,4 @@
-import { routingKeyIssue, type HeaderEntry, type HeaderValue } from '@rmq/engine';
+import { routingKeyIssue, utf8Length, type HeaderEntry, type HeaderValue } from '@rmq/engine';
 import { payloadIssue } from '../document/capacity';
 import { findId, lookup } from '../document/elements';
 import { messageHeadersIssue, tooManyEntriesIssue } from '../document/headers';
@@ -193,6 +193,7 @@ function setConsumer(document: CanvasDocument, name: string, changes: ConsumerCh
 
 function setCanvas(document: CanvasDocument, changes: CanvasChanges): Result<CanvasDocument> {
   const problem = firstIssue(
+    changes.vhost === undefined ? null : vhostIssue(changes.vhost),
     changes.seed === undefined ? null : rangeIssue('seed', changes.seed, LIMITS.seed),
     changes.publishMs === undefined ? null : rangeIssue('publish time', changes.publishMs, LIMITS.timingMs),
     changes.brokerMs === undefined ? null : rangeIssue('broker time', changes.brokerMs, LIMITS.timingMs),
@@ -211,7 +212,22 @@ function setCanvas(document: CanvasDocument, changes: CanvasChanges): Result<Can
       deliverMs: changes.deliverMs ?? current.timing.deliverMs,
     }),
   };
-  return changedOrSame(document, current, next, () => ({ ...document, settings: next }));
+  const vhost = changes.vhost ?? document.vhost;
+  if (vhost === document.vhost) {
+    return changedOrSame(document, current, next, () => ({ ...document, settings: next }));
+  }
+  return ok({ ...document, vhost, settings: sameValue(current, next) ? current : next });
+}
+
+/** Why this cannot be the vhost of a canvas, or `null`: a vhost has a name, of at most 255 bytes of UTF-8, as the document says (ADR-0014). */
+function vhostIssue(vhost: string): Issue | null {
+  if (vhost === '') {
+    return { kind: 'empty-name', message: 'A vhost needs a name. The broker’s own is “/”.' };
+  }
+  const bytes = utf8Length(vhost);
+  return bytes > 255
+    ? { kind: 'name-too-long', message: `The name of a vhost is at most 255 bytes of UTF-8, and this one is ${bytes}.` }
+    : null;
 }
 
 /** An empty `changes` object is a `set` that says nothing, and that is a mistake of whoever made it. */

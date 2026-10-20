@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { canvasFromText } from '@rmq/testing';
 import { EditorPage, skipWelcome } from './pages/editor-page';
-import { ExportPage, LinkFailedPage, SharedViewPage, SharePage } from './pages/share-page';
+import { ExportPage, ImportPage, LinkFailedPage, SharedViewPage, SharePage } from './pages/share-page';
 import { SimulationPage } from './pages/simulation-page';
 import { expectNoAxeViolations } from './support/axe';
 import { fixture, payloadFor } from './support/links';
@@ -175,6 +175,35 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await exporting.open();
 
         await expect(exporting.empty).toBeVisible();
+        await expectNoAxeViolations(page);
+      });
+    });
+
+    test.describe('the dialog that imports from a broker (ADR-0111)', () => {
+      test('has no axe violations with a vhost to choose, what it replaces, and what it leaves out listed', async ({
+        page,
+      }) => {
+        await seedCanvas(page, ORDERS, 'Orders flow');
+        await new EditorPage(page).goto();
+        const importing = new ImportPage(page);
+
+        await importing.choose('broker.json', fixture('import/broker-4.3.definitions.json'));
+
+        await expect(importing.vhost).toBeVisible();
+        await expect(importing.replaces).toBeVisible();
+        await expect(importing.notes.first()).toBeVisible();
+        await usesTheme(page, colorScheme);
+        await expectNoAxeViolations(page);
+      });
+
+      test('has no axe violations when the file cannot be imported', async ({ page }) => {
+        await seedCanvas(page, ORDERS, 'Orders flow');
+        await new EditorPage(page).goto();
+        const importing = new ImportPage(page);
+
+        await importing.choose('notes.txt', 'not a definitions file', 'text/plain');
+
+        await expect(importing.error).toBeVisible();
         await expectNoAxeViolations(page);
       });
     });

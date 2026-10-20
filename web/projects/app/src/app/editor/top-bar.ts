@@ -137,6 +137,25 @@ const BUTTON =
             <rmq-icon name="send" [size]="18" />
             <span>Export…</span>
           </button>
+          <button
+            type="button"
+            [class]="button"
+            aria-haspopup="dialog"
+            title="Replace this canvas with what a RabbitMQ definitions file has"
+            data-testid="import"
+            (click)="importField.click()"
+          >
+            <rmq-icon name="import" [size]="18" />
+            <span>Import…</span>
+          </button>
+          <input
+            #importField
+            type="file"
+            accept=".json,application/json"
+            hidden
+            data-testid="import-file-field"
+            (change)="onImportFile($event)"
+          />
         </div>
         <p class="flex min-w-36 items-center gap-1.5" data-testid="save-state" [class]="saveClass()">
           <rmq-icon [name]="saveIcon()" [size]="16" />
@@ -197,4 +216,14 @@ export class TopBar {
     return label === undefined ? null : `Redo: ${label}`;
   });
   protected readonly percent = computed(() => `${Math.round(this.viewport.zoom() * 100)}%`);
+
+  /** Hands the file that was chosen to the import (ADR-0111), and empties the field, so that the same file can be chosen again. */
+  protected onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file !== undefined) {
+      void this.actions.importDefinitions(file);
+    }
+  }
 }

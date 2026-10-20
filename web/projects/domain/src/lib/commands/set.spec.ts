@@ -491,6 +491,39 @@ describe('set canvas', () => {
     expect(!result.ok && result.error.message).toContain(`The ${label} must be a whole number from`);
   });
 
+  it('sets the vhost of the canvas and keeps the settings, and changes nothing when it is the one it has (ADR-0111)', () => {
+    const before = sample();
+    const result = applySet(before, set({ kind: 'canvas', changes: { vhost: 'shop' } }));
+
+    expect(result.ok && result.value.vhost).toBe('shop');
+    expect(result.ok && result.value.settings).toBe(before.settings);
+    expect(result.ok && validateDocument(result.value)).toEqual([]);
+    expect(result.ok && undoRedoProblems(before, result.value)).toEqual([]);
+    expect(applySet(before, set({ kind: 'canvas', changes: { vhost: before.vhost } }))).toEqual({
+      ok: true,
+      value: before,
+    });
+  });
+
+  it('sets the vhost and a setting together', () => {
+    const result = applySet(sample(), set({ kind: 'canvas', changes: { vhost: 'shop', seed: 3 } }));
+
+    expect(result.ok && [result.value.vhost, result.value.settings.seed]).toEqual(['shop', 3]);
+  });
+
+  it.each([
+    ['', 'A vhost needs a name.'],
+    ['v'.repeat(256), 'The name of a vhost is at most 255 bytes of UTF-8, and this one is 256.'],
+  ])('refuses a vhost of %j, in words', (vhost, message) => {
+    const result = applySet(sample(), set({ kind: 'canvas', changes: { vhost } }));
+
+    expect(!result.ok && result.error.message).toContain(message);
+  });
+
+  it('takes a vhost of 255 bytes', () => {
+    expect(applySet(sample(), set({ kind: 'canvas', changes: { vhost: 'v'.repeat(255) } })).ok).toBe(true);
+  });
+
   it('takes the ends of each range', () => {
     expect(applySet(sample(), set({ kind: 'canvas', changes: { seed: LIMITS.seed.max } })).ok).toBe(true);
     expect(
