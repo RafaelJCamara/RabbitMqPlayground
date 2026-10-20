@@ -63,7 +63,7 @@
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@testcontainers/rabbitmq": "^12.2.1",
-    "@testing-library/angular": "^19.5.0",
+    "@testing-library/angular": "^19.6.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/user-event": "^14.6.8",
