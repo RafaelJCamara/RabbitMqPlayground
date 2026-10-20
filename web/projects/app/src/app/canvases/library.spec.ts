@@ -1670,6 +1670,41 @@ describe('CanvasLibrary', () => {
     });
   });
 
+  describe('the notes of the home that the learner closed (ADR-0110)', () => {
+    it('keeps a closed note, each once, so that it stays closed', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      await harness.library.dismissNote('space');
+      await harness.library.dismissNote('quota:low');
+      await harness.library.dismissNote('space');
+
+      expect([...harness.library.dismissedNotes()]).toEqual(['space', 'quota:low']);
+      expect(await harness.repository.getMeta('dismissedNotes')).toEqual({ ok: true, value: ['space', 'quota:low'] });
+    });
+
+    it('reads what an earlier visit closed', async () => {
+      const harness = setup();
+      await harness.repository.setMeta('dismissedNotes', ['space', 'persistence:denied']);
+      await harness.library.start();
+
+      await harness.library.show(HOME);
+
+      expect([...harness.library.dismissedNotes()]).toEqual(['space', 'persistence:denied']);
+    });
+
+    it('does not open again a note that was closed while the home was being read', async () => {
+      const harness = setup();
+      await harness.library.start();
+
+      const reading = harness.library.show(HOME);
+      await harness.library.dismissNote('space');
+      await reading;
+
+      expect(harness.library.dismissedNotes().has('space')).toBe(true);
+    });
+  });
+
   describe('the room that the browser has left (ADR-0075)', () => {
     const manager = (usage: number, quota: number): StorageManagerLike => ({
       persist: async () => true,

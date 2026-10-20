@@ -74,7 +74,7 @@ const canvasesText = (count: number): string => `${count} ${count === 1 ? 'canva
           (change)="onRestoreFile($event)"
         />
 
-        <rmq-home-notices />
+        <rmq-home-notices (closed)="focusAfterNote()" />
 
         @if (library.problem(); as problem) {
           <div
@@ -303,6 +303,19 @@ export class Home {
     if (sure) {
       await this.deleteAndMoveFocus(item.id, undefined);
     }
+  }
+
+  /** A note was closed (ADR-0110), and its button with it: the focus goes to the search, or, with no canvas to search, to the button that makes one. */
+  protected focusAfterNote(): void {
+    afterNextRender(
+      () => {
+        const target =
+          this.element.querySelector<HTMLElement>('[data-testid="home-search"]') ??
+          this.element.querySelector<HTMLElement>('[data-testid="home-new"]');
+        target?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   /** Deletes a canvas, and puts the focus on what takes its place: the next card, or the one before, or the search, or the button that makes a canvas. */

@@ -9,6 +9,7 @@ import { SIZE_CAPS } from '../load/caps';
 import type { CanvasRecord } from '../record';
 import {
   createCanvasRepository,
+  HOME_NOTES,
   TOMBSTONE_TTL_MS,
   type CanvasRepository,
   type MetaKey,
@@ -754,6 +755,16 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
           expect(unwrap(await repository.getMeta('openCanvases'))).toHaveLength(SIZE_CAPS.canvases);
         }));
 
+      it('keeps the closed notes of the home (ADR-0110), every one of them, each once', () =>
+        withHarness(async ({ repository }) => {
+          unwrap(await repository.setMeta('dismissedNotes', ['space', 'quota:low']));
+          expect(unwrap(await repository.getMeta('dismissedNotes'))).toEqual(['space', 'quota:low']);
+          unwrap(await repository.setMeta('dismissedNotes', HOME_NOTES));
+          expect(unwrap(await repository.getMeta('dismissedNotes'))).toEqual([...HOME_NOTES]);
+          unwrap(await repository.setMeta('dismissedNotes', []));
+          expect(unwrap(await repository.getMeta('dismissedNotes'))).toEqual([]);
+        }));
+
       it('keeps each value apart from the others, and from the canvases', () =>
         withHarness(async ({ repository }) => {
           await repository.create({ id: 'lastOpenCanvas', name: 'n', document: emptyDocument() });
@@ -777,6 +788,10 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
         ['openCanvases', ['c1', 'c1'], 'a list of the ids of canvases, each one once', 'a list'],
         ['openCanvases', ['c1', 'not an id'], 'a list of the ids of canvases, each one once', 'a list'],
         ['openCanvases', ['c1', 7], 'a list of the ids of canvases, each one once', 'a list'],
+        ['dismissedNotes', 'space', 'a list of the notes of the home, each one once', '"space"'],
+        ['dismissedNotes', ['space', 'space'], 'a list of the notes of the home, each one once', 'a list'],
+        ['dismissedNotes', ['quota:ok'], 'a list of the notes of the home, each one once', 'a list'],
+        ['dismissedNotes', ['persistence:granted'], 'a list of the notes of the home, each one once', 'a list'],
       ] as const)('does not keep %s as %j, and says what it has to be', (key, value, wants, shown) =>
         withHarness(async ({ repository }) => {
           const result = await repository.setMeta(key as MetaKey, value as never);
@@ -798,12 +813,14 @@ function describeTheRepository(storeName: string, make: MakeHarness): void {
             await tx.putMeta('lastBackupAt', 'yesterday');
             await tx.putMeta('backupReminderSnoozedUntil', -5);
             await tx.putMeta('openCanvases', ['a', 'a']);
+            await tx.putMeta('dismissedNotes', ['a note of a later version']);
           });
 
           expect(unwrap(await harness.repository.getMeta('lastOpenCanvas'))).toBeUndefined();
           expect(unwrap(await harness.repository.getMeta('lastBackupAt'))).toBeUndefined();
           expect(unwrap(await harness.repository.getMeta('backupReminderSnoozedUntil'))).toBeUndefined();
           expect(unwrap(await harness.repository.getMeta('openCanvases'))).toBeUndefined();
+          expect(unwrap(await harness.repository.getMeta('dismissedNotes'))).toBeUndefined();
         }));
     });
 

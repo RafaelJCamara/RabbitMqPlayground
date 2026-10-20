@@ -58,10 +58,12 @@ export {
   type RestoreStep,
 } from './lib/files/restore';
 export {
+  HOME_NOTES,
   TOMBSTONE_TTL_MS,
   type CanvasChange,
   type CanvasListing,
   type CanvasRepository,
+  type HomeNote,
   type MetaKey,
   type MetaValues,
   type NewCanvas,
