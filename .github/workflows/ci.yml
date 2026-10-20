@@ -102,6 +102,34 @@ jobs:
             web/test-results
           retention-days: 7
 
+  # The container (ADR-0112): built from this commit as `docker compose up` builds it, started, and checked by the smoke test of the live site, which
+  # waits for the commit in build-info.json, opens the app, reads the commit at the foot of the home, and loads a deep link through 404.html.
+  docker:
+    name: Container
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image and start it, stamped with this commit
+        # GITHUB_SHA is set by Actions, and docker-compose.yml passes it to the build.
+        run: docker compose up --detach --build --wait
+      - uses: ./.github/actions/setup-web
+      - uses: ./.github/actions/install-playwright
+      - name: The smoke test of the live site, against the container
+        working-directory: web
+        run: npm run test:e2e
+        env:
+          LIVE_URL: http://localhost:8080/
+          EXPECTED_COMMIT: ${{ github.sha }}
+      - name: What the container logged
+        if: failure()
+        run: docker compose logs
+      - name: Stop the container
+        if: always()
+        run: docker compose down
+
   bench:
     name: Benchmarks
     needs: verify

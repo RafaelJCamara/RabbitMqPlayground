@@ -115,6 +115,16 @@ A change is done when all of these hold ([ADR-0015](docs/adr/0015-testing-strate
     artifact, save the log and run `npx tsx tools/conformance/dump.ts restore <log> fixtures/conformance/4.3`. It
     rebuilds the files byte for byte, and refuses any file whose SHA-256 differs from the one the job printed. The
     output of `gh run view <run> --log --job <job>` works as it is. The whole set is about 250 KB of log.
+- **The container builds what Pages serves.** The `Dockerfile` runs `npm run build:pages` and the bundle check of CI, and
+  `web/tools/repo/docker.spec.ts` fails if the two drift apart. The CI job **Container** builds the image of every
+  change, starts it, and runs the smoke test of the live site against it
+  ([ADR-0112](docs/adr/0112-docker-compose-up-at-the-root-builds-the-pages-build-and-serves-it-with-nginx-as-a-user-that-is-not-root.md)).
+  To try it locally, stamp the image with the commit, since the smoke test reads it at the foot of the home:
+  `GITHUB_SHA=$(git rev-parse HEAD) docker compose up -d --build --wait` at the root, then
+  `LIVE_URL=http://localhost:8080/ EXPECTED_COMMIT=$(git rev-parse HEAD) npm run test:e2e` in `web/`.
+- **The broker's files in `web/fixtures/import` were exported by RabbitMQ itself**
+  ([ADR-0111](docs/adr/0111-a-definitions-file-is-imported-into-the-open-canvas-and-replaces-what-it-has-in-one-change-that-undo-takes-back.md)).
+  `web/tools/import/declare-broker-fixture.sh` says how to record them again.
 
 ## Reporting bugs and proposing features
 

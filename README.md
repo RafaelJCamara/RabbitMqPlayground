@@ -24,7 +24,22 @@ has no logo, and its name is kept in one place so it can be changed.
 - direct, fanout, topic and headers exchanges, with RabbitMQ 4.3 semantics;
 - five ways to link things, a command bar, and an equivalent command shown for every gesture;
 - a deterministic simulation with an explanation for every routing decision;
-- multiple canvases saved in your browser, share links and `definitions.json` export, with no server and no account.
+- multiple canvases saved in your browser, share links, and `definitions.json` export and import, with no server and no
+  account.
+
+## Run it with Docker
+
+To run the playground on your own machine without Node.js, you need only Docker. At the root of the repository:
+
+```sh
+docker compose up -d            # builds the image the first time, then serves it at http://localhost:8080
+docker compose up -d --build    # after a git pull, to build and serve the new version
+docker compose down             # stops it
+```
+
+The image is static files served by nginx as a user that is not root (see [ADR-0112](docs/adr/0112-docker-compose-up-at-the-root-builds-the-pages-build-and-serves-it-with-nginx-as-a-user-that-is-not-root.md)).
+Your canvases are kept by your browser, not by the container, so stopping or rebuilding it loses nothing. Set
+`PLAYGROUND_PORT` to use another port, and `GITHUB_SHA=$(git rev-parse HEAD)` to have the foot of the home name the commit.
 
 ## Getting started
 
@@ -56,6 +71,7 @@ Everyday commands, all run from `web/`:
 
 ```
 docs/       plans (docs/plans), accessibility and performance notes, generated command reference
+docker/     the configuration of nginx in the container (Dockerfile and docker-compose.yml are at the root)
 web/        the npm and Angular workspace
   projects/engine, domain, persistence, testing   plain TypeScript libraries (@rmq/*)
   projects/app                                     the Angular application

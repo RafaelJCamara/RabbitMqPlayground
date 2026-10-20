@@ -1,0 +1,25 @@
+# RabbitMQ Playground on this machine (ADR-0112):
+#
+#   docker compose up -d            then open http://localhost:8080
+#   docker compose up -d --build    after a pull, to build the new version
+#   docker compose down             to stop it
+#
+# The canvases are kept by the browser, not by the container, so stopping or rebuilding it loses nothing. The port is PLAYGROUND_PORT
+# (8080 if it is not set). To have the foot of the home name the commit:  GITHUB_SHA=$(git rev-parse HEAD) docker compose up -d --build
+services:
+  playground:
+    build:
+      context: .
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-local}
+    image: rabbitmq-playground:local
+    ports:
+      - "${PLAYGROUND_PORT:-8080}:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

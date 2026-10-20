@@ -1,0 +1,15 @@
+# What the image is not built from (ADR-0112): it needs web/ and docker/ only, without what installing, building and testing leave there.
+.git
+.github
+.claude
+.playwright-mcp
+docs
+**/node_modules
+web/dist
+web/.angular
+web/.tsbuild
+web/coverage
+web/test-results
+web/playwright-report
+web/bench-results
+web/conformance-diff
