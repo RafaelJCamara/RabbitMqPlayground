@@ -47,6 +47,18 @@ updates:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
 
+  # The base images of the container (ADR-0112): Node for the build, nginx for the server. Node stays on the major version of .nvmrc.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(docker)"
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/*"]
     schedule:

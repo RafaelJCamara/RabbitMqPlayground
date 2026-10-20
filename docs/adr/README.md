@@ -16,7 +16,7 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0003](0003-roadmap-and-milestones.md) | Roadmap: MVP and v1 milestones | Accepted |
 | [0004](0004-trunk-based-development-on-main.md) | Trunk-based development directly on `main` | Superseded by 0108 |
 | [0005](0005-frontend-angular.md) | Frontend framework: Angular | Accepted |
-| [0006](0006-client-only-app-dotnet-api-when-needed.md) | Client-only app; a .NET API only when needed | Accepted |
+| [0006](0006-client-only-app-dotnet-api-when-needed.md) | Client-only app; a .NET API only when needed | Accepted (the static files can also be served by a container, 0112) |
 | [0007](0007-deterministic-simulation-engine.md) | Deterministic discrete-event simulation engine | Accepted (the engine as built by 0052, delivery by 0053, what it says of a route by 0059 and 0060) |
 | [0008](0008-rabbitmq-fidelity-baseline.md) | RabbitMQ fidelity baseline (4.3.x) | Accepted (a new consumer acknowledges by hand, the fidelity of rule 15 is unchanged, 0104; rule 28 superseded by 0021, rule 4 extended by 0022, rule 27 extended by 0051, rules 13 to 16 settled by 0053, the alignment of a topic miss by 0059) |
 | [0009](0009-headers-exchange-support.md) | Headers exchange support | Accepted (integers extended by 0023, how a headers binding is explained by 0060, the editor, the typing of a value, the rows, the producer's table, the binding from a message, the live table and the chips by 0066 to 0070) |
@@ -119,9 +119,10 @@ re-arguing them. The format is described in [ADR-0001](0001-record-architecture-
 | [0106](0106-the-home-always-says-that-the-canvases-take-up-space-in-the-browser-in-a-note-that-stays-and-without-a-number.md) | The home always says that the canvases take up space in the browser, in a note that stays and without a number | Accepted (the learner can close the note, and it stays closed in that browser, 0110) |
 | [0107](0107-a-pull-request-into-main-needs-the-ci-checks-and-the-code-owner-and-the-maintainer-may-still-push.md) | A pull request into main needs the CI checks and the code owner, and the maintainer may still push | Superseded by 0108 |
 | [0108](0108-every-change-reaches-main-through-a-pull-request-and-nobody-pushes-to-it.md) | Every change reaches main through a pull request, and nobody pushes to it | Accepted |
-| [0109](0109-the-foot-of-the-home-says-which-commit-the-build-is-of-and-the-page-itself-carries-it.md) | The foot of the home says which commit the build is of, and the page itself carries it | Accepted |
+| [0109](0109-the-foot-of-the-home-says-which-commit-the-build-is-of-and-the-page-itself-carries-it.md) | The foot of the home says which commit the build is of, and the page itself carries it | Accepted (the build of the container names its commit, or local, 0112) |
 | [0110](0110-the-notes-of-the-home-can-be-closed-and-stay-closed-in-that-browser.md) | The notes of the home can be closed, and stay closed in that browser | Accepted |
 | [0111](0111-a-definitions-file-is-imported-into-the-open-canvas-and-replaces-what-it-has-in-one-change-that-undo-takes-back.md) | A definitions file is imported into the open canvas, and replaces what it has, in one change that Undo takes back | Accepted |
+| [0112](0112-docker-compose-up-at-the-root-builds-the-pages-build-and-serves-it-with-nginx-as-a-user-that-is-not-root.md) | `docker compose up` at the root builds the Pages build and serves it with nginx, as a user that is not root | Accepted |
 
 ## Where to start
 

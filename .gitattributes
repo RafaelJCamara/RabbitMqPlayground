@@ -1,0 +1,7 @@
+# What a container or a shell reads keeps LF on every checkout, whatever core.autocrlf says (ADR-0112): a CR at the end of a line of a
+# shell script is part of the command, and the image is built from the files as they are checked out.
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text eol=lf
+docker/** text eol=lf
+*.sh text eol=lf
