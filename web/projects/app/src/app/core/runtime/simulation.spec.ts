@@ -1,6 +1,13 @@
 import { createEnvironmentInjector, EnvironmentInjector, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { emptyDocument, findId, nameOf, type CanvasDocument, type RuntimeCommand } from '@rmq/domain';
+import {
+  emptyDocument,
+  findId,
+  nameOf,
+  snapshotDisagrees,
+  type CanvasDocument,
+  type RuntimeCommand,
+} from '@rmq/domain';
 import type { EngineEvent, EngineSnapshot } from '@rmq/engine';
 import {
   bindingRecord,
@@ -768,6 +775,26 @@ describe('Simulation', () => {
       bus.apply({ type: 'delete', target: { kind: 'queue', name: 'extra' } }, 'key', { say: false });
 
       expect(status.notice()).toEqual({ kind: 'message', text: '1 message was lost.' });
+    });
+
+    it('makes the engine again for another vhost, which the messages do not follow, so that a link of the canvas is of its vhost (ADR-0111)', () => {
+      const { simulation, run, bus, store, status } = setup();
+      run(PUBLISH);
+      expect(simulation.messageCount()).toBe(2);
+
+      bus.apply({ type: 'set', kind: 'canvas', changes: { vhost: 'prod' } }, 'typed');
+
+      expect(simulation.snapshot().vhost).toBe('prod');
+      expect(simulation.messageCount()).toBe(0);
+      expect(snapshotDisagrees(store.document(), simulation.snapshot())).toBeNull();
+      expect(status.notice()).toEqual({
+        kind: 'message',
+        text: 'Changed the vhost of the canvas. 2 messages were lost.',
+      });
+
+      bus.undo('toolbar');
+      expect(simulation.snapshot().vhost).toBe(store.document().vhost);
+      expect(snapshotDisagrees(store.document(), simulation.snapshot())).toBeNull();
     });
 
     it('says nothing of what was lost when nothing was', () => {

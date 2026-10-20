@@ -280,6 +280,14 @@ export class Simulation implements RuntimeHost {
       this.restoreShared();
       return;
     }
+    if (document.vhost !== this.held.vhost) {
+      // Another vhost is another broker's worth of queues, and messages do not move to it: the engine is made again for it, as for a load, and what
+      // it held is lost (ADR-0111). `reconcile` has no command for it, because no broker has one.
+      const held = this.messageCount();
+      this.rebuild(document);
+      this.lost = held;
+      return;
+    }
     const before = this.held;
     const events = this.feed(reconcile(before, document));
     this.held = document;

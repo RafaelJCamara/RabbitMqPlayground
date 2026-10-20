@@ -31,7 +31,8 @@ import type { CanvasDocument } from './document/schema';
  *
  * The commands come in an order in which each is valid for what the ones before it made: the settings, then what goes (unbinding while both ends stay,
  * producers, subscriptions and channels), then deleting, declaring and binding, then what comes (channels, subscriptions, producers). Layout and
- * labels are the canvas's and never reach the engine. The vhost does not change within a canvas.
+ * labels are the canvas's and never reach the engine. A change of the vhost has no command here, since no broker has one: the simulation makes its engine again
+ * for the new vhost (ADR-0111).
  */
 
 interface ConsumerSpec {

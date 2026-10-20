@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Announcer } from '../core/announcer';
 import { ShareDialogs } from './dialogs';
+import { MAX_NOTES_SHOWN } from './import-dialog';
 
 /** The dialog that imports a definitions file into the canvas (ADR-0111). */
 
@@ -105,6 +106,23 @@ describe('ImportDialog (ADR-0111)', () => {
       'Left out: The users (1) of the file are not imported: a canvas has exchanges, queues and bindings only.',
       'Changed: The queue “billing” is imported as a classic queue: its type is “quorum”, and the simulator models classic queues only.',
     ]);
+  });
+
+  it('lists the first 50 notes and counts the rest, for a file with thousands of things left out', async () => {
+    const { dialog } = await openDialog(
+      read({
+        vhosts: [{ name: '/' }],
+        queues: [
+          queue('kept'),
+          ...Array.from({ length: 120 }, (_, index) => queue(`gone${index}`, '/', { durable: false })),
+        ],
+      }),
+    );
+
+    expect(within(within(dialog).getByTestId('import-notes')).getAllByRole('listitem')).toHaveLength(MAX_NOTES_SHOWN);
+    expect(within(dialog).getByTestId('import-more-notes')).toHaveTextContent(
+      'And 70 more, which the list does not show.',
+    );
   });
 
   it('asks which vhost to import when the file has several, starts at /, and imports the one that is chosen', async () => {
