@@ -223,7 +223,7 @@ test.describe('the conditions of a binding, in the inspector (ADR-0066)', () => 
     await expect(headers.editor.inspector.getByTestId('binding-conditions')).toHaveCount(2);
     await expect(headers.chips('x1>q1')).toHaveText(['all · format=pdf · type=report', 'all · format=pdf']);
 
-    await headers.editor.inspector.getByRole('button', { name: 'Delete binding 1 of 2' }).click();
+    await headers.editor.inspector.getByRole('button', { name: 'Delete this binding, 1 of 2' }).click();
 
     await expect(headers.editor.inspector.getByTestId('binding-conditions')).toHaveCount(1);
     await expect(headers.chips('x1>q1')).toHaveText(['all · format=pdf']);

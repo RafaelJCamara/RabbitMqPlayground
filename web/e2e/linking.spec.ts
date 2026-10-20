@@ -97,7 +97,7 @@ test.describe('journey 3: the five ways to link', () => {
     const editor = await open(page);
     await editor.select('Exchange orders, direct');
 
-    await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from exchange orders' }).click();
 
     const search = page.getByRole('combobox', { name: 'Search the targets' });
     await expect(search).toBeFocused();
@@ -183,7 +183,7 @@ test.describe('journey 3: the five ways to link', () => {
     await editor.dragLinkTo('p1', await editor.centre(editor.nodeById('x1')));
     await expect.poll(() => editor.edges()).toEqual(['sender -> orders']);
     await editor.select('Queue billing');
-    await page.getByRole('button', { name: 'Link queue billing to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from queue billing' }).click();
     await page.getByRole('option', { name: /worker/ }).click();
     await expect.poll(() => editor.edges()).toEqual(['sender -> orders', 'worker <- billing']);
 
@@ -439,7 +439,7 @@ test.describe('journey 3: the popovers in a window that is shorter than they are
     const editor = await open(page);
     await editor.select('Exchange orders, direct');
 
-    await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from exchange orders' }).click();
 
     const picker = page.getByRole('dialog', { name: 'Link exchange orders to…' });
     await expect(page.getByRole('combobox', { name: 'Search the targets' })).toBeFocused();

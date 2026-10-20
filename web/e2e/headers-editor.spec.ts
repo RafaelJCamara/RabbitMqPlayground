@@ -239,7 +239,7 @@ test.describe('every way of making a link asks for the conditions of a headers b
     const headers = await HeadersPage.open(page, FILES, { stop: false });
     await headers.editor.select('Exchange files, headers');
 
-    await page.getByRole('button', { name: 'Link exchange files to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from exchange files' }).click();
     await expect(page.getByRole('combobox', { name: 'Search the targets' })).toBeFocused();
     await page.keyboard.type('scans');
     await page.keyboard.press('Enter');

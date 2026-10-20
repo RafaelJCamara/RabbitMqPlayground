@@ -252,7 +252,7 @@ test.describe('a canvas of 200 nodes and 500 edges', () => {
     await expect(page.getByTestId('status-message')).toHaveText('Published 1000 messages from p3.');
     await page.keyboard.press('Escape');
     await headers.editor.select('Exchange x3, headers');
-    await page.getByRole('button', { name: 'Link exchange x3 to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from exchange x3' }).click();
     const search = page.getByRole('combobox', { name: 'Search the targets' });
     await expect(search).toBeFocused();
     await page.keyboard.type('q1');

@@ -233,7 +233,7 @@ const states: readonly {
     name: 'with the picker of "Link to…" open',
     enter: async (page, editor) => {
       await editor.select('Exchange orders, topic');
-      await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+      await page.getByRole('button', { name: 'Link to… from exchange orders' }).click();
       await expect(page.getByRole('dialog', { name: 'Link exchange orders to…' })).toBeVisible();
     },
   },
@@ -241,7 +241,7 @@ const states: readonly {
     name: 'with the picker of "Link to…" open and nothing that matches what was typed',
     enter: async (page, editor) => {
       await editor.select('Exchange orders, topic');
-      await page.getByRole('button', { name: 'Link exchange orders to…' }).click();
+      await page.getByRole('button', { name: 'Link to… from exchange orders' }).click();
       const picker = page.getByRole('dialog', { name: 'Link exchange orders to…' });
       await picker.getByRole('combobox', { name: 'Search the targets' }).fill('zzz');
       await expect(picker.getByTestId('picker-nothing')).toBeVisible();
@@ -253,7 +253,7 @@ const states: readonly {
     edges: 0,
     enter: async (page, editor) => {
       await editor.select('Producer sender');
-      await page.getByRole('button', { name: 'Link producer sender to…' }).click();
+      await page.getByRole('button', { name: 'Link to… from producer sender' }).click();
       await expect(page.getByTestId('picker-reason')).toBeVisible();
     },
   },

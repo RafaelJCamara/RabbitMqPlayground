@@ -97,7 +97,7 @@ let nextInspector = 0;
             class="border-border bg-surface hover:bg-canvas flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
             data-testid="link-to"
             aria-keyshortcuts="L"
-            [attr.aria-label]="'Link ' + kindLabel[n.element] + ' ' + n.name + ' to…'"
+            [attr.aria-label]="'Link to… from ' + kindLabel[n.element] + ' ' + n.name"
             (click)="linkFrom(n)"
           >
             <rmq-icon name="link" [size]="18" />
@@ -327,7 +327,7 @@ let nextInspector = 0;
                         type="button"
                         class="border-danger text-danger hover:bg-danger-bg flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
                         data-testid="delete-binding"
-                        [attr.aria-label]="'Delete binding ' + (index + 1) + ' of ' + e.bindings.length"
+                        [attr.aria-label]="'Delete this binding, ' + (index + 1) + ' of ' + e.bindings.length"
                         (click)="unbind(row)"
                       >
                         <rmq-icon name="trash" [size]="18" />
