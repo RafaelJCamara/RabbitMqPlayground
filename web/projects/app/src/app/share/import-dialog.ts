@@ -15,6 +15,9 @@ import { BUTTON, BUTTON_PRIMARY } from '../core/ui/buttons';
 
 export const IMPORT_TITLE_ID = 'rmq-import-title';
 
+/** How many notes the dialog lists; the rest are counted. */
+export const MAX_NOTES_SHOWN = 50;
+
 /** What the dialog that imports a definitions file needs (ADR-0111). */
 export interface ImportDialogData {
   /** The name of the canvas that the import replaces. */
@@ -101,12 +104,17 @@ const KIND_WORDS: Readonly<Record<ImportNote['kind'], string>> = {
         <section aria-labelledby="rmq-import-notes" class="flex flex-col gap-1.5">
           <h3 id="rmq-import-notes" class="font-medium">What is not imported as it is in the file</h3>
           <ul class="flex list-disc flex-col gap-1 pl-5" data-testid="import-notes">
-            @for (note of notes(); track $index) {
+            @for (note of shownNotes(); track $index) {
               <li>
                 <span class="font-medium">{{ kindWords[note.kind] }}:</span> {{ note.message }}
               </li>
             }
           </ul>
+          @if (notes().length > shownNotes().length) {
+            <p class="text-muted" data-testid="import-more-notes">
+              And {{ notes().length - shownNotes().length }} more, which the list does not show.
+            </p>
+          }
         </section>
       }
       <div class="flex justify-end gap-2">
@@ -170,6 +178,9 @@ export class ImportDialog {
     }
     return plan.ok ? plan.value.notes : plan.error.kind === 'empty' ? plan.error.notes : [];
   });
+
+  /** The first notes, which is as many as a person reads: a file of thousands of items that the canvas refuses would otherwise be a list of thousands. */
+  protected readonly shownNotes = computed(() => this.notes().slice(0, MAX_NOTES_SHOWN));
 
   protected readonly confirmText = computed(() => (this.replaced() === null ? 'Import' : 'Replace and import'));
 

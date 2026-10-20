@@ -129,10 +129,11 @@ export function readDefinitions(text: string): Outcome<DefinitionsFile, ImportEr
     lists[list] = value as readonly JsonValue[];
   }
 
-  const vhosts: string[] = [];
+  // A set keeps the names in the order in which they come, and finds one at once, however many a file has.
+  const vhosts = new Set<string>();
   const named = (vhost: JsonValue | undefined): void => {
-    if (typeof vhost === 'string' && !vhosts.includes(vhost)) {
-      vhosts.push(vhost);
+    if (typeof vhost === 'string') {
+      vhosts.add(vhost);
     }
   };
   const declared = data.get('vhosts');
@@ -152,7 +153,7 @@ export function readDefinitions(text: string): Outcome<DefinitionsFile, ImportEr
     const count = Array.isArray(value) ? value.length : isJsonObject(value) ? value.size : 0;
     return count === 0 ? [] : [{ section, count }];
   });
-  return succeed({ vhosts, ...lists, others });
+  return succeed({ vhosts: [...vhosts], ...lists, others });
 }
 
 /** The vhost to import when the learner has not chosen one: the only one that the file names, or none when it names none. With several, the learner chooses. */
