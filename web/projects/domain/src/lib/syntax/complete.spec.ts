@@ -244,6 +244,7 @@ describe('completeCommand', () => {
         'publish-ms=',
         'broker-ms=',
         'deliver-ms=',
+        'vhost=',
       ]);
       expect(inserts(at('unset sender '))).toEqual(['header:']);
       expect(inserts(at('move billing '))).toEqual(['x=', 'y=']);
@@ -358,6 +359,7 @@ describe('completeCommand', () => {
         'option | publish-ms= | publish-ms= | milliseconds to publish',
         'option | broker-ms= | broker-ms= | milliseconds in the broker',
         'option | deliver-ms= | deliver-ms= | milliseconds to deliver',
+        'option | vhost= | vhost= | the virtual host, which an export offers first',
       ]);
       expect(shown('move label orders -> billing ')).toEqual(['option | at= | at= | how far along the edge']);
     });

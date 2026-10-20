@@ -97,6 +97,40 @@ export class ExportPage {
   }
 }
 
+/** The dialog that imports a definitions file into the canvas (ADR-0111), and the picker that the button of the top bar opens. */
+export class ImportPage {
+  readonly button: Locator;
+  readonly field: Locator;
+  readonly dialog: Locator;
+  readonly vhost: Locator;
+  readonly summary: Locator;
+  readonly replaces: Locator;
+  readonly notes: Locator;
+  readonly error: Locator;
+  readonly confirm: Locator;
+  readonly cancel: Locator;
+
+  constructor(readonly page: Page) {
+    this.button = page.getByRole('button', { name: 'Import…', exact: true });
+    this.field = page.getByTestId('import-file-field');
+    this.dialog = page.getByRole('dialog', { name: /^Import definitions into “/ });
+    this.vhost = this.dialog.getByRole('combobox', { name: 'Virtual host' });
+    this.summary = this.dialog.getByTestId('import-summary');
+    this.replaces = this.dialog.getByTestId('import-replaces');
+    this.notes = this.dialog.getByTestId('import-notes').getByRole('listitem');
+    this.error = this.dialog.getByTestId('import-error');
+    this.confirm = this.dialog.getByRole('button', { name: /^(Import|Replace and import)$/ });
+    this.cancel = this.dialog.getByRole('button', { name: /^(Cancel|Close)$/ });
+  }
+
+  /** Chooses a file with the button of the top bar, as a learner does, and waits for the dialog. */
+  async choose(name: string, text: string, mimeType = 'application/json'): Promise<void> {
+    const [chooser] = await Promise.all([this.page.waitForEvent('filechooser'), this.button.click()]);
+    await chooser.setFiles({ name, mimeType, buffer: Buffer.from(text, 'utf8') });
+    await expect(this.dialog).toBeVisible();
+  }
+}
+
 /** The page that a link opens: the editor over a canvas that keeps nothing, with a banner. */
 export class SharedViewPage {
   readonly editor: EditorPage;

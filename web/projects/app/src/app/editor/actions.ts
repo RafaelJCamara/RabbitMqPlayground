@@ -1,17 +1,29 @@
 import { afterNextRender, inject, Injectable, Injector } from '@angular/core';
-import { elementCount, kindOf, nameOf, type CanvasDocument, type Id } from '@rmq/domain';
-import { writeCanvasFile } from '@rmq/persistence';
+import { elementCount, kindOf, nameOf, type Batch, type CanvasDocument, type Id } from '@rmq/domain';
+import {
+  failure,
+  readDefinitions,
+  succeed,
+  writeCanvasFile,
+  type DefinitionsFile,
+  type Outcome,
+} from '@rmq/persistence';
 import { FlowViewport } from '../canvas/model/flow-viewport';
 import { Announcer } from '../core/announcer';
 import { FILE_DOWNLOADER } from '../core/files/downloader';
+import { refusedKind, TAKES_DEFINITIONS } from '../core/files/file-kind';
 import { canvasFileName } from '../core/files/file-names';
+import { readText, tooBigToRead } from '../core/files/file-text';
 import { Simulation } from '../core/runtime/simulation';
 import { CanvasSession } from '../core/session/canvas-session';
 import { CommandBus } from '../core/state/command-bus';
+import { sentence } from '../core/state/describe';
 import { DocumentStore } from '../core/state/document-store';
 import type { CommandOrigin } from '../core/state/origin';
 import { SelectionStore } from '../core/state/selection-store';
+import { Toasts } from '../core/ui/toasts';
 import { ShareDialogs } from '../share/dialogs';
+import { formatChord } from './keyboard';
 
 /** What the editor shows as a result of an action: a field for a name, the inspector with the focus. */
 export interface ActionSurface {
@@ -45,6 +57,7 @@ export class EditorActions {
   private readonly session = inject(CanvasSession);
   private readonly dialogs = inject(ShareDialogs);
   private readonly downloader = inject(FILE_DOWNLOADER);
+  private readonly toasts = inject(Toasts);
 
   /** Set by the editor, which owns the field for a name and the inspector. */
   surface: ActionSurface | undefined;
@@ -165,6 +178,53 @@ export class EditorActions {
   /** Opens the dialog that exports the canvas as it is on the screen as a definitions file for a broker (ADR-0079). */
   exportDefinitions(): void {
     this.dialogs.exportDefinitions({ name: this.session.name(), document: this.store.document() });
+  }
+
+  /**
+   * Imports a definitions file into this canvas (ADR-0111): the file is refused before it is read when it is not a JSON file or is too big (ADR-0102), and is
+   * then read and shown in the dialog, which says what it makes, what it replaces and what it leaves out, or why it cannot be imported.
+   */
+  async importDefinitions(file: File): Promise<void> {
+    const refused = refusedKind(file, TAKES_DEFINITIONS) ?? tooBigToRead(file, 'a definitions file');
+    const read = refused === null ? await this.readDefinitionsFile(file) : failure(refused);
+    this.dialogs.importDefinitions({
+      name: this.session.name(),
+      fileName: file.name,
+      document: this.store.document(),
+      file: read,
+      run: (batch) => this.runImport(batch),
+    });
+  }
+
+  private async readDefinitionsFile(file: File): Promise<Outcome<DefinitionsFile, string>> {
+    try {
+      const read = readDefinitions(await readText(file));
+      return read.ok ? succeed(read.value) : failure(read.error.message);
+    } catch (error) {
+      return failure(`The file could not be read: ${error instanceof Error ? error.message : String(error)}.`);
+    }
+  }
+
+  /** The import is one change through the bus, and a notice with an Undo follows it, as one follows a clear (ADR-0074): it is true while the canvas is the one that the import made. */
+  private runImport(batch: Batch): boolean {
+    const result = this.bus.apply(batch, 'toolbar');
+    if (!result.ok) {
+      return false;
+    }
+    const after = result.value;
+    this.toasts.show({
+      message: sentence(batch.label ?? 'imported a definitions file'),
+      undo: {
+        label: 'Undo',
+        keys: formatChord({ key: 'z', mod: true }),
+        run: async () => {
+          this.bus.undo('toolbar');
+          return succeed(undefined);
+        },
+      },
+      stillTrue: () => this.store.document() === after,
+    });
+    return true;
   }
 
   /** Gives the canvas as a file (ADR-0075), and says so. A canvas that the app could not open again is not given, and that is said. */

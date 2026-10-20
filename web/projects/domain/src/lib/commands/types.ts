@@ -109,6 +109,8 @@ export interface ConsumerChanges {
 }
 
 export interface CanvasChanges {
+  /** The vhost of the canvas, which a broker names in some of its refusals and which an export offers first (ADR-0111). */
+  readonly vhost?: string;
   readonly showDefaultExchange?: boolean;
   readonly seed?: number;
   readonly publishMs?: number;
@@ -175,6 +177,8 @@ export interface Layout {
 export interface Batch {
   readonly type: 'batch';
   readonly commands: readonly DocumentCommand[];
+  /** What the batch is, in words, for whoever tells the learner what was done, when its commands do not say it well: an import of a definitions file, for one (ADR-0111). */
+  readonly label?: string;
 }
 
 /** A command that changes the document. */

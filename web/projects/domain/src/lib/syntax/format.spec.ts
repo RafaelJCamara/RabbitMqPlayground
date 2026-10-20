@@ -291,6 +291,9 @@ describe('formatCommand', () => {
         'set queue:canvas durable=true',
       );
       expect(formatCommand({ type: 'set', kind: 'canvas', changes: { seed: 1 } }, document)).toBe('set canvas seed=1');
+      expect(formatCommand({ type: 'set', kind: 'canvas', changes: { vhost: 'my shop' } }, document)).toBe(
+        'set canvas vhost="my shop"',
+      );
     });
 
     it('in front of a name that has to be quoted', () => {

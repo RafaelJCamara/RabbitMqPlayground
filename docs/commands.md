@@ -282,7 +282,7 @@ reset counters
 
 Sets attributes of an element, or of the canvas. A queue that is not durable is refused, as it is when it is declared. An exchange cannot become internal while a producer publishes to it, and cannot become a topic exchange while a binding of it has a key that a topic exchange refuses. A producer's message headers are set one at a time, as `header:name=value`, with the value typed as in `bind`.
 
-**Syntax:** `set <element|canvas> <attribute>=<value>...   (exchange: type, durable, auto-delete, internal · queue: durable · producer: payload, key, burst, every, repeat, header:<name> · consumer: ack, prefetch, processing · canvas: default-exchange, seed, publish-ms, broker-ms, deliver-ms)`
+**Syntax:** `set <element|canvas> <attribute>=<value>...   (exchange: type, durable, auto-delete, internal · queue: durable · producer: payload, key, burst, every, repeat, header:<name> · consumer: ack, prefetch, processing · canvas: default-exchange, seed, publish-ms, broker-ms, deliver-ms, vhost)`
 
 **Examples:**
 

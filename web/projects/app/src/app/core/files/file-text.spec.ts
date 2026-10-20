@@ -13,6 +13,12 @@ describe('tooBigToRead (ADR-0075)', () => {
     );
   });
 
+  it('names the files that the picker takes, when it is told them (ADR-0111)', () => {
+    expect(tooBigToRead({ size: MAX_FILE_BYTES + 1 }, 'a definitions file')).toContain(
+      'which is more than a definitions file can be',
+    );
+  });
+
   it('lets an ordinary file be read, and an empty one', () => {
     expect(tooBigToRead({ size: 0 })).toBeNull();
     expect(tooBigToRead({ size: 12_345 })).toBeNull();

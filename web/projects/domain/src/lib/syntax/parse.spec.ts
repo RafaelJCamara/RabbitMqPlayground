@@ -685,6 +685,8 @@ describe('parseCommand', () => {
         changes: { prefetch: 0 },
       });
       expect(read('set canvas seed=9')).toStrictEqual({ type: 'set', kind: 'canvas', changes: { seed: 9 } });
+      expect(read('set canvas vhost=shop')).toStrictEqual({ type: 'set', kind: 'canvas', changes: { vhost: 'shop' } });
+      expect(read('set canvas vhost="/"')).toStrictEqual({ type: 'set', kind: 'canvas', changes: { vhost: '/' } });
       expect(read('set billing durable=true')).toStrictEqual({
         type: 'set',
         kind: 'queue',

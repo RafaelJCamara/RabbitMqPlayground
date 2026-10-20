@@ -44,6 +44,18 @@ export {
   type ExportError,
   type WarningKind,
 } from './lib/export/definitions';
+export {
+  defaultVhost,
+  importBatch,
+  importSummaryText,
+  planImport,
+  readDefinitions,
+  type DefinitionsFile,
+  type ImportError,
+  type ImportNote,
+  type ImportNoteKind,
+  type ImportPlan,
+} from './lib/import/definitions';
 export { parseCanvasFile, readCanvasFile, writeCanvasFile, type CanvasFile } from './lib/files/canvas-file';
 export { parseBackup, readBackup, writeBackup, type Backup, type BackupEntry } from './lib/files/backup';
 export {

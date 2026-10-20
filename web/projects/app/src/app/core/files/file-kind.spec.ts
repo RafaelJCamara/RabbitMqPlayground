@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isJsonFile, refusedKind } from './file-kind';
+import { isJsonFile, refusedKind, TAKES_DEFINITIONS } from './file-kind';
 
 const file = (name: string, type = '') => ({ name, type });
 
@@ -55,5 +55,12 @@ describe('refusedKind', () => {
     expect(refusedKind(file('x.js', 'text/javascript'))).toBe(
       '“x.js” is not a JSON file. This app opens only the JSON files it saves: a canvas (.rmq.json) or a backup.',
     );
+  });
+
+  it('says what the import of definitions takes, when it is that picker (ADR-0111)', () => {
+    expect(refusedKind(file('defs.yaml', 'application/yaml'), TAKES_DEFINITIONS)).toBe(
+      '“defs.yaml” is not a JSON file. The import takes a RabbitMQ definitions file, which is a JSON file.',
+    );
+    expect(refusedKind(file('defs.json', 'application/json'), TAKES_DEFINITIONS)).toBeNull();
   });
 });
