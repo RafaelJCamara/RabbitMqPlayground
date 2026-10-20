@@ -546,17 +546,17 @@ describe('Inspector', () => {
       const { user } = await renderInspector({ nodes: ['E1'] });
       const open = vi.spyOn(TestBed.inject(LinkFlow), 'openPicker');
 
-      await user.click(screen.getByRole('button', { name: 'Link exchange orders to…' }));
+      await user.click(screen.getByRole('button', { name: 'Link to… from exchange orders' }));
 
       expect(open).toHaveBeenCalledWith('E1', 'inspector');
     });
 
     it('has the button for a producer and for a queue, and not for a consumer, where a message ends', async () => {
       const { choose } = await renderInspector({ nodes: ['P1'] });
-      expect(screen.getByRole('button', { name: 'Link producer sender to…' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Link to… from producer sender' })).toBeInTheDocument();
 
       choose(['Q1']);
-      expect(screen.getByRole('button', { name: 'Link queue billing to…' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Link to… from queue billing' })).toBeInTheDocument();
 
       choose(['C1']);
       expect(screen.queryByRole('button', { name: /^Link .* to…$/ })).not.toBeInTheDocument();
@@ -565,7 +565,7 @@ describe('Inspector', () => {
     it('says which key does the same, which is L on the canvas', async () => {
       await renderInspector({ nodes: ['E1'] });
 
-      expect(screen.getByRole('button', { name: 'Link exchange orders to…' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Link to… from exchange orders' })).toHaveAttribute(
         'aria-keyshortcuts',
         'L',
       );
@@ -1114,7 +1114,7 @@ describe('the bindings of a headers edge (ADR-0066)', () => {
     expect(within(only).getByRole('textbox', { name: 'Value of condition 1' })).toHaveValue('pdf');
     expect(within(only).getByRole('button', { name: 'Apply' })).toBeInTheDocument();
     expect(within(only).getByRole('button', { name: 'Revert' })).toBeInTheDocument();
-    expect(within(only).getByRole('button', { name: 'Delete binding 1 of 1' })).toBeInTheDocument();
+    expect(within(only).getByRole('button', { name: 'Delete this binding, 1 of 1' })).toBeInTheDocument();
     // The line is what a learner would type, with the names that the canvas has.
     expect(within(only).getByTestId('conditions-line')).toHaveTextContent(
       'bind docs -> archive x-match=any format=pdf',
@@ -1275,7 +1275,7 @@ describe('the bindings of a headers edge (ADR-0066)', () => {
     bus().apply(SECOND, 'toolbar');
     choose([], ['E2>Q2']);
 
-    await user.click(screen.getByRole('button', { name: 'Delete binding 2 of 2' }));
+    await user.click(screen.getByRole('button', { name: 'Delete this binding, 2 of 2' }));
 
     expect(Object.values(document().bindings).filter(({ dest }) => dest.id === 'Q2')).toHaveLength(1);
     expect(document().bindings['B2']).toBeDefined();

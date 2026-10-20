@@ -401,7 +401,7 @@ test.describe('journey 4: gestures and typed commands are interchangeable', () =
     await page.keyboard.press('Enter');
     await expect.poll(() => editor.edges()).toHaveLength(2);
     await editor.select('Queue queue1');
-    await page.getByRole('button', { name: 'Link queue queue1 to…' }).click();
+    await page.getByRole('button', { name: 'Link to… from queue queue1' }).click();
     await page.getByRole('option', { name: /consumer1/ }).click();
     await expect.poll(() => editor.edges()).toHaveLength(3);
 

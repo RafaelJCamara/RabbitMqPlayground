@@ -187,7 +187,7 @@ const WAYS: readonly [string, (page: Page, onboarding: OnboardingPage) => Promis
     'Link to… in the inspector',
     async (page, onboarding) => {
       await onboarding.editor.select('Producer producer1');
-      await page.getByRole('button', { name: 'Link producer producer1 to…' }).click();
+      await page.getByRole('button', { name: 'Link to… from producer producer1' }).click();
       await expect(page.getByRole('combobox', { name: 'Search the targets' })).toBeFocused();
       await page.keyboard.type('exchange');
       await page.keyboard.press('Enter');
