@@ -12,6 +12,7 @@ import {
   writeCanvasFile,
   type CanvasRecord,
   type CanvasRepository,
+  type HomeNote,
   type Outcome,
   type QuotaWarning,
   type RepositoryError,
@@ -81,6 +82,7 @@ export class CanvasLibrary implements CanvasHost {
     snoozedUntil: undefined,
   });
   private readonly storageUsage = signal<StorageUsage | null>(null);
+  private readonly closedNotes = signal<ReadonlySet<HomeNote>>(new Set());
   /** The time at which the home was last read, which is what the reminder is judged at (the reminder is not a clock). */
   private readonly readAt = signal(0);
   private editor: OpenEditor | undefined;
@@ -106,6 +108,8 @@ export class CanvasLibrary implements CanvasHost {
   readonly persistence = this.storage.persistence;
   /** Why the canvases are kept in memory and will be gone when the tab is closed, or `undefined`. */
   readonly memoryReason = this.storage.memoryReason;
+  /** The notes of the home that the learner has closed (ADR-0110). */
+  readonly dismissedNotes = this.closedNotes.asReadonly();
   /** The reminder to make a backup, or that it is not due (ADR-0075). */
   readonly reminder = computed(() =>
     backupReminder({
@@ -442,15 +446,19 @@ export class CanvasLibrary implements CanvasHost {
 
   /** The times of the last backup and of the reminder, and the room that the browser has left. A browser that does not say is an answer: nothing is shown of it. */
   private async readHomeFacts(repository: CanvasRepository): Promise<void> {
-    const [last, snoozedUntil, usage] = await Promise.all([
+    const [last, snoozedUntil, closed, usage] = await Promise.all([
       repository.getMeta('lastBackupAt'),
       repository.getMeta('backupReminderSnoozedUntil'),
+      repository.getMeta('dismissedNotes'),
       readUsage(this.manager),
     ]);
     this.backups.set({
       last: last.ok ? last.value : undefined,
       snoozedUntil: snoozedUntil.ok ? snoozedUntil.value : undefined,
     });
+    // A note is never opened again by reading: one closed while this read was on its way stays closed.
+    const stored = closed.ok ? (closed.value ?? []) : [];
+    this.closedNotes.update((notes) => new Set([...notes, ...stored]));
     this.storageUsage.set(usage.ok ? usage.value : null);
     this.readAt.set(this.now());
     this.storage.askPersistence();
@@ -561,6 +569,16 @@ export class CanvasLibrary implements CanvasHost {
     this.backups.update((times) => ({ ...times, snoozedUntil: until }));
     const repository = await this.storage.repository();
     await repository.setMeta('backupReminderSnoozedUntil', until);
+  }
+
+  /**
+   * Closes a note of the home (ADR-0110). It stays closed in this browser until its data is cleared; in memory, until the tab is closed, which is
+   * as long as anything there is kept. A note that cannot be written down is still closed for the page.
+   */
+  async dismissNote(note: HomeNote): Promise<void> {
+    this.closedNotes.update((notes) => new Set([...notes, note]));
+    const repository = await this.storage.repository();
+    await repository.setMeta('dismissedNotes', [...this.closedNotes()]);
   }
 
   /** Puts a backup back without writing over anything (ADR-0075). A file that is not a backup changes nothing, and the answer says why; otherwise it answers the report. */

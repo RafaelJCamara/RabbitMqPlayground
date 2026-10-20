@@ -61,6 +61,8 @@ export interface MetaValues {
   readonly backupReminderSnoozedUntil: number;
   /** The canvases that are open in the strip of the workspace (ADR-0072), by id, in the order of the strip. */
   readonly openCanvases: readonly string[];
+  /** The notes of the home that the learner has closed (ADR-0110), each once. */
+  readonly dismissedNotes: readonly HomeNote[];
 }
 export type MetaKey = keyof MetaValues;
 
@@ -75,12 +77,35 @@ const isIdList = (value: unknown): value is readonly string[] =>
   value.every(isCanvasId) &&
   new Set<unknown>(value).size === value.length;
 
+/**
+ * The notes of the home that can be closed (ADR-0110). A note that says something worse has a key of its own, so that closing a
+ * warning never hides a worse one: the room running low and running out, and each thing that the browser can say when it does not
+ * promise to keep the canvases.
+ */
+export const HOME_NOTES = [
+  'memory',
+  'space',
+  'quota:low',
+  'quota:critical',
+  'persistence:unsupported',
+  'persistence:denied',
+  'persistence:failed',
+] as const;
+export type HomeNote = (typeof HOME_NOTES)[number];
+
+const isHomeNote = (value: unknown): value is HomeNote => (HOME_NOTES as readonly unknown[]).includes(value);
+
+/** A list of notes of the home, each one once. */
+const isNoteList = (value: unknown): value is readonly HomeNote[] =>
+  Array.isArray(value) && value.every(isHomeNote) && new Set<unknown>(value).size === value.length;
+
 /** What each value has to be, for the sentence that says what is wrong with one. */
 const META_WANTS: Readonly<Record<MetaKey, string>> = {
   lastOpenCanvas: 'the id of a canvas',
   lastBackupAt: 'a time, in milliseconds since 1970',
   backupReminderSnoozedUntil: 'a time, in milliseconds since 1970',
   openCanvases: 'a list of the ids of canvases, each one once',
+  dismissedNotes: 'a list of the notes of the home, each one once',
 };
 
 const META_CHECKS: { readonly [K in MetaKey]: (value: unknown) => value is MetaValues[K] } = {
@@ -88,6 +113,7 @@ const META_CHECKS: { readonly [K in MetaKey]: (value: unknown) => value is MetaV
   lastBackupAt: isTime,
   backupReminderSnoozedUntil: isTime,
   openCanvases: isIdList,
+  dismissedNotes: isNoteList,
 };
 
 /** What the repository holds, as it can tell without opening a canvas. */

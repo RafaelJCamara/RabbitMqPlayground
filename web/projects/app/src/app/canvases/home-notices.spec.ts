@@ -1,8 +1,9 @@
 import { signal } from '@angular/core';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import type { PersistResult, QuotaWarning } from '@rmq/persistence';
+import type { HomeNote, PersistResult, QuotaWarning } from '@rmq/persistence';
 import { describe, expect, it, vi } from 'vitest';
+import { Announcer } from '../core/announcer';
 import { HomeNotices } from './home-notices';
 import { CanvasLibrary } from './library';
 import type { Reminder } from './reminder';
@@ -12,28 +13,44 @@ function fakeLibrary() {
   const quota = signal<QuotaWarning | null>(null);
   const persistence = signal<PersistResult | null>(null);
   const reminder = signal<Reminder>({ due: false });
+  const dismissedNotes = signal<ReadonlySet<HomeNote>>(new Set());
   return {
     memoryReason,
     quota,
     persistence,
     reminder,
+    dismissedNotes,
     exportBackup: vi.fn(async () => undefined),
     snoozeReminder: vi.fn(async () => undefined),
+    dismissNote: vi.fn(async (note: HomeNote) => {
+      dismissedNotes.update((notes) => new Set([...notes, note]));
+    }),
   };
 }
 
 async function renderNotices() {
   const library = fakeLibrary();
-  const view = await render(HomeNotices, { providers: [{ provide: CanvasLibrary, useValue: library }] });
-  return { ...view, library, user: userEvent.setup() };
+  const announce = vi.fn();
+  const closed = vi.fn();
+  const view = await render(HomeNotices, {
+    providers: [
+      { provide: CanvasLibrary, useValue: library },
+      { provide: Announcer, useValue: { announce } },
+    ],
+    on: { closed },
+  });
+  return { ...view, library, announce, closed, user: userEvent.setup() };
 }
+
+const testIds = (container: Element): string[] =>
+  [...container.querySelectorAll('[data-testid]')].map((element) => element.getAttribute('data-testid') ?? '');
 
 describe('HomeNotices (ADR-0075)', () => {
   it('says only that the canvases take up space when there is nothing else to say', async () => {
     const { container } = await renderNotices();
 
     expect(screen.getByTestId('space-note')).toHaveTextContent('Your canvases take up space in this browser.');
-    expect(container.querySelectorAll('[data-testid]')).toHaveLength(1);
+    expect(testIds(container)).toEqual(['space-note', 'space-note-close']);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -147,6 +164,100 @@ describe('HomeNotices (ADR-0075)', () => {
 
       expect(await screen.findByTestId('quota')).toHaveTextContent('The browser has used 85% of the room.');
       expect(screen.queryByTestId('usage')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('closing a note (ADR-0110)', () => {
+    async function withEveryNote(memory: boolean) {
+      const rendered = await renderNotices();
+      if (memory) {
+        rendered.library.memoryReason.set('The browser does not let this site keep canvases here.');
+      }
+      rendered.library.quota.set({ level: 'low', message: 'The browser has used 85% of the room.' });
+      rendered.library.persistence.set({
+        status: 'denied',
+        message: 'The browser did not promise to keep the canvases.',
+      });
+      rendered.library.reminder.set({ due: true, text: 'You have never backed up your canvases.' });
+      rendered.fixture.detectChanges();
+      return rendered;
+    }
+
+    it.each([
+      [false, 'space-note', 'Close the note that the canvases take up space', 'space'],
+      [true, 'memory-note', 'Close the note that nothing is kept', 'memory'],
+      [false, 'quota', 'Close the warning about the room', 'quota:low'],
+      [
+        false,
+        'persistence-note',
+        'Close the note that the browser did not promise to keep the canvases',
+        'persistence:denied',
+      ],
+    ] as const)('closes %#: %s, with a button that has a name, and says so', async (memory, id, name, note) => {
+      const { library, fixture, user, announce, closed } = await withEveryNote(memory);
+
+      await user.click(within(await screen.findByTestId(id)).getByRole('button', { name }));
+      fixture.detectChanges();
+
+      expect(library.dismissNote).toHaveBeenCalledExactlyOnceWith(note);
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument();
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Note closed.');
+      expect(closed).toHaveBeenCalledOnce();
+    });
+
+    it('leaves the other notes where they are', async () => {
+      const { fixture, user } = await withEveryNote(false);
+
+      await user.click(screen.getByTestId('space-note-close'));
+      fixture.detectChanges();
+
+      expect(screen.getByTestId('quota')).toBeInTheDocument();
+      expect(screen.getByTestId('persistence-note')).toBeInTheDocument();
+      expect(screen.getByTestId('reminder')).toBeInTheDocument();
+    });
+
+    it('does not show a note that was closed before the page was opened', async () => {
+      const { library, fixture } = await renderNotices();
+
+      library.dismissedNotes.set(new Set(['space']));
+      fixture.detectChanges();
+
+      expect(screen.queryByTestId('space-note')).not.toBeInTheDocument();
+    });
+
+    it('does not hide the warning that the room is almost gone when the one that it is running low was closed', async () => {
+      const { library, fixture, user } = await withEveryNote(false);
+
+      await user.click(screen.getByTestId('quota-close'));
+      fixture.detectChanges();
+      expect(screen.queryByTestId('quota')).not.toBeInTheDocument();
+
+      library.quota.set({ level: 'critical', message: 'The browser has almost no room left.' });
+      fixture.detectChanges();
+      expect(await screen.findByTestId('quota')).toHaveTextContent('The browser has almost no room left.');
+    });
+
+    it('shows again what the browser says when it says something else after a note was closed', async () => {
+      const { library, fixture, user } = await withEveryNote(false);
+
+      await user.click(screen.getByTestId('persistence-note-close'));
+      fixture.detectChanges();
+      library.persistence.set({ status: 'failed', message: 'The browser could not be asked to keep the canvases.' });
+      fixture.detectChanges();
+
+      expect(await screen.findByTestId('persistence-note')).toHaveTextContent(
+        'The browser could not be asked to keep the canvases.',
+      );
+    });
+
+    it('has no button that closes the reminder, which is put off for a week instead', async () => {
+      await withEveryNote(false);
+
+      expect(
+        within(screen.getByTestId('reminder'))
+          .getAllByRole('button')
+          .map((button) => button.textContent?.trim()),
+      ).toEqual(['Back up everything', 'Remind me in a week']);
     });
   });
 });

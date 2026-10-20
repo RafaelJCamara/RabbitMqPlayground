@@ -572,6 +572,61 @@ test.describe('what the home says about keeping the canvases (ADR-0075)', () => 
     await expect(note).toBeVisible();
   });
 
+  test('closes the notes with their buttons, and they stay closed when the page is opened again (ADR-0110)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await page.addInitScript(() => {
+      navigator.storage.persist = async () => false;
+    });
+    await canvases.goto();
+    await canvases.showHome();
+
+    const space = canvases.home.getByTestId('space-note');
+    const promise = canvases.home.getByTestId('persistence-note');
+    await expect(space).toBeVisible();
+    await expect(promise).toBeVisible();
+
+    await space.getByRole('button', { name: 'Close the note that the canvases take up space' }).click();
+    await expect(space).toHaveCount(0);
+    await expect(canvases.home.getByRole('searchbox', { name: 'Search canvases' })).toBeFocused();
+    await promise
+      .getByRole('button', { name: 'Close the note that the browser did not promise to keep the canvases' })
+      .click();
+    await expect(promise).toHaveCount(0);
+
+    await page.reload();
+    await canvases.heading.waitFor();
+    await canvases.editorReady();
+    await canvases.showHome();
+    await expect(canvases.home.getByTestId('home-footer')).toBeVisible();
+    await expect(space).toHaveCount(0);
+    await expect(promise).toHaveCount(0);
+  });
+
+  test('shows the warning that the room is almost gone when only the one that it is running low was closed (ADR-0110)', async ({
+    page,
+  }) => {
+    const canvases = new CanvasesPage(page);
+    await page.addInitScript(() => {
+      const used = Number(sessionStorage.getItem('used') ?? '850');
+      navigator.storage.estimate = async () => ({ usage: used, quota: 1_000 });
+    });
+    await canvases.goto();
+    await canvases.showHome();
+
+    const quota = canvases.home.getByTestId('quota');
+    await quota.getByRole('button', { name: 'Close the warning about the room' }).click();
+    await expect(quota).toHaveCount(0);
+
+    await page.evaluate(() => sessionStorage.setItem('used', '960'));
+    await page.reload();
+    await canvases.heading.waitFor();
+    await canvases.editorReady();
+    await canvases.showHome();
+    await expect(quota).toContainText('The browser has almost no room left');
+  });
+
   test('warns, in words, when the browser says the room is nearly gone', async ({ page }) => {
     const canvases = new CanvasesPage(page);
     await page.addInitScript(() => {

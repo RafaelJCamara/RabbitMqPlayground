@@ -1,6 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { failure, succeed, type Outcome, type RestoreReport, type UnreadableCanvas } from '@rmq/persistence';
+import {
+  failure,
+  succeed,
+  type HomeNote,
+  type Outcome,
+  type RestoreReport,
+  type UnreadableCanvas,
+} from '@rmq/persistence';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -36,6 +43,7 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
   const list = signal(canvases);
   const problem = signal<string | null>(null);
   const broken = signal(unreadable);
+  const dismissed = signal<ReadonlySet<HomeNote>>(new Set());
   return {
     list,
     problem,
@@ -49,6 +57,8 @@ function fakeLibrary(canvases: readonly CanvasSummary[], unreadable: readonly Un
     usage: signal(null).asReadonly(),
     exportBackup: vi.fn(async (_options?: { say?: boolean }) => succeed({ file: 'b.json', count: 1, left: 0 })),
     snoozeReminder: vi.fn(async () => undefined),
+    dismissedNotes: dismissed.asReadonly(),
+    dismissNote: vi.fn(async (note: HomeNote) => dismissed.update((notes) => new Set([...notes, note]))),
     saveAsFile: vi.fn(async (_id: string) => succeed('a.rmq.json')),
     share: vi.fn(async (_id: string) => true),
     openFile: vi.fn(async (_file: File): Promise<Outcome<undefined, string>> => succeed(undefined)),
@@ -98,6 +108,26 @@ describe('Home (ADR-0073)', () => {
         'href',
         'https://github.com/RafaelJCamara/RabbitMqPlayground',
       );
+    });
+  });
+
+  describe('closing a note (ADR-0110)', () => {
+    it('puts the focus on the search, since the button that had it is gone', async () => {
+      const { user, library } = await renderHome([canvas('a')]);
+
+      await user.click(screen.getByRole('button', { name: 'Close the note that the canvases take up space' }));
+
+      expect(library.dismissNote).toHaveBeenCalledExactlyOnceWith('space');
+      expect(screen.queryByTestId('space-note')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search canvases' })).toHaveFocus());
+    });
+
+    it('puts the focus on the button that makes a canvas when there is no canvas to search', async () => {
+      const { user } = await renderHome([]);
+
+      await user.click(screen.getByRole('button', { name: 'Close the note that the canvases take up space' }));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'New canvas' })).toHaveFocus());
     });
   });
 
