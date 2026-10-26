@@ -21,7 +21,7 @@ ENV GITHUB_SHA=${GITHUB_SHA} GITHUB_REF_NAME=${GITHUB_REF_NAME}
 RUN npm run build:pages \
   && npx tsx tools/pages/check-bundle.ts dist/app/browser __rmq RMQ_E2E drawnEdges simulationState overlayFrame explainEventLog explainEmphasis
 
-FROM nginxinc/nginx-unprivileged:1.30-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/web/dist/app/browser /usr/share/nginx/html
 EXPOSE 8080
